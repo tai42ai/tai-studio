@@ -4,6 +4,7 @@
 
 ```ts
 
+import { $strip } from 'zod/v4/core';
 import type { AnchorHTMLAttributes } from 'react';
 import { AriaAttributes } from 'react';
 import type { ButtonHTMLAttributes } from 'react';
@@ -32,6 +33,14 @@ import type { TdHTMLAttributes } from 'react';
 import type { TextareaHTMLAttributes } from 'react';
 import type { ThHTMLAttributes } from 'react';
 import { z } from 'zod';
+import { ZodArray } from 'zod';
+import { ZodBoolean } from 'zod';
+import { ZodDefault } from 'zod';
+import { ZodNullable } from 'zod';
+import { ZodObject } from 'zod';
+import { ZodRecord } from 'zod';
+import { ZodString } from 'zod';
+import { ZodUnknown } from 'zod';
 
 // @public
 export type AdapterCompileResult = {
@@ -52,24 +61,6 @@ export interface AdapterMappingProps {
     readonly sources?: BindingSourceSchemas;
     readonly suggestions?: readonly TemplateJqSuggestion[];
     readonly value: string;
-}
-
-// @public
-interface AddServerArgs {
-    // (undocumented)
-    readonly category?: string;
-    // (undocumented)
-    readonly description?: string;
-    // (undocumented)
-    readonly display_name?: string;
-    // (undocumented)
-    readonly icon_url?: string;
-    // (undocumented)
-    readonly id?: string;
-    // (undocumented)
-    readonly scopes?: string[];
-    // (undocumented)
-    readonly url: string;
 }
 
 // @public
@@ -160,9 +151,9 @@ export const AlertTriangleIcon: IconComponent;
 
 // @public (undocumented)
 const allToolSchemas: z.ZodRecord<z.ZodString, z.ZodObject<{
+    description: z.ZodNullable<z.ZodString>;
     input: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     output: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    description: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>>;
 
 // @public (undocumented)
@@ -171,10 +162,11 @@ type AnswerFormat = z.infer<typeof answerFormat>;
 // @public (undocumented)
 const answerFormat: z.ZodEnum<{
     text: "text";
-    external: "external";
+    free: "free";
     confirm: "confirm";
-    select: "select";
     form: "form";
+    select: "select";
+    external: "external";
 }>;
 
 // @public (undocumented)
@@ -186,6 +178,67 @@ interface ApiConfig {
     fetch?: typeof fetch;
     getToken: () => string | null;
 }
+
+// @public (undocumented)
+type ApiConversationRouteCreate = z.input<typeof apiConversationRouteCreate>;
+
+// @public (undocumented)
+const apiConversationRouteCreate: z.ZodObject<{
+    callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    channel: z.ZodDefault<z.ZodNull>;
+    door: z.ZodLiteral<"api">;
+    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    execution_key: z.ZodString;
+    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    initial_mode: z.ZodDefault<z.ZodEnum<{
+        agent: "agent";
+        manual: "manual";
+    }>>;
+    locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    our_identity: z.ZodDefault<z.ZodNull>;
+    overlap: z.ZodDefault<z.ZodObject<{
+        deliver: z.ZodDefault<z.ZodEnum<{
+            one: "one";
+            all: "all";
+        }>>;
+        running: z.ZodDefault<z.ZodEnum<{
+            continue: "continue";
+            cancel: "cancel";
+        }>>;
+        settle_seconds: z.ZodDefault<z.ZodNumber>;
+    }, z.core.$strip>>;
+    reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    route_name: z.ZodString;
+    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    target_kind: z.ZodEnum<{
+        tool: "tool";
+        agent: "agent";
+    }>;
+    target_name: z.ZodString;
+    turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+}, z.core.$strip>;
 
 // @public
 interface ApiKeyBody {
@@ -208,10 +261,10 @@ export const ApiProvider: Provider<    {
 readonly streamInteractions: (signal?: AbortSignal, lastEventId?: string) => Promise<AsyncGenerator<SseFrame, any, any>>;
 readonly getHealth: (signal?: AbortSignal) => Promise<string>;
 readonly getSystemKinds: (signal?: AbortSignal) => Promise<{
-kind: string;
-state: "default" | "active" | "off";
-plugin: string | null;
 detail: string;
+kind: string;
+plugin: string | null;
+state: "default" | "active" | "off";
 }[]>;
 readonly searchMarketplace: (query?: MarketplaceSearchQuery, signal?: AbortSignal) => Promise<{
 listings: {
@@ -275,7 +328,7 @@ routes?: {
 base: string;
 paths: {
 path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+methods: ("GET" | "DELETE" | "PATCH" | "POST" | "PUT")[];
 public: boolean;
 }[];
 } | null | undefined;
@@ -299,70 +352,97 @@ readonly listMarketplaceCategories: (signal?: AbortSignal) => Promise<string[]>;
 readonly listMarketplaceKinds: (signal?: AbortSignal) => Promise<string[]>;
 readonly listInstalledMarketplacePlugins: (signal?: AbortSignal) => Promise<{
 installed: {
-ref: string;
-version: string;
-source: string;
-delivery: "package" | "descriptor";
-installed_at: string;
-latest: string | null;
-update_available: boolean;
-incompatible_newer: string | null;
-missing_upstream: boolean;
 compat: {
-status: "unknown" | "compatible" | "incompatible";
 reason: string | null;
+status: "unknown" | "compatible" | "incompatible";
 };
+delivery: "package" | "descriptor";
+incompatible_newer: string | null;
+installed_at: string;
 items: {
-name: string;
 kind: string;
+name: string;
 }[];
+latest: string | null;
+missing_upstream: boolean;
+ref: string;
 route_mounts: Record<string, string>;
+source: string;
+update_available: boolean;
+version: string;
 }[];
 }>;
 readonly previewMarketplaceInstall: (body: MarketplaceInstallPreviewBody, signal?: AbortSignal) => Promise<{
-ref: string;
-version: string;
-items: {
+collisions: {
+conflict_owner: string;
+conflict_path: string;
+full_path: string;
 item: string;
-kind: string;
+methods: ("GET" | "DELETE" | "PATCH" | "POST" | "PUT")[];
+}[];
+delivery: "package" | "descriptor";
+items: {
 base: string;
 default_base: string;
+item: string;
+kind: string;
 routes: {
-path: string;
 full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+methods: ("GET" | "DELETE" | "PATCH" | "POST" | "PUT")[];
+path: string;
 public: boolean;
 }[];
 }[];
-collisions: {
-item: string;
+missing_env: string[];
+new_public_routes: {
 full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-conflict_owner: string;
-conflict_path: string;
+item: string;
+methods: ("GET" | "DELETE" | "PATCH" | "POST" | "PUT")[];
 }[];
 public_routes: {
-item: string;
 full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-}[];
-new_public_routes: {
 item: string;
-full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+methods: ("GET" | "DELETE" | "PATCH" | "POST" | "PUT")[];
 }[];
-requires_public_acceptance: boolean;
+ref: string;
 required_env: {
 name: string;
 secret: boolean;
 }[];
-missing_env: string[];
-delivery: "package" | "descriptor";
+requires_public_acceptance: boolean;
+version: string;
 }>;
 readonly installMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
-ref: string;
-version: string;
 notes: string[];
+package: string | null;
+pip_output: string | null;
+ref: string;
+reload: {
+env_keys: number;
+fanout: {
+error: string | null;
+local_only: boolean | null;
+mode: string;
+note: string | null;
+op: string | null;
+reachable: boolean | null;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: string;
+payload: unknown;
+}[] | null;
+};
+status: string;
+};
+routes: {
+full_path: string;
+item: string;
+methods: ("GET" | "DELETE" | "PATCH" | "POST" | "PUT")[];
+public: boolean;
+}[];
+version: string;
 advisories: {
 id: number;
 listing: string;
@@ -371,23 +451,63 @@ severity: string;
 summary: string;
 created_at: string;
 withdrawn_at: string | null;
-}[];
-routes: {
-item: string;
-full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-public: boolean;
 }[];
 }>;
 readonly uninstallMarketplacePlugin: (body: MarketplaceUninstallBody) => Promise<{
-ref: string;
-uninstalled: true;
 notes: string[];
+ref: string;
+reload: {
+env_keys: number;
+fanout: {
+error: string | null;
+local_only: boolean | null;
+mode: string;
+note: string | null;
+op: string | null;
+reachable: boolean | null;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: string;
+payload: unknown;
+}[] | null;
+};
+status: string;
+} | null;
+uninstalled: boolean;
 }>;
 readonly updateMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
-ref: string;
-version: string;
 notes: string[];
+package: string | null;
+pip_output: string | null;
+ref: string;
+reload: {
+env_keys: number;
+fanout: {
+error: string | null;
+local_only: boolean | null;
+mode: string;
+note: string | null;
+op: string | null;
+reachable: boolean | null;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: string;
+payload: unknown;
+}[] | null;
+};
+status: string;
+};
+routes: {
+full_path: string;
+item: string;
+methods: ("GET" | "DELETE" | "PATCH" | "POST" | "PUT")[];
+public: boolean;
+}[];
+version: string;
 advisories: {
 id: number;
 listing: string;
@@ -396,22 +516,17 @@ severity: string;
 summary: string;
 created_at: string;
 withdrawn_at: string | null;
-}[];
-routes: {
-item: string;
-full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-public: boolean;
 }[];
 }>;
 readonly upgradeAllMarketplacePlugins: () => Promise<{
 results: {
-ref: string;
-outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
 detail: string;
+outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
+ref: string;
 }[];
 }>;
 readonly getMarketplaceAdvisories: (signal?: AbortSignal) => Promise<{
+fetched_at: string;
 advisories: {
 id: number;
 listing: string;
@@ -421,113 +536,112 @@ summary: string;
 created_at: string;
 withdrawn_at: string | null;
 }[];
-fetched_at: string;
 }>;
 readonly getObservabilityMetrics: (params?: MetricsQuery, signal?: AbortSignal) => Promise<{
-summary: {
-totalRuns: number;
-totalCost: number;
+byModel: {
+avgLatencyMs: number;
+calls: number;
+cost: number;
+model: string;
 totalTokens: number;
+}[];
+byModelAvailable: boolean;
+granularity: "hour" | "day" | "week";
+summary: {
 averageLatencyMs: number;
 avgCostPerRun: number;
 avgTokensPerRun: number;
 timeToFirstTokenMs: number | null;
+totalCost: number;
+totalRuns: number;
+totalTokens: number;
 };
 timeSeries: {
+avgLatencyMs: number;
 bucket: string | null;
+cost: number;
 runs: number;
-cost: number;
-avgLatencyMs: number;
 totalTokens: number;
 }[];
-byModel: {
-model: string;
-calls: number;
-cost: number;
-totalTokens: number;
-avgLatencyMs: number;
-}[];
-byModelAvailable: boolean;
-granularity: "hour" | "day" | "week";
 }>;
 readonly listRuns: (params?: RunsQuery, signal?: AbortSignal) => Promise<{
 items: {
-id: string;
-traceId: string;
-createdAt: string | null;
-tags: string[];
-status: "error" | "success";
 cost: number | null;
-latencyMs: number | null;
-totalTokens: number | null;
+createdAt: string | null;
+id: string;
 inputPreview: unknown;
+latencyMs: number | null;
 outputPreview: unknown;
+status: "error" | "success";
+tags: string[];
+totalTokens: number | null;
+traceId: string;
 }[];
-page: number;
 nextPage: number | null;
+page: number;
 }>;
 readonly getObservabilityCapabilities: (signal?: AbortSignal) => Promise<{
-pageSizeMax: number;
-sortKeys: string[];
 incompatibleFilters: Record<string, string[]>;
 metrics: {
-measures: string[];
 dimensions: string[];
+measures: string[];
 };
+pageSizeMax: number;
+sortKeys: ("totalTokens" | "cost" | "createdAt" | "latencyMs")[];
 }>;
 readonly getRunTrace: (traceId: string, signal?: AbortSignal) => Promise<{
-traceId: string;
-timestamp: string | null;
-tags: string[];
-totalCost: number | null;
 input: unknown;
-output: unknown;
 metadata: unknown;
+output: unknown;
 spans: {
+end: string | null;
 id: string;
-parentId: string | null;
-traceId: string | null;
-name: string | null;
+input: unknown;
+inputTokens: number | null;
 kind: "LLM" | "TOOL" | "CHAIN" | "EVENT" | null;
 level: string | null;
-statusMessage: string | null;
-start: string | null;
-end: string | null;
-model: string | null;
-inputTokens: number | null;
-outputTokens: number | null;
-totalTokens: number | null;
 metadata: unknown;
-input: unknown;
+model: string | null;
+name: string | null;
 output: unknown;
+outputTokens: number | null;
+parentId: string | null;
+start: string | null;
+statusMessage: string | null;
+totalTokens: number | null;
+traceId: string | null;
 }[];
+tags: string[];
+timestamp: string | null;
+totalCost: number | null;
+traceId: string;
 }>;
 readonly getRunTraceOutline: (traceId: string, signal?: AbortSignal) => Promise<{
-traceId: string;
 spans: {
+end: string | null;
 id: string;
-parentId: string | null;
-traceId: string | null;
-name: string | null;
+inputTokens: number | null;
 kind: "LLM" | "TOOL" | "CHAIN" | "EVENT" | null;
 level: string | null;
-statusMessage: string | null;
-start: string | null;
-end: string | null;
-model: string | null;
-inputTokens: number | null;
-outputTokens: number | null;
-totalTokens: number | null;
 metadata: unknown;
+model: string | null;
+name: string | null;
+outputTokens: number | null;
+parentId: string | null;
+start: string | null;
+statusMessage: string | null;
+totalTokens: number | null;
+traceId: string | null;
 }[];
+traceId: string;
 }>;
 readonly getResolvedSpanValue: (traceId: string, spanId: string, field: "input" | "output", options?: {
 readonly pointer?: string;
 }, signal?: AbortSignal) => Promise<{
-traceId: string;
-spanId: string;
 field: "output" | "input";
 pointer: string;
+spanId: string;
+traceId: string;
 value: unknown;
 }>;
 readonly exportTrace: (traceId: string, options?: {
@@ -575,9 +689,39 @@ sections: string[];
 ok: boolean;
 sections: Record<string, {
 created: number;
-updated: number;
-skipped: number;
 errors: string[];
+skipped: number;
+updated: number;
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+error: string | null;
+local_only: boolean;
+op: string;
+reachable: boolean;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
+mode: "fleet";
+} | {
+error: string | null;
+local_only: boolean;
+op: string;
+reachable: boolean;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
+mode: "unreachable";
+} | null;
 details: {
 [x: string]: unknown;
 new_api_keys?: {
@@ -586,59 +730,6 @@ description: string;
 api_key: string;
 }[] | undefined;
 };
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-} | null;
-recycle: {
-recycle: {
-name: string;
-kind: string;
-status: string;
-generation_before: number;
-detail?: string | null | undefined;
-}[];
-fresh: {
-name: string;
-kind: string;
-generation: number;
-}[];
-recycle_stopped: {
-kind: string;
-name: string | null;
-detail: string;
-} | null;
-} | null;
-awaiting_respawn: {
-name: string;
-keys: string[];
-}[];
 }>;
 }>;
 readonly validateCondition: (body: ValidateConditionBody) => Promise<{
@@ -646,6 +737,9 @@ ok: boolean;
 result: boolean | null;
 }>;
 readonly listPolicyVersions: (userId: string, signal?: AbortSignal) => Promise<{
+created_at: string;
+is_current: boolean;
+tags: string[];
 version: number;
 body: {
 condition: {
@@ -656,13 +750,10 @@ kwargs?: Record<string, unknown> | undefined;
 policy_data: Record<string, unknown>;
 scopes: string[];
 };
-tags: string[];
-created_at: string;
-is_current: boolean;
 }[]>;
 readonly rollbackPolicy: (userId: string, version: number) => Promise<{
-user_id: string;
 active_version: number;
+user_id: string;
 }>;
 readonly logout: () => Promise<{
 revoked: boolean;
@@ -670,36 +761,37 @@ revoked: boolean;
 readonly getAuthCapabilities: (signal?: AbortSignal) => Promise<{
 mintable: boolean;
 providers: {
-name: string;
 mintable: boolean;
+name: string;
 }[];
 }>;
 readonly getLoginMethods: (options?: {
 signal?: AbortSignal;
 }) => Promise<{
+claim_fragment_key: string;
 methods: ({
-shape: "form";
-id: string;
-title: string;
-purpose: "login" | "invite";
-fields: {
-name: string;
-label: string;
-secret: boolean;
-autocomplete?: string | undefined;
-}[];
-submit_path: string;
-} | {
-shape: "button";
-id: string;
-label: string;
 href: string;
-icon?: string | undefined;
+icon: string | null;
+id: string;
+label: string;
+shape: "button";
+} | {
+fields: {
+autocomplete: string | null;
+label: string;
+name: string;
+secret: boolean;
+}[];
+id: string;
+purpose: "login" | "invite";
+shape: "form";
+submit_path: string;
+title: string;
 })[];
 needs_setup: boolean;
-setup_login?: {
+setup_login: {
 kinds: ("invite" | "password")[];
-} | null | undefined;
+} | null;
 }>;
 readonly submitLoginForm: (path: string, values: Record<string, string>) => Promise<{
 token: string;
@@ -716,73 +808,149 @@ token: string;
 user_id: string;
 }>;
 readonly submitSetup: (body: SetupBody) => Promise<{
-owner_user_id: string;
-key_user_id: string;
 api_key: string;
+invite_token: string | null;
 key_fingerprint: string;
+key_user_id: string;
 login_attached: boolean;
-invite_token?: string | null | undefined;
-login_path?: string | null | undefined;
+login_path: string | null;
+owner_user_id: string;
 }>;
 readonly getMe: (signal?: AbortSignal) => Promise<{
-user_id: string;
-owner_user_id: string | null;
 admin: boolean;
+agents: string[];
+mintable: boolean;
+owner_user_id: string | null;
+principal: {
+display_name: string;
+kind: "human" | "service";
+user_id: string;
+} | null;
 public_resource_id: string;
-scopes: string[];
-routes: {
-path: string;
-methods: string[];
-}[];
 route_patterns: {
+open_prefix: string | null;
 pattern: string;
 scope_id: string;
 }[];
+routes: {
+methods: string[];
+path: string;
+}[];
+scopes: string[];
 sub_mcp: {
+access_pattern: string;
+mount_url: string;
+slug: string;
 tools: string[];
 transport: string;
-mount_url: string;
-access_pattern: string;
-slug: string;
 }[];
 tools: string[];
-agents: string[];
-mintable: boolean;
-principal?: {
 user_id: string;
-kind: "human" | "service";
+}>;
+readonly listPrincipals: (signal?: AbortSignal) => Promise<{
+created_at: string;
+created_by: string | null;
+disabled: boolean;
 display_name: string;
-} | null | undefined;
-}>;
-readonly listScopes: (signal?: AbortSignal) => Promise<Record<string, string>>;
-readonly addUrlToScope: (body: AddUrlToScopeBody) => Promise<{
-scope_id: string;
-url: string;
-}>;
-readonly removeUrlFromScope: (body: {
-url: string;
-}) => Promise<{
-url: string;
-}>;
-readonly removeScope: (scopeId: string) => Promise<{
-scope_id: string;
-deleted_keys: number;
-}>;
-readonly listAuthRoutes: (signal?: AbortSignal) => Promise<{
-path: string;
-methods: string[];
-mapped: string | null;
-tags: string[];
-summary: string;
-action: "read" | "write" | "fenced" | "secret" | null;
-declared_public: boolean;
+kind: "human" | "service";
+user_id: string;
 }[]>;
-readonly listPublicRoutes: (signal?: AbortSignal) => Promise<string[]>;
-readonly pinRoutePublic: (body: PinRoutePublicBody) => Promise<{
-url: string;
+readonly createPrincipal: (body: {
+user_id?: string;
+kind: PrincipalKind;
+display_name: string;
+role: string;
+}) => Promise<{
+created_at: string;
+created_by: string | null;
+disabled: boolean;
+display_name: string;
+kind: "human" | "service";
+user_id: string;
 }>;
-readonly unpinPublicRoute: (url: string) => Promise<{
-url: string;
+readonly updatePrincipal: (userId: string, body: {
+display_name?: string;
+disabled?: boolean;
+}) => Promise<{
+created_at: string;
+created_by: string | null;
+disabled: boolean;
+display_name: string;
+kind: "human" | "service";
+user_id: string;
+}>;
+readonly deletePrincipal: (userId: string) => Promise<{
+deleted: boolean;
+user_id: string;
+}>;
+readonly listTokensPayload: (signal?: AbortSignal) => Promise<{
+condition: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+description: string;
+orphaned: boolean;
+policy_data: Record<string, unknown> | null;
+principal: {
+display_name: string;
+kind: "human" | "service";
+user_id: string;
+} | null;
+scopes: string[] | null;
+user_id: string;
+}[]>;
+readonly createApiKey: (body: ApiKeyBody) => Promise<string>;
+readonly editApiKey: (userId: string, body: Omit<ApiKeyBody, "user_id">) => Promise<{
+updated: boolean;
+user_id: string;
+}>;
+readonly revokeApiKey: (userId: string) => Promise<{
+revoked: boolean;
+user_id: string;
+}>;
+readonly createClaimLink: (body: ClaimLinkBody) => Promise<{
+claim_path: string;
+expires_at: string;
+token: string;
+}>;
+readonly listMembers: (signal?: AbortSignal) => Promise<{
+invites: {
+action_keys: string[];
+created_at: string;
+email: string;
+expires_at: string;
+handle: string;
+id: string;
+role: string | null;
+}[];
+members: {
+action_keys: string[];
+created_at: string;
+disabled: boolean;
+email: string;
+handle: string;
+id: string;
+principals: {
+disabled: boolean;
+role: string | null;
+user_id: string;
+}[];
+role: string | null;
+}[];
+}>;
+readonly listMemberActions: (signal?: AbortSignal) => Promise<{
+actions: {
+destructive: boolean;
+input_schema: Record<string, unknown>;
+key: string;
+label: string;
+result_schema: Record<string, unknown>;
+scope: "page" | "member_row" | "invite_row";
+}[];
+}>;
+readonly invokeMemberAction: (body: InvokeMemberActionBody) => Promise<{
+result: Record<string, unknown>;
 }>;
 readonly listRoles: (signal?: AbortSignal) => Promise<{
 allow_all: boolean;
@@ -824,11 +992,14 @@ name: string;
 scopes: string[];
 }>;
 readonly deleteRole: (name: string) => Promise<{
-name: string;
 deleted: boolean;
+name: string;
 }>;
 readonly listRoleVersions: (name: string, signal?: AbortSignal) => Promise<{
 versions: {
+created_at: string;
+is_current: boolean;
+tags: string[];
 version: number;
 body: {
 allow_all: boolean;
@@ -843,11 +1014,11 @@ grants: Record<string, "none" | "read" | "write">;
 name: string;
 scopes: string[];
 };
-tags: string[];
-created_at: string;
-is_current: boolean;
 }[];
 audit: {
+created_at: string;
+is_current: boolean;
+tags: string[];
 version: number;
 body: {
 action: string;
@@ -855,9 +1026,6 @@ actor: string | null;
 before: unknown;
 after: unknown;
 };
-tags: string[];
-created_at: string;
-is_current: boolean;
 }[];
 }>;
 readonly rollbackRole: (name: string, version: number) => Promise<{
@@ -873,115 +1041,40 @@ grants: Record<string, "none" | "read" | "write">;
 name: string;
 scopes: string[];
 }>;
-readonly listTokensPayload: (signal?: AbortSignal) => Promise<{
-user_id: string;
-description: string;
-scopes: string[];
-policy_data: unknown;
-condition?: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null | undefined;
-principal?: {
-user_id: string;
-kind: "human" | "service";
-display_name: string;
-} | null | undefined;
-orphaned?: boolean | undefined;
-}[]>;
-readonly createApiKey: (body: ApiKeyBody) => Promise<string>;
-readonly editApiKey: (userId: string, body: Omit<ApiKeyBody, "user_id">) => Promise<{
-user_id: string;
-updated: boolean;
+readonly listScopes: (signal?: AbortSignal) => Promise<Record<string, string>>;
+readonly addUrlToScope: (body: AddUrlToScopeBody) => Promise<{
+scope_id: string;
+url: string;
 }>;
-readonly revokeApiKey: (userId: string) => Promise<{
-user_id: string;
-revoked: boolean;
-}>;
-readonly createClaimLink: (body: ClaimLinkBody) => Promise<{
-claim_path: string;
-token: string;
-expires_at: string;
-}>;
-readonly listMembers: (signal?: AbortSignal) => Promise<{
-members: {
-id: string;
-email: string;
-role: string | null;
-created_at: string;
-principals: {
-user_id: string;
-disabled: boolean;
-role: string | null;
-}[];
-disabled: boolean;
-handle: string;
-action_keys: string[];
-}[];
-invites: {
-id: string;
-email: string;
-role: string | null;
-created_at: string;
-expires_at: string;
-handle: string;
-action_keys: string[];
-}[];
-}>;
-readonly listMemberActions: (signal?: AbortSignal) => Promise<{
-actions: {
-key: string;
-label: string;
-scope: "page" | "member_row" | "invite_row";
-destructive: boolean;
-input_schema: Record<string, unknown>;
-result_schema: Record<string, unknown>;
-}[];
-}>;
-readonly invokeMemberAction: (body: InvokeMemberActionBody) => Promise<{
-result: Record<string, unknown>;
-}>;
-readonly listPrincipals: (signal?: AbortSignal) => Promise<{
-user_id: string;
-kind: "human" | "service";
-display_name: string;
-created_by: string | null;
-disabled: boolean;
-created_at: string;
-}[]>;
-readonly createPrincipal: (body: {
-user_id?: string;
-kind: "human" | "service";
-display_name: string;
-role: string;
+readonly removeUrlFromScope: (body: {
+url: string;
 }) => Promise<{
-user_id: string;
-kind: "human" | "service";
-display_name: string;
-created_by: string | null;
-disabled: boolean;
-created_at: string;
+url: string;
 }>;
-readonly updatePrincipal: (userId: string, body: {
-display_name?: string;
-disabled?: boolean;
-}) => Promise<{
-user_id: string;
-kind: "human" | "service";
-display_name: string;
-created_by: string | null;
-disabled: boolean;
-created_at: string;
+readonly removeScope: (scopeId: string) => Promise<{
+deleted_keys: number;
+scope_id: string;
 }>;
-readonly deletePrincipal: (userId: string) => Promise<{
-user_id: string;
-deleted: boolean;
+readonly listAuthRoutes: (signal?: AbortSignal) => Promise<{
+action: "read" | "write" | "secret" | "fenced" | null;
+declared_public: boolean;
+mapped: string | null;
+methods: string[];
+path: string;
+summary: string;
+tags: string[];
+}[]>;
+readonly listPublicRoutes: (signal?: AbortSignal) => Promise<string[]>;
+readonly pinRoutePublic: (body: PinRoutePublicBody) => Promise<{
+url: string;
+}>;
+readonly unpinPublicRoute: (url: string) => Promise<{
+url: string;
 }>;
 readonly getSettingsSchema: (signal?: AbortSignal) => Promise<{
 groups: {
-name: string;
 module: string;
+name: string;
 qualname: string;
 fields: {
 name: string;
@@ -999,29 +1092,31 @@ value: unknown;
 }>;
 readonly getMcpConfigSchema: (signal?: AbortSignal) => Promise<Record<string, unknown>>;
 readonly createTriggerLink: (body: TriggerLinkCreateBody) => Promise<{
+expires_at: string | null;
 name: string;
-trigger_path: string;
 token: string;
 topic: string;
-expires_at: string | null;
+trigger_path: string;
 }>;
 readonly listTriggerLinks: (signal?: AbortSignal) => Promise<{
 items: {
-name: string;
-topic: string;
-execution_key: string;
-trigger_auth: "token" | "public" | "verifier" | "token+api_key" | "out-of-service";
-tool_kwargs: Record<string, unknown> | null;
-created_by: string | null;
 created_at: string;
+created_by: string | null;
+execution_key: string;
+execution_key_fingerprint: string;
 expires_at: string | null;
+name: string;
+require_api_key: boolean;
 token_hash_prefix: string;
+tool_kwargs: Record<string, unknown> | null;
+topic: string;
+trigger_auth: "token" | "public" | "verifier" | "token+api_key" | "out-of-service";
 }[];
 total: number;
 }>;
 readonly deleteTriggerLink: (name: string) => Promise<{
-removed: boolean;
 name: string;
+removed: boolean;
 }>;
 readonly listHooks: (topic?: string, signal?: AbortSignal) => Promise<{
 items: {
@@ -1111,19 +1206,19 @@ tool_kwargs: Record<string, unknown>;
 topic: string;
 }[];
 total: number;
+trigger_auth: Record<string, "token" | "public" | "verifier" | "token+api_key" | "out-of-service">;
 topic_verifiers: Record<string, {
 verifier: string;
 config: Record<string, unknown>;
 }>;
-trigger_auth: Record<string, "token" | "public" | "verifier" | "token+api_key" | "out-of-service">;
 }>;
 readonly registerHook: (params: HookRegister) => Promise<{
-registered: boolean;
 name: string;
+registered: boolean;
 }>;
 readonly unregisterHook: (name: string) => Promise<{
-removed: boolean;
 name: string;
+removed: boolean;
 }>;
 readonly listHookVerifiers: (signal?: AbortSignal) => Promise<string[]>;
 readonly setTopicVerifier: (topic: string, body: TopicVerifierBody) => Promise<{
@@ -1158,18 +1253,55 @@ readonly streamAgentRun: (name: string, input: unknown, signal?: AbortSignal) =>
 readonly streamAuthoredAgentRun: (name: string, input: unknown, signal?: AbortSignal) => Promise<AsyncGenerator<ParsedAgentEvent, any, any>>;
 readonly listNotifications: (signal?: AbortSignal) => Promise<{
 notifications: {
-id: string;
-message: string;
-recipient: string | null;
+audience: string | null;
 created_at: string;
-audience?: string | null | undefined;
-media?: unknown[] | null | undefined;
-template?: {
+footer: string | null;
+header: {
+caption: string | null;
+filename: string | null;
+kind: "image" | "link" | "document" | "video" | "audio";
+url: string;
+} | null;
+id: string;
+location: {
+address: string | null;
+latitude: number;
+longitude: number;
+name: string | null;
+} | null;
+media: {
+caption: string | null;
+filename: string | null;
+kind: "image" | "link" | "document" | "video" | "audio";
+url: string;
+}[] | null;
+message: string;
+options: ({
+kind: "link";
+label: string;
+url: string;
+} | {
+description: string | null;
+id: string | null;
+kind: "reply";
+text: string;
+})[] | null;
+recipient: string | null;
+schema: unknown;
+sections: {
+rows: {
+description: string | null;
+id: string | null;
+kind: "reply";
+text: string;
+}[];
+title: string;
+}[] | null;
+template: {
 language: string;
 name: string;
 parameters: Record<string, unknown> | null;
-} | null | undefined;
-options?: string[] | null | undefined;
+} | null;
 }[];
 }>;
 readonly getWebEntryGate: (identity: string, signal?: AbortSignal) => Promise<{
@@ -1193,16 +1325,15 @@ readonly revokeWebEntryCode: (identity: string, codeId: string) => Promise<{
 status: "revoked";
 }>;
 readonly listConversationRoutes: (signal?: AbortSignal) => Promise<{
-items: {
-callback_secret: string | null;
+items: ({
 callback_url: string | null;
 cancel_expr: {
 content?: string | undefined;
 id?: string | undefined;
 kwargs?: Record<string, unknown> | undefined;
 } | null;
-channel: string | null;
-door: "channel" | "api";
+channel: null;
+door: "api";
 error_reply_text: string | null;
 execution_key: string;
 execution_key_fingerprint: string;
@@ -1213,7 +1344,7 @@ kwargs?: Record<string, unknown> | undefined;
 } | null;
 initial_mode: "agent" | "manual";
 locale: string | null;
-our_identity: string | null;
+our_identity: null;
 overlap: {
 deliver: "one" | "all";
 running: "continue" | "cancel";
@@ -1238,22 +1369,66 @@ kwargs?: Record<string, unknown> | undefined;
 target_kind: "tool" | "agent";
 target_name: string;
 turns_per_hour_override: number | null;
-}[];
+} | {
+callback_url: null;
+cancel_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+channel: string;
+door: "channel";
+error_reply_text: string | null;
+execution_key: string;
+execution_key_fingerprint: string;
+extras_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+initial_mode: "agent" | "manual";
+locale: string | null;
+our_identity: string;
+overlap: {
+deliver: "one" | "all";
+running: "continue" | "cancel";
+settle_seconds: number;
+};
+reply_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+resume_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+route_name: string;
+start_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+target_kind: "tool" | "agent";
+target_name: string;
+turns_per_hour_override: number | null;
+})[];
 total: number;
+unreadable: number;
 }>;
 readonly createOrReplaceConversationRoute: (route: ConversationRouteCreate) => Promise<{
-created: boolean;
-route_name: string;
-route: {
 callback_secret: string | null;
+created: boolean;
+route: {
 callback_url: string | null;
 cancel_expr: {
 content?: string | undefined;
 id?: string | undefined;
 kwargs?: Record<string, unknown> | undefined;
 } | null;
-channel: string | null;
-door: "channel" | "api";
+channel: null;
+door: "api";
 error_reply_text: string | null;
 execution_key: string;
 execution_key_fingerprint: string;
@@ -1264,7 +1439,51 @@ kwargs?: Record<string, unknown> | undefined;
 } | null;
 initial_mode: "agent" | "manual";
 locale: string | null;
-our_identity: string | null;
+our_identity: null;
+overlap: {
+deliver: "one" | "all";
+running: "continue" | "cancel";
+settle_seconds: number;
+};
+reply_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+resume_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+route_name: string;
+start_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+target_kind: "tool" | "agent";
+target_name: string;
+turns_per_hour_override: number | null;
+} | {
+callback_url: null;
+cancel_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+channel: string;
+door: "channel";
+error_reply_text: string | null;
+execution_key: string;
+execution_key_fingerprint: string;
+extras_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+initial_mode: "agent" | "manual";
+locale: string | null;
+our_identity: string;
 overlap: {
 deliver: "one" | "all";
 running: "continue" | "cancel";
@@ -1290,88 +1509,266 @@ target_kind: "tool" | "agent";
 target_name: string;
 turns_per_hour_override: number | null;
 };
-callback_secret: string | null;
+route_name: string;
 }>;
 readonly deleteConversationRoute: (routeName: string) => Promise<{
 removed: boolean;
 route_name: string;
 }>;
 readonly listConversationThreads: (routeName: string, page: number, pageSize: number, filters?: ConversationThreadFilters, signal?: AbortSignal) => Promise<{
-total: number;
-page: number;
-page_size: number;
-next_page: number | null;
-truncated: boolean;
 items: {
-thread_id: string;
 client_address: string;
 last_activity_at: number;
+last_delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
 message_count: number;
-last_delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
+thread_id: string;
 }[];
+next_page: number | null;
+page: number;
+page_size: number;
+total: number;
+truncated: boolean;
+unreadable: number;
 }>;
 readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
+items: {
+answer: string | null;
+answer_parts: {
+data: {
+options: Record<string, {
+label: string | null;
+value: string;
+}[]>;
+values: Record<string, unknown>;
+} | null;
+footer: string | null;
+form_tag: string | null;
+header: {
+caption: string | null;
+filename: string | null;
+kind: "image" | "link" | "document" | "video" | "audio";
+url: string;
+} | null;
+location: {
+address: string | null;
+latitude: number;
+longitude: number;
+name: string | null;
+} | null;
+media: {
+caption: string | null;
+filename: string | null;
+kind: "image" | "link" | "document" | "video" | "audio";
+url: string;
+}[] | null;
+message: string;
+options: ({
+kind: "link";
+label: string;
+url: string;
+} | {
+description: string | null;
+id: string | null;
+kind: "reply";
+text: string;
+})[] | null;
+pages: {
+display: {
+alt: string | null;
+kind: "heading" | "body" | "image";
+slot: string | null;
+src: string | null;
+text: string | null;
+}[];
+fields: string[];
+kind: "input" | "review";
+title: string;
+}[] | null;
+schema: Record<string, unknown> | null;
+sections: {
+rows: {
+description: string | null;
+id: string | null;
+kind: "reply";
+text: string;
+}[];
+title: string;
+}[] | null;
+template: {
+language: string;
+name: string;
+parameters: Record<string, unknown> | null;
+} | null;
+}[] | null;
+answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
+attempts: number | null;
+callback_url: string | null;
+caller_principal: string | null;
+channel: string | null;
+client_address: string;
+created_at: number;
+delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
+door: "channel" | "api";
+error: string | null;
+inbound_attachments: {
+caption: string | null;
+filename: string | null;
+kind: "image" | "link" | "document" | "video" | "audio";
+url: string;
+}[] | null;
+inbound_event: Record<string, unknown> | null;
+inbound_form: Record<string, unknown> | null;
+inbound_form_tag: string | null;
+inbound_kind: "message" | "event";
+inbound_locale: string | null;
+inbound_location: {
+address: string | null;
+latitude: number;
+longitude: number;
+name: string | null;
+} | null;
+inbound_text: string;
+message_id: string;
+operator_send: boolean;
+origin: "operator" | "client";
+our_identity: string | null;
+outbound_message_ids: string[] | null;
+pending_receipt: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | null;
+provider_message_id: string | null;
+route_missing: boolean;
+route_name: string;
+submitted_by: string | null;
+successor_id: string | null;
+thread_id: string;
+updated_at: number;
+}[];
+next_page: number | null;
 order: "asc" | "desc";
-total: number;
 page: number;
 page_size: number;
-next_page: number | null;
+person_id: string | null;
+total: number;
 truncated: boolean;
-items: {
-message_id: string;
-route_name: string;
-door: "channel" | "api";
-thread_id: string;
-client_address: string;
-caller_principal: string | null;
-inbound_text: string;
-inbound_attachments: unknown[] | null;
-answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
-answer: string | null;
-successor_id: string | null;
-origin: "client" | "operator";
-delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
-created_at: number;
-updated_at: number;
-channel?: string | null | undefined;
-our_identity?: string | null | undefined;
-provider_message_id?: string | null | undefined;
-callback_url?: string | null | undefined;
-error?: string | null | undefined;
-outbound_message_ids?: string[] | undefined;
-attempts?: number | undefined;
-}[];
+unreadable: number;
 }>;
 readonly searchConversationMessages: (query: ConversationMessageSearchQuery, signal?: AbortSignal) => Promise<{
-total: number;
+items: {
+answer: string | null;
+answer_parts: {
+data: {
+options: Record<string, {
+label: string | null;
+value: string;
+}[]>;
+values: Record<string, unknown>;
+} | null;
+footer: string | null;
+form_tag: string | null;
+header: {
+caption: string | null;
+filename: string | null;
+kind: "image" | "link" | "document" | "video" | "audio";
+url: string;
+} | null;
+location: {
+address: string | null;
+latitude: number;
+longitude: number;
+name: string | null;
+} | null;
+media: {
+caption: string | null;
+filename: string | null;
+kind: "image" | "link" | "document" | "video" | "audio";
+url: string;
+}[] | null;
+message: string;
+options: ({
+kind: "link";
+label: string;
+url: string;
+} | {
+description: string | null;
+id: string | null;
+kind: "reply";
+text: string;
+})[] | null;
+pages: {
+display: {
+alt: string | null;
+kind: "heading" | "body" | "image";
+slot: string | null;
+src: string | null;
+text: string | null;
+}[];
+fields: string[];
+kind: "input" | "review";
+title: string;
+}[] | null;
+schema: Record<string, unknown> | null;
+sections: {
+rows: {
+description: string | null;
+id: string | null;
+kind: "reply";
+text: string;
+}[];
+title: string;
+}[] | null;
+template: {
+language: string;
+name: string;
+parameters: Record<string, unknown> | null;
+} | null;
+}[] | null;
+answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
+attempts: number | null;
+callback_url: string | null;
+caller_principal: string | null;
+channel: string | null;
+client_address: string;
+created_at: number;
+delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
+door: "channel" | "api";
+error: string | null;
+inbound_attachments: {
+caption: string | null;
+filename: string | null;
+kind: "image" | "link" | "document" | "video" | "audio";
+url: string;
+}[] | null;
+inbound_event: Record<string, unknown> | null;
+inbound_form: Record<string, unknown> | null;
+inbound_form_tag: string | null;
+inbound_kind: "message" | "event";
+inbound_locale: string | null;
+inbound_location: {
+address: string | null;
+latitude: number;
+longitude: number;
+name: string | null;
+} | null;
+inbound_text: string;
+message_id: string;
+operator_send: boolean;
+origin: "operator" | "client";
+our_identity: string | null;
+outbound_message_ids: string[] | null;
+pending_receipt: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | null;
+provider_message_id: string | null;
+route_missing: boolean;
+route_name: string;
+submitted_by: string | null;
+successor_id: string | null;
+thread_id: string;
+updated_at: number;
+}[];
+next_page: number | null;
 page: number;
 page_size: number;
-next_page: number | null;
+total: number;
 truncated: boolean;
-items: {
-message_id: string;
-route_name: string;
-door: "channel" | "api";
-thread_id: string;
-client_address: string;
-caller_principal: string | null;
-inbound_text: string;
-inbound_attachments: unknown[] | null;
-answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
-answer: string | null;
-successor_id: string | null;
-origin: "client" | "operator";
-delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
-created_at: number;
-updated_at: number;
-channel?: string | null | undefined;
-our_identity?: string | null | undefined;
-provider_message_id?: string | null | undefined;
-callback_url?: string | null | undefined;
-error?: string | null | undefined;
-outbound_message_ids?: string[] | undefined;
-attempts?: number | undefined;
-}[];
+unreadable: number;
 }>;
 readonly sendConversationThreadMessage: (routeName: string, body: ConversationThreadMessageBody) => Promise<{
 message_id: string;
@@ -1436,6 +1833,7 @@ target_kind: "tool" | "agent";
 target_name: string;
 }[];
 total: number;
+unreadable: number;
 }>;
 readonly getConversationConfig: (targetKind: ConversationTargetKind, targetName: string, signal?: AbortSignal) => Promise<{
 greeting_template: string | null;
@@ -1487,9 +1885,6 @@ target_kind: "tool" | "agent";
 target_name: string;
 }>;
 readonly setConversationConfig: (config: TargetConversationConfig) => Promise<{
-created: boolean;
-target_kind: "tool" | "agent";
-target_name: string;
 config: {
 greeting_template: string | null;
 multichannel: boolean;
@@ -1539,6 +1934,9 @@ template_jq: string | null;
 target_kind: "tool" | "agent";
 target_name: string;
 };
+created: boolean;
+target_kind: "tool" | "agent";
+target_name: string;
 }>;
 readonly deleteConversationConfig: (targetKind: ConversationTargetKind, targetName: string) => Promise<{
 removed: boolean;
@@ -1547,30 +1945,118 @@ target_name: string;
 }>;
 readonly listFailedConversationMessages: (signal?: AbortSignal) => Promise<{
 items: {
-message_id: string;
-route_name: string;
-door: "channel" | "api";
-thread_id: string;
-client_address: string;
-caller_principal: string | null;
-inbound_text: string;
-inbound_attachments: unknown[] | null;
-answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
 answer: string | null;
-successor_id: string | null;
-origin: "client" | "operator";
-delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
+answer_parts: {
+data: {
+options: Record<string, {
+label: string | null;
+value: string;
+}[]>;
+values: Record<string, unknown>;
+} | null;
+footer: string | null;
+form_tag: string | null;
+header: {
+caption: string | null;
+filename: string | null;
+kind: "image" | "link" | "document" | "video" | "audio";
+url: string;
+} | null;
+location: {
+address: string | null;
+latitude: number;
+longitude: number;
+name: string | null;
+} | null;
+media: {
+caption: string | null;
+filename: string | null;
+kind: "image" | "link" | "document" | "video" | "audio";
+url: string;
+}[] | null;
+message: string;
+options: ({
+kind: "link";
+label: string;
+url: string;
+} | {
+description: string | null;
+id: string | null;
+kind: "reply";
+text: string;
+})[] | null;
+pages: {
+display: {
+alt: string | null;
+kind: "heading" | "body" | "image";
+slot: string | null;
+src: string | null;
+text: string | null;
+}[];
+fields: string[];
+kind: "input" | "review";
+title: string;
+}[] | null;
+schema: Record<string, unknown> | null;
+sections: {
+rows: {
+description: string | null;
+id: string | null;
+kind: "reply";
+text: string;
+}[];
+title: string;
+}[] | null;
+template: {
+language: string;
+name: string;
+parameters: Record<string, unknown> | null;
+} | null;
+}[] | null;
+answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
+attempts: number | null;
+callback_url: string | null;
+caller_principal: string | null;
+channel: string | null;
+client_address: string;
 created_at: number;
+delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
+door: "channel" | "api";
+error: string | null;
+inbound_attachments: {
+caption: string | null;
+filename: string | null;
+kind: "image" | "link" | "document" | "video" | "audio";
+url: string;
+}[] | null;
+inbound_event: Record<string, unknown> | null;
+inbound_form: Record<string, unknown> | null;
+inbound_form_tag: string | null;
+inbound_kind: "message" | "event";
+inbound_locale: string | null;
+inbound_location: {
+address: string | null;
+latitude: number;
+longitude: number;
+name: string | null;
+} | null;
+inbound_text: string;
+message_id: string;
+operator_send: boolean;
+origin: "operator" | "client";
+our_identity: string | null;
+outbound_message_ids: string[] | null;
+pending_receipt: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | null;
+provider_message_id: string | null;
+route_missing: boolean;
+route_name: string;
+submitted_by: string | null;
+successor_id: string | null;
+thread_id: string;
 updated_at: number;
-channel?: string | null | undefined;
-our_identity?: string | null | undefined;
-provider_message_id?: string | null | undefined;
-callback_url?: string | null | undefined;
-error?: string | null | undefined;
-outbound_message_ids?: string[] | undefined;
-attempts?: number | undefined;
 }[];
 total: number;
+unreadable: number;
 }>;
 readonly deleteConversationThread: (routeName: string, threadId: string) => Promise<{
 removed: number;
@@ -1578,34 +2064,39 @@ route_name: string;
 thread_id: string;
 }>;
 readonly deleteConversationPerson: (personId: string) => Promise<{
+erased: boolean;
 person_id: string;
 removed: number;
-erased: boolean;
 }>;
 readonly listChannels: (signal?: AbortSignal) => Promise<{
 channels: string[];
 }>;
 readonly listInteractions: (page: number, pageSize: number, signal?: AbortSignal) => Promise<{
-total: number;
+next_page: number | null;
 page: number;
 page_size: number;
-next_page: number | null;
+total: number;
 truncated: boolean;
 items: {
-interaction_id: string;
-group_id: string;
-question: string;
-answer_format: "text" | "external" | "confirm" | "select" | "form";
-format_payload: Record<string, unknown>;
+answer_format: "text" | "free" | "confirm" | "form" | "select" | "external";
+audience: string | null;
+channel: string | null;
 created_at: string;
-timeout_at: string;
+group_id: string;
+interaction_id: string;
+media: {
+caption: string | null;
+filename: string | null;
+kind: "image" | "link" | "document" | "video" | "audio";
+url: string;
+}[] | null;
+origin: string | null;
+question: string;
+recipient: string | null;
 sensitive: boolean;
-server_verified?: boolean | undefined;
-channel?: string | undefined;
-recipient?: string | undefined;
-origin?: string | undefined;
-audience?: string | undefined;
-media?: unknown[] | undefined;
+server_verified: boolean | null;
+timeout_at: string;
+format_payload: Record<string, unknown>;
 }[];
 }>;
 readonly answerInteraction: (interactionId: string, answer: unknown) => Promise<{
@@ -1615,8 +2106,8 @@ status: string;
 readonly reactInteraction: (interactionId: string, event: ReactionEvent, values: unknown) => Promise<{
 values: Record<string, unknown>;
 options: Record<string, {
+label: string | null;
 value: string;
-label?: string | null | undefined;
 }[]>;
 errors: Record<string, string>;
 display: Record<string, unknown>;
@@ -1626,454 +2117,270 @@ interaction_id: string;
 status: string;
 }>;
 readonly listStudioPlugins: (signal?: AbortSignal) => Promise<{
-name: string;
-version: string;
 api_version: number;
-entry: string;
-integrity: Record<string, string>;
 contributions: {
-tool_panels: Record<string, string>;
+nav_entries: string[];
 pages: string[];
 settings_tabs: string[];
-nav_entries: string[];
+tool_panels: Record<string, string>;
 };
+entry: string;
+integrity: Record<string, string>;
+name: string;
+version: string;
 }[]>;
 readonly listProviders: (signal?: AbortSignal) => Promise<{
-providers: {
-id: string;
+categories: {
 display_name: string;
-description: string;
-icon_url: string | null;
-kind: "none" | "oauth";
-origin: "system" | "community";
-category: string;
-sub_services: {
 id: string;
-display_name: string;
-description: string;
-scopes: string[];
+sort_order: number;
 }[];
+providers: {
+category: string;
 config_fields: {
 key: string;
 label: string;
-target: "env" | "header";
 required: boolean;
 secret: boolean;
+target: "header" | "env";
 }[];
-removable: boolean;
-client_source: "manual" | "env" | "dynamic" | "unset" | null;
-}[];
-categories: {
-id: string;
+description: string;
 display_name: string;
-sort_order: number;
+icon_url: string;
+id: string;
+kind: "none" | "oauth";
+origin: "system" | "community";
+sub_services: {
+description: string;
+display_name: string;
+id: string;
+scopes: string[];
+}[];
 }[];
 }>;
 readonly listConnections: (signal?: AbortSignal) => Promise<{
 items: {
-connection_id: string;
-provider_id: string;
-alias: string;
-kind: "none" | "oauth";
 account_identity: string | null;
+alias: string;
+auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
+connection_id: string;
+created_at: string;
 enabled_sub_services: string[];
 granted_scopes: string[];
+kind: "none" | "oauth";
+provider_id: string;
 unreachable_sub_services: string[];
-scopes_wanted: string[];
-auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
-created_at: string;
 }[];
 total: number;
-unhealthy?: number | undefined;
+unhealthy: number;
 }>;
 readonly getConnection: (id: string, signal?: AbortSignal) => Promise<{
-connection_id: string;
-provider_id: string;
-alias: string;
-kind: "none" | "oauth";
 account_identity: string | null;
+alias: string;
+auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
+connection_id: string;
+created_at: string;
 enabled_sub_services: string[];
 granted_scopes: string[];
+kind: "none" | "oauth";
+provider_id: string;
 unreachable_sub_services: string[];
-scopes_wanted: string[];
-auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
-created_at: string;
 }>;
 readonly startConnect: (args: StartConnectArgs) => Promise<{
-flow_id: string;
 authorize_url: string;
+flow_id: string;
 } | {
-connection_id: string;
 added_manifest_entries: string[];
+connection_id: string;
 fanout: {
 mode: "local-only";
 note: string;
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "fleet";
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "unreachable";
 } | null;
 }>;
 readonly disconnect: (id: string) => Promise<{
 connection_id: string;
-upstream_revoke_outcome: "success" | "failed" | "skipped";
-upstream_revoke_status: number | null;
 removed_manifest_entries: string[];
+upstream_revoke_outcome: "success" | "skipped" | "failed";
+upstream_revoke_status: number | null;
 fanout: {
 mode: "local-only";
 note: string;
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "fleet";
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "unreachable";
 } | null;
 }>;
 readonly reconnect: (id: string, enabled_sub_services: string[], return_url?: string) => Promise<{
-flow_id: string;
 authorize_url: string;
+flow_id: string;
 }>;
 readonly patchSubServices: (id: string, enabled_sub_services: string[], return_url?: string) => Promise<{
-connection_id: string;
-enabled_sub_services: string[];
-consent_required: boolean;
-flow_id: string | null;
-authorize_url: string | null;
 added_manifest_entries: string[];
+authorize_url: string | null;
+connection_id: string;
+consent_required: boolean;
+enabled_sub_services: string[];
+flow_id: string | null;
 removed_manifest_entries: string[];
 fanout: {
 mode: "local-only";
 note: string;
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "fleet";
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "unreachable";
 } | null;
 }>;
-readonly completeOAuth: (state: string, code: string, error?: string, iss?: string) => Promise<{
-kind: "success";
+readonly completeOAuth: (state: string, code: string, error?: string) => Promise<{
+kind: "cancelled";
+message: string;
+} | {
+kind: "failed";
+reason: string;
+} | {
+kind: "not_configured";
+} | {
 connection_id: string;
+kind: "success";
 return_url: string;
 fanout: {
 mode: "local-only";
 note: string;
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "fleet";
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "unreachable";
-} | null;
-} | {
-kind: "failed";
-reason: string;
-} | {
-kind: "cancelled";
-message: string;
-}>;
-readonly discoverServer: (target: DiscoverServerTarget) => Promise<{
-url: string;
-resource: string;
-resource_name: string | null;
-issuer: string;
-authorization_servers: string[];
-client_issuer: string | null;
-registration_supported: boolean;
-automatic_client: boolean;
-scopes_supported: string[];
-suggested_id: string;
-suggested_display_name: string;
-redirect_uri: string | null;
-}>;
-readonly addServer: (args: AddServerArgs) => Promise<{
-provider: {
-id: string;
-display_name: string;
-description: string;
-icon_url: string | null;
-kind: "none" | "oauth";
-origin: "system" | "community";
-category: string;
-sub_services: {
-id: string;
-display_name: string;
-description: string;
-scopes: string[];
-}[];
-config_fields: {
-key: string;
-label: string;
-target: "env" | "header";
-required: boolean;
-secret: boolean;
-}[];
-removable: boolean;
-client_source: "manual" | "env" | "dynamic" | "unset" | null;
 };
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-} | null;
-}>;
-readonly removeProvider: (id: string) => Promise<{
-provider_id: string;
-removed_clients: number;
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-} | null;
-}>;
-readonly setProviderClient: (id: string, args: SetProviderClientArgs) => Promise<{
-provider: {
-id: string;
-display_name: string;
-description: string;
-icon_url: string | null;
-kind: "none" | "oauth";
-origin: "system" | "community";
-category: string;
-sub_services: {
-id: string;
-display_name: string;
-description: string;
-scopes: string[];
-}[];
-config_fields: {
-key: string;
-label: string;
-target: "env" | "header";
-required: boolean;
-secret: boolean;
-}[];
-removable: boolean;
-client_source: "manual" | "env" | "dynamic" | "unset" | null;
-};
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-} | null;
 }>;
 readonly setMcpSecretEnv: (body: SetMcpSecretEnvBody) => Promise<{
-status: string;
 env_keys: number;
-awaiting_respawn: {
-name: string;
-keys: string[];
-}[];
+status: string;
 fanout: {
 mode: "local-only";
 note: string;
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "fleet";
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "unreachable";
 };
-recycle: {
-recycle: {
-name: string;
-kind: string;
-status: string;
-generation_before: number;
-detail?: string | null | undefined;
-}[];
-fresh: {
-name: string;
-kind: string;
-generation: number;
-}[];
-recycle_stopped: {
-kind: string;
-name: string | null;
-detail: string;
-} | null;
-} | null;
 }>;
 readonly getManifestPreserved: (signal?: AbortSignal) => Promise<{
+user_tools: string[];
 mcp: {
 [x: string]: unknown;
 managed?: {
@@ -2082,17 +2389,16 @@ provider_id: string;
 sub_service: string;
 } | null | undefined;
 }[];
-user_tools: string[];
 }>;
 readonly getMcpEnvRefs: (signal?: AbortSignal) => Promise<{
-var: string;
-pointer: string;
 has_default: boolean;
+pointer: string;
 set: boolean;
+var: string;
 }[]>;
 readonly listSettingsProfiles: (signal?: AbortSignal) => Promise<{
-name: string;
 description: string;
+name: string;
 }[]>;
 readonly getSettingsProfile: (name: string, signal?: AbortSignal) => Promise<{
 description: string;
@@ -2100,100 +2406,93 @@ env: Record<string, string>;
 secret_keys: string[];
 }>;
 readonly putSettingsProfile: (name: string, body: SettingsProfileBody) => Promise<{
-ok: true;
-version?: number | undefined;
+ok: boolean;
+version: number;
 }>;
 readonly deleteSettingsProfile: (name: string) => Promise<{
-ok: true;
+ok: boolean;
 }>;
 readonly diffSettingsProfile: (name: string) => Promise<{
 added: string[];
-removed: string[];
 changed: {
 key: string;
-old: string;
 new: string;
+old: string;
 }[];
 recycle_keys: string[];
 refused_keys: string[];
+removed: string[];
 }>;
 readonly applySettingsProfile: (name: string) => Promise<{
+fresh: {
+generation: number;
+kind: string;
+name: string;
+}[];
 hot: string[];
 recycle: {
-name: string;
-kind: string;
-status: string;
+detail: string | null;
 generation_before: number;
-detail?: string | null | undefined;
-}[];
-fresh: {
-name: string;
 kind: string;
-generation: number;
-}[];
-refused: {
-key: string;
-reason: string;
+name: string;
+status: string;
 }[];
 recycle_stopped: {
+detail: string;
 kind: string;
 name: string | null;
-detail: string;
 } | null;
-awaiting_respawn: {
-name: string;
-keys: string[];
-}[];
+refused: string[];
 fanout: {
 mode: "local-only";
 note: string;
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "fleet";
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "unreachable";
 };
 }>;
 readonly listSettingsProfileVersions: (name: string, signal?: AbortSignal) => Promise<{
-version: number;
-tags: string[];
 created_at: string;
 is_current: boolean;
+tags: string[];
+version: number;
 }[]>;
 readonly getSettingsProfileVersion: (name: string, version: number, signal?: AbortSignal) => Promise<{
-version: number;
-tags: string[];
-created_at: string;
-is_current: boolean;
 body: {
 description: string;
 env: Record<string, string>;
 secret_keys: string[];
 };
+created_at: string;
+is_current: boolean;
+tags: string[];
+version: number;
 }>;
 readonly rollbackSettingsProfile: (name: string, version: number) => Promise<{
-ok: true;
+ok: boolean;
 version: number;
 }>;
 readonly getEnvConfig: (signal?: AbortSignal) => Promise<{
@@ -2204,84 +2503,62 @@ readonly setEnvConfig: (body: {
 env: Record<string, string>;
 secret_keys?: string[] | null;
 }) => Promise<{
-status: string;
 env_keys: number;
-awaiting_respawn: {
-name: string;
-keys: string[];
-}[];
+status: string;
 fanout: {
 mode: "local-only";
 note: string;
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "fleet";
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "unreachable";
 };
-recycle: {
-recycle: {
-name: string;
-kind: string;
-status: string;
-generation_before: number;
-detail?: string | null | undefined;
-}[];
-fresh: {
-name: string;
-kind: string;
-generation: number;
-}[];
-recycle_stopped: {
-kind: string;
-name: string | null;
-detail: string;
-} | null;
-} | null;
 }>;
 readonly getConfigMode: (signal?: AbortSignal) => Promise<{
 config_mode: string;
 read_only: boolean;
 }>;
 readonly reloadConfig: (targets?: string[] | null) => Promise<{
+error: string | null;
+local_only: boolean;
+ok: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 }>;
 readonly listSubMcp: (signal?: AbortSignal) => Promise<Record<string, {
+access_pattern: string;
+mount_url: string;
 tools: string[];
 transport: string;
-mount_url: string;
-access_pattern: string;
 }>>;
 readonly createSubMcp: (slug: string, tools: string[], transport?: string) => Promise<{
 slug: string;
@@ -2289,10 +2566,11 @@ tools: string[];
 transport: string;
 }>;
 readonly deleteSubMcp: (slug: string) => Promise<{
+removed: boolean;
 slug: string;
-removed: true;
 }>;
 readonly getManifest: (signal?: AbortSignal) => Promise<{
+user_tools: string[];
 mcp: {
 [x: string]: unknown;
 managed?: {
@@ -2301,565 +2579,476 @@ provider_id: string;
 sub_service: string;
 } | null | undefined;
 }[];
-user_tools: string[];
 }>;
 readonly setMcpConfig: (mcp: unknown[]) => Promise<{
-status: string;
 env_keys: number;
-awaiting_respawn: {
-name: string;
-keys: string[];
-}[];
+status: string;
 fanout: {
 mode: "local-only";
 note: string;
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "fleet";
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "unreachable";
 };
-recycle: {
-recycle: {
-name: string;
-kind: string;
-status: string;
-generation_before: number;
-detail?: string | null | undefined;
-}[];
-fresh: {
-name: string;
-kind: string;
-generation: number;
-}[];
-recycle_stopped: {
-kind: string;
-name: string | null;
-detail: string;
-} | null;
-} | null;
 }>;
 readonly getMcpStatus: (signal?: AbortSignal) => Promise<{
 bound: Record<string, string[]>;
 failed: {
-title: string;
+category: string;
+http_status: number | null;
+message: string;
 status: string;
-category?: string | undefined;
-message?: string | undefined;
-http_status?: number | null | undefined;
+title: string;
 }[];
+health: Record<string, {
+consecutive_failures: number;
+failing_since: string | null;
+last_error: Record<string, string> | null;
+last_success: string | null;
+}>;
 }>;
 readonly reloadMcp: (title: string) => Promise<{
+error: string | null;
+local_only: boolean;
+ok: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 }>;
 readonly addToolsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
-status: string;
 env_keys: number;
-awaiting_respawn: {
-name: string;
-keys: string[];
-}[];
+status: string;
 fanout: {
 mode: "local-only";
 note: string;
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "fleet";
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "unreachable";
 };
-recycle: {
-recycle: {
-name: string;
-kind: string;
-status: string;
-generation_before: number;
-detail?: string | null | undefined;
-}[];
-fresh: {
-name: string;
-kind: string;
-generation: number;
-}[];
-recycle_stopped: {
-kind: string;
-name: string | null;
-detail: string;
-} | null;
-} | null;
 }>;
 readonly removeToolsEntry: (title: string) => Promise<{
-status: string;
 env_keys: number;
-awaiting_respawn: {
-name: string;
-keys: string[];
-}[];
+status: string;
 fanout: {
 mode: "local-only";
 note: string;
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "fleet";
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "unreachable";
 };
-recycle: {
-recycle: {
-name: string;
-kind: string;
-status: string;
-generation_before: number;
-detail?: string | null | undefined;
-}[];
-fresh: {
-name: string;
-kind: string;
-generation: number;
-}[];
-recycle_stopped: {
-kind: string;
-name: string | null;
-detail: string;
-} | null;
-} | null;
 }>;
 readonly addAgentsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
-status: string;
 env_keys: number;
-awaiting_respawn: {
-name: string;
-keys: string[];
-}[];
+status: string;
 fanout: {
 mode: "local-only";
 note: string;
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "fleet";
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "unreachable";
 };
-recycle: {
-recycle: {
-name: string;
-kind: string;
-status: string;
-generation_before: number;
-detail?: string | null | undefined;
-}[];
-fresh: {
-name: string;
-kind: string;
-generation: number;
-}[];
-recycle_stopped: {
-kind: string;
-name: string | null;
-detail: string;
-} | null;
-} | null;
 }>;
 readonly removeAgentsEntry: (title: string) => Promise<{
-status: string;
 env_keys: number;
-awaiting_respawn: {
-name: string;
-keys: string[];
-}[];
+status: string;
 fanout: {
 mode: "local-only";
 note: string;
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "fleet";
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "unreachable";
 };
-recycle: {
-recycle: {
-name: string;
-kind: string;
-status: string;
-generation_before: number;
-detail?: string | null | undefined;
-}[];
-fresh: {
-name: string;
-kind: string;
-generation: number;
-}[];
-recycle_stopped: {
-kind: string;
-name: string | null;
-detail: string;
-} | null;
-} | null;
 }>;
 readonly updateApiTools: (body: ApiToolsListsBody) => Promise<{
-status: string;
 env_keys: number;
-awaiting_respawn: {
-name: string;
-keys: string[];
-}[];
+status: string;
 fanout: {
 mode: "local-only";
 note: string;
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "fleet";
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "unreachable";
 };
-recycle: {
-recycle: {
-name: string;
-kind: string;
-status: string;
-generation_before: number;
-detail?: string | null | undefined;
-}[];
-fresh: {
-name: string;
-kind: string;
-generation: number;
-}[];
-recycle_stopped: {
-kind: string;
-name: string | null;
-detail: string;
-} | null;
-} | null;
 }>;
 readonly listFailedMcps: (signal?: AbortSignal) => Promise<{
+error: string | null;
+local_only: boolean;
+ok: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 }>;
 readonly reloadFailedMcps: () => Promise<{
+error: string | null;
+local_only: boolean;
+ok: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 }>;
 readonly deregisterMcp: (title: string) => Promise<{
+error: string | null;
+local_only: boolean;
+ok: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 }>;
 readonly listTemplates: (signal?: AbortSignal) => Promise<string[]>;
 readonly getTemplate: (templateId: string) => Promise<{
-template: string;
 schema: Record<string, unknown>;
+template: string;
 }>;
 readonly uploadTemplate: (path: string, content: string) => Promise<{
+fanout: {
+error: string | null;
+local_only: boolean | null;
+mode: string;
+note: string | null;
+op: string | null;
+reachable: boolean | null;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: string;
+payload: unknown;
+}[] | null;
+};
 path: string;
-uploaded: true;
+uploaded: boolean;
 }>;
 readonly deleteTemplate: (path: string) => Promise<{
+deleted: boolean;
+fanout: {
+error: string | null;
+local_only: boolean | null;
+mode: string;
+note: string | null;
+op: string | null;
+reachable: boolean | null;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: string;
+payload: unknown;
+}[] | null;
+};
 path: string;
-deleted: true;
 }>;
 readonly deleteTemplateDir: (path: string) => Promise<{
+deleted: boolean;
+fanout: {
+error: string | null;
+local_only: boolean | null;
+mode: string;
+note: string | null;
+op: string | null;
+reachable: boolean | null;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: string;
+payload: unknown;
+}[] | null;
+};
 path: string;
-deleted: true;
 }>;
 readonly renderTemplate: (text: TemplatedText) => Promise<{
 rendered: string;
 }>;
 readonly clearTemplatesCache: () => Promise<{
-cleared: true;
+cleared: boolean;
+fanout: {
+error: string | null;
+local_only: boolean | null;
+mode: string;
+note: string | null;
+op: string | null;
+reachable: boolean | null;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: string;
+payload: unknown;
+}[] | null;
+};
 }>;
 readonly listExtensions: (signal?: AbortSignal) => Promise<{
-name: string;
 kind: string;
+multiple: boolean;
+name: string;
 }[]>;
 readonly getToolExtensions: (name: string, signal?: AbortSignal) => Promise<{
+available: {
+kind: string;
+multiple: boolean;
+name: string;
+}[];
 combos: (string | {
 name: string;
 config: Record<string, unknown>;
 })[][];
-available: {
-name: string;
-kind: string;
-}[];
 }>;
 readonly setToolExtensions: (name: string, combos: readonly PresetExtensionElement[][]) => Promise<{
-status: string;
 env_keys: number;
-awaiting_respawn: {
-name: string;
-keys: string[];
-}[];
+status: string;
 fanout: {
 mode: "local-only";
 note: string;
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "fleet";
 } | {
+error: string | null;
+local_only: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 mode: "unreachable";
 };
-recycle: {
-recycle: {
-name: string;
-kind: string;
-status: string;
-generation_before: number;
-detail?: string | null | undefined;
-}[];
-fresh: {
-name: string;
-kind: string;
-generation: number;
-}[];
-recycle_stopped: {
-kind: string;
-name: string | null;
-detail: string;
-} | null;
-} | null;
 }>;
 readonly getBackendInfo: (signal?: AbortSignal) => Promise<{
-present: boolean;
 backend: string | null;
 module: string | null;
+present: boolean;
 }>;
 readonly listFleetWorkers: (signal?: AbortSignal) => Promise<{
 workers: {
-name: string;
-kind: "backend" | "serve";
-pid: number;
+beat_at: string;
 generation: number;
 joined_at: string;
-beat_at: string;
-state: "ready" | "resyncing" | "recycling";
-stale: boolean;
+kind: "backend" | "serve";
 last_op: {
+at: string;
 op: string;
 outcome: string;
-at: string;
 } | null;
+name: string;
+pid: number;
+stale: boolean;
+state: "resyncing" | "recycling" | "ready";
 }[];
 }>;
 readonly reloadFleetConfig: (targets: string[] | null) => Promise<{
+error: string | null;
+local_only: boolean;
+ok: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 }>;
 readonly getStorageInfo: (signal?: AbortSignal) => Promise<{
+module: string | null;
 present: boolean;
 provider: string | null;
-module: string | null;
 }>;
 readonly listStorageResources: (signal?: AbortSignal) => Promise<{
 resources: string[];
 }>;
 readonly statStorageResource: (id: string, signal?: AbortSignal) => Promise<{
+content_type: string;
 id: string;
-content_type: string | null;
 }>;
 readonly downloadStorageResource: (id: string, signal?: AbortSignal) => Promise<Blob>;
 readonly uploadStorageResource: (body: StorageUploadBody) => Promise<{
 id: string;
-stored: true;
+stored: boolean;
 }>;
 readonly deleteStorageResource: (id: string) => Promise<{
+deleted: boolean;
 id: string;
-deleted: true;
 }>;
 readonly deleteStorageDir: (path: string) => Promise<{
+deleted: boolean;
 dir: string;
-deleted: true;
 }>;
 readonly listToolMeta: (signal?: AbortSignal) => Promise<{
 folders: {
@@ -2868,25 +3057,25 @@ name: string;
 parent_id: string | null;
 }[];
 meta: {
-tool_name: string;
+badges: string[];
 display_name: string | null;
 folder_id: string | null;
-tags: string[];
-badges: string[];
 hidden: boolean | null;
+tags: string[];
+tool_name: string;
 }[];
 }>;
 readonly upsertToolMeta: (toolName: string, patch: ToolMetaPatch) => Promise<{
-tool_name: string;
+badges: string[];
 display_name: string | null;
 folder_id: string | null;
-tags: string[];
-badges: string[];
 hidden: boolean | null;
+tags: string[];
+tool_name: string;
 }>;
 readonly deleteToolMeta: (toolName: string) => Promise<{
+deleted: boolean;
 tool_name: string;
-deleted: true;
 }>;
 readonly createFolder: (name: string, parentId?: string | null) => Promise<{
 id: string;
@@ -2904,8 +3093,8 @@ name: string;
 parent_id: string | null;
 }>;
 readonly deleteFolder: (folderId: string) => Promise<{
+deleted: boolean;
 folder_id: string;
-deleted: true;
 }>;
 readonly listStates: (signal?: AbortSignal) => Promise<{
 default_subject_kind: string;
@@ -2938,10 +3127,10 @@ retention_days: number | null;
 subject_kinds: string[];
 updated_at: string | null;
 attachments: {
-template: string;
-path: string[];
-parameters: Record<string, unknown>;
 declarations: Record<string, unknown>;
+parameters: Record<string, unknown>;
+path: string[];
+template: string;
 }[];
 schema?: Record<string, unknown> | {
 content?: string | undefined;
@@ -2961,16 +3150,16 @@ regime: "single" | "composing" | "free";
 retention_days: number | null;
 subject_kinds: string[];
 updated_at: string | null;
-held: {
-save_id: string;
+held?: {
 held_by: string;
+save_id: string;
 subjects: {
+key: string;
+kind: string;
 target_kind: "tool" | "agent";
 target_name: string;
-kind: string;
-key: string;
 }[];
-}[];
+}[] | undefined;
 schema?: Record<string, unknown> | {
 content?: string | undefined;
 id?: string | undefined;
@@ -2978,188 +3167,179 @@ kwargs?: Record<string, unknown> | undefined;
 } | undefined;
 }>;
 readonly deleteState: (name: string) => Promise<{
+deleted: boolean;
 name: string;
-deleted: true;
 }>;
 readonly getStateStats: (name: string, signal?: AbortSignal) => Promise<{
-records: number;
+consumers: number;
 per_field: Record<string, number>;
 per_kind: Record<string, number>;
-consumers: number;
-held: {
-save_id: string;
+records: number;
+held?: {
 held_by: string;
+save_id: string;
 subjects: {
+key: string;
+kind: string;
 target_kind: "tool" | "agent";
 target_name: string;
-kind: string;
-key: string;
 }[];
-}[];
+}[] | undefined;
 }>;
 readonly listStateAttachments: (name: string, signal?: AbortSignal) => Promise<{
-template: string;
-path: string[];
-parameters: Record<string, unknown>;
 declarations: Record<string, unknown>;
+parameters: Record<string, unknown>;
+path: string[];
+state: string;
+template: string;
 }[]>;
 readonly getStateAttachment: (name: string, template: string, signal?: AbortSignal) => Promise<{
-template: string;
-path: string[];
-parameters: Record<string, unknown>;
 declarations: Record<string, unknown>;
+parameters: Record<string, unknown>;
+path: string[];
+template: string;
 }>;
 readonly attachStateTemplate: (name: string, template: string, body: StateAttachmentBody) => Promise<{
-attached: true;
+attached: boolean;
 state: string;
 template: string;
-held: {
-save_id: string;
+held?: {
 held_by: string;
+save_id: string;
 subjects: {
+key: string;
+kind: string;
 target_kind: "tool" | "agent";
 target_name: string;
-kind: string;
-key: string;
 }[];
-}[];
+}[] | undefined;
 }>;
 readonly patchStateAttachment: (name: string, template: string, body: StateAttachmentBody) => Promise<{
-updated: true;
 state: string;
 template: string;
-held: {
-save_id: string;
-held_by: string;
-subjects: {
-target_kind: "tool" | "agent";
-target_name: string;
-kind: string;
-key: string;
-}[];
-}[];
+updated: boolean;
 }>;
 readonly detachStateTemplate: (name: string, template: string) => Promise<{
-detached: true;
+detached: boolean;
 state: string;
 template: string;
 }>;
 readonly listStateSubjects: (name: string, params: {
 kind?: string;
 } & StatePageQuery, signal?: AbortSignal) => Promise<{
+next_cursor: string | null;
 subjects: {
 subject: {
+key: string;
+kind: string;
 target_kind: "tool" | "agent";
 target_name: string;
-kind: string;
-key: string;
 };
 updated_at: number;
 }[];
-next_cursor: string | null;
-held: {
-save_id: string;
+held?: {
 held_by: string;
+save_id: string;
 subjects: {
+key: string;
+kind: string;
 target_kind: "tool" | "agent";
 target_name: string;
-kind: string;
-key: string;
 }[];
-}[];
+}[] | undefined;
 }>;
 readonly searchStateRecords: (name: string, body: {
 filters: Record<string, unknown>;
 } & StatePageQuery, signal?: AbortSignal) => Promise<{
 matches: {
 subject: {
+key: string;
+kind: string;
 target_kind: "tool" | "agent";
 target_name: string;
-kind: string;
-key: string;
 };
 updated_at: number;
 }[];
 next_cursor: string | null;
-held: {
-save_id: string;
+held?: {
 held_by: string;
+save_id: string;
 subjects: {
+key: string;
+kind: string;
 target_kind: "tool" | "agent";
 target_name: string;
-kind: string;
-key: string;
 }[];
-}[];
+}[] | undefined;
 }>;
 readonly getStateRecord: (name: string, subject: StateSubjectRef, signal?: AbortSignal) => Promise<{
-state: string;
-subject: {
+canonical_subject: {
+key: string;
+kind: string;
 target_kind: "tool" | "agent";
 target_name: string;
-kind: string;
-key: string;
 };
 data: Record<string, unknown>;
-seq: number;
-canonical_subject: {
-target_kind: "tool" | "agent";
-target_name: string;
-kind: string;
-key: string;
-};
 folded_from: {
+key: string;
+kind: string;
 target_kind: "tool" | "agent";
 target_name: string;
-kind: string;
-key: string;
 }[];
+seq: number;
+state: string;
+subject: {
+key: string;
+kind: string;
+target_kind: "tool" | "agent";
+target_name: string;
+};
 } | null>;
 readonly putStateRecord: (name: string, subject: StateSubjectRef, data: Record<string, unknown>) => Promise<{
-state: string;
-subject: {
+canonical_subject: {
+key: string;
+kind: string;
 target_kind: "tool" | "agent";
 target_name: string;
-kind: string;
-key: string;
 };
 data: Record<string, unknown>;
-seq: number;
-canonical_subject: {
-target_kind: "tool" | "agent";
-target_name: string;
-kind: string;
-key: string;
-};
 folded_from: {
+key: string;
+kind: string;
 target_kind: "tool" | "agent";
 target_name: string;
-kind: string;
-key: string;
 }[];
+seq: number;
+state: string;
+subject: {
+key: string;
+kind: string;
+target_kind: "tool" | "agent";
+target_name: string;
+};
 }>;
 readonly patchStateRecord: (name: string, subject: StateSubjectRef, data: Record<string, unknown>) => Promise<{
-state: string;
-subject: {
+canonical_subject: {
+key: string;
+kind: string;
 target_kind: "tool" | "agent";
 target_name: string;
-kind: string;
-key: string;
 };
 data: Record<string, unknown>;
-seq: number;
-canonical_subject: {
-target_kind: "tool" | "agent";
-target_name: string;
-kind: string;
-key: string;
-};
 folded_from: {
+key: string;
+kind: string;
 target_kind: "tool" | "agent";
 target_name: string;
-kind: string;
-key: string;
 }[];
+seq: number;
+state: string;
+subject: {
+key: string;
+kind: string;
+target_kind: "tool" | "agent";
+target_name: string;
+};
 }>;
 readonly applyStateRecord: (name: string, subject: StateSubjectRef, ops: readonly Record<string, unknown>[]) => Promise<{
 applied: boolean;
@@ -3176,55 +3356,56 @@ readonly applyTemplateJq: (name: string, subject: StateSubjectRef, jqName: strin
 input?: unknown;
 op_id?: string;
 }) => Promise<{
-name: string;
 applied: boolean;
 data: Record<string, unknown> | null;
+name: string;
 seq: number | null;
 skipped: Record<string, unknown>[];
 }>;
 readonly deleteStateRecord: (name: string, subject: StateSubjectRef) => Promise<{
-erased: true;
+erased: boolean;
 }>;
 readonly foldStateRecord: (name: string, subject: StateSubjectRef, into: StateSubjectRef, mode: "switch" | "merge") => Promise<{
-mode: "switch" | "merge";
-from: {
-kind: string;
-key: string;
-};
-into: {
-kind: string;
-key: string;
-};
 already: boolean;
 flattened: number;
+from: {
+key: string;
+kind: string;
+};
+into: {
+key: string;
+kind: string;
+};
+merged_members: string[] | null;
+mode: "switch" | "merge";
 }>;
 readonly listStateWrites: (name: string, subject: StateSubjectRef, params?: StatePageQuery, signal?: AbortSignal) => Promise<{
 items: {
-seq: number;
 at: string;
 origin: {
-consumer: string | null;
-meta: Record<string, unknown> | null;
-run_id: string | null;
-op_id: string | null;
-door: string;
 actor: string | null;
-turn_id: string | null;
+consumer: string | null;
+door: "tool" | "api" | "conversation" | "hook" | "schedule" | "operator";
 inbound_id: string | null;
+meta: Record<string, unknown> | null;
+op_id: string | null;
+run_id: string | null;
+turn_id: string | null;
 };
 paths: (string | number)[][];
+seq: number;
 }[];
 next_cursor: string | null;
 }>;
 readonly stateConsumers: (name: string, signal?: AbortSignal) => Promise<{
-kind: string;
-name: string | null;
 detail: string | null;
+kind: string;
 link: {
-token: string | null;
 plugin_path: string | null;
 search: Record<string, unknown> | null;
+token: string | null;
 } | null;
+name: string | null;
 unavailable: string | null;
 }[]>;
 readonly listStateTemplates: (signal?: AbortSignal) => Promise<{
@@ -3404,111 +3585,114 @@ enabled: boolean;
 } | undefined;
 }>;
 readonly deleteStateTemplate: (name: string) => Promise<{
+deleted: boolean;
 name: string;
-deleted: true;
 }>;
 readonly pruneStateRetention: () => Promise<{
 pruned: Record<string, number>;
-held: {
-save_id: string;
+held?: {
 held_by: string;
+save_id: string;
 subjects: {
+key: string;
+kind: string;
 target_kind: "tool" | "agent";
 target_name: string;
-kind: string;
-key: string;
 }[];
-}[];
+}[] | undefined;
 }>;
 readonly listPendingSaves: (params: {
 status?: "outstanding" | "failed";
 } & StatePageQuery, signal?: AbortSignal) => Promise<{
+failed: number;
 items: {
-id: string;
-status: "running" | "failed" | "pending" | "calls";
-run_id: string | null;
-states: string[];
-subjects: {
-state: string;
-subject: {
-target_kind: "tool" | "agent";
-target_name: string;
-kind: string;
-key: string;
-};
-}[];
+attempts: number;
 calls: {
 kind: string;
 target: string;
 }[];
-attempts: number;
-last_error: string | null;
-failed_phase: "records" | "calls" | null;
 created_at: string;
 failed_at: string | null;
+failed_phase: "calls" | "records" | null;
+id: string;
+last_error: string | null;
+run_id: string | null;
+states: string[];
+status: "running" | "failed" | "calls" | "pending";
+subjects: {
+state: string;
+subject: {
+key: string;
+kind: string;
+target_kind: "tool" | "agent";
+target_name: string;
+};
+}[];
 }[];
 next_cursor: string | null;
 outstanding: number;
-failed: number;
 }>;
 readonly retryPendingSave: (id: string) => Promise<{
 id: string;
-status: "running" | "failed" | "applied" | "pending" | "calls";
 last_error: string | null;
+status: "running" | "applied" | "failed" | "calls" | "pending";
 }>;
 readonly discardPendingSave: (id: string) => Promise<{
 discarded: string;
 }>;
 readonly listPresets: (signal?: AbortSignal) => Promise<{
-name: string;
-base_tool: string;
-description: string;
 active_version: number;
+base_tool: string;
+conflicted: boolean;
+conflicted_reason: string | null;
+description: string;
+input_schema: Record<string, unknown> | null;
+name: string;
+output_schema: Record<string, unknown> | null;
+used_by: string[];
+uses: string[];
 extensions: (string | {
 name: string;
 config: Record<string, unknown>;
 })[][];
-output_schema: Record<string, unknown> | null;
-input_schema: Record<string, unknown> | null;
-conflicted: boolean;
-conflicted_reason: string | null;
-uses: string[];
-used_by: string[];
 }[]>;
 readonly createPreset: (body: CreatePresetBody) => Promise<{
-name: string;
-base_tool: string;
-description: string;
 active_version: number;
+base_tool: string;
+conflicted: boolean;
+conflicted_reason: string | null;
+description: string;
+input_schema: Record<string, unknown> | null;
+name: string;
+output_schema: Record<string, unknown> | null;
+used_by: string[];
+uses: string[];
 extensions: (string | {
 name: string;
 config: Record<string, unknown>;
 })[][];
-output_schema: Record<string, unknown> | null;
-input_schema: Record<string, unknown> | null;
-conflicted: boolean;
-conflicted_reason: string | null;
-uses: string[];
-used_by: string[];
 }>;
 readonly getPreset: (name: string, signal?: AbortSignal) => Promise<{
-name: string;
-base_tool: string;
-description: string;
 active_version: number;
+base_tool: string;
+conflicted: boolean;
+conflicted_reason: string | null;
+description: string;
+fixed_kwargs: Record<string, unknown>;
+input_schema: Record<string, unknown> | null;
+name: string;
+output_schema: Record<string, unknown> | null;
+used_by: string[];
+uses: string[];
 extensions: (string | {
 name: string;
 config: Record<string, unknown>;
 })[][];
-output_schema: Record<string, unknown> | null;
-input_schema: Record<string, unknown> | null;
-conflicted: boolean;
-conflicted_reason: string | null;
-uses: string[];
-used_by: string[];
-fixed_kwargs: Record<string, unknown>;
 }>;
 readonly listPresetVersions: (name: string, signal?: AbortSignal) => Promise<{
+created_at: string;
+is_current: boolean;
+tags: string[];
 version: number;
 body: {
 base_tool: string;
@@ -3569,11 +3753,11 @@ template_jq: string | null;
 }[];
 } | null;
 };
-tags: string[];
-created_at: string;
-is_current: boolean;
 }[]>;
 readonly getPresetVersion: (name: string, version: number, signal?: AbortSignal) => Promise<{
+created_at: string;
+is_current: boolean;
+tags: string[];
 version: number;
 body: {
 base_tool: string;
@@ -3634,11 +3818,11 @@ template_jq: string | null;
 }[];
 } | null;
 };
-tags: string[];
-created_at: string;
-is_current: boolean;
 }>;
 readonly savePresetVersion: (name: string, body: SavePresetVersionBody) => Promise<{
+created_at: string;
+is_current: boolean;
+tags: string[];
 version: number;
 body: {
 base_tool: string;
@@ -3699,73 +3883,161 @@ template_jq: string | null;
 }[];
 } | null;
 };
-tags: string[];
-created_at: string;
-is_current: boolean;
 }>;
 readonly rollbackPreset: (name: string, version: number) => Promise<{
-name: string;
 active_version: number;
+fanout: {
+error: string | null;
+local_only: boolean | null;
+mode: string;
+note: string | null;
+op: string | null;
+reachable: boolean | null;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: string;
+payload: unknown;
+}[] | null;
+};
+name: string;
 }>;
 readonly deletePreset: (name: string) => Promise<{
+deleted: boolean;
+fanout: {
+error: string | null;
+local_only: boolean | null;
+mode: string;
+note: string | null;
+op: string | null;
+reachable: boolean | null;
+results: {
+detail: string | null;
+error: string | null;
 name: string;
-deleted: true;
+outcome: string;
+payload: unknown;
+}[] | null;
+};
+name: string;
 }>;
 readonly renamePreset: (name: string, newName: string) => Promise<{
+active_version: number;
+fanout: {
+error: string | null;
+local_only: boolean | null;
+mode: string;
+note: string | null;
+op: string | null;
+reachable: boolean | null;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: string;
+payload: unknown;
+}[] | null;
+};
 name: string;
 renamed_from: string;
-active_version: number;
 }>;
 readonly getPresetReferees: (name: string, signal?: AbortSignal) => Promise<{
 name: string;
 referees: string[];
 }>;
 readonly validatePreset: (body: ValidatePresetBody) => Promise<{
-valid: boolean;
 error: string | null;
+valid: boolean;
 }>;
 readonly setPresetVersionTags: (name: string, version: number, tags: readonly string[]) => Promise<{
 name: string;
-version: number;
 tags: string[];
+version: number;
 }>;
 readonly listTools: (signal?: AbortSignal) => Promise<string[]>;
 readonly getToolSchema: (name: string, signal?: AbortSignal) => Promise<{
+description: string | null;
 input: Record<string, unknown>;
 output: Record<string, unknown> | null;
-description: string | null;
 }>;
 readonly getAllToolSchemas: (signal?: AbortSignal) => Promise<Record<string, {
+description: string | null;
 input: Record<string, unknown>;
 output: Record<string, unknown> | null;
-description: string | null;
 }>>;
-readonly runTool: (args: RunToolArgs, signal?: AbortSignal) => Promise<unknown>;
+readonly runTool: (args: RunToolArgs, signal?: AbortSignal) => Promise<{
+asks: {
+answer_format: string | null;
+asked_by: string[] | null;
+audience: string | null;
+channel: string | null;
+created_at: string | null;
+error: unknown;
+expiry_at: string | null;
+format_payload: Record<string, unknown> | null;
+group_id: string | null;
+id: string;
+media: Record<string, unknown>[] | null;
+on_expiry: "kill" | "resume" | null;
+payload: Record<string, unknown> | null;
+question: string | null;
+recipient: string | null;
+result: unknown;
+status: "running" | "asking" | "failed" | "finished";
+thread_id: string | null;
+to: "caller" | "user" | null;
+}[];
+kind: "asks";
+suspended: {
+caller_interaction_ids: string[];
+expiry_at: string | null;
+interaction_id: string;
+interaction_ids: string[];
+resume_owner: string | null;
+};
+} | {
+kind: "none";
+} | {
+kind: "parked";
+suspended: {
+caller_interaction_ids: string[];
+expiry_at: string | null;
+interaction_id: string;
+interaction_ids: string[];
+resume_owner: string | null;
+};
+} | {
+kind: "result";
+result: unknown;
+}>;
 readonly reloadTool: (args: ToolAdminArgs) => Promise<{
+error: string | null;
+local_only: boolean;
+ok: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 }>;
 readonly removeTool: (args: ToolAdminArgs) => Promise<{
+error: string | null;
+local_only: boolean;
+ok: boolean;
 op: string;
 reachable: boolean;
-local_only: boolean;
 results: {
-name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
 detail: string | null;
-}[];
 error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
 }>;
 readonly submitToolRun: (args: SubmitToolRunArgs, signal?: AbortSignal) => Promise<{
 run_id: string;
@@ -3773,26 +4045,26 @@ run_id: string;
 readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
 run_id: string;
 tool_name: string;
-status: "running" | "failed" | "parked" | "succeeded" | "lost";
+status: "running" | "parked" | "failed" | "succeeded" | "lost";
 started_at: string;
 finished_at?: string | undefined;
 result?: unknown;
 error?: string | undefined;
-outcome?: unknown;
 resumed_interactions?: string[] | undefined;
 }>;
 readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
 run_id: string;
 tool_name: string;
-status: "running" | "failed" | "parked" | "succeeded" | "lost";
+status: "running" | "parked" | "failed" | "succeeded" | "lost";
 started_at: string;
 finished_at?: string | undefined;
 }[]>;
 readonly listToolTags: (signal?: AbortSignal) => Promise<{
-name: string;
-tags: string[];
 badges: string[];
 hidden: boolean;
+name: string;
+schedulable: boolean;
+tags: string[];
 }[]>;
 readonly baseUrl: string;
 } | null>;
@@ -3842,7 +4114,7 @@ const applyResult: z.ZodObject<{
     data: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
     seq: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     skipped: z.ZodDefault<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-}, z.core.$strip>;
+}, z.core.$strict>;
 
 // @public
 export const ArrowDownIcon: IconComponent;
@@ -3858,16 +4130,17 @@ type AttachmentMediaItem = z.infer<typeof attachmentMediaItem>;
 
 // @public
 const attachmentMediaItem: z.ZodObject<{
+    caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     kind: z.ZodEnum<{
         image: "image";
-        audio: "audio";
+        link: "link";
         document: "document";
         video: "video";
+        audio: "audio";
     }>;
     url: z.ZodString;
-    caption: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    filename: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-}, z.core.$strip>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type AttachmentMediaKind = z.infer<typeof attachmentMediaKind>;
@@ -3875,9 +4148,10 @@ type AttachmentMediaKind = z.infer<typeof attachmentMediaKind>;
 // @public
 const attachmentMediaKind: z.ZodEnum<{
     image: "image";
-    audio: "audio";
+    link: "link";
     document: "document";
     video: "video";
+    audio: "audio";
 }>;
 
 // @public (undocumented)
@@ -3887,8 +4161,8 @@ type AuthCapabilities = z.infer<typeof authCapabilities>;
 const authCapabilities: z.ZodObject<{
     mintable: z.ZodBoolean;
     providers: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
         mintable: z.ZodBoolean;
+        name: z.ZodString;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 
@@ -3902,34 +4176,34 @@ type AuthRoute = z.infer<typeof authRoute>;
 
 // @public
 const authRoute: z.ZodObject<{
-    path: z.ZodString;
-    methods: z.ZodArray<z.ZodString>;
-    mapped: z.ZodNullable<z.ZodString>;
-    tags: z.ZodArray<z.ZodString>;
-    summary: z.ZodString;
     action: z.ZodNullable<z.ZodEnum<{
         read: "read";
         write: "write";
-        fenced: "fenced";
         secret: "secret";
+        fenced: "fenced";
     }>>;
     declared_public: z.ZodBoolean;
+    mapped: z.ZodNullable<z.ZodString>;
+    methods: z.ZodArray<z.ZodString>;
+    path: z.ZodString;
+    summary: z.ZodString;
+    tags: z.ZodArray<z.ZodString>;
 }, z.core.$strip>;
 
 // @public (undocumented)
 const authRoutes: z.ZodArray<z.ZodObject<{
-    path: z.ZodString;
-    methods: z.ZodArray<z.ZodString>;
-    mapped: z.ZodNullable<z.ZodString>;
-    tags: z.ZodArray<z.ZodString>;
-    summary: z.ZodString;
     action: z.ZodNullable<z.ZodEnum<{
         read: "read";
         write: "write";
-        fenced: "fenced";
         secret: "secret";
+        fenced: "fenced";
     }>>;
     declared_public: z.ZodBoolean;
+    mapped: z.ZodNullable<z.ZodString>;
+    methods: z.ZodArray<z.ZodString>;
+    path: z.ZodString;
+    summary: z.ZodString;
+    tags: z.ZodArray<z.ZodString>;
 }, z.core.$strip>>;
 
 // @public
@@ -3947,22 +4221,13 @@ export interface AuthState {
 }
 
 // @public (undocumented)
-type AwaitingWorker = z.infer<typeof awaitingWorker>;
-
-// @public
-const awaitingWorker: z.ZodObject<{
-    name: z.ZodString;
-    keys: z.ZodArray<z.ZodString>;
-}, z.core.$strip>;
-
-// @public (undocumented)
 type BackendInfo = z.infer<typeof backendInfo>;
 
 // @public
 const backendInfo: z.ZodObject<{
+    backend: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    module: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     present: z.ZodBoolean;
-    backend: z.ZodNullable<z.ZodString>;
-    module: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -3970,10 +4235,10 @@ type BackupDocument = z.infer<typeof backupDocument>;
 
 // @public
 const backupDocument: z.ZodObject<{
-    version: z.ZodLiteral<1>;
     created_at: z.ZodString;
+    errors: z.ZodRecord<z.ZodString, z.ZodString>;
     sections: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    errors: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+    version: z.ZodNumber;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -3983,90 +4248,143 @@ type BackupImportReport = z.infer<typeof backupImportReport>;
 const backupImportReport: z.ZodObject<{
     ok: z.ZodBoolean;
     sections: z.ZodRecord<z.ZodString, z.ZodObject<{
-        created: z.ZodNumber;
-        updated: z.ZodNumber;
-        skipped: z.ZodNumber;
-        errors: z.ZodArray<z.ZodString>;
-        details: z.ZodObject<{
+        created: z.ZodDefault<z.ZodNumber>;
+        errors: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        skipped: z.ZodDefault<z.ZodNumber>;
+        updated: z.ZodDefault<z.ZodNumber>;
+        fanout: z.ZodDefault<z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
+            mode: z.ZodLiteral<"local-only">;
+            note: z.ZodString;
+        }, z.core.$strip>, z.ZodObject<{
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            local_only: z.ZodDefault<z.ZodBoolean>;
+            op: z.ZodString;
+            reachable: z.ZodDefault<z.ZodBoolean>;
+            results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                name: z.ZodString;
+                outcome: z.ZodEnum<{
+                    applied: "applied";
+                    failed: "failed";
+                    missing: "missing";
+                    departed: "departed";
+                    timed_out: "timed_out";
+                    resyncing: "resyncing";
+                    recycling: "recycling";
+                    stale: "stale";
+                }>;
+                payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+            }, z.core.$strip>>>;
+            mode: z.ZodLiteral<"fleet">;
+        }, z.core.$strip>, z.ZodObject<{
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            local_only: z.ZodDefault<z.ZodBoolean>;
+            op: z.ZodString;
+            reachable: z.ZodDefault<z.ZodBoolean>;
+            results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                name: z.ZodString;
+                outcome: z.ZodEnum<{
+                    applied: "applied";
+                    failed: "failed";
+                    missing: "missing";
+                    departed: "departed";
+                    timed_out: "timed_out";
+                    resyncing: "resyncing";
+                    recycling: "recycling";
+                    stale: "stale";
+                }>;
+                payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+            }, z.core.$strip>>>;
+            mode: z.ZodLiteral<"unreachable">;
+        }, z.core.$strip>], "mode">>>;
+        details: z.ZodDefault<z.ZodObject<{
             new_api_keys: z.ZodOptional<z.ZodArray<z.ZodObject<{
                 user_id: z.ZodString;
                 description: z.ZodString;
                 api_key: z.ZodString;
             }, z.core.$strip>>>;
-        }, z.core.$loose>;
-        fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
-            mode: z.ZodLiteral<"local-only">;
-            note: z.ZodString;
-        }, z.core.$strip>, z.ZodObject<{
-            op: z.ZodString;
-            reachable: z.ZodBoolean;
-            local_only: z.ZodBoolean;
-            results: z.ZodArray<z.ZodObject<{
-                name: z.ZodString;
-                outcome: z.ZodEnum<{
-                    failed: "failed";
-                    applied: "applied";
-                    resyncing: "resyncing";
-                    recycling: "recycling";
-                    stale: "stale";
-                    missing: "missing";
-                    departed: "departed";
-                    timed_out: "timed_out";
-                }>;
-                payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-                error: z.ZodNullable<z.ZodString>;
-                detail: z.ZodNullable<z.ZodString>;
-            }, z.core.$strip>>;
-            error: z.ZodNullable<z.ZodString>;
-            mode: z.ZodLiteral<"fleet">;
-        }, z.core.$strip>, z.ZodObject<{
-            op: z.ZodString;
-            reachable: z.ZodBoolean;
-            local_only: z.ZodBoolean;
-            results: z.ZodArray<z.ZodObject<{
-                name: z.ZodString;
-                outcome: z.ZodEnum<{
-                    failed: "failed";
-                    applied: "applied";
-                    resyncing: "resyncing";
-                    recycling: "recycling";
-                    stale: "stale";
-                    missing: "missing";
-                    departed: "departed";
-                    timed_out: "timed_out";
-                }>;
-                payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-                error: z.ZodNullable<z.ZodString>;
-                detail: z.ZodNullable<z.ZodString>;
-            }, z.core.$strip>>;
-            error: z.ZodNullable<z.ZodString>;
-            mode: z.ZodLiteral<"unreachable">;
-        }, z.core.$strip>], "mode">>;
-        recycle: z.ZodNullable<z.ZodObject<{
-            recycle: z.ZodArray<z.ZodObject<{
-                name: z.ZodString;
-                kind: z.ZodString;
-                status: z.ZodString;
-                generation_before: z.ZodNumber;
-                detail: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-            }, z.core.$strip>>;
-            fresh: z.ZodArray<z.ZodObject<{
-                name: z.ZodString;
-                kind: z.ZodString;
-                generation: z.ZodNumber;
-            }, z.core.$strip>>;
-            recycle_stopped: z.ZodNullable<z.ZodObject<{
-                kind: z.ZodString;
-                name: z.ZodNullable<z.ZodString>;
-                detail: z.ZodString;
-            }, z.core.$strip>>;
-        }, z.core.$strip>>;
-        awaiting_respawn: z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
-            keys: z.ZodArray<z.ZodString>;
-        }, z.core.$strip>>;
-    }, z.core.$strip>>;
+        }, z.core.$catchall<z.ZodUnknown>>>;
+    }, z.core.$strict>>;
 }, z.core.$strip>;
+
+// @public (undocumented)
+type BackupNewApiKeys = z.infer<typeof backupNewApiKeys>;
+
+// @public
+const backupNewApiKeys: z.ZodArray<z.ZodObject<{
+    user_id: z.ZodString;
+    description: z.ZodString;
+    api_key: z.ZodString;
+}, z.core.$strip>>;
+
+// @public (undocumented)
+type BackupSectionReport = z.infer<typeof backupSectionReport>;
+
+// @public (undocumented)
+const backupSectionReport: z.ZodObject<{
+    created: z.ZodDefault<z.ZodNumber>;
+    errors: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    skipped: z.ZodDefault<z.ZodNumber>;
+    updated: z.ZodDefault<z.ZodNumber>;
+    fanout: z.ZodDefault<z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        mode: z.ZodLiteral<"local-only">;
+        note: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
+        op: z.ZodString;
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            name: z.ZodString;
+            outcome: z.ZodEnum<{
+                applied: "applied";
+                failed: "failed";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+            }>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
+        mode: z.ZodLiteral<"fleet">;
+    }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
+        op: z.ZodString;
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            name: z.ZodString;
+            outcome: z.ZodEnum<{
+                applied: "applied";
+                failed: "failed";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+            }>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
+        mode: z.ZodLiteral<"unreachable">;
+    }, z.core.$strip>], "mode">>>;
+    details: z.ZodDefault<z.ZodObject<{
+        new_api_keys: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            user_id: z.ZodString;
+            description: z.ZodString;
+            api_key: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$catchall<z.ZodUnknown>>>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 const backupSections: z.ZodArray<z.ZodObject<{
@@ -4235,21 +4553,37 @@ type CallerAsksEnvelope = z.infer<typeof callerAsksEnvelope>;
 // @public
 const callerAsksEnvelope: z.ZodObject<{
     asks: z.ZodArray<z.ZodObject<{
+        answer_format: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        asked_by: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+        audience: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        channel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        created_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        error: z.ZodDefault<z.ZodUnknown>;
+        expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        format_payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        group_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         id: z.ZodString;
+        media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>>;
+        on_expiry: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            kill: "kill";
+            resume: "resume";
+        }>>>;
+        payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        question: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        recipient: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        result: z.ZodDefault<z.ZodUnknown>;
         status: z.ZodEnum<{
             running: "running";
-            failed: "failed";
             asking: "asking";
+            failed: "failed";
             finished: "finished";
         }>;
-        to: z.ZodOptional<z.ZodNullable<z.ZodEnum<{
-            user: "user";
+        thread_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        to: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
             caller: "caller";
+            user: "user";
         }>>>;
-        question: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        payload: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-        asked_by: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
-    }, z.core.$strip>>;
+    }, z.core.$strict>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -4287,6 +4621,67 @@ export interface CardProps extends SurfaceProps {
 }
 
 // @public (undocumented)
+type ChannelConversationRouteCreate = z.input<typeof channelConversationRouteCreate>;
+
+// @public (undocumented)
+const channelConversationRouteCreate: z.ZodObject<{
+    callback_url: z.ZodDefault<z.ZodNull>;
+    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    channel: z.ZodString;
+    door: z.ZodLiteral<"channel">;
+    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    execution_key: z.ZodString;
+    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    initial_mode: z.ZodDefault<z.ZodEnum<{
+        agent: "agent";
+        manual: "manual";
+    }>>;
+    locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    our_identity: z.ZodString;
+    overlap: z.ZodDefault<z.ZodObject<{
+        deliver: z.ZodDefault<z.ZodEnum<{
+            one: "one";
+            all: "all";
+        }>>;
+        running: z.ZodDefault<z.ZodEnum<{
+            continue: "continue";
+            cancel: "cancel";
+        }>>;
+        settle_seconds: z.ZodDefault<z.ZodNumber>;
+    }, z.core.$strip>>;
+    reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    route_name: z.ZodString;
+    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    target_kind: z.ZodEnum<{
+        tool: "tool";
+        agent: "agent";
+    }>;
+    target_name: z.ZodString;
+    turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
 type Channels = z.infer<typeof channels>;
 
 // @public (undocumented)
@@ -4301,8 +4696,8 @@ type ChannelTemplate = z.infer<typeof channelTemplate>;
 const channelTemplate: z.ZodObject<{
     language: z.ZodString;
     name: z.ZodString;
-    parameters: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
-}, z.core.$strip>;
+    parameters: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 export function Checkbox(input: CheckboxProps): JSX.Element;
@@ -4357,8 +4752,8 @@ type ClaimLinkCreated = z.infer<typeof claimLinkCreated>;
 // @public
 const claimLinkCreated: z.ZodObject<{
     claim_path: z.ZodString;
-    token: z.ZodString;
     expires_at: z.ZodString;
+    token: z.ZodString;
 }, z.core.$strip>;
 
 // @public
@@ -4388,15 +4783,22 @@ type CompletedOrigin = z.infer<typeof completedOrigin>;
 
 // @public
 const completedOrigin: z.ZodObject<{
-    consumer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    meta: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-    run_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    door: z.ZodString;
     actor: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    turn_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    consumer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    door: z.ZodEnum<{
+        tool: "tool";
+        api: "api";
+        conversation: "conversation";
+        hook: "hook";
+        schedule: "schedule";
+        operator: "operator";
+    }>;
     inbound_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-}, z.core.$strip>;
+    meta: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    run_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    turn_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+}, z.core.$strict>;
 
 // @public
 export function CompletionInput(input: CompletionInputProps): ReactNode;
@@ -4420,12 +4822,12 @@ export type CompletionProvider = (argName: string, partial: string) => Promise<s
 const configFieldView: z.ZodObject<{
     key: z.ZodString;
     label: z.ZodString;
+    required: z.ZodDefault<z.ZodBoolean>;
+    secret: z.ZodDefault<z.ZodBoolean>;
     target: z.ZodEnum<{
-        env: "env";
         header: "header";
+        env: "env";
     }>;
-    required: z.ZodBoolean;
-    secret: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public
@@ -4457,55 +4859,53 @@ export interface ConfirmDialogProps {
     readonly title: string;
 }
 
-// @public (undocumented)
+// @public
 const connectionsList: z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
-        connection_id: z.ZodString;
-        provider_id: z.ZodString;
+        account_identity: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         alias: z.ZodString;
-        kind: z.ZodEnum<{
-            none: "none";
-            oauth: "oauth";
-        }>;
-        account_identity: z.ZodNullable<z.ZodString>;
-        enabled_sub_services: z.ZodArray<z.ZodString>;
-        granted_scopes: z.ZodArray<z.ZodString>;
-        unreachable_sub_services: z.ZodDefault<z.ZodArray<z.ZodString>>;
-        scopes_wanted: z.ZodDefault<z.ZodArray<z.ZodString>>;
         auth_health_state: z.ZodEnum<{
             healthy: "healthy";
             reconnect_required: "reconnect_required";
             refresh_failing: "refresh_failing";
         }>;
+        connection_id: z.ZodString;
         created_at: z.ZodString;
+        enabled_sub_services: z.ZodArray<z.ZodString>;
+        granted_scopes: z.ZodArray<z.ZodString>;
+        kind: z.ZodEnum<{
+            none: "none";
+            oauth: "oauth";
+        }>;
+        provider_id: z.ZodString;
+        unreachable_sub_services: z.ZodDefault<z.ZodArray<z.ZodString>>;
     }, z.core.$strip>>;
     total: z.ZodNumber;
-    unhealthy: z.ZodOptional<z.ZodNumber>;
+    unhealthy: z.ZodNumber;
 }, z.core.$strip>;
 
 // @public (undocumented)
 type ConnectionView = z.infer<typeof connectionView>;
 
-// @public (undocumented)
+// @public
 const connectionView: z.ZodObject<{
-    connection_id: z.ZodString;
-    provider_id: z.ZodString;
+    account_identity: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     alias: z.ZodString;
-    kind: z.ZodEnum<{
-        none: "none";
-        oauth: "oauth";
-    }>;
-    account_identity: z.ZodNullable<z.ZodString>;
-    enabled_sub_services: z.ZodArray<z.ZodString>;
-    granted_scopes: z.ZodArray<z.ZodString>;
-    unreachable_sub_services: z.ZodDefault<z.ZodArray<z.ZodString>>;
-    scopes_wanted: z.ZodDefault<z.ZodArray<z.ZodString>>;
     auth_health_state: z.ZodEnum<{
         healthy: "healthy";
         reconnect_required: "reconnect_required";
         refresh_failing: "refresh_failing";
     }>;
+    connection_id: z.ZodString;
     created_at: z.ZodString;
+    enabled_sub_services: z.ZodArray<z.ZodString>;
+    granted_scopes: z.ZodArray<z.ZodString>;
+    kind: z.ZodEnum<{
+        none: "none";
+        oauth: "oauth";
+    }>;
+    provider_id: z.ZodString;
+    unreachable_sub_services: z.ZodDefault<z.ZodArray<z.ZodString>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -4513,8 +4913,8 @@ type ConnectorCategoryView = z.infer<typeof connectorCategoryView>;
 
 // @public
 const connectorCategoryView: z.ZodObject<{
-    id: z.ZodString;
     display_name: z.ZodString;
+    id: z.ZodString;
     sort_order: z.ZodNumber;
 }, z.core.$strip>;
 
@@ -4536,26 +4936,26 @@ type ConsumerLink = z.infer<typeof consumerLink>;
 
 // @public
 const consumerLink: z.ZodObject<{
-    token: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     plugin_path: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     search: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-}, z.core.$strip>;
+    token: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type ConsumerRow = z.infer<typeof consumerRow>;
 
 // @public
 const consumerRow: z.ZodObject<{
-    kind: z.ZodString;
-    name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    kind: z.ZodString;
     link: z.ZodDefault<z.ZodNullable<z.ZodObject<{
-        token: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         plugin_path: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         search: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-    }, z.core.$strip>>>;
+        token: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strict>>>;
+    name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-}, z.core.$strip>;
+}, z.core.$strict>;
 
 // @public
 interface ControlRefProps<T> {
@@ -4569,10 +4969,10 @@ type ConversationAnswerStatus = z.infer<typeof conversationAnswerStatus>;
 // @public
 const conversationAnswerStatus: z.ZodEnum<{
     error: "error";
-    silent: "silent";
-    merged: "merged";
     superseded: "superseded";
     answered: "answered";
+    silent: "silent";
+    merged: "merged";
 }>;
 
 // @public (undocumented)
@@ -4594,24 +4994,24 @@ type ConversationConfigs = z.infer<typeof conversationConfigs>;
 // @public
 const conversationConfigs: z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
-        greeting_template: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+        greeting_template: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         multichannel: z.ZodDefault<z.ZodBoolean>;
-        state_binding: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             states: z.ZodArray<z.ZodObject<{
                 input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     into: z.ZodString;
-                    jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                    }, z.core.$strict>>>;
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
-                scope_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
+                }, z.core.$strict>>>;
                 state: z.ZodString;
                 subject_expr: z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
@@ -4620,25 +5020,25 @@ const conversationConfigs: z.ZodObject<{
                 }, z.core.$strict>;
                 templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
                 updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
-                    adapter: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    }, z.core.$strict>>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    op_id: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    }, z.core.$strict>>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                    }, z.core.$strict>>>;
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
             }, z.core.$strict>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         target_kind: z.ZodEnum<{
             tool: "tool";
             agent: "agent";
@@ -4646,6 +5046,7 @@ const conversationConfigs: z.ZodObject<{
         target_name: z.ZodString;
     }, z.core.$strip>>;
     total: z.ZodNumber;
+    unreadable: z.ZodDefault<z.ZodNumber>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -4653,31 +5054,25 @@ type ConversationConfigWritten = z.infer<typeof conversationConfigWritten>;
 
 // @public
 const conversationConfigWritten: z.ZodObject<{
-    created: z.ZodBoolean;
-    target_kind: z.ZodEnum<{
-        tool: "tool";
-        agent: "agent";
-    }>;
-    target_name: z.ZodString;
     config: z.ZodObject<{
-        greeting_template: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+        greeting_template: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         multichannel: z.ZodDefault<z.ZodBoolean>;
-        state_binding: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             states: z.ZodArray<z.ZodObject<{
                 input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     into: z.ZodString;
-                    jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                    }, z.core.$strict>>>;
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
-                scope_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
+                }, z.core.$strict>>>;
                 state: z.ZodString;
                 subject_expr: z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
@@ -4686,31 +5081,37 @@ const conversationConfigWritten: z.ZodObject<{
                 }, z.core.$strict>;
                 templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
                 updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
-                    adapter: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    }, z.core.$strict>>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    op_id: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    }, z.core.$strict>>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                    }, z.core.$strict>>>;
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
             }, z.core.$strict>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         target_kind: z.ZodEnum<{
             tool: "tool";
             agent: "agent";
         }>;
         target_name: z.ZodString;
     }, z.core.$strip>;
+    created: z.ZodBoolean;
+    target_kind: z.ZodEnum<{
+        tool: "tool";
+        agent: "agent";
+    }>;
+    target_name: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -4718,15 +5119,15 @@ type ConversationDeliveryStatus = z.infer<typeof conversationDeliveryStatus>;
 
 // @public
 const conversationDeliveryStatus: z.ZodEnum<{
+    superseded: "superseded";
+    failed: "failed";
+    silent: "silent";
+    merged: "merged";
     accepted: "accepted";
     pending_delivery: "pending_delivery";
     provisional: "provisional";
     delivered: "delivered";
-    failed: "failed";
     shed: "shed";
-    silent: "silent";
-    merged: "merged";
-    superseded: "superseded";
 }>;
 
 // @public (undocumented)
@@ -4744,52 +5145,178 @@ type ConversationFailedMessages = z.infer<typeof conversationFailedMessages>;
 // @public
 const conversationFailedMessages: z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
-        message_id: z.ZodString;
-        route_name: z.ZodString;
-        door: z.ZodEnum<{
-            channel: "channel";
-            api: "api";
-        }>;
-        thread_id: z.ZodString;
-        client_address: z.ZodString;
-        caller_principal: z.ZodNullable<z.ZodString>;
-        inbound_text: z.ZodString;
-        inbound_attachments: z.ZodNullable<z.ZodArray<z.ZodUnknown>>;
-        answer_status: z.ZodNullable<z.ZodEnum<{
+        answer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        answer_parts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            data: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+                    label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    value: z.ZodString;
+                }, z.core.$strict>>>>;
+                values: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>>>;
+            footer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            form_tag: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            header: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                kind: z.ZodEnum<{
+                    image: "image";
+                    link: "link";
+                    document: "document";
+                    video: "video";
+                    audio: "audio";
+                }>;
+                url: z.ZodString;
+            }, z.core.$strict>>>;
+            location: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                address: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                latitude: z.ZodNumber;
+                longitude: z.ZodNumber;
+                name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strict>>>;
+            media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+                caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                kind: z.ZodEnum<{
+                    image: "image";
+                    link: "link";
+                    document: "document";
+                    video: "video";
+                    audio: "audio";
+                }>;
+                url: z.ZodString;
+            }, z.core.$strict>>>>;
+            message: z.ZodDefault<z.ZodString>;
+            options: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+                description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                kind: z.ZodDefault<z.ZodLiteral<"reply">>;
+                text: z.ZodString;
+            }, z.core.$strict>, z.ZodObject<{
+                kind: z.ZodDefault<z.ZodLiteral<"link">>;
+                label: z.ZodString;
+                url: z.ZodString;
+            }, z.core.$strict>], "kind">>>>;
+            pages: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+                display: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                    alt: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    kind: z.ZodEnum<{
+                        heading: "heading";
+                        body: "body";
+                        image: "image";
+                    }>;
+                    slot: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    src: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                fields: z.ZodArray<z.ZodString>;
+                kind: z.ZodDefault<z.ZodEnum<{
+                    input: "input";
+                    review: "review";
+                }>>;
+                title: z.ZodString;
+            }, z.core.$strict>>>>;
+            schema: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+            sections: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+                rows: z.ZodArray<z.ZodObject<{
+                    description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    kind: z.ZodDefault<z.ZodLiteral<"reply">>;
+                    text: z.ZodString;
+                }, z.core.$strict>>;
+                title: z.ZodString;
+            }, z.core.$strict>>>>;
+            template: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                language: z.ZodString;
+                name: z.ZodString;
+                parameters: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+            }, z.core.$strict>>>;
+        }, z.core.$strict>>>>;
+        answer_status: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
             error: "error";
-            silent: "silent";
-            merged: "merged";
             superseded: "superseded";
             answered: "answered";
-        }>>;
-        answer: z.ZodNullable<z.ZodString>;
-        successor_id: z.ZodNullable<z.ZodString>;
-        origin: z.ZodEnum<{
-            client: "client";
-            operator: "operator";
-        }>;
-        delivery_status: z.ZodEnum<{
+            silent: "silent";
+            merged: "merged";
+        }>>>;
+        attempts: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        caller_principal: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        channel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        client_address: z.ZodString;
+        created_at: z.ZodNumber;
+        delivery_status: z.ZodDefault<z.ZodEnum<{
+            superseded: "superseded";
+            failed: "failed";
+            silent: "silent";
+            merged: "merged";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
-            failed: "failed";
             shed: "shed";
+        }>>;
+        door: z.ZodEnum<{
+            channel: "channel";
+            api: "api";
+        }>;
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        inbound_attachments: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            kind: z.ZodEnum<{
+                image: "image";
+                link: "link";
+                document: "document";
+                video: "video";
+                audio: "audio";
+            }>;
+            url: z.ZodString;
+        }, z.core.$strict>>>>;
+        inbound_event: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        inbound_form: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        inbound_form_tag: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        inbound_kind: z.ZodDefault<z.ZodEnum<{
+            message: "message";
+            event: "event";
+        }>>;
+        inbound_locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        inbound_location: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            address: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            latitude: z.ZodNumber;
+            longitude: z.ZodNumber;
+            name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strict>>>;
+        inbound_text: z.ZodString;
+        message_id: z.ZodString;
+        operator_send: z.ZodDefault<z.ZodBoolean>;
+        origin: z.ZodEnum<{
+            operator: "operator";
+            client: "client";
+        }>;
+        our_identity: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        outbound_message_ids: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+        pending_receipt: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            superseded: "superseded";
+            failed: "failed";
             silent: "silent";
             merged: "merged";
-            superseded: "superseded";
-        }>;
-        created_at: z.ZodNumber;
+            accepted: "accepted";
+            pending_delivery: "pending_delivery";
+            provisional: "provisional";
+            delivered: "delivered";
+            shed: "shed";
+        }>>>;
+        provider_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        route_missing: z.ZodDefault<z.ZodBoolean>;
+        route_name: z.ZodString;
+        submitted_by: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        successor_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        thread_id: z.ZodString;
         updated_at: z.ZodNumber;
-        channel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        our_identity: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        provider_message_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        callback_url: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        outbound_message_ids: z.ZodOptional<z.ZodArray<z.ZodString>>;
-        attempts: z.ZodOptional<z.ZodNumber>;
     }, z.core.$strip>>;
     total: z.ZodNumber;
+    unreadable: z.ZodDefault<z.ZodNumber>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -4797,50 +5324,175 @@ type ConversationMessage = z.infer<typeof conversationMessage>;
 
 // @public
 const conversationMessage: z.ZodObject<{
-    message_id: z.ZodString;
-    route_name: z.ZodString;
-    door: z.ZodEnum<{
-        channel: "channel";
-        api: "api";
-    }>;
-    thread_id: z.ZodString;
-    client_address: z.ZodString;
-    caller_principal: z.ZodNullable<z.ZodString>;
-    inbound_text: z.ZodString;
-    inbound_attachments: z.ZodNullable<z.ZodArray<z.ZodUnknown>>;
-    answer_status: z.ZodNullable<z.ZodEnum<{
+    answer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    answer_parts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+        data: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+                label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                value: z.ZodString;
+            }, z.core.$strict>>>>;
+            values: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        footer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        form_tag: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        header: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            kind: z.ZodEnum<{
+                image: "image";
+                link: "link";
+                document: "document";
+                video: "video";
+                audio: "audio";
+            }>;
+            url: z.ZodString;
+        }, z.core.$strict>>>;
+        location: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            address: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            latitude: z.ZodNumber;
+            longitude: z.ZodNumber;
+            name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strict>>>;
+        media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            kind: z.ZodEnum<{
+                image: "image";
+                link: "link";
+                document: "document";
+                video: "video";
+                audio: "audio";
+            }>;
+            url: z.ZodString;
+        }, z.core.$strict>>>>;
+        message: z.ZodDefault<z.ZodString>;
+        options: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+            description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            kind: z.ZodDefault<z.ZodLiteral<"reply">>;
+            text: z.ZodString;
+        }, z.core.$strict>, z.ZodObject<{
+            kind: z.ZodDefault<z.ZodLiteral<"link">>;
+            label: z.ZodString;
+            url: z.ZodString;
+        }, z.core.$strict>], "kind">>>>;
+        pages: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            display: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                alt: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                kind: z.ZodEnum<{
+                    heading: "heading";
+                    body: "body";
+                    image: "image";
+                }>;
+                slot: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                src: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strict>>>;
+            fields: z.ZodArray<z.ZodString>;
+            kind: z.ZodDefault<z.ZodEnum<{
+                input: "input";
+                review: "review";
+            }>>;
+            title: z.ZodString;
+        }, z.core.$strict>>>>;
+        schema: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        sections: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            rows: z.ZodArray<z.ZodObject<{
+                description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                kind: z.ZodDefault<z.ZodLiteral<"reply">>;
+                text: z.ZodString;
+            }, z.core.$strict>>;
+            title: z.ZodString;
+        }, z.core.$strict>>>>;
+        template: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            language: z.ZodString;
+            name: z.ZodString;
+            parameters: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        }, z.core.$strict>>>;
+    }, z.core.$strict>>>>;
+    answer_status: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
         error: "error";
-        silent: "silent";
-        merged: "merged";
         superseded: "superseded";
         answered: "answered";
-    }>>;
-    answer: z.ZodNullable<z.ZodString>;
-    successor_id: z.ZodNullable<z.ZodString>;
-    origin: z.ZodEnum<{
-        client: "client";
-        operator: "operator";
-    }>;
-    delivery_status: z.ZodEnum<{
+        silent: "silent";
+        merged: "merged";
+    }>>>;
+    attempts: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    caller_principal: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    channel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    client_address: z.ZodString;
+    created_at: z.ZodNumber;
+    delivery_status: z.ZodDefault<z.ZodEnum<{
+        superseded: "superseded";
+        failed: "failed";
+        silent: "silent";
+        merged: "merged";
         accepted: "accepted";
         pending_delivery: "pending_delivery";
         provisional: "provisional";
         delivered: "delivered";
-        failed: "failed";
         shed: "shed";
+    }>>;
+    door: z.ZodEnum<{
+        channel: "channel";
+        api: "api";
+    }>;
+    error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    inbound_attachments: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+        caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        kind: z.ZodEnum<{
+            image: "image";
+            link: "link";
+            document: "document";
+            video: "video";
+            audio: "audio";
+        }>;
+        url: z.ZodString;
+    }, z.core.$strict>>>>;
+    inbound_event: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    inbound_form: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    inbound_form_tag: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    inbound_kind: z.ZodDefault<z.ZodEnum<{
+        message: "message";
+        event: "event";
+    }>>;
+    inbound_locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    inbound_location: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        address: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        latitude: z.ZodNumber;
+        longitude: z.ZodNumber;
+        name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strict>>>;
+    inbound_text: z.ZodString;
+    message_id: z.ZodString;
+    operator_send: z.ZodDefault<z.ZodBoolean>;
+    origin: z.ZodEnum<{
+        operator: "operator";
+        client: "client";
+    }>;
+    our_identity: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    outbound_message_ids: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+    pending_receipt: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+        superseded: "superseded";
+        failed: "failed";
         silent: "silent";
         merged: "merged";
-        superseded: "superseded";
-    }>;
-    created_at: z.ZodNumber;
+        accepted: "accepted";
+        pending_delivery: "pending_delivery";
+        provisional: "provisional";
+        delivered: "delivered";
+        shed: "shed";
+    }>>>;
+    provider_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    route_missing: z.ZodDefault<z.ZodBoolean>;
+    route_name: z.ZodString;
+    submitted_by: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    successor_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    thread_id: z.ZodString;
     updated_at: z.ZodNumber;
-    channel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    our_identity: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    provider_message_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    callback_url: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    outbound_message_ids: z.ZodOptional<z.ZodArray<z.ZodString>>;
-    attempts: z.ZodOptional<z.ZodNumber>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -4848,57 +5500,183 @@ type ConversationMessageSearchPage = z.infer<typeof conversationMessageSearchPag
 
 // @public
 const conversationMessageSearchPage: z.ZodObject<{
-    total: z.ZodNumber;
-    page: z.ZodNumber;
-    page_size: z.ZodNumber;
-    next_page: z.ZodNullable<z.ZodNumber>;
-    truncated: z.ZodBoolean;
     items: z.ZodArray<z.ZodObject<{
-        message_id: z.ZodString;
-        route_name: z.ZodString;
-        door: z.ZodEnum<{
-            channel: "channel";
-            api: "api";
-        }>;
-        thread_id: z.ZodString;
-        client_address: z.ZodString;
-        caller_principal: z.ZodNullable<z.ZodString>;
-        inbound_text: z.ZodString;
-        inbound_attachments: z.ZodNullable<z.ZodArray<z.ZodUnknown>>;
-        answer_status: z.ZodNullable<z.ZodEnum<{
+        answer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        answer_parts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            data: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+                    label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    value: z.ZodString;
+                }, z.core.$strict>>>>;
+                values: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>>>;
+            footer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            form_tag: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            header: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                kind: z.ZodEnum<{
+                    image: "image";
+                    link: "link";
+                    document: "document";
+                    video: "video";
+                    audio: "audio";
+                }>;
+                url: z.ZodString;
+            }, z.core.$strict>>>;
+            location: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                address: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                latitude: z.ZodNumber;
+                longitude: z.ZodNumber;
+                name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strict>>>;
+            media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+                caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                kind: z.ZodEnum<{
+                    image: "image";
+                    link: "link";
+                    document: "document";
+                    video: "video";
+                    audio: "audio";
+                }>;
+                url: z.ZodString;
+            }, z.core.$strict>>>>;
+            message: z.ZodDefault<z.ZodString>;
+            options: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+                description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                kind: z.ZodDefault<z.ZodLiteral<"reply">>;
+                text: z.ZodString;
+            }, z.core.$strict>, z.ZodObject<{
+                kind: z.ZodDefault<z.ZodLiteral<"link">>;
+                label: z.ZodString;
+                url: z.ZodString;
+            }, z.core.$strict>], "kind">>>>;
+            pages: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+                display: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                    alt: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    kind: z.ZodEnum<{
+                        heading: "heading";
+                        body: "body";
+                        image: "image";
+                    }>;
+                    slot: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    src: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                fields: z.ZodArray<z.ZodString>;
+                kind: z.ZodDefault<z.ZodEnum<{
+                    input: "input";
+                    review: "review";
+                }>>;
+                title: z.ZodString;
+            }, z.core.$strict>>>>;
+            schema: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+            sections: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+                rows: z.ZodArray<z.ZodObject<{
+                    description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    kind: z.ZodDefault<z.ZodLiteral<"reply">>;
+                    text: z.ZodString;
+                }, z.core.$strict>>;
+                title: z.ZodString;
+            }, z.core.$strict>>>>;
+            template: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                language: z.ZodString;
+                name: z.ZodString;
+                parameters: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+            }, z.core.$strict>>>;
+        }, z.core.$strict>>>>;
+        answer_status: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
             error: "error";
-            silent: "silent";
-            merged: "merged";
             superseded: "superseded";
             answered: "answered";
-        }>>;
-        answer: z.ZodNullable<z.ZodString>;
-        successor_id: z.ZodNullable<z.ZodString>;
-        origin: z.ZodEnum<{
-            client: "client";
-            operator: "operator";
-        }>;
-        delivery_status: z.ZodEnum<{
+            silent: "silent";
+            merged: "merged";
+        }>>>;
+        attempts: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        caller_principal: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        channel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        client_address: z.ZodString;
+        created_at: z.ZodNumber;
+        delivery_status: z.ZodDefault<z.ZodEnum<{
+            superseded: "superseded";
+            failed: "failed";
+            silent: "silent";
+            merged: "merged";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
-            failed: "failed";
             shed: "shed";
+        }>>;
+        door: z.ZodEnum<{
+            channel: "channel";
+            api: "api";
+        }>;
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        inbound_attachments: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            kind: z.ZodEnum<{
+                image: "image";
+                link: "link";
+                document: "document";
+                video: "video";
+                audio: "audio";
+            }>;
+            url: z.ZodString;
+        }, z.core.$strict>>>>;
+        inbound_event: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        inbound_form: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        inbound_form_tag: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        inbound_kind: z.ZodDefault<z.ZodEnum<{
+            message: "message";
+            event: "event";
+        }>>;
+        inbound_locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        inbound_location: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            address: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            latitude: z.ZodNumber;
+            longitude: z.ZodNumber;
+            name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strict>>>;
+        inbound_text: z.ZodString;
+        message_id: z.ZodString;
+        operator_send: z.ZodDefault<z.ZodBoolean>;
+        origin: z.ZodEnum<{
+            operator: "operator";
+            client: "client";
+        }>;
+        our_identity: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        outbound_message_ids: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+        pending_receipt: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            superseded: "superseded";
+            failed: "failed";
             silent: "silent";
             merged: "merged";
-            superseded: "superseded";
-        }>;
-        created_at: z.ZodNumber;
+            accepted: "accepted";
+            pending_delivery: "pending_delivery";
+            provisional: "provisional";
+            delivered: "delivered";
+            shed: "shed";
+        }>>>;
+        provider_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        route_missing: z.ZodDefault<z.ZodBoolean>;
+        route_name: z.ZodString;
+        submitted_by: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        successor_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        thread_id: z.ZodString;
         updated_at: z.ZodNumber;
-        channel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        our_identity: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        provider_message_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        callback_url: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        outbound_message_ids: z.ZodOptional<z.ZodArray<z.ZodString>>;
-        attempts: z.ZodOptional<z.ZodNumber>;
     }, z.core.$strip>>;
+    next_page: z.ZodNullable<z.ZodNumber>;
+    page: z.ZodNumber;
+    page_size: z.ZodNumber;
+    total: z.ZodNumber;
+    truncated: z.ZodBoolean;
+    unreadable: z.ZodDefault<z.ZodNumber>;
 }, z.core.$strip>;
 
 // @public
@@ -4927,9 +5705,9 @@ type ConversationPersonDeleted = z.infer<typeof conversationPersonDeleted>;
 
 // @public
 const conversationPersonDeleted: z.ZodObject<{
+    erased: z.ZodBoolean;
     person_id: z.ZodString;
     removed: z.ZodNumber;
-    erased: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -4937,41 +5715,38 @@ type ConversationRecordOrigin = z.infer<typeof conversationRecordOrigin>;
 
 // @public
 const conversationRecordOrigin: z.ZodEnum<{
-    client: "client";
     operator: "operator";
+    client: "client";
 }>;
 
 // @public (undocumented)
 type ConversationRoute = z.infer<typeof conversationRoute>;
 
 // @public (undocumented)
-const conversationRoute: z.ZodObject<{
-    callback_secret: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-    callback_url: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-    cancel_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+const conversationRoute: z.ZodDiscriminatedUnion<[z.ZodObject<{
+    callback_secret: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    channel: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-    door: z.ZodEnum<{
-        channel: "channel";
-        api: "api";
-    }>;
-    error_reply_text: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+    }, z.core.$strict>>>;
+    channel: z.ZodDefault<z.ZodNull>;
+    door: z.ZodLiteral<"api">;
+    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     execution_key: z.ZodString;
     execution_key_fingerprint: z.ZodString;
-    extras_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     initial_mode: z.ZodDefault<z.ZodEnum<{
         agent: "agent";
         manual: "manual";
     }>>;
-    locale: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-    our_identity: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+    locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    our_identity: z.ZodDefault<z.ZodNull>;
     overlap: z.ZodDefault<z.ZodObject<{
         deliver: z.ZodDefault<z.ZodEnum<{
             one: "one";
@@ -4983,59 +5758,113 @@ const conversationRoute: z.ZodObject<{
         }>>;
         settle_seconds: z.ZodDefault<z.ZodNumber>;
     }, z.core.$strip>>;
-    reply_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    resume_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    }, z.core.$strict>>>;
+    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     route_name: z.ZodString;
-    start_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     target_kind: z.ZodEnum<{
         tool: "tool";
         agent: "agent";
     }>;
     target_name: z.ZodString;
-    turns_per_hour_override: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
-}, z.core.$strip>;
+    turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+}, z.core.$strip>, z.ZodObject<{
+    callback_secret: z.ZodDefault<z.ZodNull>;
+    callback_url: z.ZodDefault<z.ZodNull>;
+    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    channel: z.ZodString;
+    door: z.ZodLiteral<"channel">;
+    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    execution_key: z.ZodString;
+    execution_key_fingerprint: z.ZodString;
+    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    initial_mode: z.ZodDefault<z.ZodEnum<{
+        agent: "agent";
+        manual: "manual";
+    }>>;
+    locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    our_identity: z.ZodString;
+    overlap: z.ZodDefault<z.ZodObject<{
+        deliver: z.ZodDefault<z.ZodEnum<{
+            one: "one";
+            all: "all";
+        }>>;
+        running: z.ZodDefault<z.ZodEnum<{
+            continue: "continue";
+            cancel: "cancel";
+        }>>;
+        settle_seconds: z.ZodDefault<z.ZodNumber>;
+    }, z.core.$strip>>;
+    reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    route_name: z.ZodString;
+    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    target_kind: z.ZodEnum<{
+        tool: "tool";
+        agent: "agent";
+    }>;
+    target_name: z.ZodString;
+    turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+}, z.core.$strip>], "door">;
 
 // @public (undocumented)
 type ConversationRouteCreate = z.input<typeof conversationRouteCreate>;
 
 // @public (undocumented)
-const conversationRouteCreate: z.ZodObject<{
-    callback_url: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-    cancel_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+const conversationRouteCreate: z.ZodDiscriminatedUnion<[z.ZodObject<{
+    callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    channel: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-    door: z.ZodEnum<{
-        channel: "channel";
-        api: "api";
-    }>;
-    error_reply_text: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+    }, z.core.$strict>>>;
+    channel: z.ZodDefault<z.ZodNull>;
+    door: z.ZodLiteral<"api">;
+    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     execution_key: z.ZodString;
-    extras_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     initial_mode: z.ZodDefault<z.ZodEnum<{
         agent: "agent";
         manual: "manual";
     }>>;
-    locale: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-    our_identity: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+    locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    our_identity: z.ZodDefault<z.ZodNull>;
     overlap: z.ZodDefault<z.ZodObject<{
         deliver: z.ZodDefault<z.ZodEnum<{
             one: "one";
@@ -5047,29 +5876,84 @@ const conversationRouteCreate: z.ZodObject<{
         }>>;
         settle_seconds: z.ZodDefault<z.ZodNumber>;
     }, z.core.$strip>>;
-    reply_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    resume_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    }, z.core.$strict>>>;
+    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     route_name: z.ZodString;
-    start_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     target_kind: z.ZodEnum<{
         tool: "tool";
         agent: "agent";
     }>;
     target_name: z.ZodString;
-    turns_per_hour_override: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
-}, z.core.$strip>;
+    turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+}, z.core.$strip>, z.ZodObject<{
+    callback_url: z.ZodDefault<z.ZodNull>;
+    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    channel: z.ZodString;
+    door: z.ZodLiteral<"channel">;
+    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    execution_key: z.ZodString;
+    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    initial_mode: z.ZodDefault<z.ZodEnum<{
+        agent: "agent";
+        manual: "manual";
+    }>>;
+    locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    our_identity: z.ZodString;
+    overlap: z.ZodDefault<z.ZodObject<{
+        deliver: z.ZodDefault<z.ZodEnum<{
+            one: "one";
+            all: "all";
+        }>>;
+        running: z.ZodDefault<z.ZodEnum<{
+            continue: "continue";
+            cancel: "cancel";
+        }>>;
+        settle_seconds: z.ZodDefault<z.ZodNumber>;
+    }, z.core.$strip>>;
+    reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    route_name: z.ZodString;
+    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    target_kind: z.ZodEnum<{
+        tool: "tool";
+        agent: "agent";
+    }>;
+    target_name: z.ZodString;
+    turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+}, z.core.$strip>], "door">;
 
 // @public (undocumented)
 type ConversationRouteDeleted = z.infer<typeof conversationRouteDeleted>;
@@ -5085,33 +5969,29 @@ type ConversationRoutes = z.infer<typeof conversationRoutes>;
 
 // @public (undocumented)
 const conversationRoutes: z.ZodObject<{
-    items: z.ZodArray<z.ZodObject<{
-        callback_secret: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-        callback_url: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-        cancel_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    items: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
-        channel: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-        door: z.ZodEnum<{
-            channel: "channel";
-            api: "api";
-        }>;
-        error_reply_text: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+        }, z.core.$strict>>>;
+        channel: z.ZodDefault<z.ZodNull>;
+        door: z.ZodLiteral<"api">;
+        error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         execution_key: z.ZodString;
         execution_key_fingerprint: z.ZodString;
-        extras_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         initial_mode: z.ZodDefault<z.ZodEnum<{
             agent: "agent";
             manual: "manual";
         }>>;
-        locale: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-        our_identity: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+        locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        our_identity: z.ZodDefault<z.ZodNull>;
         overlap: z.ZodDefault<z.ZodObject<{
             deliver: z.ZodDefault<z.ZodEnum<{
                 one: "one";
@@ -5123,66 +6003,237 @@ const conversationRoutes: z.ZodObject<{
             }>>;
             settle_seconds: z.ZodDefault<z.ZodNumber>;
         }, z.core.$strip>>;
-        reply_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
-        resume_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        }, z.core.$strict>>>;
+        resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         route_name: z.ZodString;
-        start_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         target_kind: z.ZodEnum<{
             tool: "tool";
             agent: "agent";
         }>;
         target_name: z.ZodString;
-        turns_per_hour_override: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
-    }, z.core.$strip>>;
+        turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    }, z.core.$strip>, z.ZodObject<{
+        callback_url: z.ZodDefault<z.ZodNull>;
+        cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        channel: z.ZodString;
+        door: z.ZodLiteral<"channel">;
+        error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        execution_key: z.ZodString;
+        execution_key_fingerprint: z.ZodString;
+        extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        initial_mode: z.ZodDefault<z.ZodEnum<{
+            agent: "agent";
+            manual: "manual";
+        }>>;
+        locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        our_identity: z.ZodString;
+        overlap: z.ZodDefault<z.ZodObject<{
+            deliver: z.ZodDefault<z.ZodEnum<{
+                one: "one";
+                all: "all";
+            }>>;
+            running: z.ZodDefault<z.ZodEnum<{
+                continue: "continue";
+                cancel: "cancel";
+            }>>;
+            settle_seconds: z.ZodDefault<z.ZodNumber>;
+        }, z.core.$strip>>;
+        reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        route_name: z.ZodString;
+        start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        target_kind: z.ZodEnum<{
+            tool: "tool";
+            agent: "agent";
+        }>;
+        target_name: z.ZodString;
+        turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    }, z.core.$strip>], "door">>;
     total: z.ZodNumber;
+    unreadable: z.ZodDefault<z.ZodNumber>;
 }, z.core.$strip>;
+
+// @public (undocumented)
+type ConversationRouteView = z.infer<typeof conversationRouteView>;
+
+// @public
+const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
+    callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    channel: z.ZodDefault<z.ZodNull>;
+    door: z.ZodLiteral<"api">;
+    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    execution_key: z.ZodString;
+    execution_key_fingerprint: z.ZodString;
+    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    initial_mode: z.ZodDefault<z.ZodEnum<{
+        agent: "agent";
+        manual: "manual";
+    }>>;
+    locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    our_identity: z.ZodDefault<z.ZodNull>;
+    overlap: z.ZodDefault<z.ZodObject<{
+        deliver: z.ZodDefault<z.ZodEnum<{
+            one: "one";
+            all: "all";
+        }>>;
+        running: z.ZodDefault<z.ZodEnum<{
+            continue: "continue";
+            cancel: "cancel";
+        }>>;
+        settle_seconds: z.ZodDefault<z.ZodNumber>;
+    }, z.core.$strip>>;
+    reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    route_name: z.ZodString;
+    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    target_kind: z.ZodEnum<{
+        tool: "tool";
+        agent: "agent";
+    }>;
+    target_name: z.ZodString;
+    turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+}, z.core.$strip>, z.ZodObject<{
+    callback_url: z.ZodDefault<z.ZodNull>;
+    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    channel: z.ZodString;
+    door: z.ZodLiteral<"channel">;
+    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    execution_key: z.ZodString;
+    execution_key_fingerprint: z.ZodString;
+    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    initial_mode: z.ZodDefault<z.ZodEnum<{
+        agent: "agent";
+        manual: "manual";
+    }>>;
+    locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    our_identity: z.ZodString;
+    overlap: z.ZodDefault<z.ZodObject<{
+        deliver: z.ZodDefault<z.ZodEnum<{
+            one: "one";
+            all: "all";
+        }>>;
+        running: z.ZodDefault<z.ZodEnum<{
+            continue: "continue";
+            cancel: "cancel";
+        }>>;
+        settle_seconds: z.ZodDefault<z.ZodNumber>;
+    }, z.core.$strip>>;
+    reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    route_name: z.ZodString;
+    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    target_kind: z.ZodEnum<{
+        tool: "tool";
+        agent: "agent";
+    }>;
+    target_name: z.ZodString;
+    turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+}, z.core.$strip>], "door">;
 
 // @public (undocumented)
 type ConversationRouteWritten = z.infer<typeof conversationRouteWritten>;
 
 // @public
 const conversationRouteWritten: z.ZodObject<{
+    callback_secret: z.ZodNullable<z.ZodString>;
     created: z.ZodBoolean;
-    route_name: z.ZodString;
-    route: z.ZodObject<{
-        callback_secret: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-        callback_url: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-        cancel_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    route: z.ZodDiscriminatedUnion<[z.ZodObject<{
+        callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
-        channel: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-        door: z.ZodEnum<{
-            channel: "channel";
-            api: "api";
-        }>;
-        error_reply_text: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+        }, z.core.$strict>>>;
+        channel: z.ZodDefault<z.ZodNull>;
+        door: z.ZodLiteral<"api">;
+        error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         execution_key: z.ZodString;
         execution_key_fingerprint: z.ZodString;
-        extras_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         initial_mode: z.ZodDefault<z.ZodEnum<{
             agent: "agent";
             manual: "manual";
         }>>;
-        locale: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-        our_identity: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+        locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        our_identity: z.ZodDefault<z.ZodNull>;
         overlap: z.ZodDefault<z.ZodObject<{
             deliver: z.ZodDefault<z.ZodEnum<{
                 one: "one";
@@ -5194,30 +6245,86 @@ const conversationRouteWritten: z.ZodObject<{
             }>>;
             settle_seconds: z.ZodDefault<z.ZodNumber>;
         }, z.core.$strip>>;
-        reply_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
-        resume_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        }, z.core.$strict>>>;
+        resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         route_name: z.ZodString;
-        start_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         target_kind: z.ZodEnum<{
             tool: "tool";
             agent: "agent";
         }>;
         target_name: z.ZodString;
-        turns_per_hour_override: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
-    }, z.core.$strip>;
-    callback_secret: z.ZodNullable<z.ZodString>;
+        turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    }, z.core.$strip>, z.ZodObject<{
+        callback_url: z.ZodDefault<z.ZodNull>;
+        cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        channel: z.ZodString;
+        door: z.ZodLiteral<"channel">;
+        error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        execution_key: z.ZodString;
+        execution_key_fingerprint: z.ZodString;
+        extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        initial_mode: z.ZodDefault<z.ZodEnum<{
+            agent: "agent";
+            manual: "manual";
+        }>>;
+        locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        our_identity: z.ZodString;
+        overlap: z.ZodDefault<z.ZodObject<{
+            deliver: z.ZodDefault<z.ZodEnum<{
+                one: "one";
+                all: "all";
+            }>>;
+            running: z.ZodDefault<z.ZodEnum<{
+                continue: "continue";
+                cancel: "cancel";
+            }>>;
+            settle_seconds: z.ZodDefault<z.ZodNumber>;
+        }, z.core.$strip>>;
+        reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        route_name: z.ZodString;
+        start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        target_kind: z.ZodEnum<{
+            tool: "tool";
+            agent: "agent";
+        }>;
+        target_name: z.ZodString;
+        turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    }, z.core.$strip>], "door">;
+    route_name: z.ZodString;
 }, z.core.$strip>;
 
 // @public
@@ -5237,21 +6344,21 @@ type ConversationThread = z.infer<typeof conversationThread>;
 
 // @public
 const conversationThread: z.ZodObject<{
-    thread_id: z.ZodString;
     client_address: z.ZodString;
     last_activity_at: z.ZodNumber;
-    message_count: z.ZodNumber;
     last_delivery_status: z.ZodEnum<{
+        superseded: "superseded";
+        failed: "failed";
+        silent: "silent";
+        merged: "merged";
         accepted: "accepted";
         pending_delivery: "pending_delivery";
         provisional: "provisional";
         delivered: "delivered";
-        failed: "failed";
         shed: "shed";
-        silent: "silent";
-        merged: "merged";
-        superseded: "superseded";
     }>;
+    message_count: z.ZodNumber;
+    thread_id: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -5320,28 +6427,29 @@ type ConversationThreadsPage = z.infer<typeof conversationThreadsPage>;
 
 // @public (undocumented)
 const conversationThreadsPage: z.ZodObject<{
-    total: z.ZodNumber;
-    page: z.ZodNumber;
-    page_size: z.ZodNumber;
-    next_page: z.ZodNullable<z.ZodNumber>;
-    truncated: z.ZodBoolean;
     items: z.ZodArray<z.ZodObject<{
-        thread_id: z.ZodString;
         client_address: z.ZodString;
         last_activity_at: z.ZodNumber;
-        message_count: z.ZodNumber;
         last_delivery_status: z.ZodEnum<{
+            superseded: "superseded";
+            failed: "failed";
+            silent: "silent";
+            merged: "merged";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
-            failed: "failed";
             shed: "shed";
-            silent: "silent";
-            merged: "merged";
-            superseded: "superseded";
         }>;
+        message_count: z.ZodNumber;
+        thread_id: z.ZodString;
     }, z.core.$strip>>;
+    next_page: z.ZodNullable<z.ZodNumber>;
+    page: z.ZodNumber;
+    page_size: z.ZodNumber;
+    total: z.ZodNumber;
+    truncated: z.ZodBoolean;
+    unreadable: z.ZodDefault<z.ZodNumber>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -5349,61 +6457,188 @@ type ConversationTranscriptPage = z.infer<typeof conversationTranscriptPage>;
 
 // @public
 const conversationTranscriptPage: z.ZodObject<{
-    order: z.ZodEnum<{
-        asc: "asc";
-        desc: "desc";
-    }>;
-    total: z.ZodNumber;
-    page: z.ZodNumber;
-    page_size: z.ZodNumber;
-    next_page: z.ZodNullable<z.ZodNumber>;
-    truncated: z.ZodBoolean;
     items: z.ZodArray<z.ZodObject<{
-        message_id: z.ZodString;
-        route_name: z.ZodString;
-        door: z.ZodEnum<{
-            channel: "channel";
-            api: "api";
-        }>;
-        thread_id: z.ZodString;
-        client_address: z.ZodString;
-        caller_principal: z.ZodNullable<z.ZodString>;
-        inbound_text: z.ZodString;
-        inbound_attachments: z.ZodNullable<z.ZodArray<z.ZodUnknown>>;
-        answer_status: z.ZodNullable<z.ZodEnum<{
+        answer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        answer_parts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            data: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+                    label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    value: z.ZodString;
+                }, z.core.$strict>>>>;
+                values: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>>>;
+            footer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            form_tag: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            header: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                kind: z.ZodEnum<{
+                    image: "image";
+                    link: "link";
+                    document: "document";
+                    video: "video";
+                    audio: "audio";
+                }>;
+                url: z.ZodString;
+            }, z.core.$strict>>>;
+            location: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                address: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                latitude: z.ZodNumber;
+                longitude: z.ZodNumber;
+                name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strict>>>;
+            media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+                caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                kind: z.ZodEnum<{
+                    image: "image";
+                    link: "link";
+                    document: "document";
+                    video: "video";
+                    audio: "audio";
+                }>;
+                url: z.ZodString;
+            }, z.core.$strict>>>>;
+            message: z.ZodDefault<z.ZodString>;
+            options: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+                description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                kind: z.ZodDefault<z.ZodLiteral<"reply">>;
+                text: z.ZodString;
+            }, z.core.$strict>, z.ZodObject<{
+                kind: z.ZodDefault<z.ZodLiteral<"link">>;
+                label: z.ZodString;
+                url: z.ZodString;
+            }, z.core.$strict>], "kind">>>>;
+            pages: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+                display: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                    alt: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    kind: z.ZodEnum<{
+                        heading: "heading";
+                        body: "body";
+                        image: "image";
+                    }>;
+                    slot: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    src: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                fields: z.ZodArray<z.ZodString>;
+                kind: z.ZodDefault<z.ZodEnum<{
+                    input: "input";
+                    review: "review";
+                }>>;
+                title: z.ZodString;
+            }, z.core.$strict>>>>;
+            schema: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+            sections: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+                rows: z.ZodArray<z.ZodObject<{
+                    description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    kind: z.ZodDefault<z.ZodLiteral<"reply">>;
+                    text: z.ZodString;
+                }, z.core.$strict>>;
+                title: z.ZodString;
+            }, z.core.$strict>>>>;
+            template: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                language: z.ZodString;
+                name: z.ZodString;
+                parameters: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+            }, z.core.$strict>>>;
+        }, z.core.$strict>>>>;
+        answer_status: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
             error: "error";
-            silent: "silent";
-            merged: "merged";
             superseded: "superseded";
             answered: "answered";
-        }>>;
-        answer: z.ZodNullable<z.ZodString>;
-        successor_id: z.ZodNullable<z.ZodString>;
-        origin: z.ZodEnum<{
-            client: "client";
-            operator: "operator";
-        }>;
-        delivery_status: z.ZodEnum<{
+            silent: "silent";
+            merged: "merged";
+        }>>>;
+        attempts: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        caller_principal: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        channel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        client_address: z.ZodString;
+        created_at: z.ZodNumber;
+        delivery_status: z.ZodDefault<z.ZodEnum<{
+            superseded: "superseded";
+            failed: "failed";
+            silent: "silent";
+            merged: "merged";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
-            failed: "failed";
             shed: "shed";
+        }>>;
+        door: z.ZodEnum<{
+            channel: "channel";
+            api: "api";
+        }>;
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        inbound_attachments: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            kind: z.ZodEnum<{
+                image: "image";
+                link: "link";
+                document: "document";
+                video: "video";
+                audio: "audio";
+            }>;
+            url: z.ZodString;
+        }, z.core.$strict>>>>;
+        inbound_event: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        inbound_form: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        inbound_form_tag: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        inbound_kind: z.ZodDefault<z.ZodEnum<{
+            message: "message";
+            event: "event";
+        }>>;
+        inbound_locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        inbound_location: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            address: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            latitude: z.ZodNumber;
+            longitude: z.ZodNumber;
+            name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strict>>>;
+        inbound_text: z.ZodString;
+        message_id: z.ZodString;
+        operator_send: z.ZodDefault<z.ZodBoolean>;
+        origin: z.ZodEnum<{
+            operator: "operator";
+            client: "client";
+        }>;
+        our_identity: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        outbound_message_ids: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+        pending_receipt: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            superseded: "superseded";
+            failed: "failed";
             silent: "silent";
             merged: "merged";
-            superseded: "superseded";
-        }>;
-        created_at: z.ZodNumber;
+            accepted: "accepted";
+            pending_delivery: "pending_delivery";
+            provisional: "provisional";
+            delivered: "delivered";
+            shed: "shed";
+        }>>>;
+        provider_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        route_missing: z.ZodDefault<z.ZodBoolean>;
+        route_name: z.ZodString;
+        submitted_by: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        successor_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        thread_id: z.ZodString;
         updated_at: z.ZodNumber;
-        channel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        our_identity: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        provider_message_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        callback_url: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        outbound_message_ids: z.ZodOptional<z.ZodArray<z.ZodString>>;
-        attempts: z.ZodOptional<z.ZodNumber>;
     }, z.core.$strip>>;
+    next_page: z.ZodNullable<z.ZodNumber>;
+    order: z.ZodEnum<{
+        asc: "asc";
+        desc: "desc";
+    }>;
+    page: z.ZodNumber;
+    page_size: z.ZodNumber;
+    person_id: z.ZodNullable<z.ZodString>;
+    total: z.ZodNumber;
+    truncated: z.ZodBoolean;
+    unreadable: z.ZodDefault<z.ZodNumber>;
 }, z.core.$strip>;
 
 // @public
@@ -5454,10 +6689,10 @@ function createApiClient(config: ApiConfig): {
     readonly streamInteractions: (signal?: AbortSignal, lastEventId?: string) => Promise<AsyncGenerator<SseFrame, any, any>>;
     readonly getHealth: (signal?: AbortSignal) => Promise<string>;
     readonly getSystemKinds: (signal?: AbortSignal) => Promise<{
-        kind: string;
-        state: "default" | "active" | "off";
-        plugin: string | null;
         detail: string;
+        kind: string;
+        plugin: string | null;
+        state: "default" | "active" | "off";
     }[]>;
     readonly searchMarketplace: (query?: MarketplaceSearchQuery, signal?: AbortSignal) => Promise<{
         listings: {
@@ -5521,7 +6756,7 @@ function createApiClient(config: ApiConfig): {
                     base: string;
                     paths: {
                         path: string;
-                        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+                        methods: ("GET" | "DELETE" | "PATCH" | "POST" | "PUT")[];
                         public: boolean;
                     }[];
                 } | null | undefined;
@@ -5545,70 +6780,97 @@ function createApiClient(config: ApiConfig): {
     readonly listMarketplaceKinds: (signal?: AbortSignal) => Promise<string[]>;
     readonly listInstalledMarketplacePlugins: (signal?: AbortSignal) => Promise<{
         installed: {
-            ref: string;
-            version: string;
-            source: string;
-            delivery: "package" | "descriptor";
-            installed_at: string;
-            latest: string | null;
-            update_available: boolean;
-            incompatible_newer: string | null;
-            missing_upstream: boolean;
             compat: {
-                status: "unknown" | "compatible" | "incompatible";
                 reason: string | null;
+                status: "unknown" | "compatible" | "incompatible";
             };
+            delivery: "package" | "descriptor";
+            incompatible_newer: string | null;
+            installed_at: string;
             items: {
-                name: string;
                 kind: string;
+                name: string;
             }[];
+            latest: string | null;
+            missing_upstream: boolean;
+            ref: string;
             route_mounts: Record<string, string>;
+            source: string;
+            update_available: boolean;
+            version: string;
         }[];
     }>;
     readonly previewMarketplaceInstall: (body: MarketplaceInstallPreviewBody, signal?: AbortSignal) => Promise<{
-        ref: string;
-        version: string;
-        items: {
+        collisions: {
+            conflict_owner: string;
+            conflict_path: string;
+            full_path: string;
             item: string;
-            kind: string;
+            methods: ("GET" | "DELETE" | "PATCH" | "POST" | "PUT")[];
+        }[];
+        delivery: "package" | "descriptor";
+        items: {
             base: string;
             default_base: string;
+            item: string;
+            kind: string;
             routes: {
-                path: string;
                 full_path: string;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+                methods: ("GET" | "DELETE" | "PATCH" | "POST" | "PUT")[];
+                path: string;
                 public: boolean;
             }[];
         }[];
-        collisions: {
-            item: string;
+        missing_env: string[];
+        new_public_routes: {
             full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            conflict_owner: string;
-            conflict_path: string;
+            item: string;
+            methods: ("GET" | "DELETE" | "PATCH" | "POST" | "PUT")[];
         }[];
         public_routes: {
-            item: string;
             full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        }[];
-        new_public_routes: {
             item: string;
-            full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+            methods: ("GET" | "DELETE" | "PATCH" | "POST" | "PUT")[];
         }[];
-        requires_public_acceptance: boolean;
+        ref: string;
         required_env: {
             name: string;
             secret: boolean;
         }[];
-        missing_env: string[];
-        delivery: "package" | "descriptor";
+        requires_public_acceptance: boolean;
+        version: string;
     }>;
     readonly installMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
-        ref: string;
-        version: string;
         notes: string[];
+        package: string | null;
+        pip_output: string | null;
+        ref: string;
+        reload: {
+            env_keys: number;
+            fanout: {
+                error: string | null;
+                local_only: boolean | null;
+                mode: string;
+                note: string | null;
+                op: string | null;
+                reachable: boolean | null;
+                results: {
+                    detail: string | null;
+                    error: string | null;
+                    name: string;
+                    outcome: string;
+                    payload: unknown;
+                }[] | null;
+            };
+            status: string;
+        };
+        routes: {
+            full_path: string;
+            item: string;
+            methods: ("GET" | "DELETE" | "PATCH" | "POST" | "PUT")[];
+            public: boolean;
+        }[];
+        version: string;
         advisories: {
             id: number;
             listing: string;
@@ -5617,23 +6879,63 @@ function createApiClient(config: ApiConfig): {
             summary: string;
             created_at: string;
             withdrawn_at: string | null;
-        }[];
-        routes: {
-            item: string;
-            full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            public: boolean;
         }[];
     }>;
     readonly uninstallMarketplacePlugin: (body: MarketplaceUninstallBody) => Promise<{
-        ref: string;
-        uninstalled: true;
         notes: string[];
+        ref: string;
+        reload: {
+            env_keys: number;
+            fanout: {
+                error: string | null;
+                local_only: boolean | null;
+                mode: string;
+                note: string | null;
+                op: string | null;
+                reachable: boolean | null;
+                results: {
+                    detail: string | null;
+                    error: string | null;
+                    name: string;
+                    outcome: string;
+                    payload: unknown;
+                }[] | null;
+            };
+            status: string;
+        } | null;
+        uninstalled: boolean;
     }>;
     readonly updateMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
-        ref: string;
-        version: string;
         notes: string[];
+        package: string | null;
+        pip_output: string | null;
+        ref: string;
+        reload: {
+            env_keys: number;
+            fanout: {
+                error: string | null;
+                local_only: boolean | null;
+                mode: string;
+                note: string | null;
+                op: string | null;
+                reachable: boolean | null;
+                results: {
+                    detail: string | null;
+                    error: string | null;
+                    name: string;
+                    outcome: string;
+                    payload: unknown;
+                }[] | null;
+            };
+            status: string;
+        };
+        routes: {
+            full_path: string;
+            item: string;
+            methods: ("GET" | "DELETE" | "PATCH" | "POST" | "PUT")[];
+            public: boolean;
+        }[];
+        version: string;
         advisories: {
             id: number;
             listing: string;
@@ -5642,22 +6944,17 @@ function createApiClient(config: ApiConfig): {
             summary: string;
             created_at: string;
             withdrawn_at: string | null;
-        }[];
-        routes: {
-            item: string;
-            full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            public: boolean;
         }[];
     }>;
     readonly upgradeAllMarketplacePlugins: () => Promise<{
         results: {
-            ref: string;
-            outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
             detail: string;
+            outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
+            ref: string;
         }[];
     }>;
     readonly getMarketplaceAdvisories: (signal?: AbortSignal) => Promise<{
+        fetched_at: string;
         advisories: {
             id: number;
             listing: string;
@@ -5667,113 +6964,112 @@ function createApiClient(config: ApiConfig): {
             created_at: string;
             withdrawn_at: string | null;
         }[];
-        fetched_at: string;
     }>;
     readonly getObservabilityMetrics: (params?: MetricsQuery, signal?: AbortSignal) => Promise<{
-        summary: {
-            totalRuns: number;
-            totalCost: number;
+        byModel: {
+            avgLatencyMs: number;
+            calls: number;
+            cost: number;
+            model: string;
             totalTokens: number;
+        }[];
+        byModelAvailable: boolean;
+        granularity: "hour" | "day" | "week";
+        summary: {
             averageLatencyMs: number;
             avgCostPerRun: number;
             avgTokensPerRun: number;
             timeToFirstTokenMs: number | null;
+            totalCost: number;
+            totalRuns: number;
+            totalTokens: number;
         };
         timeSeries: {
+            avgLatencyMs: number;
             bucket: string | null;
+            cost: number;
             runs: number;
-            cost: number;
-            avgLatencyMs: number;
             totalTokens: number;
         }[];
-        byModel: {
-            model: string;
-            calls: number;
-            cost: number;
-            totalTokens: number;
-            avgLatencyMs: number;
-        }[];
-        byModelAvailable: boolean;
-        granularity: "hour" | "day" | "week";
     }>;
     readonly listRuns: (params?: RunsQuery, signal?: AbortSignal) => Promise<{
         items: {
-            id: string;
-            traceId: string;
-            createdAt: string | null;
-            tags: string[];
-            status: "error" | "success";
             cost: number | null;
-            latencyMs: number | null;
-            totalTokens: number | null;
+            createdAt: string | null;
+            id: string;
             inputPreview: unknown;
+            latencyMs: number | null;
             outputPreview: unknown;
+            status: "error" | "success";
+            tags: string[];
+            totalTokens: number | null;
+            traceId: string;
         }[];
-        page: number;
         nextPage: number | null;
+        page: number;
     }>;
     readonly getObservabilityCapabilities: (signal?: AbortSignal) => Promise<{
-        pageSizeMax: number;
-        sortKeys: string[];
         incompatibleFilters: Record<string, string[]>;
         metrics: {
-            measures: string[];
             dimensions: string[];
+            measures: string[];
         };
+        pageSizeMax: number;
+        sortKeys: ("totalTokens" | "cost" | "createdAt" | "latencyMs")[];
     }>;
     readonly getRunTrace: (traceId: string, signal?: AbortSignal) => Promise<{
-        traceId: string;
-        timestamp: string | null;
-        tags: string[];
-        totalCost: number | null;
         input: unknown;
-        output: unknown;
         metadata: unknown;
+        output: unknown;
         spans: {
+            end: string | null;
             id: string;
-            parentId: string | null;
-            traceId: string | null;
-            name: string | null;
+            input: unknown;
+            inputTokens: number | null;
             kind: "LLM" | "TOOL" | "CHAIN" | "EVENT" | null;
             level: string | null;
-            statusMessage: string | null;
-            start: string | null;
-            end: string | null;
-            model: string | null;
-            inputTokens: number | null;
-            outputTokens: number | null;
-            totalTokens: number | null;
             metadata: unknown;
-            input: unknown;
+            model: string | null;
+            name: string | null;
             output: unknown;
+            outputTokens: number | null;
+            parentId: string | null;
+            start: string | null;
+            statusMessage: string | null;
+            totalTokens: number | null;
+            traceId: string | null;
         }[];
+        tags: string[];
+        timestamp: string | null;
+        totalCost: number | null;
+        traceId: string;
     }>;
     readonly getRunTraceOutline: (traceId: string, signal?: AbortSignal) => Promise<{
-        traceId: string;
         spans: {
+            end: string | null;
             id: string;
-            parentId: string | null;
-            traceId: string | null;
-            name: string | null;
+            inputTokens: number | null;
             kind: "LLM" | "TOOL" | "CHAIN" | "EVENT" | null;
             level: string | null;
-            statusMessage: string | null;
-            start: string | null;
-            end: string | null;
-            model: string | null;
-            inputTokens: number | null;
-            outputTokens: number | null;
-            totalTokens: number | null;
             metadata: unknown;
+            model: string | null;
+            name: string | null;
+            outputTokens: number | null;
+            parentId: string | null;
+            start: string | null;
+            statusMessage: string | null;
+            totalTokens: number | null;
+            traceId: string | null;
         }[];
+        traceId: string;
     }>;
     readonly getResolvedSpanValue: (traceId: string, spanId: string, field: "input" | "output", options?: {
         readonly pointer?: string;
     }, signal?: AbortSignal) => Promise<{
-        traceId: string;
-        spanId: string;
         field: "output" | "input";
         pointer: string;
+        spanId: string;
+        traceId: string;
         value: unknown;
     }>;
     readonly exportTrace: (traceId: string, options?: {
@@ -5821,9 +7117,39 @@ function createApiClient(config: ApiConfig): {
         ok: boolean;
         sections: Record<string, {
             created: number;
-            updated: number;
-            skipped: number;
             errors: string[];
+            skipped: number;
+            updated: number;
+            fanout: {
+                mode: "local-only";
+                note: string;
+            } | {
+                error: string | null;
+                local_only: boolean;
+                op: string;
+                reachable: boolean;
+                results: {
+                    detail: string | null;
+                    error: string | null;
+                    name: string;
+                    outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                    payload: unknown;
+                }[];
+                mode: "fleet";
+            } | {
+                error: string | null;
+                local_only: boolean;
+                op: string;
+                reachable: boolean;
+                results: {
+                    detail: string | null;
+                    error: string | null;
+                    name: string;
+                    outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                    payload: unknown;
+                }[];
+                mode: "unreachable";
+            } | null;
             details: {
                 [x: string]: unknown;
                 new_api_keys?: {
@@ -5832,59 +7158,6 @@ function createApiClient(config: ApiConfig): {
                     api_key: string;
                 }[] | undefined;
             };
-            fanout: {
-                mode: "local-only";
-                note: string;
-            } | {
-                op: string;
-                reachable: boolean;
-                local_only: boolean;
-                results: {
-                    name: string;
-                    outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                    payload: unknown;
-                    error: string | null;
-                    detail: string | null;
-                }[];
-                error: string | null;
-                mode: "fleet";
-            } | {
-                op: string;
-                reachable: boolean;
-                local_only: boolean;
-                results: {
-                    name: string;
-                    outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                    payload: unknown;
-                    error: string | null;
-                    detail: string | null;
-                }[];
-                error: string | null;
-                mode: "unreachable";
-            } | null;
-            recycle: {
-                recycle: {
-                    name: string;
-                    kind: string;
-                    status: string;
-                    generation_before: number;
-                    detail?: string | null | undefined;
-                }[];
-                fresh: {
-                    name: string;
-                    kind: string;
-                    generation: number;
-                }[];
-                recycle_stopped: {
-                    kind: string;
-                    name: string | null;
-                    detail: string;
-                } | null;
-            } | null;
-            awaiting_respawn: {
-                name: string;
-                keys: string[];
-            }[];
         }>;
     }>;
     readonly validateCondition: (body: ValidateConditionBody) => Promise<{
@@ -5892,6 +7165,9 @@ function createApiClient(config: ApiConfig): {
         result: boolean | null;
     }>;
     readonly listPolicyVersions: (userId: string, signal?: AbortSignal) => Promise<{
+        created_at: string;
+        is_current: boolean;
+        tags: string[];
         version: number;
         body: {
             condition: {
@@ -5902,13 +7178,10 @@ function createApiClient(config: ApiConfig): {
             policy_data: Record<string, unknown>;
             scopes: string[];
         };
-        tags: string[];
-        created_at: string;
-        is_current: boolean;
     }[]>;
     readonly rollbackPolicy: (userId: string, version: number) => Promise<{
-        user_id: string;
         active_version: number;
+        user_id: string;
     }>;
     readonly logout: () => Promise<{
         revoked: boolean;
@@ -5916,36 +7189,37 @@ function createApiClient(config: ApiConfig): {
     readonly getAuthCapabilities: (signal?: AbortSignal) => Promise<{
         mintable: boolean;
         providers: {
-            name: string;
             mintable: boolean;
+            name: string;
         }[];
     }>;
     readonly getLoginMethods: (options?: {
         signal?: AbortSignal;
     }) => Promise<{
+        claim_fragment_key: string;
         methods: ({
-            shape: "form";
-            id: string;
-            title: string;
-            purpose: "login" | "invite";
-            fields: {
-                name: string;
-                label: string;
-                secret: boolean;
-                autocomplete?: string | undefined;
-            }[];
-            submit_path: string;
-        } | {
-            shape: "button";
+            href: string;
+            icon: string | null;
             id: string;
             label: string;
-            href: string;
-            icon?: string | undefined;
+            shape: "button";
+        } | {
+            fields: {
+                autocomplete: string | null;
+                label: string;
+                name: string;
+                secret: boolean;
+            }[];
+            id: string;
+            purpose: "login" | "invite";
+            shape: "form";
+            submit_path: string;
+            title: string;
         })[];
         needs_setup: boolean;
-        setup_login?: {
+        setup_login: {
             kinds: ("invite" | "password")[];
-        } | null | undefined;
+        } | null;
     }>;
     readonly submitLoginForm: (path: string, values: Record<string, string>) => Promise<{
         token: string;
@@ -5962,73 +7236,149 @@ function createApiClient(config: ApiConfig): {
         user_id: string;
     }>;
     readonly submitSetup: (body: SetupBody) => Promise<{
-        owner_user_id: string;
-        key_user_id: string;
         api_key: string;
+        invite_token: string | null;
         key_fingerprint: string;
+        key_user_id: string;
         login_attached: boolean;
-        invite_token?: string | null | undefined;
-        login_path?: string | null | undefined;
+        login_path: string | null;
+        owner_user_id: string;
     }>;
     readonly getMe: (signal?: AbortSignal) => Promise<{
-        user_id: string;
-        owner_user_id: string | null;
         admin: boolean;
+        agents: string[];
+        mintable: boolean;
+        owner_user_id: string | null;
+        principal: {
+            display_name: string;
+            kind: "human" | "service";
+            user_id: string;
+        } | null;
         public_resource_id: string;
-        scopes: string[];
-        routes: {
-            path: string;
-            methods: string[];
-        }[];
         route_patterns: {
+            open_prefix: string | null;
             pattern: string;
             scope_id: string;
         }[];
+        routes: {
+            methods: string[];
+            path: string;
+        }[];
+        scopes: string[];
         sub_mcp: {
+            access_pattern: string;
+            mount_url: string;
+            slug: string;
             tools: string[];
             transport: string;
-            mount_url: string;
-            access_pattern: string;
-            slug: string;
         }[];
         tools: string[];
-        agents: string[];
-        mintable: boolean;
-        principal?: {
-            user_id: string;
-            kind: "human" | "service";
-            display_name: string;
-        } | null | undefined;
+        user_id: string;
     }>;
-    readonly listScopes: (signal?: AbortSignal) => Promise<Record<string, string>>;
-    readonly addUrlToScope: (body: AddUrlToScopeBody) => Promise<{
-        scope_id: string;
-        url: string;
-    }>;
-    readonly removeUrlFromScope: (body: {
-        url: string;
-    }) => Promise<{
-        url: string;
-    }>;
-    readonly removeScope: (scopeId: string) => Promise<{
-        scope_id: string;
-        deleted_keys: number;
-    }>;
-    readonly listAuthRoutes: (signal?: AbortSignal) => Promise<{
-        path: string;
-        methods: string[];
-        mapped: string | null;
-        tags: string[];
-        summary: string;
-        action: "read" | "write" | "fenced" | "secret" | null;
-        declared_public: boolean;
+    readonly listPrincipals: (signal?: AbortSignal) => Promise<{
+        created_at: string;
+        created_by: string | null;
+        disabled: boolean;
+        display_name: string;
+        kind: "human" | "service";
+        user_id: string;
     }[]>;
-    readonly listPublicRoutes: (signal?: AbortSignal) => Promise<string[]>;
-    readonly pinRoutePublic: (body: PinRoutePublicBody) => Promise<{
-        url: string;
+    readonly createPrincipal: (body: {
+        user_id?: string;
+        kind: PrincipalKind;
+        display_name: string;
+        role: string;
+    }) => Promise<{
+        created_at: string;
+        created_by: string | null;
+        disabled: boolean;
+        display_name: string;
+        kind: "human" | "service";
+        user_id: string;
     }>;
-    readonly unpinPublicRoute: (url: string) => Promise<{
-        url: string;
+    readonly updatePrincipal: (userId: string, body: {
+        display_name?: string;
+        disabled?: boolean;
+    }) => Promise<{
+        created_at: string;
+        created_by: string | null;
+        disabled: boolean;
+        display_name: string;
+        kind: "human" | "service";
+        user_id: string;
+    }>;
+    readonly deletePrincipal: (userId: string) => Promise<{
+        deleted: boolean;
+        user_id: string;
+    }>;
+    readonly listTokensPayload: (signal?: AbortSignal) => Promise<{
+        condition: {
+            content?: string | undefined;
+            id?: string | undefined;
+            kwargs?: Record<string, unknown> | undefined;
+        } | null;
+        description: string;
+        orphaned: boolean;
+        policy_data: Record<string, unknown> | null;
+        principal: {
+            display_name: string;
+            kind: "human" | "service";
+            user_id: string;
+        } | null;
+        scopes: string[] | null;
+        user_id: string;
+    }[]>;
+    readonly createApiKey: (body: ApiKeyBody) => Promise<string>;
+    readonly editApiKey: (userId: string, body: Omit<ApiKeyBody, "user_id">) => Promise<{
+        updated: boolean;
+        user_id: string;
+    }>;
+    readonly revokeApiKey: (userId: string) => Promise<{
+        revoked: boolean;
+        user_id: string;
+    }>;
+    readonly createClaimLink: (body: ClaimLinkBody) => Promise<{
+        claim_path: string;
+        expires_at: string;
+        token: string;
+    }>;
+    readonly listMembers: (signal?: AbortSignal) => Promise<{
+        invites: {
+            action_keys: string[];
+            created_at: string;
+            email: string;
+            expires_at: string;
+            handle: string;
+            id: string;
+            role: string | null;
+        }[];
+        members: {
+            action_keys: string[];
+            created_at: string;
+            disabled: boolean;
+            email: string;
+            handle: string;
+            id: string;
+            principals: {
+                disabled: boolean;
+                role: string | null;
+                user_id: string;
+            }[];
+            role: string | null;
+        }[];
+    }>;
+    readonly listMemberActions: (signal?: AbortSignal) => Promise<{
+        actions: {
+            destructive: boolean;
+            input_schema: Record<string, unknown>;
+            key: string;
+            label: string;
+            result_schema: Record<string, unknown>;
+            scope: "page" | "member_row" | "invite_row";
+        }[];
+    }>;
+    readonly invokeMemberAction: (body: InvokeMemberActionBody) => Promise<{
+        result: Record<string, unknown>;
     }>;
     readonly listRoles: (signal?: AbortSignal) => Promise<{
         allow_all: boolean;
@@ -6070,11 +7420,14 @@ function createApiClient(config: ApiConfig): {
         scopes: string[];
     }>;
     readonly deleteRole: (name: string) => Promise<{
-        name: string;
         deleted: boolean;
+        name: string;
     }>;
     readonly listRoleVersions: (name: string, signal?: AbortSignal) => Promise<{
         versions: {
+            created_at: string;
+            is_current: boolean;
+            tags: string[];
             version: number;
             body: {
                 allow_all: boolean;
@@ -6089,11 +7442,11 @@ function createApiClient(config: ApiConfig): {
                 name: string;
                 scopes: string[];
             };
-            tags: string[];
-            created_at: string;
-            is_current: boolean;
         }[];
         audit: {
+            created_at: string;
+            is_current: boolean;
+            tags: string[];
             version: number;
             body: {
                 action: string;
@@ -6101,9 +7454,6 @@ function createApiClient(config: ApiConfig): {
                 before: unknown;
                 after: unknown;
             };
-            tags: string[];
-            created_at: string;
-            is_current: boolean;
         }[];
     }>;
     readonly rollbackRole: (name: string, version: number) => Promise<{
@@ -6119,115 +7469,40 @@ function createApiClient(config: ApiConfig): {
         name: string;
         scopes: string[];
     }>;
-    readonly listTokensPayload: (signal?: AbortSignal) => Promise<{
-        user_id: string;
-        description: string;
-        scopes: string[];
-        policy_data: unknown;
-        condition?: {
-            content?: string | undefined;
-            id?: string | undefined;
-            kwargs?: Record<string, unknown> | undefined;
-        } | null | undefined;
-        principal?: {
-            user_id: string;
-            kind: "human" | "service";
-            display_name: string;
-        } | null | undefined;
-        orphaned?: boolean | undefined;
-    }[]>;
-    readonly createApiKey: (body: ApiKeyBody) => Promise<string>;
-    readonly editApiKey: (userId: string, body: Omit<ApiKeyBody, "user_id">) => Promise<{
-        user_id: string;
-        updated: boolean;
+    readonly listScopes: (signal?: AbortSignal) => Promise<Record<string, string>>;
+    readonly addUrlToScope: (body: AddUrlToScopeBody) => Promise<{
+        scope_id: string;
+        url: string;
     }>;
-    readonly revokeApiKey: (userId: string) => Promise<{
-        user_id: string;
-        revoked: boolean;
-    }>;
-    readonly createClaimLink: (body: ClaimLinkBody) => Promise<{
-        claim_path: string;
-        token: string;
-        expires_at: string;
-    }>;
-    readonly listMembers: (signal?: AbortSignal) => Promise<{
-        members: {
-            id: string;
-            email: string;
-            role: string | null;
-            created_at: string;
-            principals: {
-                user_id: string;
-                disabled: boolean;
-                role: string | null;
-            }[];
-            disabled: boolean;
-            handle: string;
-            action_keys: string[];
-        }[];
-        invites: {
-            id: string;
-            email: string;
-            role: string | null;
-            created_at: string;
-            expires_at: string;
-            handle: string;
-            action_keys: string[];
-        }[];
-    }>;
-    readonly listMemberActions: (signal?: AbortSignal) => Promise<{
-        actions: {
-            key: string;
-            label: string;
-            scope: "page" | "member_row" | "invite_row";
-            destructive: boolean;
-            input_schema: Record<string, unknown>;
-            result_schema: Record<string, unknown>;
-        }[];
-    }>;
-    readonly invokeMemberAction: (body: InvokeMemberActionBody) => Promise<{
-        result: Record<string, unknown>;
-    }>;
-    readonly listPrincipals: (signal?: AbortSignal) => Promise<{
-        user_id: string;
-        kind: "human" | "service";
-        display_name: string;
-        created_by: string | null;
-        disabled: boolean;
-        created_at: string;
-    }[]>;
-    readonly createPrincipal: (body: {
-        user_id?: string;
-        kind: "human" | "service";
-        display_name: string;
-        role: string;
+    readonly removeUrlFromScope: (body: {
+        url: string;
     }) => Promise<{
-        user_id: string;
-        kind: "human" | "service";
-        display_name: string;
-        created_by: string | null;
-        disabled: boolean;
-        created_at: string;
+        url: string;
     }>;
-    readonly updatePrincipal: (userId: string, body: {
-        display_name?: string;
-        disabled?: boolean;
-    }) => Promise<{
-        user_id: string;
-        kind: "human" | "service";
-        display_name: string;
-        created_by: string | null;
-        disabled: boolean;
-        created_at: string;
+    readonly removeScope: (scopeId: string) => Promise<{
+        deleted_keys: number;
+        scope_id: string;
     }>;
-    readonly deletePrincipal: (userId: string) => Promise<{
-        user_id: string;
-        deleted: boolean;
+    readonly listAuthRoutes: (signal?: AbortSignal) => Promise<{
+        action: "read" | "write" | "secret" | "fenced" | null;
+        declared_public: boolean;
+        mapped: string | null;
+        methods: string[];
+        path: string;
+        summary: string;
+        tags: string[];
+    }[]>;
+    readonly listPublicRoutes: (signal?: AbortSignal) => Promise<string[]>;
+    readonly pinRoutePublic: (body: PinRoutePublicBody) => Promise<{
+        url: string;
+    }>;
+    readonly unpinPublicRoute: (url: string) => Promise<{
+        url: string;
     }>;
     readonly getSettingsSchema: (signal?: AbortSignal) => Promise<{
         groups: {
-            name: string;
             module: string;
+            name: string;
             qualname: string;
             fields: {
                 name: string;
@@ -6245,29 +7520,31 @@ function createApiClient(config: ApiConfig): {
     }>;
     readonly getMcpConfigSchema: (signal?: AbortSignal) => Promise<Record<string, unknown>>;
     readonly createTriggerLink: (body: TriggerLinkCreateBody) => Promise<{
+        expires_at: string | null;
         name: string;
-        trigger_path: string;
         token: string;
         topic: string;
-        expires_at: string | null;
+        trigger_path: string;
     }>;
     readonly listTriggerLinks: (signal?: AbortSignal) => Promise<{
         items: {
-            name: string;
-            topic: string;
-            execution_key: string;
-            trigger_auth: "token" | "public" | "verifier" | "token+api_key" | "out-of-service";
-            tool_kwargs: Record<string, unknown> | null;
-            created_by: string | null;
             created_at: string;
+            created_by: string | null;
+            execution_key: string;
+            execution_key_fingerprint: string;
             expires_at: string | null;
+            name: string;
+            require_api_key: boolean;
             token_hash_prefix: string;
+            tool_kwargs: Record<string, unknown> | null;
+            topic: string;
+            trigger_auth: "token" | "public" | "verifier" | "token+api_key" | "out-of-service";
         }[];
         total: number;
     }>;
     readonly deleteTriggerLink: (name: string) => Promise<{
-        removed: boolean;
         name: string;
+        removed: boolean;
     }>;
     readonly listHooks: (topic?: string, signal?: AbortSignal) => Promise<{
         items: {
@@ -6357,19 +7634,19 @@ function createApiClient(config: ApiConfig): {
             topic: string;
         }[];
         total: number;
+        trigger_auth: Record<string, "token" | "public" | "verifier" | "token+api_key" | "out-of-service">;
         topic_verifiers: Record<string, {
             verifier: string;
             config: Record<string, unknown>;
         }>;
-        trigger_auth: Record<string, "token" | "public" | "verifier" | "token+api_key" | "out-of-service">;
     }>;
     readonly registerHook: (params: HookRegister) => Promise<{
-        registered: boolean;
         name: string;
+        registered: boolean;
     }>;
     readonly unregisterHook: (name: string) => Promise<{
-        removed: boolean;
         name: string;
+        removed: boolean;
     }>;
     readonly listHookVerifiers: (signal?: AbortSignal) => Promise<string[]>;
     readonly setTopicVerifier: (topic: string, body: TopicVerifierBody) => Promise<{
@@ -6404,18 +7681,55 @@ function createApiClient(config: ApiConfig): {
     readonly streamAuthoredAgentRun: (name: string, input: unknown, signal?: AbortSignal) => Promise<AsyncGenerator<ParsedAgentEvent, any, any>>;
     readonly listNotifications: (signal?: AbortSignal) => Promise<{
         notifications: {
-            id: string;
-            message: string;
-            recipient: string | null;
+            audience: string | null;
             created_at: string;
-            audience?: string | null | undefined;
-            media?: unknown[] | null | undefined;
-            template?: {
+            footer: string | null;
+            header: {
+                caption: string | null;
+                filename: string | null;
+                kind: "image" | "link" | "document" | "video" | "audio";
+                url: string;
+            } | null;
+            id: string;
+            location: {
+                address: string | null;
+                latitude: number;
+                longitude: number;
+                name: string | null;
+            } | null;
+            media: {
+                caption: string | null;
+                filename: string | null;
+                kind: "image" | "link" | "document" | "video" | "audio";
+                url: string;
+            }[] | null;
+            message: string;
+            options: ({
+                kind: "link";
+                label: string;
+                url: string;
+            } | {
+                description: string | null;
+                id: string | null;
+                kind: "reply";
+                text: string;
+            })[] | null;
+            recipient: string | null;
+            schema: unknown;
+            sections: {
+                rows: {
+                    description: string | null;
+                    id: string | null;
+                    kind: "reply";
+                    text: string;
+                }[];
+                title: string;
+            }[] | null;
+            template: {
                 language: string;
                 name: string;
                 parameters: Record<string, unknown> | null;
-            } | null | undefined;
-            options?: string[] | null | undefined;
+            } | null;
         }[];
     }>;
     readonly getWebEntryGate: (identity: string, signal?: AbortSignal) => Promise<{
@@ -6439,16 +7753,15 @@ function createApiClient(config: ApiConfig): {
         status: "revoked";
     }>;
     readonly listConversationRoutes: (signal?: AbortSignal) => Promise<{
-        items: {
-            callback_secret: string | null;
+        items: ({
             callback_url: string | null;
             cancel_expr: {
                 content?: string | undefined;
                 id?: string | undefined;
                 kwargs?: Record<string, unknown> | undefined;
             } | null;
-            channel: string | null;
-            door: "channel" | "api";
+            channel: null;
+            door: "api";
             error_reply_text: string | null;
             execution_key: string;
             execution_key_fingerprint: string;
@@ -6459,7 +7772,7 @@ function createApiClient(config: ApiConfig): {
             } | null;
             initial_mode: "agent" | "manual";
             locale: string | null;
-            our_identity: string | null;
+            our_identity: null;
             overlap: {
                 deliver: "one" | "all";
                 running: "continue" | "cancel";
@@ -6484,22 +7797,15 @@ function createApiClient(config: ApiConfig): {
             target_kind: "tool" | "agent";
             target_name: string;
             turns_per_hour_override: number | null;
-        }[];
-        total: number;
-    }>;
-    readonly createOrReplaceConversationRoute: (route: ConversationRouteCreate) => Promise<{
-        created: boolean;
-        route_name: string;
-        route: {
-            callback_secret: string | null;
-            callback_url: string | null;
+        } | {
+            callback_url: null;
             cancel_expr: {
                 content?: string | undefined;
                 id?: string | undefined;
                 kwargs?: Record<string, unknown> | undefined;
             } | null;
-            channel: string | null;
-            door: "channel" | "api";
+            channel: string;
+            door: "channel";
             error_reply_text: string | null;
             execution_key: string;
             execution_key_fingerprint: string;
@@ -6510,7 +7816,102 @@ function createApiClient(config: ApiConfig): {
             } | null;
             initial_mode: "agent" | "manual";
             locale: string | null;
-            our_identity: string | null;
+            our_identity: string;
+            overlap: {
+                deliver: "one" | "all";
+                running: "continue" | "cancel";
+                settle_seconds: number;
+            };
+            reply_expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            resume_expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            route_name: string;
+            start_expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            target_kind: "tool" | "agent";
+            target_name: string;
+            turns_per_hour_override: number | null;
+        })[];
+        total: number;
+        unreadable: number;
+    }>;
+    readonly createOrReplaceConversationRoute: (route: ConversationRouteCreate) => Promise<{
+        callback_secret: string | null;
+        created: boolean;
+        route: {
+            callback_url: string | null;
+            cancel_expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            channel: null;
+            door: "api";
+            error_reply_text: string | null;
+            execution_key: string;
+            execution_key_fingerprint: string;
+            extras_expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            initial_mode: "agent" | "manual";
+            locale: string | null;
+            our_identity: null;
+            overlap: {
+                deliver: "one" | "all";
+                running: "continue" | "cancel";
+                settle_seconds: number;
+            };
+            reply_expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            resume_expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            route_name: string;
+            start_expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            target_kind: "tool" | "agent";
+            target_name: string;
+            turns_per_hour_override: number | null;
+        } | {
+            callback_url: null;
+            cancel_expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            channel: string;
+            door: "channel";
+            error_reply_text: string | null;
+            execution_key: string;
+            execution_key_fingerprint: string;
+            extras_expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            initial_mode: "agent" | "manual";
+            locale: string | null;
+            our_identity: string;
             overlap: {
                 deliver: "one" | "all";
                 running: "continue" | "cancel";
@@ -6536,88 +7937,266 @@ function createApiClient(config: ApiConfig): {
             target_name: string;
             turns_per_hour_override: number | null;
         };
-        callback_secret: string | null;
+        route_name: string;
     }>;
     readonly deleteConversationRoute: (routeName: string) => Promise<{
         removed: boolean;
         route_name: string;
     }>;
     readonly listConversationThreads: (routeName: string, page: number, pageSize: number, filters?: ConversationThreadFilters, signal?: AbortSignal) => Promise<{
-        total: number;
-        page: number;
-        page_size: number;
-        next_page: number | null;
-        truncated: boolean;
         items: {
-            thread_id: string;
             client_address: string;
             last_activity_at: number;
+            last_delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
             message_count: number;
-            last_delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
+            thread_id: string;
         }[];
+        next_page: number | null;
+        page: number;
+        page_size: number;
+        total: number;
+        truncated: boolean;
+        unreadable: number;
     }>;
     readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
+        items: {
+            answer: string | null;
+            answer_parts: {
+                data: {
+                    options: Record<string, {
+                        label: string | null;
+                        value: string;
+                    }[]>;
+                    values: Record<string, unknown>;
+                } | null;
+                footer: string | null;
+                form_tag: string | null;
+                header: {
+                    caption: string | null;
+                    filename: string | null;
+                    kind: "image" | "link" | "document" | "video" | "audio";
+                    url: string;
+                } | null;
+                location: {
+                    address: string | null;
+                    latitude: number;
+                    longitude: number;
+                    name: string | null;
+                } | null;
+                media: {
+                    caption: string | null;
+                    filename: string | null;
+                    kind: "image" | "link" | "document" | "video" | "audio";
+                    url: string;
+                }[] | null;
+                message: string;
+                options: ({
+                    kind: "link";
+                    label: string;
+                    url: string;
+                } | {
+                    description: string | null;
+                    id: string | null;
+                    kind: "reply";
+                    text: string;
+                })[] | null;
+                pages: {
+                    display: {
+                        alt: string | null;
+                        kind: "heading" | "body" | "image";
+                        slot: string | null;
+                        src: string | null;
+                        text: string | null;
+                    }[];
+                    fields: string[];
+                    kind: "input" | "review";
+                    title: string;
+                }[] | null;
+                schema: Record<string, unknown> | null;
+                sections: {
+                    rows: {
+                        description: string | null;
+                        id: string | null;
+                        kind: "reply";
+                        text: string;
+                    }[];
+                    title: string;
+                }[] | null;
+                template: {
+                    language: string;
+                    name: string;
+                    parameters: Record<string, unknown> | null;
+                } | null;
+            }[] | null;
+            answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
+            attempts: number | null;
+            callback_url: string | null;
+            caller_principal: string | null;
+            channel: string | null;
+            client_address: string;
+            created_at: number;
+            delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
+            door: "channel" | "api";
+            error: string | null;
+            inbound_attachments: {
+                caption: string | null;
+                filename: string | null;
+                kind: "image" | "link" | "document" | "video" | "audio";
+                url: string;
+            }[] | null;
+            inbound_event: Record<string, unknown> | null;
+            inbound_form: Record<string, unknown> | null;
+            inbound_form_tag: string | null;
+            inbound_kind: "message" | "event";
+            inbound_locale: string | null;
+            inbound_location: {
+                address: string | null;
+                latitude: number;
+                longitude: number;
+                name: string | null;
+            } | null;
+            inbound_text: string;
+            message_id: string;
+            operator_send: boolean;
+            origin: "operator" | "client";
+            our_identity: string | null;
+            outbound_message_ids: string[] | null;
+            pending_receipt: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | null;
+            provider_message_id: string | null;
+            route_missing: boolean;
+            route_name: string;
+            submitted_by: string | null;
+            successor_id: string | null;
+            thread_id: string;
+            updated_at: number;
+        }[];
+        next_page: number | null;
         order: "asc" | "desc";
-        total: number;
         page: number;
         page_size: number;
-        next_page: number | null;
+        person_id: string | null;
+        total: number;
         truncated: boolean;
-        items: {
-            message_id: string;
-            route_name: string;
-            door: "channel" | "api";
-            thread_id: string;
-            client_address: string;
-            caller_principal: string | null;
-            inbound_text: string;
-            inbound_attachments: unknown[] | null;
-            answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
-            answer: string | null;
-            successor_id: string | null;
-            origin: "client" | "operator";
-            delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
-            created_at: number;
-            updated_at: number;
-            channel?: string | null | undefined;
-            our_identity?: string | null | undefined;
-            provider_message_id?: string | null | undefined;
-            callback_url?: string | null | undefined;
-            error?: string | null | undefined;
-            outbound_message_ids?: string[] | undefined;
-            attempts?: number | undefined;
-        }[];
+        unreadable: number;
     }>;
     readonly searchConversationMessages: (query: ConversationMessageSearchQuery, signal?: AbortSignal) => Promise<{
-        total: number;
+        items: {
+            answer: string | null;
+            answer_parts: {
+                data: {
+                    options: Record<string, {
+                        label: string | null;
+                        value: string;
+                    }[]>;
+                    values: Record<string, unknown>;
+                } | null;
+                footer: string | null;
+                form_tag: string | null;
+                header: {
+                    caption: string | null;
+                    filename: string | null;
+                    kind: "image" | "link" | "document" | "video" | "audio";
+                    url: string;
+                } | null;
+                location: {
+                    address: string | null;
+                    latitude: number;
+                    longitude: number;
+                    name: string | null;
+                } | null;
+                media: {
+                    caption: string | null;
+                    filename: string | null;
+                    kind: "image" | "link" | "document" | "video" | "audio";
+                    url: string;
+                }[] | null;
+                message: string;
+                options: ({
+                    kind: "link";
+                    label: string;
+                    url: string;
+                } | {
+                    description: string | null;
+                    id: string | null;
+                    kind: "reply";
+                    text: string;
+                })[] | null;
+                pages: {
+                    display: {
+                        alt: string | null;
+                        kind: "heading" | "body" | "image";
+                        slot: string | null;
+                        src: string | null;
+                        text: string | null;
+                    }[];
+                    fields: string[];
+                    kind: "input" | "review";
+                    title: string;
+                }[] | null;
+                schema: Record<string, unknown> | null;
+                sections: {
+                    rows: {
+                        description: string | null;
+                        id: string | null;
+                        kind: "reply";
+                        text: string;
+                    }[];
+                    title: string;
+                }[] | null;
+                template: {
+                    language: string;
+                    name: string;
+                    parameters: Record<string, unknown> | null;
+                } | null;
+            }[] | null;
+            answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
+            attempts: number | null;
+            callback_url: string | null;
+            caller_principal: string | null;
+            channel: string | null;
+            client_address: string;
+            created_at: number;
+            delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
+            door: "channel" | "api";
+            error: string | null;
+            inbound_attachments: {
+                caption: string | null;
+                filename: string | null;
+                kind: "image" | "link" | "document" | "video" | "audio";
+                url: string;
+            }[] | null;
+            inbound_event: Record<string, unknown> | null;
+            inbound_form: Record<string, unknown> | null;
+            inbound_form_tag: string | null;
+            inbound_kind: "message" | "event";
+            inbound_locale: string | null;
+            inbound_location: {
+                address: string | null;
+                latitude: number;
+                longitude: number;
+                name: string | null;
+            } | null;
+            inbound_text: string;
+            message_id: string;
+            operator_send: boolean;
+            origin: "operator" | "client";
+            our_identity: string | null;
+            outbound_message_ids: string[] | null;
+            pending_receipt: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | null;
+            provider_message_id: string | null;
+            route_missing: boolean;
+            route_name: string;
+            submitted_by: string | null;
+            successor_id: string | null;
+            thread_id: string;
+            updated_at: number;
+        }[];
+        next_page: number | null;
         page: number;
         page_size: number;
-        next_page: number | null;
+        total: number;
         truncated: boolean;
-        items: {
-            message_id: string;
-            route_name: string;
-            door: "channel" | "api";
-            thread_id: string;
-            client_address: string;
-            caller_principal: string | null;
-            inbound_text: string;
-            inbound_attachments: unknown[] | null;
-            answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
-            answer: string | null;
-            successor_id: string | null;
-            origin: "client" | "operator";
-            delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
-            created_at: number;
-            updated_at: number;
-            channel?: string | null | undefined;
-            our_identity?: string | null | undefined;
-            provider_message_id?: string | null | undefined;
-            callback_url?: string | null | undefined;
-            error?: string | null | undefined;
-            outbound_message_ids?: string[] | undefined;
-            attempts?: number | undefined;
-        }[];
+        unreadable: number;
     }>;
     readonly sendConversationThreadMessage: (routeName: string, body: ConversationThreadMessageBody) => Promise<{
         message_id: string;
@@ -6682,6 +8261,7 @@ function createApiClient(config: ApiConfig): {
             target_name: string;
         }[];
         total: number;
+        unreadable: number;
     }>;
     readonly getConversationConfig: (targetKind: ConversationTargetKind, targetName: string, signal?: AbortSignal) => Promise<{
         greeting_template: string | null;
@@ -6733,9 +8313,6 @@ function createApiClient(config: ApiConfig): {
         target_name: string;
     }>;
     readonly setConversationConfig: (config: TargetConversationConfig) => Promise<{
-        created: boolean;
-        target_kind: "tool" | "agent";
-        target_name: string;
         config: {
             greeting_template: string | null;
             multichannel: boolean;
@@ -6785,6 +8362,9 @@ function createApiClient(config: ApiConfig): {
             target_kind: "tool" | "agent";
             target_name: string;
         };
+        created: boolean;
+        target_kind: "tool" | "agent";
+        target_name: string;
     }>;
     readonly deleteConversationConfig: (targetKind: ConversationTargetKind, targetName: string) => Promise<{
         removed: boolean;
@@ -6793,30 +8373,118 @@ function createApiClient(config: ApiConfig): {
     }>;
     readonly listFailedConversationMessages: (signal?: AbortSignal) => Promise<{
         items: {
-            message_id: string;
-            route_name: string;
-            door: "channel" | "api";
-            thread_id: string;
-            client_address: string;
-            caller_principal: string | null;
-            inbound_text: string;
-            inbound_attachments: unknown[] | null;
-            answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
             answer: string | null;
-            successor_id: string | null;
-            origin: "client" | "operator";
-            delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
+            answer_parts: {
+                data: {
+                    options: Record<string, {
+                        label: string | null;
+                        value: string;
+                    }[]>;
+                    values: Record<string, unknown>;
+                } | null;
+                footer: string | null;
+                form_tag: string | null;
+                header: {
+                    caption: string | null;
+                    filename: string | null;
+                    kind: "image" | "link" | "document" | "video" | "audio";
+                    url: string;
+                } | null;
+                location: {
+                    address: string | null;
+                    latitude: number;
+                    longitude: number;
+                    name: string | null;
+                } | null;
+                media: {
+                    caption: string | null;
+                    filename: string | null;
+                    kind: "image" | "link" | "document" | "video" | "audio";
+                    url: string;
+                }[] | null;
+                message: string;
+                options: ({
+                    kind: "link";
+                    label: string;
+                    url: string;
+                } | {
+                    description: string | null;
+                    id: string | null;
+                    kind: "reply";
+                    text: string;
+                })[] | null;
+                pages: {
+                    display: {
+                        alt: string | null;
+                        kind: "heading" | "body" | "image";
+                        slot: string | null;
+                        src: string | null;
+                        text: string | null;
+                    }[];
+                    fields: string[];
+                    kind: "input" | "review";
+                    title: string;
+                }[] | null;
+                schema: Record<string, unknown> | null;
+                sections: {
+                    rows: {
+                        description: string | null;
+                        id: string | null;
+                        kind: "reply";
+                        text: string;
+                    }[];
+                    title: string;
+                }[] | null;
+                template: {
+                    language: string;
+                    name: string;
+                    parameters: Record<string, unknown> | null;
+                } | null;
+            }[] | null;
+            answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
+            attempts: number | null;
+            callback_url: string | null;
+            caller_principal: string | null;
+            channel: string | null;
+            client_address: string;
             created_at: number;
+            delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
+            door: "channel" | "api";
+            error: string | null;
+            inbound_attachments: {
+                caption: string | null;
+                filename: string | null;
+                kind: "image" | "link" | "document" | "video" | "audio";
+                url: string;
+            }[] | null;
+            inbound_event: Record<string, unknown> | null;
+            inbound_form: Record<string, unknown> | null;
+            inbound_form_tag: string | null;
+            inbound_kind: "message" | "event";
+            inbound_locale: string | null;
+            inbound_location: {
+                address: string | null;
+                latitude: number;
+                longitude: number;
+                name: string | null;
+            } | null;
+            inbound_text: string;
+            message_id: string;
+            operator_send: boolean;
+            origin: "operator" | "client";
+            our_identity: string | null;
+            outbound_message_ids: string[] | null;
+            pending_receipt: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | null;
+            provider_message_id: string | null;
+            route_missing: boolean;
+            route_name: string;
+            submitted_by: string | null;
+            successor_id: string | null;
+            thread_id: string;
             updated_at: number;
-            channel?: string | null | undefined;
-            our_identity?: string | null | undefined;
-            provider_message_id?: string | null | undefined;
-            callback_url?: string | null | undefined;
-            error?: string | null | undefined;
-            outbound_message_ids?: string[] | undefined;
-            attempts?: number | undefined;
         }[];
         total: number;
+        unreadable: number;
     }>;
     readonly deleteConversationThread: (routeName: string, threadId: string) => Promise<{
         removed: number;
@@ -6824,34 +8492,39 @@ function createApiClient(config: ApiConfig): {
         thread_id: string;
     }>;
     readonly deleteConversationPerson: (personId: string) => Promise<{
+        erased: boolean;
         person_id: string;
         removed: number;
-        erased: boolean;
     }>;
     readonly listChannels: (signal?: AbortSignal) => Promise<{
         channels: string[];
     }>;
     readonly listInteractions: (page: number, pageSize: number, signal?: AbortSignal) => Promise<{
-        total: number;
+        next_page: number | null;
         page: number;
         page_size: number;
-        next_page: number | null;
+        total: number;
         truncated: boolean;
         items: {
-            interaction_id: string;
-            group_id: string;
-            question: string;
-            answer_format: "text" | "external" | "confirm" | "select" | "form";
-            format_payload: Record<string, unknown>;
+            answer_format: "text" | "free" | "confirm" | "form" | "select" | "external";
+            audience: string | null;
+            channel: string | null;
             created_at: string;
-            timeout_at: string;
+            group_id: string;
+            interaction_id: string;
+            media: {
+                caption: string | null;
+                filename: string | null;
+                kind: "image" | "link" | "document" | "video" | "audio";
+                url: string;
+            }[] | null;
+            origin: string | null;
+            question: string;
+            recipient: string | null;
             sensitive: boolean;
-            server_verified?: boolean | undefined;
-            channel?: string | undefined;
-            recipient?: string | undefined;
-            origin?: string | undefined;
-            audience?: string | undefined;
-            media?: unknown[] | undefined;
+            server_verified: boolean | null;
+            timeout_at: string;
+            format_payload: Record<string, unknown>;
         }[];
     }>;
     readonly answerInteraction: (interactionId: string, answer: unknown) => Promise<{
@@ -6861,8 +8534,8 @@ function createApiClient(config: ApiConfig): {
     readonly reactInteraction: (interactionId: string, event: ReactionEvent, values: unknown) => Promise<{
         values: Record<string, unknown>;
         options: Record<string, {
+            label: string | null;
             value: string;
-            label?: string | null | undefined;
         }[]>;
         errors: Record<string, string>;
         display: Record<string, unknown>;
@@ -6872,454 +8545,270 @@ function createApiClient(config: ApiConfig): {
         status: string;
     }>;
     readonly listStudioPlugins: (signal?: AbortSignal) => Promise<{
-        name: string;
-        version: string;
         api_version: number;
-        entry: string;
-        integrity: Record<string, string>;
         contributions: {
-            tool_panels: Record<string, string>;
+            nav_entries: string[];
             pages: string[];
             settings_tabs: string[];
-            nav_entries: string[];
+            tool_panels: Record<string, string>;
         };
+        entry: string;
+        integrity: Record<string, string>;
+        name: string;
+        version: string;
     }[]>;
     readonly listProviders: (signal?: AbortSignal) => Promise<{
-        providers: {
-            id: string;
+        categories: {
             display_name: string;
-            description: string;
-            icon_url: string | null;
-            kind: "none" | "oauth";
-            origin: "system" | "community";
+            id: string;
+            sort_order: number;
+        }[];
+        providers: {
             category: string;
-            sub_services: {
-                id: string;
-                display_name: string;
-                description: string;
-                scopes: string[];
-            }[];
             config_fields: {
                 key: string;
                 label: string;
-                target: "env" | "header";
                 required: boolean;
                 secret: boolean;
+                target: "header" | "env";
             }[];
-            removable: boolean;
-            client_source: "manual" | "env" | "dynamic" | "unset" | null;
-        }[];
-        categories: {
-            id: string;
+            description: string;
             display_name: string;
-            sort_order: number;
+            icon_url: string;
+            id: string;
+            kind: "none" | "oauth";
+            origin: "system" | "community";
+            sub_services: {
+                description: string;
+                display_name: string;
+                id: string;
+                scopes: string[];
+            }[];
         }[];
     }>;
     readonly listConnections: (signal?: AbortSignal) => Promise<{
         items: {
-            connection_id: string;
-            provider_id: string;
-            alias: string;
-            kind: "none" | "oauth";
             account_identity: string | null;
+            alias: string;
+            auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
+            connection_id: string;
+            created_at: string;
             enabled_sub_services: string[];
             granted_scopes: string[];
+            kind: "none" | "oauth";
+            provider_id: string;
             unreachable_sub_services: string[];
-            scopes_wanted: string[];
-            auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
-            created_at: string;
         }[];
         total: number;
-        unhealthy?: number | undefined;
+        unhealthy: number;
     }>;
     readonly getConnection: (id: string, signal?: AbortSignal) => Promise<{
-        connection_id: string;
-        provider_id: string;
-        alias: string;
-        kind: "none" | "oauth";
         account_identity: string | null;
+        alias: string;
+        auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
+        connection_id: string;
+        created_at: string;
         enabled_sub_services: string[];
         granted_scopes: string[];
+        kind: "none" | "oauth";
+        provider_id: string;
         unreachable_sub_services: string[];
-        scopes_wanted: string[];
-        auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
-        created_at: string;
     }>;
     readonly startConnect: (args: StartConnectArgs) => Promise<{
-        flow_id: string;
         authorize_url: string;
+        flow_id: string;
     } | {
-        connection_id: string;
         added_manifest_entries: string[];
+        connection_id: string;
         fanout: {
             mode: "local-only";
             note: string;
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "fleet";
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "unreachable";
         } | null;
     }>;
     readonly disconnect: (id: string) => Promise<{
         connection_id: string;
-        upstream_revoke_outcome: "success" | "failed" | "skipped";
-        upstream_revoke_status: number | null;
         removed_manifest_entries: string[];
+        upstream_revoke_outcome: "success" | "skipped" | "failed";
+        upstream_revoke_status: number | null;
         fanout: {
             mode: "local-only";
             note: string;
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "fleet";
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "unreachable";
         } | null;
     }>;
     readonly reconnect: (id: string, enabled_sub_services: string[], return_url?: string) => Promise<{
-        flow_id: string;
         authorize_url: string;
+        flow_id: string;
     }>;
     readonly patchSubServices: (id: string, enabled_sub_services: string[], return_url?: string) => Promise<{
-        connection_id: string;
-        enabled_sub_services: string[];
-        consent_required: boolean;
-        flow_id: string | null;
-        authorize_url: string | null;
         added_manifest_entries: string[];
+        authorize_url: string | null;
+        connection_id: string;
+        consent_required: boolean;
+        enabled_sub_services: string[];
+        flow_id: string | null;
         removed_manifest_entries: string[];
         fanout: {
             mode: "local-only";
             note: string;
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "fleet";
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "unreachable";
         } | null;
     }>;
-    readonly completeOAuth: (state: string, code: string, error?: string, iss?: string) => Promise<{
-        kind: "success";
+    readonly completeOAuth: (state: string, code: string, error?: string) => Promise<{
+        kind: "cancelled";
+        message: string;
+    } | {
+        kind: "failed";
+        reason: string;
+    } | {
+        kind: "not_configured";
+    } | {
         connection_id: string;
+        kind: "success";
         return_url: string;
         fanout: {
             mode: "local-only";
             note: string;
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "fleet";
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "unreachable";
-        } | null;
-    } | {
-        kind: "failed";
-        reason: string;
-    } | {
-        kind: "cancelled";
-        message: string;
-    }>;
-    readonly discoverServer: (target: DiscoverServerTarget) => Promise<{
-        url: string;
-        resource: string;
-        resource_name: string | null;
-        issuer: string;
-        authorization_servers: string[];
-        client_issuer: string | null;
-        registration_supported: boolean;
-        automatic_client: boolean;
-        scopes_supported: string[];
-        suggested_id: string;
-        suggested_display_name: string;
-        redirect_uri: string | null;
-    }>;
-    readonly addServer: (args: AddServerArgs) => Promise<{
-        provider: {
-            id: string;
-            display_name: string;
-            description: string;
-            icon_url: string | null;
-            kind: "none" | "oauth";
-            origin: "system" | "community";
-            category: string;
-            sub_services: {
-                id: string;
-                display_name: string;
-                description: string;
-                scopes: string[];
-            }[];
-            config_fields: {
-                key: string;
-                label: string;
-                target: "env" | "header";
-                required: boolean;
-                secret: boolean;
-            }[];
-            removable: boolean;
-            client_source: "manual" | "env" | "dynamic" | "unset" | null;
         };
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        } | null;
-    }>;
-    readonly removeProvider: (id: string) => Promise<{
-        provider_id: string;
-        removed_clients: number;
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        } | null;
-    }>;
-    readonly setProviderClient: (id: string, args: SetProviderClientArgs) => Promise<{
-        provider: {
-            id: string;
-            display_name: string;
-            description: string;
-            icon_url: string | null;
-            kind: "none" | "oauth";
-            origin: "system" | "community";
-            category: string;
-            sub_services: {
-                id: string;
-                display_name: string;
-                description: string;
-                scopes: string[];
-            }[];
-            config_fields: {
-                key: string;
-                label: string;
-                target: "env" | "header";
-                required: boolean;
-                secret: boolean;
-            }[];
-            removable: boolean;
-            client_source: "manual" | "env" | "dynamic" | "unset" | null;
-        };
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        } | null;
     }>;
     readonly setMcpSecretEnv: (body: SetMcpSecretEnvBody) => Promise<{
-        status: string;
         env_keys: number;
-        awaiting_respawn: {
-            name: string;
-            keys: string[];
-        }[];
+        status: string;
         fanout: {
             mode: "local-only";
             note: string;
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "fleet";
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "unreachable";
         };
-        recycle: {
-            recycle: {
-                name: string;
-                kind: string;
-                status: string;
-                generation_before: number;
-                detail?: string | null | undefined;
-            }[];
-            fresh: {
-                name: string;
-                kind: string;
-                generation: number;
-            }[];
-            recycle_stopped: {
-                kind: string;
-                name: string | null;
-                detail: string;
-            } | null;
-        } | null;
     }>;
     readonly getManifestPreserved: (signal?: AbortSignal) => Promise<{
+        user_tools: string[];
         mcp: {
             [x: string]: unknown;
             managed?: {
@@ -7328,17 +8817,16 @@ function createApiClient(config: ApiConfig): {
                 sub_service: string;
             } | null | undefined;
         }[];
-        user_tools: string[];
     }>;
     readonly getMcpEnvRefs: (signal?: AbortSignal) => Promise<{
-        var: string;
-        pointer: string;
         has_default: boolean;
+        pointer: string;
         set: boolean;
+        var: string;
     }[]>;
     readonly listSettingsProfiles: (signal?: AbortSignal) => Promise<{
-        name: string;
         description: string;
+        name: string;
     }[]>;
     readonly getSettingsProfile: (name: string, signal?: AbortSignal) => Promise<{
         description: string;
@@ -7346,100 +8834,93 @@ function createApiClient(config: ApiConfig): {
         secret_keys: string[];
     }>;
     readonly putSettingsProfile: (name: string, body: SettingsProfileBody) => Promise<{
-        ok: true;
-        version?: number | undefined;
+        ok: boolean;
+        version: number;
     }>;
     readonly deleteSettingsProfile: (name: string) => Promise<{
-        ok: true;
+        ok: boolean;
     }>;
     readonly diffSettingsProfile: (name: string) => Promise<{
         added: string[];
-        removed: string[];
         changed: {
             key: string;
-            old: string;
             new: string;
+            old: string;
         }[];
         recycle_keys: string[];
         refused_keys: string[];
+        removed: string[];
     }>;
     readonly applySettingsProfile: (name: string) => Promise<{
+        fresh: {
+            generation: number;
+            kind: string;
+            name: string;
+        }[];
         hot: string[];
         recycle: {
-            name: string;
-            kind: string;
-            status: string;
+            detail: string | null;
             generation_before: number;
-            detail?: string | null | undefined;
-        }[];
-        fresh: {
-            name: string;
             kind: string;
-            generation: number;
-        }[];
-        refused: {
-            key: string;
-            reason: string;
+            name: string;
+            status: string;
         }[];
         recycle_stopped: {
+            detail: string;
             kind: string;
             name: string | null;
-            detail: string;
         } | null;
-        awaiting_respawn: {
-            name: string;
-            keys: string[];
-        }[];
+        refused: string[];
         fanout: {
             mode: "local-only";
             note: string;
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "fleet";
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "unreachable";
         };
     }>;
     readonly listSettingsProfileVersions: (name: string, signal?: AbortSignal) => Promise<{
-        version: number;
-        tags: string[];
         created_at: string;
         is_current: boolean;
+        tags: string[];
+        version: number;
     }[]>;
     readonly getSettingsProfileVersion: (name: string, version: number, signal?: AbortSignal) => Promise<{
-        version: number;
-        tags: string[];
-        created_at: string;
-        is_current: boolean;
         body: {
             description: string;
             env: Record<string, string>;
             secret_keys: string[];
         };
+        created_at: string;
+        is_current: boolean;
+        tags: string[];
+        version: number;
     }>;
     readonly rollbackSettingsProfile: (name: string, version: number) => Promise<{
-        ok: true;
+        ok: boolean;
         version: number;
     }>;
     readonly getEnvConfig: (signal?: AbortSignal) => Promise<{
@@ -7450,84 +8931,62 @@ function createApiClient(config: ApiConfig): {
         env: Record<string, string>;
         secret_keys?: string[] | null;
     }) => Promise<{
-        status: string;
         env_keys: number;
-        awaiting_respawn: {
-            name: string;
-            keys: string[];
-        }[];
+        status: string;
         fanout: {
             mode: "local-only";
             note: string;
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "fleet";
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "unreachable";
         };
-        recycle: {
-            recycle: {
-                name: string;
-                kind: string;
-                status: string;
-                generation_before: number;
-                detail?: string | null | undefined;
-            }[];
-            fresh: {
-                name: string;
-                kind: string;
-                generation: number;
-            }[];
-            recycle_stopped: {
-                kind: string;
-                name: string | null;
-                detail: string;
-            } | null;
-        } | null;
     }>;
     readonly getConfigMode: (signal?: AbortSignal) => Promise<{
         config_mode: string;
         read_only: boolean;
     }>;
     readonly reloadConfig: (targets?: string[] | null) => Promise<{
+        error: string | null;
+        local_only: boolean;
+        ok: boolean;
         op: string;
         reachable: boolean;
-        local_only: boolean;
         results: {
-            name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-            payload: unknown;
-            error: string | null;
             detail: string | null;
+            error: string | null;
+            name: string;
+            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            payload: unknown;
         }[];
-        error: string | null;
     }>;
     readonly listSubMcp: (signal?: AbortSignal) => Promise<Record<string, {
+        access_pattern: string;
+        mount_url: string;
         tools: string[];
         transport: string;
-        mount_url: string;
-        access_pattern: string;
     }>>;
     readonly createSubMcp: (slug: string, tools: string[], transport?: string) => Promise<{
         slug: string;
@@ -7535,10 +8994,11 @@ function createApiClient(config: ApiConfig): {
         transport: string;
     }>;
     readonly deleteSubMcp: (slug: string) => Promise<{
+        removed: boolean;
         slug: string;
-        removed: true;
     }>;
     readonly getManifest: (signal?: AbortSignal) => Promise<{
+        user_tools: string[];
         mcp: {
             [x: string]: unknown;
             managed?: {
@@ -7547,565 +9007,476 @@ function createApiClient(config: ApiConfig): {
                 sub_service: string;
             } | null | undefined;
         }[];
-        user_tools: string[];
     }>;
     readonly setMcpConfig: (mcp: unknown[]) => Promise<{
-        status: string;
         env_keys: number;
-        awaiting_respawn: {
-            name: string;
-            keys: string[];
-        }[];
+        status: string;
         fanout: {
             mode: "local-only";
             note: string;
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "fleet";
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "unreachable";
         };
-        recycle: {
-            recycle: {
-                name: string;
-                kind: string;
-                status: string;
-                generation_before: number;
-                detail?: string | null | undefined;
-            }[];
-            fresh: {
-                name: string;
-                kind: string;
-                generation: number;
-            }[];
-            recycle_stopped: {
-                kind: string;
-                name: string | null;
-                detail: string;
-            } | null;
-        } | null;
     }>;
     readonly getMcpStatus: (signal?: AbortSignal) => Promise<{
         bound: Record<string, string[]>;
         failed: {
-            title: string;
+            category: string;
+            http_status: number | null;
+            message: string;
             status: string;
-            category?: string | undefined;
-            message?: string | undefined;
-            http_status?: number | null | undefined;
+            title: string;
         }[];
+        health: Record<string, {
+            consecutive_failures: number;
+            failing_since: string | null;
+            last_error: Record<string, string> | null;
+            last_success: string | null;
+        }>;
     }>;
     readonly reloadMcp: (title: string) => Promise<{
+        error: string | null;
+        local_only: boolean;
+        ok: boolean;
         op: string;
         reachable: boolean;
-        local_only: boolean;
         results: {
-            name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-            payload: unknown;
-            error: string | null;
             detail: string | null;
+            error: string | null;
+            name: string;
+            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            payload: unknown;
         }[];
-        error: string | null;
     }>;
     readonly addToolsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
-        status: string;
         env_keys: number;
-        awaiting_respawn: {
-            name: string;
-            keys: string[];
-        }[];
+        status: string;
         fanout: {
             mode: "local-only";
             note: string;
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "fleet";
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "unreachable";
         };
-        recycle: {
-            recycle: {
-                name: string;
-                kind: string;
-                status: string;
-                generation_before: number;
-                detail?: string | null | undefined;
-            }[];
-            fresh: {
-                name: string;
-                kind: string;
-                generation: number;
-            }[];
-            recycle_stopped: {
-                kind: string;
-                name: string | null;
-                detail: string;
-            } | null;
-        } | null;
     }>;
     readonly removeToolsEntry: (title: string) => Promise<{
-        status: string;
         env_keys: number;
-        awaiting_respawn: {
-            name: string;
-            keys: string[];
-        }[];
+        status: string;
         fanout: {
             mode: "local-only";
             note: string;
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "fleet";
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "unreachable";
         };
-        recycle: {
-            recycle: {
-                name: string;
-                kind: string;
-                status: string;
-                generation_before: number;
-                detail?: string | null | undefined;
-            }[];
-            fresh: {
-                name: string;
-                kind: string;
-                generation: number;
-            }[];
-            recycle_stopped: {
-                kind: string;
-                name: string | null;
-                detail: string;
-            } | null;
-        } | null;
     }>;
     readonly addAgentsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
-        status: string;
         env_keys: number;
-        awaiting_respawn: {
-            name: string;
-            keys: string[];
-        }[];
+        status: string;
         fanout: {
             mode: "local-only";
             note: string;
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "fleet";
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "unreachable";
         };
-        recycle: {
-            recycle: {
-                name: string;
-                kind: string;
-                status: string;
-                generation_before: number;
-                detail?: string | null | undefined;
-            }[];
-            fresh: {
-                name: string;
-                kind: string;
-                generation: number;
-            }[];
-            recycle_stopped: {
-                kind: string;
-                name: string | null;
-                detail: string;
-            } | null;
-        } | null;
     }>;
     readonly removeAgentsEntry: (title: string) => Promise<{
-        status: string;
         env_keys: number;
-        awaiting_respawn: {
-            name: string;
-            keys: string[];
-        }[];
+        status: string;
         fanout: {
             mode: "local-only";
             note: string;
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "fleet";
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "unreachable";
         };
-        recycle: {
-            recycle: {
-                name: string;
-                kind: string;
-                status: string;
-                generation_before: number;
-                detail?: string | null | undefined;
-            }[];
-            fresh: {
-                name: string;
-                kind: string;
-                generation: number;
-            }[];
-            recycle_stopped: {
-                kind: string;
-                name: string | null;
-                detail: string;
-            } | null;
-        } | null;
     }>;
     readonly updateApiTools: (body: ApiToolsListsBody) => Promise<{
-        status: string;
         env_keys: number;
-        awaiting_respawn: {
-            name: string;
-            keys: string[];
-        }[];
+        status: string;
         fanout: {
             mode: "local-only";
             note: string;
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "fleet";
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "unreachable";
         };
-        recycle: {
-            recycle: {
-                name: string;
-                kind: string;
-                status: string;
-                generation_before: number;
-                detail?: string | null | undefined;
-            }[];
-            fresh: {
-                name: string;
-                kind: string;
-                generation: number;
-            }[];
-            recycle_stopped: {
-                kind: string;
-                name: string | null;
-                detail: string;
-            } | null;
-        } | null;
     }>;
     readonly listFailedMcps: (signal?: AbortSignal) => Promise<{
+        error: string | null;
+        local_only: boolean;
+        ok: boolean;
         op: string;
         reachable: boolean;
-        local_only: boolean;
         results: {
-            name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-            payload: unknown;
-            error: string | null;
             detail: string | null;
+            error: string | null;
+            name: string;
+            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            payload: unknown;
         }[];
-        error: string | null;
     }>;
     readonly reloadFailedMcps: () => Promise<{
+        error: string | null;
+        local_only: boolean;
+        ok: boolean;
         op: string;
         reachable: boolean;
-        local_only: boolean;
         results: {
-            name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-            payload: unknown;
-            error: string | null;
             detail: string | null;
+            error: string | null;
+            name: string;
+            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            payload: unknown;
         }[];
-        error: string | null;
     }>;
     readonly deregisterMcp: (title: string) => Promise<{
+        error: string | null;
+        local_only: boolean;
+        ok: boolean;
         op: string;
         reachable: boolean;
-        local_only: boolean;
         results: {
-            name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-            payload: unknown;
-            error: string | null;
             detail: string | null;
+            error: string | null;
+            name: string;
+            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            payload: unknown;
         }[];
-        error: string | null;
     }>;
     readonly listTemplates: (signal?: AbortSignal) => Promise<string[]>;
     readonly getTemplate: (templateId: string) => Promise<{
-        template: string;
         schema: Record<string, unknown>;
+        template: string;
     }>;
     readonly uploadTemplate: (path: string, content: string) => Promise<{
+        fanout: {
+            error: string | null;
+            local_only: boolean | null;
+            mode: string;
+            note: string | null;
+            op: string | null;
+            reachable: boolean | null;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: string;
+                payload: unknown;
+            }[] | null;
+        };
         path: string;
-        uploaded: true;
+        uploaded: boolean;
     }>;
     readonly deleteTemplate: (path: string) => Promise<{
+        deleted: boolean;
+        fanout: {
+            error: string | null;
+            local_only: boolean | null;
+            mode: string;
+            note: string | null;
+            op: string | null;
+            reachable: boolean | null;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: string;
+                payload: unknown;
+            }[] | null;
+        };
         path: string;
-        deleted: true;
     }>;
     readonly deleteTemplateDir: (path: string) => Promise<{
+        deleted: boolean;
+        fanout: {
+            error: string | null;
+            local_only: boolean | null;
+            mode: string;
+            note: string | null;
+            op: string | null;
+            reachable: boolean | null;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: string;
+                payload: unknown;
+            }[] | null;
+        };
         path: string;
-        deleted: true;
     }>;
     readonly renderTemplate: (text: TemplatedText) => Promise<{
         rendered: string;
     }>;
     readonly clearTemplatesCache: () => Promise<{
-        cleared: true;
+        cleared: boolean;
+        fanout: {
+            error: string | null;
+            local_only: boolean | null;
+            mode: string;
+            note: string | null;
+            op: string | null;
+            reachable: boolean | null;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: string;
+                payload: unknown;
+            }[] | null;
+        };
     }>;
     readonly listExtensions: (signal?: AbortSignal) => Promise<{
-        name: string;
         kind: string;
+        multiple: boolean;
+        name: string;
     }[]>;
     readonly getToolExtensions: (name: string, signal?: AbortSignal) => Promise<{
+        available: {
+            kind: string;
+            multiple: boolean;
+            name: string;
+        }[];
         combos: (string | {
             name: string;
             config: Record<string, unknown>;
         })[][];
-        available: {
-            name: string;
-            kind: string;
-        }[];
     }>;
     readonly setToolExtensions: (name: string, combos: readonly PresetExtensionElement[][]) => Promise<{
-        status: string;
         env_keys: number;
-        awaiting_respawn: {
-            name: string;
-            keys: string[];
-        }[];
+        status: string;
         fanout: {
             mode: "local-only";
             note: string;
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "fleet";
         } | {
+            error: string | null;
+            local_only: boolean;
             op: string;
             reachable: boolean;
-            local_only: boolean;
             results: {
-                name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
                 detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
             }[];
-            error: string | null;
             mode: "unreachable";
         };
-        recycle: {
-            recycle: {
-                name: string;
-                kind: string;
-                status: string;
-                generation_before: number;
-                detail?: string | null | undefined;
-            }[];
-            fresh: {
-                name: string;
-                kind: string;
-                generation: number;
-            }[];
-            recycle_stopped: {
-                kind: string;
-                name: string | null;
-                detail: string;
-            } | null;
-        } | null;
     }>;
     readonly getBackendInfo: (signal?: AbortSignal) => Promise<{
-        present: boolean;
         backend: string | null;
         module: string | null;
+        present: boolean;
     }>;
     readonly listFleetWorkers: (signal?: AbortSignal) => Promise<{
         workers: {
-            name: string;
-            kind: "backend" | "serve";
-            pid: number;
+            beat_at: string;
             generation: number;
             joined_at: string;
-            beat_at: string;
-            state: "ready" | "resyncing" | "recycling";
-            stale: boolean;
+            kind: "backend" | "serve";
             last_op: {
+                at: string;
                 op: string;
                 outcome: string;
-                at: string;
             } | null;
+            name: string;
+            pid: number;
+            stale: boolean;
+            state: "resyncing" | "recycling" | "ready";
         }[];
     }>;
     readonly reloadFleetConfig: (targets: string[] | null) => Promise<{
+        error: string | null;
+        local_only: boolean;
+        ok: boolean;
         op: string;
         reachable: boolean;
-        local_only: boolean;
         results: {
-            name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-            payload: unknown;
-            error: string | null;
             detail: string | null;
+            error: string | null;
+            name: string;
+            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            payload: unknown;
         }[];
-        error: string | null;
     }>;
     readonly getStorageInfo: (signal?: AbortSignal) => Promise<{
+        module: string | null;
         present: boolean;
         provider: string | null;
-        module: string | null;
     }>;
     readonly listStorageResources: (signal?: AbortSignal) => Promise<{
         resources: string[];
     }>;
     readonly statStorageResource: (id: string, signal?: AbortSignal) => Promise<{
+        content_type: string;
         id: string;
-        content_type: string | null;
     }>;
     readonly downloadStorageResource: (id: string, signal?: AbortSignal) => Promise<Blob>;
     readonly uploadStorageResource: (body: StorageUploadBody) => Promise<{
         id: string;
-        stored: true;
+        stored: boolean;
     }>;
     readonly deleteStorageResource: (id: string) => Promise<{
+        deleted: boolean;
         id: string;
-        deleted: true;
     }>;
     readonly deleteStorageDir: (path: string) => Promise<{
+        deleted: boolean;
         dir: string;
-        deleted: true;
     }>;
     readonly listToolMeta: (signal?: AbortSignal) => Promise<{
         folders: {
@@ -8114,25 +9485,25 @@ function createApiClient(config: ApiConfig): {
             parent_id: string | null;
         }[];
         meta: {
-            tool_name: string;
+            badges: string[];
             display_name: string | null;
             folder_id: string | null;
-            tags: string[];
-            badges: string[];
             hidden: boolean | null;
+            tags: string[];
+            tool_name: string;
         }[];
     }>;
     readonly upsertToolMeta: (toolName: string, patch: ToolMetaPatch) => Promise<{
-        tool_name: string;
+        badges: string[];
         display_name: string | null;
         folder_id: string | null;
-        tags: string[];
-        badges: string[];
         hidden: boolean | null;
+        tags: string[];
+        tool_name: string;
     }>;
     readonly deleteToolMeta: (toolName: string) => Promise<{
+        deleted: boolean;
         tool_name: string;
-        deleted: true;
     }>;
     readonly createFolder: (name: string, parentId?: string | null) => Promise<{
         id: string;
@@ -8150,8 +9521,8 @@ function createApiClient(config: ApiConfig): {
         parent_id: string | null;
     }>;
     readonly deleteFolder: (folderId: string) => Promise<{
+        deleted: boolean;
         folder_id: string;
-        deleted: true;
     }>;
     readonly listStates: (signal?: AbortSignal) => Promise<{
         default_subject_kind: string;
@@ -8184,10 +9555,10 @@ function createApiClient(config: ApiConfig): {
         subject_kinds: string[];
         updated_at: string | null;
         attachments: {
-            template: string;
-            path: string[];
-            parameters: Record<string, unknown>;
             declarations: Record<string, unknown>;
+            parameters: Record<string, unknown>;
+            path: string[];
+            template: string;
         }[];
         schema?: Record<string, unknown> | {
             content?: string | undefined;
@@ -8207,16 +9578,16 @@ function createApiClient(config: ApiConfig): {
         retention_days: number | null;
         subject_kinds: string[];
         updated_at: string | null;
-        held: {
-            save_id: string;
+        held?: {
             held_by: string;
+            save_id: string;
             subjects: {
+                key: string;
+                kind: string;
                 target_kind: "tool" | "agent";
                 target_name: string;
-                kind: string;
-                key: string;
             }[];
-        }[];
+        }[] | undefined;
         schema?: Record<string, unknown> | {
             content?: string | undefined;
             id?: string | undefined;
@@ -8224,188 +9595,179 @@ function createApiClient(config: ApiConfig): {
         } | undefined;
     }>;
     readonly deleteState: (name: string) => Promise<{
+        deleted: boolean;
         name: string;
-        deleted: true;
     }>;
     readonly getStateStats: (name: string, signal?: AbortSignal) => Promise<{
-        records: number;
+        consumers: number;
         per_field: Record<string, number>;
         per_kind: Record<string, number>;
-        consumers: number;
-        held: {
-            save_id: string;
+        records: number;
+        held?: {
             held_by: string;
+            save_id: string;
             subjects: {
+                key: string;
+                kind: string;
                 target_kind: "tool" | "agent";
                 target_name: string;
-                kind: string;
-                key: string;
             }[];
-        }[];
+        }[] | undefined;
     }>;
     readonly listStateAttachments: (name: string, signal?: AbortSignal) => Promise<{
-        template: string;
-        path: string[];
-        parameters: Record<string, unknown>;
         declarations: Record<string, unknown>;
+        parameters: Record<string, unknown>;
+        path: string[];
+        state: string;
+        template: string;
     }[]>;
     readonly getStateAttachment: (name: string, template: string, signal?: AbortSignal) => Promise<{
-        template: string;
-        path: string[];
-        parameters: Record<string, unknown>;
         declarations: Record<string, unknown>;
+        parameters: Record<string, unknown>;
+        path: string[];
+        template: string;
     }>;
     readonly attachStateTemplate: (name: string, template: string, body: StateAttachmentBody) => Promise<{
-        attached: true;
+        attached: boolean;
         state: string;
         template: string;
-        held: {
-            save_id: string;
+        held?: {
             held_by: string;
+            save_id: string;
             subjects: {
+                key: string;
+                kind: string;
                 target_kind: "tool" | "agent";
                 target_name: string;
-                kind: string;
-                key: string;
             }[];
-        }[];
+        }[] | undefined;
     }>;
     readonly patchStateAttachment: (name: string, template: string, body: StateAttachmentBody) => Promise<{
-        updated: true;
         state: string;
         template: string;
-        held: {
-            save_id: string;
-            held_by: string;
-            subjects: {
-                target_kind: "tool" | "agent";
-                target_name: string;
-                kind: string;
-                key: string;
-            }[];
-        }[];
+        updated: boolean;
     }>;
     readonly detachStateTemplate: (name: string, template: string) => Promise<{
-        detached: true;
+        detached: boolean;
         state: string;
         template: string;
     }>;
     readonly listStateSubjects: (name: string, params: {
         kind?: string;
     } & StatePageQuery, signal?: AbortSignal) => Promise<{
+        next_cursor: string | null;
         subjects: {
             subject: {
+                key: string;
+                kind: string;
                 target_kind: "tool" | "agent";
                 target_name: string;
-                kind: string;
-                key: string;
             };
             updated_at: number;
         }[];
-        next_cursor: string | null;
-        held: {
-            save_id: string;
+        held?: {
             held_by: string;
+            save_id: string;
             subjects: {
+                key: string;
+                kind: string;
                 target_kind: "tool" | "agent";
                 target_name: string;
-                kind: string;
-                key: string;
             }[];
-        }[];
+        }[] | undefined;
     }>;
     readonly searchStateRecords: (name: string, body: {
         filters: Record<string, unknown>;
     } & StatePageQuery, signal?: AbortSignal) => Promise<{
         matches: {
             subject: {
+                key: string;
+                kind: string;
                 target_kind: "tool" | "agent";
                 target_name: string;
-                kind: string;
-                key: string;
             };
             updated_at: number;
         }[];
         next_cursor: string | null;
-        held: {
-            save_id: string;
+        held?: {
             held_by: string;
+            save_id: string;
             subjects: {
+                key: string;
+                kind: string;
                 target_kind: "tool" | "agent";
                 target_name: string;
-                kind: string;
-                key: string;
             }[];
-        }[];
+        }[] | undefined;
     }>;
     readonly getStateRecord: (name: string, subject: StateSubjectRef, signal?: AbortSignal) => Promise<{
-        state: string;
-        subject: {
+        canonical_subject: {
+            key: string;
+            kind: string;
             target_kind: "tool" | "agent";
             target_name: string;
-            kind: string;
-            key: string;
         };
         data: Record<string, unknown>;
-        seq: number;
-        canonical_subject: {
-            target_kind: "tool" | "agent";
-            target_name: string;
-            kind: string;
-            key: string;
-        };
         folded_from: {
+            key: string;
+            kind: string;
             target_kind: "tool" | "agent";
             target_name: string;
-            kind: string;
-            key: string;
         }[];
+        seq: number;
+        state: string;
+        subject: {
+            key: string;
+            kind: string;
+            target_kind: "tool" | "agent";
+            target_name: string;
+        };
     } | null>;
     readonly putStateRecord: (name: string, subject: StateSubjectRef, data: Record<string, unknown>) => Promise<{
-        state: string;
-        subject: {
+        canonical_subject: {
+            key: string;
+            kind: string;
             target_kind: "tool" | "agent";
             target_name: string;
-            kind: string;
-            key: string;
         };
         data: Record<string, unknown>;
-        seq: number;
-        canonical_subject: {
-            target_kind: "tool" | "agent";
-            target_name: string;
-            kind: string;
-            key: string;
-        };
         folded_from: {
+            key: string;
+            kind: string;
             target_kind: "tool" | "agent";
             target_name: string;
-            kind: string;
-            key: string;
         }[];
+        seq: number;
+        state: string;
+        subject: {
+            key: string;
+            kind: string;
+            target_kind: "tool" | "agent";
+            target_name: string;
+        };
     }>;
     readonly patchStateRecord: (name: string, subject: StateSubjectRef, data: Record<string, unknown>) => Promise<{
-        state: string;
-        subject: {
+        canonical_subject: {
+            key: string;
+            kind: string;
             target_kind: "tool" | "agent";
             target_name: string;
-            kind: string;
-            key: string;
         };
         data: Record<string, unknown>;
-        seq: number;
-        canonical_subject: {
-            target_kind: "tool" | "agent";
-            target_name: string;
-            kind: string;
-            key: string;
-        };
         folded_from: {
+            key: string;
+            kind: string;
             target_kind: "tool" | "agent";
             target_name: string;
-            kind: string;
-            key: string;
         }[];
+        seq: number;
+        state: string;
+        subject: {
+            key: string;
+            kind: string;
+            target_kind: "tool" | "agent";
+            target_name: string;
+        };
     }>;
     readonly applyStateRecord: (name: string, subject: StateSubjectRef, ops: readonly Record<string, unknown>[]) => Promise<{
         applied: boolean;
@@ -8422,55 +9784,56 @@ function createApiClient(config: ApiConfig): {
         input?: unknown;
         op_id?: string;
     }) => Promise<{
-        name: string;
         applied: boolean;
         data: Record<string, unknown> | null;
+        name: string;
         seq: number | null;
         skipped: Record<string, unknown>[];
     }>;
     readonly deleteStateRecord: (name: string, subject: StateSubjectRef) => Promise<{
-        erased: true;
+        erased: boolean;
     }>;
     readonly foldStateRecord: (name: string, subject: StateSubjectRef, into: StateSubjectRef, mode: "switch" | "merge") => Promise<{
-        mode: "switch" | "merge";
-        from: {
-            kind: string;
-            key: string;
-        };
-        into: {
-            kind: string;
-            key: string;
-        };
         already: boolean;
         flattened: number;
+        from: {
+            key: string;
+            kind: string;
+        };
+        into: {
+            key: string;
+            kind: string;
+        };
+        merged_members: string[] | null;
+        mode: "switch" | "merge";
     }>;
     readonly listStateWrites: (name: string, subject: StateSubjectRef, params?: StatePageQuery, signal?: AbortSignal) => Promise<{
         items: {
-            seq: number;
             at: string;
             origin: {
-                consumer: string | null;
-                meta: Record<string, unknown> | null;
-                run_id: string | null;
-                op_id: string | null;
-                door: string;
                 actor: string | null;
-                turn_id: string | null;
+                consumer: string | null;
+                door: "tool" | "api" | "conversation" | "hook" | "schedule" | "operator";
                 inbound_id: string | null;
+                meta: Record<string, unknown> | null;
+                op_id: string | null;
+                run_id: string | null;
+                turn_id: string | null;
             };
             paths: (string | number)[][];
+            seq: number;
         }[];
         next_cursor: string | null;
     }>;
     readonly stateConsumers: (name: string, signal?: AbortSignal) => Promise<{
-        kind: string;
-        name: string | null;
         detail: string | null;
+        kind: string;
         link: {
-            token: string | null;
             plugin_path: string | null;
             search: Record<string, unknown> | null;
+            token: string | null;
         } | null;
+        name: string | null;
         unavailable: string | null;
     }[]>;
     readonly listStateTemplates: (signal?: AbortSignal) => Promise<{
@@ -8650,111 +10013,114 @@ function createApiClient(config: ApiConfig): {
         } | undefined;
     }>;
     readonly deleteStateTemplate: (name: string) => Promise<{
+        deleted: boolean;
         name: string;
-        deleted: true;
     }>;
     readonly pruneStateRetention: () => Promise<{
         pruned: Record<string, number>;
-        held: {
-            save_id: string;
+        held?: {
             held_by: string;
+            save_id: string;
             subjects: {
+                key: string;
+                kind: string;
                 target_kind: "tool" | "agent";
                 target_name: string;
-                kind: string;
-                key: string;
             }[];
-        }[];
+        }[] | undefined;
     }>;
     readonly listPendingSaves: (params: {
         status?: "outstanding" | "failed";
     } & StatePageQuery, signal?: AbortSignal) => Promise<{
+        failed: number;
         items: {
-            id: string;
-            status: "running" | "failed" | "pending" | "calls";
-            run_id: string | null;
-            states: string[];
-            subjects: {
-                state: string;
-                subject: {
-                    target_kind: "tool" | "agent";
-                    target_name: string;
-                    kind: string;
-                    key: string;
-                };
-            }[];
+            attempts: number;
             calls: {
                 kind: string;
                 target: string;
             }[];
-            attempts: number;
-            last_error: string | null;
-            failed_phase: "records" | "calls" | null;
             created_at: string;
             failed_at: string | null;
+            failed_phase: "calls" | "records" | null;
+            id: string;
+            last_error: string | null;
+            run_id: string | null;
+            states: string[];
+            status: "running" | "failed" | "calls" | "pending";
+            subjects: {
+                state: string;
+                subject: {
+                    key: string;
+                    kind: string;
+                    target_kind: "tool" | "agent";
+                    target_name: string;
+                };
+            }[];
         }[];
         next_cursor: string | null;
         outstanding: number;
-        failed: number;
     }>;
     readonly retryPendingSave: (id: string) => Promise<{
         id: string;
-        status: "running" | "failed" | "applied" | "pending" | "calls";
         last_error: string | null;
+        status: "running" | "applied" | "failed" | "calls" | "pending";
     }>;
     readonly discardPendingSave: (id: string) => Promise<{
         discarded: string;
     }>;
     readonly listPresets: (signal?: AbortSignal) => Promise<{
-        name: string;
-        base_tool: string;
-        description: string;
         active_version: number;
+        base_tool: string;
+        conflicted: boolean;
+        conflicted_reason: string | null;
+        description: string;
+        input_schema: Record<string, unknown> | null;
+        name: string;
+        output_schema: Record<string, unknown> | null;
+        used_by: string[];
+        uses: string[];
         extensions: (string | {
             name: string;
             config: Record<string, unknown>;
         })[][];
-        output_schema: Record<string, unknown> | null;
-        input_schema: Record<string, unknown> | null;
-        conflicted: boolean;
-        conflicted_reason: string | null;
-        uses: string[];
-        used_by: string[];
     }[]>;
     readonly createPreset: (body: CreatePresetBody) => Promise<{
-        name: string;
-        base_tool: string;
-        description: string;
         active_version: number;
+        base_tool: string;
+        conflicted: boolean;
+        conflicted_reason: string | null;
+        description: string;
+        input_schema: Record<string, unknown> | null;
+        name: string;
+        output_schema: Record<string, unknown> | null;
+        used_by: string[];
+        uses: string[];
         extensions: (string | {
             name: string;
             config: Record<string, unknown>;
         })[][];
-        output_schema: Record<string, unknown> | null;
-        input_schema: Record<string, unknown> | null;
-        conflicted: boolean;
-        conflicted_reason: string | null;
-        uses: string[];
-        used_by: string[];
     }>;
     readonly getPreset: (name: string, signal?: AbortSignal) => Promise<{
-        name: string;
-        base_tool: string;
-        description: string;
         active_version: number;
+        base_tool: string;
+        conflicted: boolean;
+        conflicted_reason: string | null;
+        description: string;
+        fixed_kwargs: Record<string, unknown>;
+        input_schema: Record<string, unknown> | null;
+        name: string;
+        output_schema: Record<string, unknown> | null;
+        used_by: string[];
+        uses: string[];
         extensions: (string | {
             name: string;
             config: Record<string, unknown>;
         })[][];
-        output_schema: Record<string, unknown> | null;
-        input_schema: Record<string, unknown> | null;
-        conflicted: boolean;
-        conflicted_reason: string | null;
-        uses: string[];
-        used_by: string[];
-        fixed_kwargs: Record<string, unknown>;
     }>;
     readonly listPresetVersions: (name: string, signal?: AbortSignal) => Promise<{
+        created_at: string;
+        is_current: boolean;
+        tags: string[];
         version: number;
         body: {
             base_tool: string;
@@ -8815,11 +10181,11 @@ function createApiClient(config: ApiConfig): {
                 }[];
             } | null;
         };
-        tags: string[];
-        created_at: string;
-        is_current: boolean;
     }[]>;
     readonly getPresetVersion: (name: string, version: number, signal?: AbortSignal) => Promise<{
+        created_at: string;
+        is_current: boolean;
+        tags: string[];
         version: number;
         body: {
             base_tool: string;
@@ -8880,11 +10246,11 @@ function createApiClient(config: ApiConfig): {
                 }[];
             } | null;
         };
-        tags: string[];
-        created_at: string;
-        is_current: boolean;
     }>;
     readonly savePresetVersion: (name: string, body: SavePresetVersionBody) => Promise<{
+        created_at: string;
+        is_current: boolean;
+        tags: string[];
         version: number;
         body: {
             base_tool: string;
@@ -8945,73 +10311,161 @@ function createApiClient(config: ApiConfig): {
                 }[];
             } | null;
         };
-        tags: string[];
-        created_at: string;
-        is_current: boolean;
     }>;
     readonly rollbackPreset: (name: string, version: number) => Promise<{
-        name: string;
         active_version: number;
+        fanout: {
+            error: string | null;
+            local_only: boolean | null;
+            mode: string;
+            note: string | null;
+            op: string | null;
+            reachable: boolean | null;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: string;
+                payload: unknown;
+            }[] | null;
+        };
+        name: string;
     }>;
     readonly deletePreset: (name: string) => Promise<{
+        deleted: boolean;
+        fanout: {
+            error: string | null;
+            local_only: boolean | null;
+            mode: string;
+            note: string | null;
+            op: string | null;
+            reachable: boolean | null;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: string;
+                payload: unknown;
+            }[] | null;
+        };
         name: string;
-        deleted: true;
     }>;
     readonly renamePreset: (name: string, newName: string) => Promise<{
+        active_version: number;
+        fanout: {
+            error: string | null;
+            local_only: boolean | null;
+            mode: string;
+            note: string | null;
+            op: string | null;
+            reachable: boolean | null;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: string;
+                payload: unknown;
+            }[] | null;
+        };
         name: string;
         renamed_from: string;
-        active_version: number;
     }>;
     readonly getPresetReferees: (name: string, signal?: AbortSignal) => Promise<{
         name: string;
         referees: string[];
     }>;
     readonly validatePreset: (body: ValidatePresetBody) => Promise<{
-        valid: boolean;
         error: string | null;
+        valid: boolean;
     }>;
     readonly setPresetVersionTags: (name: string, version: number, tags: readonly string[]) => Promise<{
         name: string;
-        version: number;
         tags: string[];
+        version: number;
     }>;
     readonly listTools: (signal?: AbortSignal) => Promise<string[]>;
     readonly getToolSchema: (name: string, signal?: AbortSignal) => Promise<{
+        description: string | null;
         input: Record<string, unknown>;
         output: Record<string, unknown> | null;
-        description: string | null;
     }>;
     readonly getAllToolSchemas: (signal?: AbortSignal) => Promise<Record<string, {
+        description: string | null;
         input: Record<string, unknown>;
         output: Record<string, unknown> | null;
-        description: string | null;
     }>>;
-    readonly runTool: (args: RunToolArgs, signal?: AbortSignal) => Promise<unknown>;
+    readonly runTool: (args: RunToolArgs, signal?: AbortSignal) => Promise<{
+        asks: {
+            answer_format: string | null;
+            asked_by: string[] | null;
+            audience: string | null;
+            channel: string | null;
+            created_at: string | null;
+            error: unknown;
+            expiry_at: string | null;
+            format_payload: Record<string, unknown> | null;
+            group_id: string | null;
+            id: string;
+            media: Record<string, unknown>[] | null;
+            on_expiry: "kill" | "resume" | null;
+            payload: Record<string, unknown> | null;
+            question: string | null;
+            recipient: string | null;
+            result: unknown;
+            status: "running" | "asking" | "failed" | "finished";
+            thread_id: string | null;
+            to: "caller" | "user" | null;
+        }[];
+        kind: "asks";
+        suspended: {
+            caller_interaction_ids: string[];
+            expiry_at: string | null;
+            interaction_id: string;
+            interaction_ids: string[];
+            resume_owner: string | null;
+        };
+    } | {
+        kind: "none";
+    } | {
+        kind: "parked";
+        suspended: {
+            caller_interaction_ids: string[];
+            expiry_at: string | null;
+            interaction_id: string;
+            interaction_ids: string[];
+            resume_owner: string | null;
+        };
+    } | {
+        kind: "result";
+        result: unknown;
+    }>;
     readonly reloadTool: (args: ToolAdminArgs) => Promise<{
+        error: string | null;
+        local_only: boolean;
+        ok: boolean;
         op: string;
         reachable: boolean;
-        local_only: boolean;
         results: {
-            name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-            payload: unknown;
-            error: string | null;
             detail: string | null;
+            error: string | null;
+            name: string;
+            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            payload: unknown;
         }[];
-        error: string | null;
     }>;
     readonly removeTool: (args: ToolAdminArgs) => Promise<{
+        error: string | null;
+        local_only: boolean;
+        ok: boolean;
         op: string;
         reachable: boolean;
-        local_only: boolean;
         results: {
-            name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
-            payload: unknown;
-            error: string | null;
             detail: string | null;
+            error: string | null;
+            name: string;
+            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            payload: unknown;
         }[];
-        error: string | null;
     }>;
     readonly submitToolRun: (args: SubmitToolRunArgs, signal?: AbortSignal) => Promise<{
         run_id: string;
@@ -9019,26 +10473,26 @@ function createApiClient(config: ApiConfig): {
     readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
         run_id: string;
         tool_name: string;
-        status: "running" | "failed" | "parked" | "succeeded" | "lost";
+        status: "running" | "parked" | "failed" | "succeeded" | "lost";
         started_at: string;
         finished_at?: string | undefined;
         result?: unknown;
         error?: string | undefined;
-        outcome?: unknown;
         resumed_interactions?: string[] | undefined;
     }>;
     readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
         run_id: string;
         tool_name: string;
-        status: "running" | "failed" | "parked" | "succeeded" | "lost";
+        status: "running" | "parked" | "failed" | "succeeded" | "lost";
         started_at: string;
         finished_at?: string | undefined;
     }[]>;
     readonly listToolTags: (signal?: AbortSignal) => Promise<{
-        name: string;
-        tags: string[];
         badges: string[];
         hidden: boolean;
+        name: string;
+        schedulable: boolean;
+        tags: string[];
     }[]>;
     readonly baseUrl: string;
 };
@@ -9080,35 +10534,35 @@ type DashboardMetrics = z.infer<typeof dashboardMetrics>;
 
 // @public (undocumented)
 const dashboardMetrics: z.ZodObject<{
-    summary: z.ZodObject<{
-        totalRuns: z.ZodNumber;
-        totalCost: z.ZodNumber;
-        totalTokens: z.ZodNumber;
-        averageLatencyMs: z.ZodNumber;
-        avgCostPerRun: z.ZodNumber;
-        avgTokensPerRun: z.ZodNumber;
-        timeToFirstTokenMs: z.ZodNullable<z.ZodNumber>;
-    }, z.core.$strip>;
-    timeSeries: z.ZodArray<z.ZodObject<{
-        bucket: z.ZodNullable<z.ZodString>;
-        runs: z.ZodNumber;
-        cost: z.ZodNumber;
-        avgLatencyMs: z.ZodNumber;
-        totalTokens: z.ZodNumber;
-    }, z.core.$strip>>;
     byModel: z.ZodArray<z.ZodObject<{
-        model: z.ZodString;
+        avgLatencyMs: z.ZodNumber;
         calls: z.ZodNumber;
         cost: z.ZodNumber;
+        model: z.ZodString;
         totalTokens: z.ZodNumber;
-        avgLatencyMs: z.ZodNumber;
     }, z.core.$strip>>;
-    byModelAvailable: z.ZodBoolean;
+    byModelAvailable: z.ZodDefault<z.ZodBoolean>;
     granularity: z.ZodEnum<{
         hour: "hour";
         day: "day";
         week: "week";
     }>;
+    summary: z.ZodObject<{
+        averageLatencyMs: z.ZodNumber;
+        avgCostPerRun: z.ZodNumber;
+        avgTokensPerRun: z.ZodNumber;
+        timeToFirstTokenMs: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        totalCost: z.ZodNumber;
+        totalRuns: z.ZodNumber;
+        totalTokens: z.ZodNumber;
+    }, z.core.$strip>;
+    timeSeries: z.ZodArray<z.ZodObject<{
+        avgLatencyMs: z.ZodNumber;
+        bucket: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        cost: z.ZodNumber;
+        runs: z.ZodNumber;
+        totalTokens: z.ZodNumber;
+    }, z.core.$strip>>;
 }, z.core.$strip>;
 
 // @public
@@ -9192,88 +10646,62 @@ export function DirtyGuardBoundary(input: {
 // @public (undocumented)
 const disconnectResult: z.ZodObject<{
     connection_id: z.ZodString;
+    removed_manifest_entries: z.ZodArray<z.ZodString>;
     upstream_revoke_outcome: z.ZodEnum<{
         success: "success";
-        failed: "failed";
         skipped: "skipped";
+        failed: "failed";
     }>;
-    upstream_revoke_status: z.ZodNullable<z.ZodNumber>;
-    removed_manifest_entries: z.ZodArray<z.ZodString>;
-    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
+    upstream_revoke_status: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    fanout: z.ZodDefault<z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
         note: z.ZodString;
     }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
         op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
             }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
         mode: z.ZodLiteral<"fleet">;
     }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
         op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
             }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
         mode: z.ZodLiteral<"unreachable">;
-    }, z.core.$strip>], "mode">>;
+    }, z.core.$strip>], "mode">>>;
 }, z.core.$strip>;
-
-// @public (undocumented)
-type DiscoveredServer = z.infer<typeof discoveredServer>;
-
-// @public
-const discoveredServer: z.ZodObject<{
-    url: z.ZodString;
-    resource: z.ZodString;
-    resource_name: z.ZodNullable<z.ZodString>;
-    issuer: z.ZodString;
-    authorization_servers: z.ZodArray<z.ZodString>;
-    client_issuer: z.ZodNullable<z.ZodString>;
-    registration_supported: z.ZodBoolean;
-    automatic_client: z.ZodBoolean;
-    scopes_supported: z.ZodArray<z.ZodString>;
-    suggested_id: z.ZodString;
-    suggested_display_name: z.ZodString;
-    redirect_uri: z.ZodNullable<z.ZodString>;
-}, z.core.$strip>;
-
-// @public
-type DiscoverServerTarget = {
-    readonly url: string;
-} | {
-    readonly providerId: string;
-};
 
 // @public
 export interface Discriminator {
@@ -9288,25 +10716,25 @@ type DisplayBlock = z.infer<typeof displayBlock>;
 
 // @public
 const displayBlock: z.ZodObject<{
+    alt: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     kind: z.ZodEnum<{
-        image: "image";
         heading: "heading";
         body: "body";
+        image: "image";
     }>;
-    text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    src: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    alt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    slot: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-}, z.core.$strip>;
+    slot: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    src: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type DisplayBlockKind = z.infer<typeof displayBlockKind>;
 
 // @public
 const displayBlockKind: z.ZodEnum<{
-    image: "image";
     heading: "heading";
     body: "body";
+    image: "image";
 }>;
 
 // @public
@@ -9333,8 +10761,8 @@ export interface DrawerProps {
 
 // @public (undocumented)
 const editApiKeyResult: z.ZodObject<{
-    user_id: z.ZodString;
     updated: z.ZodBoolean;
+    user_id: z.ZodString;
 }, z.core.$strip>;
 
 // @public
@@ -9612,8 +11040,9 @@ type Extension = z.infer<typeof extension>;
 
 // @public (undocumented)
 const extension: z.ZodObject<{
-    name: z.ZodString;
     kind: z.ZodString;
+    multiple: z.ZodBoolean;
+    name: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -9664,8 +11093,9 @@ export interface ExtensionPickerProps {
 
 // @public (undocumented)
 const extensions: z.ZodArray<z.ZodObject<{
-    name: z.ZodString;
     kind: z.ZodString;
+    multiple: z.ZodBoolean;
+    name: z.ZodString;
 }, z.core.$strip>>;
 
 // @public
@@ -9769,14 +11199,14 @@ type FleetOutcome = z.infer<typeof fleetOutcome>;
 
 // @public
 const fleetOutcome: z.ZodEnum<{
-    failed: "failed";
     applied: "applied";
-    resyncing: "resyncing";
-    recycling: "recycling";
-    stale: "stale";
+    failed: "failed";
     missing: "missing";
     departed: "departed";
     timed_out: "timed_out";
+    resyncing: "resyncing";
+    recycling: "recycling";
+    stale: "stale";
 }>;
 
 // @public (undocumented)
@@ -9784,26 +11214,27 @@ type FleetReloadResult = z.infer<typeof fleetReloadResult>;
 
 // @public
 const fleetReloadResult: z.ZodObject<{
+    error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    local_only: z.ZodDefault<z.ZodBoolean>;
+    ok: z.ZodReadonly<z.ZodBoolean>;
     op: z.ZodString;
-    reachable: z.ZodBoolean;
-    local_only: z.ZodBoolean;
-    results: z.ZodArray<z.ZodObject<{
+    reachable: z.ZodDefault<z.ZodBoolean>;
+    results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            failed: "failed";
             applied: "applied";
-            resyncing: "resyncing";
-            recycling: "recycling";
-            stale: "stale";
+            failed: "failed";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
+            resyncing: "resyncing";
+            recycling: "recycling";
+            stale: "stale";
         }>;
-        payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-        error: z.ZodNullable<z.ZodString>;
-        detail: z.ZodNullable<z.ZodString>;
-    }, z.core.$strip>>;
-    error: z.ZodNullable<z.ZodString>;
+        payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -9812,53 +11243,53 @@ export function FleetReport(input: FleetReportProps): ReactNode;
 // @public (undocumented)
 type FleetReportFanout = z.infer<typeof fleetReportFanout>;
 
-// @public
+// @public (undocumented)
 const fleetReportFanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
     mode: z.ZodLiteral<"local-only">;
     note: z.ZodString;
 }, z.core.$strip>, z.ZodObject<{
+    error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    local_only: z.ZodDefault<z.ZodBoolean>;
     op: z.ZodString;
-    reachable: z.ZodBoolean;
-    local_only: z.ZodBoolean;
-    results: z.ZodArray<z.ZodObject<{
+    reachable: z.ZodDefault<z.ZodBoolean>;
+    results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            failed: "failed";
             applied: "applied";
-            resyncing: "resyncing";
-            recycling: "recycling";
-            stale: "stale";
+            failed: "failed";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
+            resyncing: "resyncing";
+            recycling: "recycling";
+            stale: "stale";
         }>;
-        payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-        error: z.ZodNullable<z.ZodString>;
-        detail: z.ZodNullable<z.ZodString>;
-    }, z.core.$strip>>;
-    error: z.ZodNullable<z.ZodString>;
+        payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+    }, z.core.$strip>>>;
     mode: z.ZodLiteral<"fleet">;
 }, z.core.$strip>, z.ZodObject<{
+    error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    local_only: z.ZodDefault<z.ZodBoolean>;
     op: z.ZodString;
-    reachable: z.ZodBoolean;
-    local_only: z.ZodBoolean;
-    results: z.ZodArray<z.ZodObject<{
+    reachable: z.ZodDefault<z.ZodBoolean>;
+    results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            failed: "failed";
             applied: "applied";
-            resyncing: "resyncing";
-            recycling: "recycling";
-            stale: "stale";
+            failed: "failed";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
+            resyncing: "resyncing";
+            recycling: "recycling";
+            stale: "stale";
         }>;
-        payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-        error: z.ZodNullable<z.ZodString>;
-        detail: z.ZodNullable<z.ZodString>;
-    }, z.core.$strip>>;
-    error: z.ZodNullable<z.ZodString>;
+        payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+    }, z.core.$strip>>>;
     mode: z.ZodLiteral<"unreachable">;
 }, z.core.$strip>], "mode">;
 
@@ -9874,7 +11305,6 @@ type FleetReportStatus = 'converged' | 'degraded' | 'unreachable';
 
 // @public (undocumented)
 interface FleetReportSummary {
-    readonly awaiting: readonly FleetWorkerAwaitingRespawn[];
     readonly error: string | null;
     readonly failures: readonly FleetWorkerFailure[];
     readonly note: string | null;
@@ -9887,26 +11317,27 @@ type FleetResult = z.infer<typeof fleetResult>;
 
 // @public
 const fleetResult: z.ZodObject<{
+    error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    local_only: z.ZodDefault<z.ZodBoolean>;
+    ok: z.ZodReadonly<z.ZodBoolean>;
     op: z.ZodString;
-    reachable: z.ZodBoolean;
-    local_only: z.ZodBoolean;
-    results: z.ZodArray<z.ZodObject<{
+    reachable: z.ZodDefault<z.ZodBoolean>;
+    results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            failed: "failed";
             applied: "applied";
-            resyncing: "resyncing";
-            recycling: "recycling";
-            stale: "stale";
+            failed: "failed";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
+            resyncing: "resyncing";
+            recycling: "recycling";
+            stale: "stale";
         }>;
-        payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-        error: z.ZodNullable<z.ZodString>;
-        detail: z.ZodNullable<z.ZodString>;
-    }, z.core.$strip>>;
-    error: z.ZodNullable<z.ZodString>;
+        payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -9914,35 +11345,27 @@ type FleetWorker = z.infer<typeof fleetWorker>;
 
 // @public
 const fleetWorker: z.ZodObject<{
-    name: z.ZodString;
+    beat_at: z.ZodString;
+    generation: z.ZodNumber;
+    joined_at: z.ZodString;
     kind: z.ZodEnum<{
         backend: "backend";
         serve: "serve";
     }>;
-    pid: z.ZodNumber;
-    generation: z.ZodNumber;
-    joined_at: z.ZodString;
-    beat_at: z.ZodString;
-    state: z.ZodEnum<{
-        ready: "ready";
-        resyncing: "resyncing";
-        recycling: "recycling";
-    }>;
-    stale: z.ZodBoolean;
-    last_op: z.ZodNullable<z.ZodObject<{
+    last_op: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        at: z.ZodString;
         op: z.ZodString;
         outcome: z.ZodString;
-        at: z.ZodString;
-    }, z.core.$strip>>;
+    }, z.core.$strip>>>;
+    name: z.ZodString;
+    pid: z.ZodNumber;
+    stale: z.ZodBoolean;
+    state: z.ZodEnum<{
+        resyncing: "resyncing";
+        recycling: "recycling";
+        ready: "ready";
+    }>;
 }, z.core.$strip>;
-
-// @public
-interface FleetWorkerAwaitingRespawn {
-    // (undocumented)
-    readonly keys: readonly string[];
-    // (undocumented)
-    readonly name: string;
-}
 
 // @public
 interface FleetWorkerFailure {
@@ -9958,20 +11381,20 @@ type FleetWorkerResult = z.infer<typeof fleetWorkerResult>;
 
 // @public
 const fleetWorkerResult: z.ZodObject<{
+    detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     name: z.ZodString;
     outcome: z.ZodEnum<{
-        failed: "failed";
         applied: "applied";
-        resyncing: "resyncing";
-        recycling: "recycling";
-        stale: "stale";
+        failed: "failed";
         missing: "missing";
         departed: "departed";
         timed_out: "timed_out";
+        resyncing: "resyncing";
+        recycling: "recycling";
+        stale: "stale";
     }>;
-    payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-    error: z.ZodNullable<z.ZodString>;
-    detail: z.ZodNullable<z.ZodString>;
+    payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -9980,26 +11403,26 @@ type FleetWorkers = z.infer<typeof fleetWorkers>;
 // @public
 const fleetWorkers: z.ZodObject<{
     workers: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
+        beat_at: z.ZodString;
+        generation: z.ZodNumber;
+        joined_at: z.ZodString;
         kind: z.ZodEnum<{
             backend: "backend";
             serve: "serve";
         }>;
-        pid: z.ZodNumber;
-        generation: z.ZodNumber;
-        joined_at: z.ZodString;
-        beat_at: z.ZodString;
-        state: z.ZodEnum<{
-            ready: "ready";
-            resyncing: "resyncing";
-            recycling: "recycling";
-        }>;
-        stale: z.ZodBoolean;
-        last_op: z.ZodNullable<z.ZodObject<{
+        last_op: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            at: z.ZodString;
             op: z.ZodString;
             outcome: z.ZodString;
-            at: z.ZodString;
-        }, z.core.$strip>>;
+        }, z.core.$strip>>>;
+        name: z.ZodString;
+        pid: z.ZodNumber;
+        stale: z.ZodBoolean;
+        state: z.ZodEnum<{
+            resyncing: "resyncing";
+            recycling: "recycling";
+            ready: "ready";
+        }>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 
@@ -10029,8 +11452,8 @@ export interface FolderBreadcrumbProps {
 
 // @public
 const folderDeleted: z.ZodObject<{
+    deleted: z.ZodBoolean;
     folder_id: z.ZodString;
-    deleted: z.ZodLiteral<true>;
 }, z.core.$strip>;
 
 // @public
@@ -10062,7 +11485,7 @@ type FolderRecord = z.infer<typeof folderRecord>;
 const folderRecord: z.ZodObject<{
     id: z.ZodString;
     name: z.ZodString;
-    parent_id: z.ZodNullable<z.ZodString>;
+    parent_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>;
 
 // @public
@@ -10084,12 +11507,12 @@ export function formatRangeLabel(value: DateRangeValue, presets?: readonly DateR
 
 // @public
 const formData: z.ZodObject<{
-    values: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+        label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         value: z.ZodString;
-        label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    }, z.core.$strip>>>>;
-}, z.core.$strip>;
+    }, z.core.$strict>>>>;
+    values: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type FormData_2 = z.infer<typeof formData>;
@@ -10119,33 +11542,33 @@ type FormOption = z.infer<typeof formOption>;
 
 // @public
 const formOption: z.ZodObject<{
+    label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     value: z.ZodString;
-    label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-}, z.core.$strip>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type FormPage = z.infer<typeof formPage>;
 
 // @public
 const formPage: z.ZodObject<{
-    title: z.ZodString;
-    fields: z.ZodArray<z.ZodString>;
     display: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        alt: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         kind: z.ZodEnum<{
-            image: "image";
             heading: "heading";
             body: "body";
+            image: "image";
         }>;
-        text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        src: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        alt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        slot: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    }, z.core.$strip>>>;
+        slot: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        src: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strict>>>;
+    fields: z.ZodArray<z.ZodString>;
     kind: z.ZodDefault<z.ZodEnum<{
         input: "input";
         review: "review";
     }>>;
-}, z.core.$strip>;
+    title: z.ZodString;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type FormPageKind = z.infer<typeof formPageKind>;
@@ -10161,24 +11584,24 @@ type FormPages = z.infer<typeof formPages>;
 
 // @public
 const formPages: z.ZodArray<z.ZodObject<{
-    title: z.ZodString;
-    fields: z.ZodArray<z.ZodString>;
     display: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        alt: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         kind: z.ZodEnum<{
-            image: "image";
             heading: "heading";
             body: "body";
+            image: "image";
         }>;
-        text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        src: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        alt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        slot: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    }, z.core.$strip>>>;
+        slot: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        src: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strict>>>;
+    fields: z.ZodArray<z.ZodString>;
     kind: z.ZodDefault<z.ZodEnum<{
         input: "input";
         review: "review";
     }>>;
-}, z.core.$strip>>;
+    title: z.ZodString;
+}, z.core.$strict>>;
 
 // @public (undocumented)
 type FormReactions = z.infer<typeof formReactions>;
@@ -10198,21 +11621,11 @@ type FormUpdate = z.infer<typeof formUpdate>;
 const formUpdate: z.ZodObject<{
     values: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+        label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         value: z.ZodString;
-        label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    }, z.core.$strip>>>>;
+    }, z.core.$strict>>>>;
     errors: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
     display: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-}, z.core.$strip>;
-
-// @public (undocumented)
-type FreshLife = z.infer<typeof freshLife>;
-
-// @public
-const freshLife: z.ZodObject<{
-    name: z.ZodString;
-    kind: z.ZodString;
-    generation: z.ZodNumber;
 }, z.core.$strip>;
 
 // @public
@@ -10251,18 +11664,18 @@ type HeldPendingSave = z.infer<typeof heldPendingSave>;
 
 // @public
 const heldPendingSave: z.ZodObject<{
-    save_id: z.ZodString;
     held_by: z.ZodString;
+    save_id: z.ZodString;
     subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        key: z.ZodString;
+        kind: z.ZodString;
         target_kind: z.ZodEnum<{
             tool: "tool";
             agent: "agent";
         }>;
         target_name: z.ZodString;
-        kind: z.ZodString;
-        key: z.ZodString;
-    }, z.core.$strip>>>;
-}, z.core.$strip>;
+    }, z.core.$strict>>>;
+}, z.core.$strict>;
 
 // @public
 export function hiddenToolNames(tagEntries: readonly ToolTagEntry[], overlayRows: readonly ToolMetaRecord[]): Set<string>;
@@ -10273,50 +11686,50 @@ type HookList = z.infer<typeof hookList>;
 // @public (undocumented)
 const hookList: z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
-        cancel_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
-        condition: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        }, z.core.$strict>>>;
+        condition: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         execution_key: z.ZodString;
         execution_key_fingerprint: z.ZodString;
-        extras_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         name: z.ZodString;
-        resume_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
-        start_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        }, z.core.$strict>>>;
+        start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
-        state_binding: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        }, z.core.$strict>>>;
+        state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             states: z.ZodArray<z.ZodObject<{
                 input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     into: z.ZodString;
-                    jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                    }, z.core.$strict>>>;
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
-                scope_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
+                }, z.core.$strict>>>;
                 state: z.ZodString;
                 subject_expr: z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
@@ -10325,26 +11738,26 @@ const hookList: z.ZodObject<{
                 }, z.core.$strict>;
                 templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
                 updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
-                    adapter: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    }, z.core.$strict>>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    op_id: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    }, z.core.$strict>>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                    }, z.core.$strict>>>;
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
             }, z.core.$strict>>;
-        }, z.core.$strict>, z.ZodNull]>>;
-        subject: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        }, z.core.$strict>>>;
+        subject: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             key_expr: z.ZodObject<{
                 content: z.ZodOptional<z.ZodString>;
                 id: z.ZodOptional<z.ZodString>;
@@ -10356,23 +11769,23 @@ const hookList: z.ZodObject<{
                 agent: "agent";
             }>;
             target_name: z.ZodString;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         tool: z.ZodString;
         tool_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         topic: z.ZodString;
     }, z.core.$strip>>;
     total: z.ZodNumber;
-    topic_verifiers: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
-        verifier: z.ZodString;
-        config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    }, z.core.$strip>>>;
-    trigger_auth: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodEnum<{
+    trigger_auth: z.ZodRecord<z.ZodString, z.ZodEnum<{
         token: "token";
         public: "public";
         verifier: "verifier";
         "token+api_key": "token+api_key";
         "out-of-service": "out-of-service";
-    }>>>;
+    }>>;
+    topic_verifiers: z.ZodRecord<z.ZodString, z.ZodObject<{
+        verifier: z.ZodString;
+        config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    }, z.core.$strip>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -10380,50 +11793,50 @@ type HookParams = z.infer<typeof hookParams>;
 
 // @public (undocumented)
 const hookParams: z.ZodObject<{
-    cancel_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    condition: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    }, z.core.$strict>>>;
+    condition: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     execution_key: z.ZodString;
     execution_key_fingerprint: z.ZodString;
-    extras_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     name: z.ZodString;
-    resume_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    start_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    }, z.core.$strict>>>;
+    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    state_binding: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    }, z.core.$strict>>>;
+    state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         states: z.ZodArray<z.ZodObject<{
             input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                 into: z.ZodString;
-                jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                }, z.core.$strict>>>;
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             }, z.core.$strict>>>;
-            scope_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 content: z.ZodOptional<z.ZodString>;
                 id: z.ZodOptional<z.ZodString>;
                 kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-            }, z.core.$strict>, z.ZodNull]>>;
+            }, z.core.$strict>>>;
             state: z.ZodString;
             subject_expr: z.ZodObject<{
                 content: z.ZodOptional<z.ZodString>;
@@ -10432,26 +11845,26 @@ const hookParams: z.ZodObject<{
             }, z.core.$strict>;
             templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
             updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
-                adapter: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                }, z.core.$strict>>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                op_id: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                }, z.core.$strict>>>;
+                op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                }, z.core.$strict>>>;
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             }, z.core.$strict>>>;
         }, z.core.$strict>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    subject: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    }, z.core.$strict>>>;
+    subject: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         key_expr: z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
@@ -10463,7 +11876,7 @@ const hookParams: z.ZodObject<{
             agent: "agent";
         }>;
         target_name: z.ZodString;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     tool: z.ZodString;
     tool_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     topic: z.ZodString;
@@ -10474,49 +11887,49 @@ type HookRegister = z.input<typeof hookRegister>;
 
 // @public (undocumented)
 const hookRegister: z.ZodObject<{
-    cancel_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    condition: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    }, z.core.$strict>>>;
+    condition: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     execution_key: z.ZodString;
-    extras_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     name: z.ZodString;
-    resume_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    start_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    }, z.core.$strict>>>;
+    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    state_binding: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    }, z.core.$strict>>>;
+    state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         states: z.ZodArray<z.ZodObject<{
             input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                 into: z.ZodString;
-                jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                }, z.core.$strict>>>;
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             }, z.core.$strict>>>;
-            scope_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 content: z.ZodOptional<z.ZodString>;
                 id: z.ZodOptional<z.ZodString>;
                 kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-            }, z.core.$strict>, z.ZodNull]>>;
+            }, z.core.$strict>>>;
             state: z.ZodString;
             subject_expr: z.ZodObject<{
                 content: z.ZodOptional<z.ZodString>;
@@ -10525,26 +11938,26 @@ const hookRegister: z.ZodObject<{
             }, z.core.$strict>;
             templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
             updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
-                adapter: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                }, z.core.$strict>>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                op_id: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                }, z.core.$strict>>>;
+                op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                }, z.core.$strict>>>;
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             }, z.core.$strict>>>;
         }, z.core.$strict>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    subject: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    }, z.core.$strict>>>;
+    subject: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         key_expr: z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
@@ -10556,7 +11969,7 @@ const hookRegister: z.ZodObject<{
             agent: "agent";
         }>;
         target_name: z.ZodString;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     tool: z.ZodString;
     tool_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     topic: z.ZodString;
@@ -10564,14 +11977,14 @@ const hookRegister: z.ZodObject<{
 
 // @public (undocumented)
 const hookRegistered: z.ZodObject<{
-    registered: z.ZodBoolean;
     name: z.ZodString;
+    registered: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public (undocumented)
 const hookRemoved: z.ZodObject<{
-    removed: z.ZodBoolean;
     name: z.ZodString;
+    removed: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public
@@ -10634,26 +12047,38 @@ type Interaction = z.infer<typeof interaction>;
 
 // @public (undocumented)
 const interaction: z.ZodObject<{
-    interaction_id: z.ZodString;
-    group_id: z.ZodString;
-    question: z.ZodDefault<z.ZodString>;
     answer_format: z.ZodEnum<{
         text: "text";
-        external: "external";
+        free: "free";
         confirm: "confirm";
-        select: "select";
         form: "form";
+        select: "select";
+        external: "external";
     }>;
-    format_payload: z.ZodPipe<z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>, z.ZodTransform<Record<string, unknown>, Record<string, unknown> | null | undefined>>;
+    audience: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    channel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     created_at: z.ZodString;
+    group_id: z.ZodString;
+    interaction_id: z.ZodString;
+    media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+        caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        kind: z.ZodEnum<{
+            image: "image";
+            link: "link";
+            document: "document";
+            video: "video";
+            audio: "audio";
+        }>;
+        url: z.ZodString;
+    }, z.core.$strict>>>>;
+    origin: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    question: z.ZodString;
+    recipient: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    sensitive: z.ZodBoolean;
+    server_verified: z.ZodDefault<z.ZodNullable<z.ZodBoolean>>;
     timeout_at: z.ZodString;
-    sensitive: z.ZodDefault<z.ZodBoolean>;
-    server_verified: z.ZodOptional<z.ZodBoolean>;
-    channel: z.ZodOptional<z.ZodString>;
-    recipient: z.ZodOptional<z.ZodString>;
-    origin: z.ZodOptional<z.ZodString>;
-    audience: z.ZodOptional<z.ZodString>;
-    media: z.ZodOptional<z.ZodArray<z.ZodUnknown>>;
+    format_payload: z.ZodPipe<z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>, z.ZodTransform<Record<string, unknown>, Record<string, unknown> | null | undefined>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -10679,12 +12104,33 @@ type InteractionMediaItem = z.infer<typeof interactionMediaItem>;
 
 // @public
 const interactionMediaItem: z.ZodObject<{
+    caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     kind: z.ZodEnum<{
-        link: "link";
         image: "image";
+        link: "link";
+        document: "document";
+        video: "video";
+        audio: "audio";
     }>;
     url: z.ZodString;
-    caption: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strict>;
+
+// @public (undocumented)
+type InteractionReaction = z.infer<typeof interactionReaction>;
+
+// @public
+const interactionReaction: z.ZodObject<{
+    interaction_id: z.ZodString;
+    update: z.ZodObject<{
+        values: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+            label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            value: z.ZodString;
+        }, z.core.$strict>>>>;
+        errors: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
+        display: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strip>;
 }, z.core.$strip>;
 
 // @public
@@ -10695,32 +12141,44 @@ type InteractionsPage = z.infer<typeof interactionsPage>;
 
 // @public
 const interactionsPage: z.ZodObject<{
-    total: z.ZodNumber;
+    next_page: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     page: z.ZodNumber;
     page_size: z.ZodNumber;
-    next_page: z.ZodNullable<z.ZodNumber>;
+    total: z.ZodNumber;
     truncated: z.ZodBoolean;
     items: z.ZodArray<z.ZodObject<{
-        interaction_id: z.ZodString;
-        group_id: z.ZodString;
-        question: z.ZodDefault<z.ZodString>;
         answer_format: z.ZodEnum<{
             text: "text";
-            external: "external";
+            free: "free";
             confirm: "confirm";
-            select: "select";
             form: "form";
+            select: "select";
+            external: "external";
         }>;
-        format_payload: z.ZodPipe<z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>, z.ZodTransform<Record<string, unknown>, Record<string, unknown> | null | undefined>>;
+        audience: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        channel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         created_at: z.ZodString;
+        group_id: z.ZodString;
+        interaction_id: z.ZodString;
+        media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            kind: z.ZodEnum<{
+                image: "image";
+                link: "link";
+                document: "document";
+                video: "video";
+                audio: "audio";
+            }>;
+            url: z.ZodString;
+        }, z.core.$strict>>>>;
+        origin: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        question: z.ZodString;
+        recipient: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        sensitive: z.ZodBoolean;
+        server_verified: z.ZodDefault<z.ZodNullable<z.ZodBoolean>>;
         timeout_at: z.ZodString;
-        sensitive: z.ZodDefault<z.ZodBoolean>;
-        server_verified: z.ZodOptional<z.ZodBoolean>;
-        channel: z.ZodOptional<z.ZodString>;
-        recipient: z.ZodOptional<z.ZodString>;
-        origin: z.ZodOptional<z.ZodString>;
-        audience: z.ZodOptional<z.ZodString>;
-        media: z.ZodOptional<z.ZodArray<z.ZodUnknown>>;
+        format_payload: z.ZodPipe<z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>, z.ZodTransform<Record<string, unknown>, Record<string, unknown> | null | undefined>>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 
@@ -10748,14 +12206,14 @@ type InviteRow = z.infer<typeof inviteRow>;
 
 // @public
 const inviteRow: z.ZodObject<{
-    id: z.ZodString;
-    email: z.ZodString;
-    role: z.ZodNullable<z.ZodString>;
+    action_keys: z.ZodDefault<z.ZodArray<z.ZodString>>;
     created_at: z.ZodString;
+    email: z.ZodString;
     expires_at: z.ZodString;
     handle: z.ZodString;
-    action_keys: z.ZodArray<z.ZodString>;
-}, z.core.$strip>;
+    id: z.ZodString;
+    role: z.ZodNullable<z.ZodString>;
+}, z.core.$strict>;
 
 // @public
 interface InvokeMemberActionBody {
@@ -10773,7 +12231,7 @@ type InvokeMemberActionResult = z.infer<typeof invokeMemberActionResult>;
 // @public
 const invokeMemberActionResult: z.ZodObject<{
     result: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-}, z.core.$strip>;
+}, z.core.$strict>;
 
 // @public
 export function isExecutionKeyListEmpty(query: ExecutionKeyQuery): boolean;
@@ -10926,26 +12384,26 @@ type KindStatus = z.infer<typeof kindStatus>;
 
 // @public (undocumented)
 const kindStatus: z.ZodObject<{
+    detail: z.ZodString;
     kind: z.ZodString;
+    plugin: z.ZodNullable<z.ZodString>;
     state: z.ZodEnum<{
         default: "default";
         active: "active";
         off: "off";
     }>;
-    plugin: z.ZodNullable<z.ZodString>;
-    detail: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
 const kindStatusList: z.ZodArray<z.ZodObject<{
+    detail: z.ZodString;
     kind: z.ZodString;
+    plugin: z.ZodNullable<z.ZodString>;
     state: z.ZodEnum<{
         default: "default";
         active: "active";
         off: "off";
     }>;
-    plugin: z.ZodNullable<z.ZodString>;
-    detail: z.ZodString;
 }, z.core.$strip>>;
 
 // @public
@@ -10982,68 +12440,69 @@ type LoginFormField = z.infer<typeof loginFormField>;
 
 // @public
 const loginFormField: z.ZodObject<{
-    name: z.ZodString;
+    autocomplete: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     label: z.ZodString;
-    secret: z.ZodBoolean;
-    autocomplete: z.ZodOptional<z.ZodString>;
-}, z.core.$strip>;
+    name: z.ZodString;
+    secret: z.ZodDefault<z.ZodBoolean>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type LoginMethod = z.infer<typeof loginMethod>;
 
 // @public
 const loginMethod: z.ZodDiscriminatedUnion<[z.ZodObject<{
-    shape: z.ZodLiteral<"form">;
+    fields: z.ZodArray<z.ZodObject<{
+        autocomplete: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        label: z.ZodString;
+        name: z.ZodString;
+        secret: z.ZodDefault<z.ZodBoolean>;
+    }, z.core.$strict>>;
     id: z.ZodString;
-    title: z.ZodString;
     purpose: z.ZodDefault<z.ZodEnum<{
         login: "login";
         invite: "invite";
     }>>;
-    fields: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
-        label: z.ZodString;
-        secret: z.ZodBoolean;
-        autocomplete: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>>;
+    shape: z.ZodDefault<z.ZodLiteral<"form">>;
     submit_path: z.ZodString;
-}, z.core.$strip>, z.ZodObject<{
-    shape: z.ZodLiteral<"button">;
+    title: z.ZodString;
+}, z.core.$strict>, z.ZodObject<{
+    href: z.ZodString;
+    icon: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     id: z.ZodString;
     label: z.ZodString;
-    icon: z.ZodOptional<z.ZodString>;
-    href: z.ZodString;
-}, z.core.$strip>], "shape">;
+    shape: z.ZodDefault<z.ZodLiteral<"button">>;
+}, z.core.$strict>], "shape">;
 
 // @public (undocumented)
 type LoginMethods = z.infer<typeof loginMethods>;
 
 // @public
 const loginMethods: z.ZodObject<{
+    claim_fragment_key: z.ZodString;
     methods: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
-        shape: z.ZodLiteral<"form">;
+        fields: z.ZodArray<z.ZodObject<{
+            autocomplete: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            label: z.ZodString;
+            name: z.ZodString;
+            secret: z.ZodDefault<z.ZodBoolean>;
+        }, z.core.$strict>>;
         id: z.ZodString;
-        title: z.ZodString;
         purpose: z.ZodDefault<z.ZodEnum<{
             login: "login";
             invite: "invite";
         }>>;
-        fields: z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
-            label: z.ZodString;
-            secret: z.ZodBoolean;
-            autocomplete: z.ZodOptional<z.ZodString>;
-        }, z.core.$strip>>;
+        shape: z.ZodDefault<z.ZodLiteral<"form">>;
         submit_path: z.ZodString;
-    }, z.core.$strip>, z.ZodObject<{
-        shape: z.ZodLiteral<"button">;
+        title: z.ZodString;
+    }, z.core.$strict>, z.ZodObject<{
+        href: z.ZodString;
+        icon: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         id: z.ZodString;
         label: z.ZodString;
-        icon: z.ZodOptional<z.ZodString>;
-        href: z.ZodString;
-    }, z.core.$strip>], "shape">>;
+        shape: z.ZodDefault<z.ZodLiteral<"button">>;
+    }, z.core.$strict>], "shape">>;
     needs_setup: z.ZodBoolean;
-    setup_login: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+    setup_login: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         kinds: z.ZodArray<z.ZodEnum<{
             invite: "invite";
             password: "password";
@@ -11085,6 +12544,7 @@ const manifestMcpEntry: z.ZodObject<{
 
 // @public (undocumented)
 const manifestView: z.ZodObject<{
+    user_tools: z.ZodArray<z.ZodString>;
     mcp: z.ZodArray<z.ZodObject<{
         managed: z.ZodOptional<z.ZodNullable<z.ZodObject<{
             connection_id: z.ZodString;
@@ -11092,7 +12552,6 @@ const manifestView: z.ZodObject<{
             sub_service: z.ZodString;
         }, z.core.$strip>>>;
     }, z.core.$loose>>;
-    user_tools: z.ZodArray<z.ZodString>;
 }, z.core.$strip>;
 
 // @public
@@ -11141,6 +12600,7 @@ export interface MarkdownProps {
 
 // @public
 const marketplaceAdvisories: z.ZodObject<{
+    fetched_at: z.ZodString;
     advisories: z.ZodArray<z.ZodObject<{
         id: z.ZodNumber;
         listing: z.ZodString;
@@ -11150,7 +12610,6 @@ const marketplaceAdvisories: z.ZodObject<{
         created_at: z.ZodString;
         withdrawn_at: z.ZodNullable<z.ZodString>;
     }, z.core.$strip>>;
-    fetched_at: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -11204,149 +12663,149 @@ type MarketplaceInstalled = z.infer<typeof marketplaceInstalled>;
 // @public
 const marketplaceInstalled: z.ZodObject<{
     installed: z.ZodArray<z.ZodObject<{
-        ref: z.ZodString;
-        version: z.ZodString;
-        source: z.ZodString;
-        delivery: z.ZodEnum<{
-            package: "package";
-            descriptor: "descriptor";
-        }>;
-        installed_at: z.ZodString;
-        latest: z.ZodNullable<z.ZodString>;
-        update_available: z.ZodBoolean;
-        incompatible_newer: z.ZodNullable<z.ZodString>;
-        missing_upstream: z.ZodBoolean;
         compat: z.ZodObject<{
+            reason: z.ZodNullable<z.ZodString>;
             status: z.ZodEnum<{
                 unknown: "unknown";
                 compatible: "compatible";
                 incompatible: "incompatible";
             }>;
-            reason: z.ZodNullable<z.ZodString>;
-        }, z.core.$strict>;
+        }, z.core.$strip>;
+        delivery: z.ZodEnum<{
+            package: "package";
+            descriptor: "descriptor";
+        }>;
+        incompatible_newer: z.ZodNullable<z.ZodString>;
+        installed_at: z.ZodString;
         items: z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
             kind: z.ZodString;
+            name: z.ZodString;
         }, z.core.$strip>>;
+        latest: z.ZodNullable<z.ZodString>;
+        missing_upstream: z.ZodBoolean;
+        ref: z.ZodString;
         route_mounts: z.ZodRecord<z.ZodString, z.ZodString>;
-    }, z.core.$strict>>;
-}, z.core.$strict>;
+        source: z.ZodString;
+        update_available: z.ZodBoolean;
+        version: z.ZodString;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type MarketplaceInstalledCompat = z.infer<typeof marketplaceInstalledCompat>;
 
 // @public
 const marketplaceInstalledCompat: z.ZodObject<{
+    reason: z.ZodNullable<z.ZodString>;
     status: z.ZodEnum<{
         unknown: "unknown";
         compatible: "compatible";
         incompatible: "incompatible";
     }>;
-    reason: z.ZodNullable<z.ZodString>;
-}, z.core.$strict>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type MarketplaceInstalledPlugin = z.infer<typeof marketplaceInstalledPlugin>;
 
 // @public
 const marketplaceInstalledPlugin: z.ZodObject<{
-    ref: z.ZodString;
-    version: z.ZodString;
-    source: z.ZodString;
-    delivery: z.ZodEnum<{
-        package: "package";
-        descriptor: "descriptor";
-    }>;
-    installed_at: z.ZodString;
-    latest: z.ZodNullable<z.ZodString>;
-    update_available: z.ZodBoolean;
-    incompatible_newer: z.ZodNullable<z.ZodString>;
-    missing_upstream: z.ZodBoolean;
     compat: z.ZodObject<{
+        reason: z.ZodNullable<z.ZodString>;
         status: z.ZodEnum<{
             unknown: "unknown";
             compatible: "compatible";
             incompatible: "incompatible";
         }>;
-        reason: z.ZodNullable<z.ZodString>;
-    }, z.core.$strict>;
+    }, z.core.$strip>;
+    delivery: z.ZodEnum<{
+        package: "package";
+        descriptor: "descriptor";
+    }>;
+    incompatible_newer: z.ZodNullable<z.ZodString>;
+    installed_at: z.ZodString;
     items: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
         kind: z.ZodString;
+        name: z.ZodString;
     }, z.core.$strip>>;
+    latest: z.ZodNullable<z.ZodString>;
+    missing_upstream: z.ZodBoolean;
+    ref: z.ZodString;
     route_mounts: z.ZodRecord<z.ZodString, z.ZodString>;
-}, z.core.$strict>;
+    source: z.ZodString;
+    update_available: z.ZodBoolean;
+    version: z.ZodString;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type MarketplaceInstallPreview = z.infer<typeof marketplaceInstallPreview>;
 
 // @public
 const marketplaceInstallPreview: z.ZodObject<{
-    ref: z.ZodString;
-    version: z.ZodString;
-    items: z.ZodArray<z.ZodObject<{
-        item: z.ZodString;
-        kind: z.ZodString;
-        base: z.ZodString;
-        default_base: z.ZodString;
-        routes: z.ZodArray<z.ZodObject<{
-            path: z.ZodString;
-            full_path: z.ZodString;
-            methods: z.ZodArray<z.ZodEnum<{
-                GET: "GET";
-                POST: "POST";
-                PUT: "PUT";
-                PATCH: "PATCH";
-                DELETE: "DELETE";
-            }>>;
-            public: z.ZodBoolean;
-        }, z.core.$strip>>;
-    }, z.core.$strip>>;
     collisions: z.ZodArray<z.ZodObject<{
-        item: z.ZodString;
-        full_path: z.ZodString;
-        methods: z.ZodArray<z.ZodEnum<{
-            GET: "GET";
-            POST: "POST";
-            PUT: "PUT";
-            PATCH: "PATCH";
-            DELETE: "DELETE";
-        }>>;
         conflict_owner: z.ZodString;
         conflict_path: z.ZodString;
-    }, z.core.$strip>>;
-    public_routes: z.ZodArray<z.ZodObject<{
-        item: z.ZodString;
         full_path: z.ZodString;
+        item: z.ZodString;
         methods: z.ZodArray<z.ZodEnum<{
             GET: "GET";
+            DELETE: "DELETE";
+            PATCH: "PATCH";
             POST: "POST";
             PUT: "PUT";
-            PATCH: "PATCH";
-            DELETE: "DELETE";
         }>>;
     }, z.core.$strip>>;
-    new_public_routes: z.ZodArray<z.ZodObject<{
-        item: z.ZodString;
-        full_path: z.ZodString;
-        methods: z.ZodArray<z.ZodEnum<{
-            GET: "GET";
-            POST: "POST";
-            PUT: "PUT";
-            PATCH: "PATCH";
-            DELETE: "DELETE";
-        }>>;
-    }, z.core.$strip>>;
-    requires_public_acceptance: z.ZodBoolean;
-    required_env: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
-        secret: z.ZodBoolean;
-    }, z.core.$strip>>;
-    missing_env: z.ZodArray<z.ZodString>;
     delivery: z.ZodEnum<{
         package: "package";
         descriptor: "descriptor";
     }>;
+    items: z.ZodArray<z.ZodObject<{
+        base: z.ZodString;
+        default_base: z.ZodString;
+        item: z.ZodString;
+        kind: z.ZodString;
+        routes: z.ZodArray<z.ZodObject<{
+            full_path: z.ZodString;
+            methods: z.ZodArray<z.ZodEnum<{
+                GET: "GET";
+                DELETE: "DELETE";
+                PATCH: "PATCH";
+                POST: "POST";
+                PUT: "PUT";
+            }>>;
+            path: z.ZodString;
+            public: z.ZodBoolean;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
+    missing_env: z.ZodArray<z.ZodString>;
+    new_public_routes: z.ZodArray<z.ZodObject<{
+        full_path: z.ZodString;
+        item: z.ZodString;
+        methods: z.ZodArray<z.ZodEnum<{
+            GET: "GET";
+            DELETE: "DELETE";
+            PATCH: "PATCH";
+            POST: "POST";
+            PUT: "PUT";
+        }>>;
+    }, z.core.$strip>>;
+    public_routes: z.ZodArray<z.ZodObject<{
+        full_path: z.ZodString;
+        item: z.ZodString;
+        methods: z.ZodArray<z.ZodEnum<{
+            GET: "GET";
+            DELETE: "DELETE";
+            PATCH: "PATCH";
+            POST: "POST";
+            PUT: "PUT";
+        }>>;
+    }, z.core.$strip>>;
+    ref: z.ZodString;
+    required_env: z.ZodArray<z.ZodObject<{
+        name: z.ZodString;
+        secret: z.ZodBoolean;
+    }, z.core.$strip>>;
+    requires_public_acceptance: z.ZodBoolean;
+    version: z.ZodString;
 }, z.core.$strip>;
 
 // @public
@@ -11364,9 +12823,42 @@ type MarketplaceInstallResult = z.infer<typeof marketplaceInstallResult>;
 
 // @public
 const marketplaceInstallResult: z.ZodObject<{
-    ref: z.ZodString;
-    version: z.ZodString;
     notes: z.ZodArray<z.ZodString>;
+    package: z.ZodNullable<z.ZodString>;
+    pip_output: z.ZodNullable<z.ZodString>;
+    ref: z.ZodString;
+    reload: z.ZodObject<{
+        env_keys: z.ZodNumber;
+        fanout: z.ZodObject<{
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            local_only: z.ZodDefault<z.ZodNullable<z.ZodBoolean>>;
+            mode: z.ZodString;
+            note: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            op: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            reachable: z.ZodDefault<z.ZodNullable<z.ZodBoolean>>;
+            results: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+                detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                name: z.ZodString;
+                outcome: z.ZodString;
+                payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+            }, z.core.$strip>>>>;
+        }, z.core.$strip>;
+        status: z.ZodString;
+    }, z.core.$strip>;
+    routes: z.ZodArray<z.ZodObject<{
+        full_path: z.ZodString;
+        item: z.ZodString;
+        methods: z.ZodArray<z.ZodEnum<{
+            GET: "GET";
+            DELETE: "DELETE";
+            PATCH: "PATCH";
+            POST: "POST";
+            PUT: "PUT";
+        }>>;
+        public: z.ZodBoolean;
+    }, z.core.$strip>>;
+    version: z.ZodString;
     advisories: z.ZodArray<z.ZodObject<{
         id: z.ZodNumber;
         listing: z.ZodString;
@@ -11375,18 +12867,6 @@ const marketplaceInstallResult: z.ZodObject<{
         summary: z.ZodString;
         created_at: z.ZodString;
         withdrawn_at: z.ZodNullable<z.ZodString>;
-    }, z.core.$strip>>;
-    routes: z.ZodArray<z.ZodObject<{
-        item: z.ZodString;
-        full_path: z.ZodString;
-        methods: z.ZodArray<z.ZodEnum<{
-            GET: "GET";
-            POST: "POST";
-            PUT: "PUT";
-            PATCH: "PATCH";
-            DELETE: "DELETE";
-        }>>;
-        public: z.ZodBoolean;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 
@@ -11406,10 +12886,10 @@ const marketplaceItem: z.ZodObject<{
             path: z.ZodString;
             methods: z.ZodArray<z.ZodEnum<{
                 GET: "GET";
+                DELETE: "DELETE";
+                PATCH: "PATCH";
                 POST: "POST";
                 PUT: "PUT";
-                PATCH: "PATCH";
-                DELETE: "DELETE";
             }>>;
             public: z.ZodBoolean;
         }, z.core.$strip>>;
@@ -11444,10 +12924,10 @@ const marketplaceLatestVersion: z.ZodObject<{
                 path: z.ZodString;
                 methods: z.ZodArray<z.ZodEnum<{
                     GET: "GET";
+                    DELETE: "DELETE";
+                    PATCH: "PATCH";
                     POST: "POST";
                     PUT: "PUT";
-                    PATCH: "PATCH";
-                    DELETE: "DELETE";
                 }>>;
                 public: z.ZodBoolean;
             }, z.core.$strip>>;
@@ -11464,14 +12944,14 @@ type MarketplaceMountedRoute = z.infer<typeof marketplaceMountedRoute>;
 
 // @public
 const marketplaceMountedRoute: z.ZodObject<{
-    item: z.ZodString;
     full_path: z.ZodString;
+    item: z.ZodString;
     methods: z.ZodArray<z.ZodEnum<{
         GET: "GET";
+        DELETE: "DELETE";
+        PATCH: "PATCH";
         POST: "POST";
         PUT: "PUT";
-        PATCH: "PATCH";
-        DELETE: "DELETE";
     }>>;
     public: z.ZodBoolean;
 }, z.core.$strip>;
@@ -11520,10 +13000,10 @@ const marketplacePluginDetail: z.ZodObject<{
                     path: z.ZodString;
                     methods: z.ZodArray<z.ZodEnum<{
                         GET: "GET";
+                        DELETE: "DELETE";
+                        PATCH: "PATCH";
                         POST: "POST";
                         PUT: "PUT";
-                        PATCH: "PATCH";
-                        DELETE: "DELETE";
                     }>>;
                     public: z.ZodBoolean;
                 }, z.core.$strip>>;
@@ -11547,17 +13027,17 @@ type MarketplacePreviewCollision = z.infer<typeof marketplacePreviewCollision>;
 
 // @public
 const marketplacePreviewCollision: z.ZodObject<{
-    item: z.ZodString;
-    full_path: z.ZodString;
-    methods: z.ZodArray<z.ZodEnum<{
-        GET: "GET";
-        POST: "POST";
-        PUT: "PUT";
-        PATCH: "PATCH";
-        DELETE: "DELETE";
-    }>>;
     conflict_owner: z.ZodString;
     conflict_path: z.ZodString;
+    full_path: z.ZodString;
+    item: z.ZodString;
+    methods: z.ZodArray<z.ZodEnum<{
+        GET: "GET";
+        DELETE: "DELETE";
+        PATCH: "PATCH";
+        POST: "POST";
+        PUT: "PUT";
+    }>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -11565,20 +13045,20 @@ type MarketplacePreviewItem = z.infer<typeof marketplacePreviewItem>;
 
 // @public
 const marketplacePreviewItem: z.ZodObject<{
-    item: z.ZodString;
-    kind: z.ZodString;
     base: z.ZodString;
     default_base: z.ZodString;
+    item: z.ZodString;
+    kind: z.ZodString;
     routes: z.ZodArray<z.ZodObject<{
-        path: z.ZodString;
         full_path: z.ZodString;
         methods: z.ZodArray<z.ZodEnum<{
             GET: "GET";
+            DELETE: "DELETE";
+            PATCH: "PATCH";
             POST: "POST";
             PUT: "PUT";
-            PATCH: "PATCH";
-            DELETE: "DELETE";
         }>>;
+        path: z.ZodString;
         public: z.ZodBoolean;
     }, z.core.$strip>>;
 }, z.core.$strip>;
@@ -11588,14 +13068,14 @@ type MarketplacePreviewPublicRoute = z.infer<typeof marketplacePreviewPublicRout
 
 // @public
 const marketplacePreviewPublicRoute: z.ZodObject<{
-    item: z.ZodString;
     full_path: z.ZodString;
+    item: z.ZodString;
     methods: z.ZodArray<z.ZodEnum<{
         GET: "GET";
+        DELETE: "DELETE";
+        PATCH: "PATCH";
         POST: "POST";
         PUT: "PUT";
-        PATCH: "PATCH";
-        DELETE: "DELETE";
     }>>;
 }, z.core.$strip>;
 
@@ -11604,15 +13084,15 @@ type MarketplacePreviewRoute = z.infer<typeof marketplacePreviewRoute>;
 
 // @public
 const marketplacePreviewRoute: z.ZodObject<{
-    path: z.ZodString;
     full_path: z.ZodString;
     methods: z.ZodArray<z.ZodEnum<{
         GET: "GET";
+        DELETE: "DELETE";
+        PATCH: "PATCH";
         POST: "POST";
         PUT: "PUT";
-        PATCH: "PATCH";
-        DELETE: "DELETE";
     }>>;
+    path: z.ZodString;
     public: z.ZodBoolean;
 }, z.core.$strip>;
 
@@ -11633,10 +13113,10 @@ const marketplaceRouteDecl: z.ZodObject<{
     path: z.ZodString;
     methods: z.ZodArray<z.ZodEnum<{
         GET: "GET";
+        DELETE: "DELETE";
+        PATCH: "PATCH";
         POST: "POST";
         PUT: "PUT";
-        PATCH: "PATCH";
-        DELETE: "DELETE";
     }>>;
     public: z.ZodBoolean;
 }, z.core.$strip>;
@@ -11651,10 +13131,10 @@ const marketplaceRoutesDecl: z.ZodObject<{
         path: z.ZodString;
         methods: z.ZodArray<z.ZodEnum<{
             GET: "GET";
+            DELETE: "DELETE";
+            PATCH: "PATCH";
             POST: "POST";
             PUT: "PUT";
-            PATCH: "PATCH";
-            DELETE: "DELETE";
         }>>;
         public: z.ZodBoolean;
     }, z.core.$strip>>;
@@ -11791,9 +13271,28 @@ type MarketplaceUninstallResult = z.infer<typeof marketplaceUninstallResult>;
 
 // @public
 const marketplaceUninstallResult: z.ZodObject<{
-    ref: z.ZodString;
-    uninstalled: z.ZodLiteral<true>;
     notes: z.ZodArray<z.ZodString>;
+    ref: z.ZodString;
+    reload: z.ZodNullable<z.ZodObject<{
+        env_keys: z.ZodNumber;
+        fanout: z.ZodObject<{
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            local_only: z.ZodDefault<z.ZodNullable<z.ZodBoolean>>;
+            mode: z.ZodString;
+            note: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            op: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            reachable: z.ZodDefault<z.ZodNullable<z.ZodBoolean>>;
+            results: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+                detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                name: z.ZodString;
+                outcome: z.ZodString;
+                payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+            }, z.core.$strip>>>>;
+        }, z.core.$strip>;
+        status: z.ZodString;
+    }, z.core.$strip>>;
+    uninstalled: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -11802,31 +13301,31 @@ type MarketplaceUpgradeAllResult = z.infer<typeof marketplaceUpgradeAllResult>;
 // @public
 const marketplaceUpgradeAllResult: z.ZodObject<{
     results: z.ZodArray<z.ZodObject<{
-        ref: z.ZodString;
+        detail: z.ZodString;
         outcome: z.ZodEnum<{
             failed: "failed";
             upgraded: "upgraded";
             "up-to-date": "up-to-date";
             "no-compatible-version": "no-compatible-version";
         }>;
-        detail: z.ZodString;
-    }, z.core.$strict>>;
-}, z.core.$strict>;
+        ref: z.ZodString;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type MarketplaceUpgradeAllRow = z.infer<typeof marketplaceUpgradeAllRow>;
 
 // @public
 const marketplaceUpgradeAllRow: z.ZodObject<{
-    ref: z.ZodString;
+    detail: z.ZodString;
     outcome: z.ZodEnum<{
         failed: "failed";
         upgraded: "upgraded";
         "up-to-date": "up-to-date";
         "no-compatible-version": "no-compatible-version";
     }>;
-    detail: z.ZodString;
-}, z.core.$strict>;
+    ref: z.ZodString;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type MarketplaceVersion = z.infer<typeof marketplaceVersion>;
@@ -11847,10 +13346,10 @@ type McpEnvRef = z.infer<typeof mcpEnvRef>;
 
 // @public
 const mcpEnvRef: z.ZodObject<{
-    var: z.ZodString;
-    pointer: z.ZodString;
     has_default: z.ZodBoolean;
+    pointer: z.ZodString;
     set: z.ZodBoolean;
+    var: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -11858,10 +13357,10 @@ type McpEnvRefs = z.infer<typeof mcpEnvRefs>;
 
 // @public (undocumented)
 const mcpEnvRefs: z.ZodArray<z.ZodObject<{
-    var: z.ZodString;
-    pointer: z.ZodString;
     has_default: z.ZodBoolean;
+    pointer: z.ZodString;
     set: z.ZodBoolean;
+    var: z.ZodString;
 }, z.core.$strip>>;
 
 // @public (undocumented)
@@ -11869,37 +13368,44 @@ type McpReloadResult = z.infer<typeof mcpReloadResult>;
 
 // @public
 const mcpReloadResult: z.ZodObject<{
+    error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    local_only: z.ZodDefault<z.ZodBoolean>;
+    ok: z.ZodReadonly<z.ZodBoolean>;
     op: z.ZodString;
-    reachable: z.ZodBoolean;
-    local_only: z.ZodBoolean;
-    results: z.ZodArray<z.ZodObject<{
+    reachable: z.ZodDefault<z.ZodBoolean>;
+    results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            failed: "failed";
             applied: "applied";
-            resyncing: "resyncing";
-            recycling: "recycling";
-            stale: "stale";
+            failed: "failed";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
+            resyncing: "resyncing";
+            recycling: "recycling";
+            stale: "stale";
         }>;
-        payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-        error: z.ZodNullable<z.ZodString>;
-        detail: z.ZodNullable<z.ZodString>;
-    }, z.core.$strip>>;
-    error: z.ZodNullable<z.ZodString>;
+        payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
 const mcpStatus: z.ZodObject<{
     bound: z.ZodRecord<z.ZodString, z.ZodArray<z.ZodString>>;
     failed: z.ZodArray<z.ZodObject<{
-        title: z.ZodString;
+        category: z.ZodString;
+        http_status: z.ZodNullable<z.ZodNumber>;
+        message: z.ZodString;
         status: z.ZodString;
-        category: z.ZodOptional<z.ZodString>;
-        message: z.ZodOptional<z.ZodString>;
-        http_status: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
+        title: z.ZodString;
+    }, z.core.$strip>>;
+    health: z.ZodRecord<z.ZodString, z.ZodObject<{
+        consecutive_failures: z.ZodNumber;
+        failing_since: z.ZodNullable<z.ZodString>;
+        last_error: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>;
+        last_success: z.ZodNullable<z.ZodString>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 
@@ -11923,8 +13429,11 @@ type MediaKind = z.infer<typeof mediaKind>;
 
 // @public
 const mediaKind: z.ZodEnum<{
-    link: "link";
     image: "image";
+    link: "link";
+    document: "document";
+    video: "video";
+    audio: "audio";
 }>;
 
 // @public (undocumented)
@@ -11933,35 +13442,35 @@ type MemberActionCatalog = z.infer<typeof memberActionCatalog>;
 // @public
 const memberActionCatalog: z.ZodObject<{
     actions: z.ZodArray<z.ZodObject<{
+        destructive: z.ZodBoolean;
+        input_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
         key: z.ZodString;
         label: z.ZodString;
+        result_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
         scope: z.ZodEnum<{
             page: "page";
             member_row: "member_row";
             invite_row: "invite_row";
         }>;
-        destructive: z.ZodBoolean;
-        input_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-        result_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    }, z.core.$strip>>;
-}, z.core.$strip>;
+    }, z.core.$strict>>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type MemberActionDescriptor = z.infer<typeof memberActionDescriptor>;
 
 // @public
 const memberActionDescriptor: z.ZodObject<{
+    destructive: z.ZodBoolean;
+    input_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     key: z.ZodString;
     label: z.ZodString;
+    result_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     scope: z.ZodEnum<{
         page: "page";
         member_row: "member_row";
         invite_row: "invite_row";
     }>;
-    destructive: z.ZodBoolean;
-    input_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    result_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-}, z.core.$strip>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type MemberActionScope = z.infer<typeof memberActionScope>;
@@ -11978,59 +13487,59 @@ type MemberDirectory = z.infer<typeof memberDirectory>;
 
 // @public
 const memberDirectory: z.ZodObject<{
-    members: z.ZodArray<z.ZodObject<{
-        id: z.ZodString;
-        email: z.ZodString;
-        role: z.ZodNullable<z.ZodString>;
-        created_at: z.ZodString;
-        principals: z.ZodArray<z.ZodObject<{
-            user_id: z.ZodString;
-            disabled: z.ZodBoolean;
-            role: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        disabled: z.ZodBoolean;
-        handle: z.ZodString;
-        action_keys: z.ZodArray<z.ZodString>;
-    }, z.core.$strip>>;
     invites: z.ZodArray<z.ZodObject<{
-        id: z.ZodString;
-        email: z.ZodString;
-        role: z.ZodNullable<z.ZodString>;
+        action_keys: z.ZodDefault<z.ZodArray<z.ZodString>>;
         created_at: z.ZodString;
+        email: z.ZodString;
         expires_at: z.ZodString;
         handle: z.ZodString;
-        action_keys: z.ZodArray<z.ZodString>;
-    }, z.core.$strip>>;
-}, z.core.$strip>;
+        id: z.ZodString;
+        role: z.ZodNullable<z.ZodString>;
+    }, z.core.$strict>>;
+    members: z.ZodArray<z.ZodObject<{
+        action_keys: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        created_at: z.ZodString;
+        disabled: z.ZodBoolean;
+        email: z.ZodString;
+        handle: z.ZodString;
+        id: z.ZodString;
+        principals: z.ZodArray<z.ZodObject<{
+            disabled: z.ZodBoolean;
+            role: z.ZodNullable<z.ZodString>;
+            user_id: z.ZodString;
+        }, z.core.$strict>>;
+        role: z.ZodNullable<z.ZodString>;
+    }, z.core.$strict>>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type MemberPrincipalState = z.infer<typeof memberPrincipalState>;
 
 // @public
 const memberPrincipalState: z.ZodObject<{
-    user_id: z.ZodString;
     disabled: z.ZodBoolean;
     role: z.ZodNullable<z.ZodString>;
-}, z.core.$strip>;
+    user_id: z.ZodString;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type MemberRow = z.infer<typeof memberRow>;
 
 // @public
 const memberRow: z.ZodObject<{
-    id: z.ZodString;
-    email: z.ZodString;
-    role: z.ZodNullable<z.ZodString>;
+    action_keys: z.ZodDefault<z.ZodArray<z.ZodString>>;
     created_at: z.ZodString;
+    disabled: z.ZodBoolean;
+    email: z.ZodString;
+    handle: z.ZodString;
+    id: z.ZodString;
     principals: z.ZodArray<z.ZodObject<{
-        user_id: z.ZodString;
         disabled: z.ZodBoolean;
         role: z.ZodNullable<z.ZodString>;
-    }, z.core.$strip>>;
-    disabled: z.ZodBoolean;
-    handle: z.ZodString;
-    action_keys: z.ZodArray<z.ZodString>;
-}, z.core.$strip>;
+        user_id: z.ZodString;
+    }, z.core.$strict>>;
+    role: z.ZodNullable<z.ZodString>;
+}, z.core.$strict>;
 
 // @public
 export const MembersIcon: IconComponent;
@@ -12043,37 +13552,38 @@ type MeProjection = z.infer<typeof meProjection>;
 
 // @public
 const meProjection: z.ZodObject<{
-    user_id: z.ZodString;
+    admin: z.ZodBoolean;
+    agents: z.ZodArray<z.ZodString>;
+    mintable: z.ZodBoolean;
     owner_user_id: z.ZodNullable<z.ZodString>;
-    principal: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-        user_id: z.ZodString;
+    principal: z.ZodNullable<z.ZodObject<{
+        display_name: z.ZodString;
         kind: z.ZodEnum<{
             human: "human";
             service: "service";
         }>;
-        display_name: z.ZodString;
-    }, z.core.$strip>>>;
-    admin: z.ZodBoolean;
-    public_resource_id: z.ZodString;
-    scopes: z.ZodArray<z.ZodString>;
-    routes: z.ZodArray<z.ZodObject<{
-        path: z.ZodString;
-        methods: z.ZodArray<z.ZodString>;
+        user_id: z.ZodString;
     }, z.core.$strip>>;
+    public_resource_id: z.ZodString;
     route_patterns: z.ZodArray<z.ZodObject<{
+        open_prefix: z.ZodNullable<z.ZodString>;
         pattern: z.ZodString;
         scope_id: z.ZodString;
     }, z.core.$strip>>;
+    routes: z.ZodArray<z.ZodObject<{
+        methods: z.ZodArray<z.ZodString>;
+        path: z.ZodString;
+    }, z.core.$strip>>;
+    scopes: z.ZodArray<z.ZodString>;
     sub_mcp: z.ZodArray<z.ZodObject<{
+        access_pattern: z.ZodString;
+        mount_url: z.ZodString;
+        slug: z.ZodString;
         tools: z.ZodArray<z.ZodString>;
         transport: z.ZodString;
-        mount_url: z.ZodString;
-        access_pattern: z.ZodString;
-        slug: z.ZodString;
     }, z.core.$strip>>;
     tools: z.ZodArray<z.ZodString>;
-    agents: z.ZodArray<z.ZodString>;
-    mintable: z.ZodBoolean;
+    user_id: z.ZodString;
 }, z.core.$strip>;
 
 // @public
@@ -12154,18 +13664,67 @@ export function normalizeCustomRange(fromInput: string, toInput: string, now: Da
 
 // @public (undocumented)
 const notification: z.ZodObject<{
+    audience: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    created_at: z.ZodString;
+    footer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    header: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        kind: z.ZodEnum<{
+            image: "image";
+            link: "link";
+            document: "document";
+            video: "video";
+            audio: "audio";
+        }>;
+        url: z.ZodString;
+    }, z.core.$strict>>>;
     id: z.ZodString;
+    location: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        address: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        latitude: z.ZodNumber;
+        longitude: z.ZodNumber;
+        name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strict>>>;
+    media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+        caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        kind: z.ZodEnum<{
+            image: "image";
+            link: "link";
+            document: "document";
+            video: "video";
+            audio: "audio";
+        }>;
+        url: z.ZodString;
+    }, z.core.$strict>>>>;
     message: z.ZodString;
-    recipient: z.ZodNullable<z.ZodString>;
-    audience: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodUnknown>>>;
-    template: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+    options: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        kind: z.ZodDefault<z.ZodLiteral<"reply">>;
+        text: z.ZodString;
+    }, z.core.$strict>, z.ZodObject<{
+        kind: z.ZodDefault<z.ZodLiteral<"link">>;
+        label: z.ZodString;
+        url: z.ZodString;
+    }, z.core.$strict>], "kind">>>>;
+    recipient: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    schema: z.ZodDefault<z.ZodUnknown>;
+    sections: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+        rows: z.ZodArray<z.ZodObject<{
+            description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            kind: z.ZodDefault<z.ZodLiteral<"reply">>;
+            text: z.ZodString;
+        }, z.core.$strict>>;
+        title: z.ZodString;
+    }, z.core.$strict>>>>;
+    template: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         language: z.ZodString;
         name: z.ZodString;
-        parameters: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
-    }, z.core.$strip>>>;
-    options: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
-    created_at: z.ZodString;
+        parameters: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    }, z.core.$strict>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -12177,18 +13736,67 @@ type Notifications = z.infer<typeof notifications>;
 // @public (undocumented)
 const notifications: z.ZodObject<{
     notifications: z.ZodArray<z.ZodObject<{
+        audience: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        created_at: z.ZodString;
+        footer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        header: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            kind: z.ZodEnum<{
+                image: "image";
+                link: "link";
+                document: "document";
+                video: "video";
+                audio: "audio";
+            }>;
+            url: z.ZodString;
+        }, z.core.$strict>>>;
         id: z.ZodString;
+        location: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            address: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            latitude: z.ZodNumber;
+            longitude: z.ZodNumber;
+            name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strict>>>;
+        media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            caption: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            filename: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            kind: z.ZodEnum<{
+                image: "image";
+                link: "link";
+                document: "document";
+                video: "video";
+                audio: "audio";
+            }>;
+            url: z.ZodString;
+        }, z.core.$strict>>>>;
         message: z.ZodString;
-        recipient: z.ZodNullable<z.ZodString>;
-        audience: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodUnknown>>>;
-        template: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        options: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+            description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            kind: z.ZodDefault<z.ZodLiteral<"reply">>;
+            text: z.ZodString;
+        }, z.core.$strict>, z.ZodObject<{
+            kind: z.ZodDefault<z.ZodLiteral<"link">>;
+            label: z.ZodString;
+            url: z.ZodString;
+        }, z.core.$strict>], "kind">>>>;
+        recipient: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        schema: z.ZodDefault<z.ZodUnknown>;
+        sections: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            rows: z.ZodArray<z.ZodObject<{
+                description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                kind: z.ZodDefault<z.ZodLiteral<"reply">>;
+                text: z.ZodString;
+            }, z.core.$strict>>;
+            title: z.ZodString;
+        }, z.core.$strict>>>>;
+        template: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             language: z.ZodString;
             name: z.ZodString;
-            parameters: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
-        }, z.core.$strip>>>;
-        options: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
-        created_at: z.ZodString;
+            parameters: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        }, z.core.$strict>>>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 
@@ -12212,63 +13820,65 @@ type OAuthCompleteResult = z.infer<typeof oauthCompleteResult>;
 
 // @public (undocumented)
 const oauthCompleteResult: z.ZodDiscriminatedUnion<[z.ZodObject<{
-    kind: z.ZodLiteral<"success">;
-    connection_id: z.ZodString;
-    return_url: z.ZodString;
-    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
-        mode: z.ZodLiteral<"local-only">;
-        note: z.ZodString;
-    }, z.core.$strip>, z.ZodObject<{
-        op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
-            outcome: z.ZodEnum<{
-                failed: "failed";
-                applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
-                missing: "missing";
-                departed: "departed";
-                timed_out: "timed_out";
-            }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
-        mode: z.ZodLiteral<"fleet">;
-    }, z.core.$strip>, z.ZodObject<{
-        op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
-            outcome: z.ZodEnum<{
-                failed: "failed";
-                applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
-                missing: "missing";
-                departed: "departed";
-                timed_out: "timed_out";
-            }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
-        mode: z.ZodLiteral<"unreachable">;
-    }, z.core.$strip>], "mode">>;
+    kind: z.ZodLiteral<"not_configured">;
+}, z.core.$strip>, z.ZodObject<{
+    kind: z.ZodLiteral<"cancelled">;
+    message: z.ZodString;
 }, z.core.$strip>, z.ZodObject<{
     kind: z.ZodLiteral<"failed">;
     reason: z.ZodString;
 }, z.core.$strip>, z.ZodObject<{
-    kind: z.ZodLiteral<"cancelled">;
-    message: z.ZodString;
+    connection_id: z.ZodString;
+    kind: z.ZodLiteral<"success">;
+    return_url: z.ZodString;
+    fanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
+        mode: z.ZodLiteral<"local-only">;
+        note: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
+        op: z.ZodString;
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            name: z.ZodString;
+            outcome: z.ZodEnum<{
+                applied: "applied";
+                failed: "failed";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+            }>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
+        mode: z.ZodLiteral<"fleet">;
+    }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
+        op: z.ZodString;
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            name: z.ZodString;
+            outcome: z.ZodEnum<{
+                applied: "applied";
+                failed: "failed";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+            }>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
+        mode: z.ZodLiteral<"unreachable">;
+    }, z.core.$strip>], "mode">;
 }, z.core.$strip>], "kind">;
 
 // @public (undocumented)
@@ -12276,13 +13886,18 @@ type ObservabilityCapabilities = z.infer<typeof observabilityCapabilities>;
 
 // @public
 const observabilityCapabilities: z.ZodObject<{
-    pageSizeMax: z.ZodNumber;
-    sortKeys: z.ZodArray<z.ZodString>;
     incompatibleFilters: z.ZodRecord<z.ZodString, z.ZodArray<z.ZodString>>;
     metrics: z.ZodObject<{
-        measures: z.ZodArray<z.ZodString>;
         dimensions: z.ZodArray<z.ZodString>;
+        measures: z.ZodArray<z.ZodString>;
     }, z.core.$strip>;
+    pageSizeMax: z.ZodNumber;
+    sortKeys: z.ZodArray<z.ZodEnum<{
+        totalTokens: "totalTokens";
+        cost: "cost";
+        createdAt: "createdAt";
+        latencyMs: "latencyMs";
+    }>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -12402,21 +14017,37 @@ type ParkedCallerAsk = z.infer<typeof parkedCallerAsk>;
 
 // @public
 const parkedCallerAsk: z.ZodObject<{
+    answer_format: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    asked_by: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+    audience: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    channel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    created_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    error: z.ZodDefault<z.ZodUnknown>;
+    expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    format_payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    group_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     id: z.ZodString;
+    media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>>;
+    on_expiry: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+        kill: "kill";
+        resume: "resume";
+    }>>>;
+    payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    question: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    recipient: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    result: z.ZodDefault<z.ZodUnknown>;
     status: z.ZodEnum<{
         running: "running";
-        failed: "failed";
         asking: "asking";
+        failed: "failed";
         finished: "finished";
     }>;
-    to: z.ZodOptional<z.ZodNullable<z.ZodEnum<{
-        user: "user";
+    thread_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    to: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
         caller: "caller";
+        user: "user";
     }>>>;
-    question: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    payload: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-    asked_by: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
-}, z.core.$strip>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type ParkedStatus = z.infer<typeof parkedStatus>;
@@ -12424,8 +14055,8 @@ type ParkedStatus = z.infer<typeof parkedStatus>;
 // @public
 const parkedStatus: z.ZodEnum<{
     running: "running";
-    failed: "failed";
     asking: "asking";
+    failed: "failed";
     finished: "finished";
 }>;
 
@@ -12458,61 +14089,61 @@ export function parseTemplateCall(expr: string): {
 
 // @public (undocumented)
 const patchSubServicesResult: z.ZodObject<{
+    added_manifest_entries: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    authorize_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     connection_id: z.ZodString;
-    enabled_sub_services: z.ZodArray<z.ZodString>;
     consent_required: z.ZodBoolean;
-    flow_id: z.ZodNullable<z.ZodString>;
-    authorize_url: z.ZodNullable<z.ZodString>;
-    added_manifest_entries: z.ZodArray<z.ZodString>;
-    removed_manifest_entries: z.ZodArray<z.ZodString>;
-    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
+    enabled_sub_services: z.ZodArray<z.ZodString>;
+    flow_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    removed_manifest_entries: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    fanout: z.ZodDefault<z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
         note: z.ZodString;
     }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
         op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
             }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
         mode: z.ZodLiteral<"fleet">;
     }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
         op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
             }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
         mode: z.ZodLiteral<"unreachable">;
-    }, z.core.$strip>], "mode">>;
+    }, z.core.$strip>], "mode">>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -12520,6 +14151,7 @@ type PatternEntry = z.infer<typeof patternEntry>;
 
 // @public
 const patternEntry: z.ZodObject<{
+    open_prefix: z.ZodNullable<z.ZodString>;
     pattern: z.ZodString;
     scope_id: z.ZodString;
 }, z.core.$strip>;
@@ -12532,39 +14164,39 @@ type PendingSave = z.infer<typeof pendingSave>;
 
 // @public
 const pendingSave: z.ZodObject<{
+    attempts: z.ZodNumber;
+    calls: z.ZodArray<z.ZodObject<{
+        kind: z.ZodString;
+        target: z.ZodString;
+    }, z.core.$strip>>;
+    created_at: z.ZodString;
+    failed_at: z.ZodNullable<z.ZodString>;
+    failed_phase: z.ZodNullable<z.ZodEnum<{
+        calls: "calls";
+        records: "records";
+    }>>;
     id: z.ZodString;
+    last_error: z.ZodNullable<z.ZodString>;
+    run_id: z.ZodNullable<z.ZodString>;
+    states: z.ZodArray<z.ZodString>;
     status: z.ZodEnum<{
         running: "running";
         failed: "failed";
-        pending: "pending";
         calls: "calls";
+        pending: "pending";
     }>;
-    run_id: z.ZodNullable<z.ZodString>;
-    states: z.ZodArray<z.ZodString>;
     subjects: z.ZodArray<z.ZodObject<{
         state: z.ZodString;
         subject: z.ZodObject<{
+            key: z.ZodString;
+            kind: z.ZodString;
             target_kind: z.ZodEnum<{
                 tool: "tool";
                 agent: "agent";
             }>;
             target_name: z.ZodString;
-            kind: z.ZodString;
-            key: z.ZodString;
-        }, z.core.$strip>;
+        }, z.core.$strict>;
     }, z.core.$strip>>;
-    calls: z.ZodArray<z.ZodObject<{
-        kind: z.ZodString;
-        target: z.ZodString;
-    }, z.core.$strip>>;
-    attempts: z.ZodNumber;
-    last_error: z.ZodNullable<z.ZodString>;
-    failed_phase: z.ZodNullable<z.ZodEnum<{
-        records: "records";
-        calls: "calls";
-    }>>;
-    created_at: z.ZodString;
-    failed_at: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
 
 // @public
@@ -12578,14 +14210,14 @@ type PendingSaveRetried = z.infer<typeof pendingSaveRetried>;
 // @public
 const pendingSaveRetried: z.ZodObject<{
     id: z.ZodString;
+    last_error: z.ZodNullable<z.ZodString>;
     status: z.ZodEnum<{
         running: "running";
-        failed: "failed";
         applied: "applied";
-        pending: "pending";
+        failed: "failed";
         calls: "calls";
+        pending: "pending";
     }>;
-    last_error: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -12593,44 +14225,44 @@ type PendingSavesPage = z.infer<typeof pendingSavesPage>;
 
 // @public
 const pendingSavesPage: z.ZodObject<{
+    failed: z.ZodNumber;
     items: z.ZodArray<z.ZodObject<{
+        attempts: z.ZodNumber;
+        calls: z.ZodArray<z.ZodObject<{
+            kind: z.ZodString;
+            target: z.ZodString;
+        }, z.core.$strip>>;
+        created_at: z.ZodString;
+        failed_at: z.ZodNullable<z.ZodString>;
+        failed_phase: z.ZodNullable<z.ZodEnum<{
+            calls: "calls";
+            records: "records";
+        }>>;
         id: z.ZodString;
+        last_error: z.ZodNullable<z.ZodString>;
+        run_id: z.ZodNullable<z.ZodString>;
+        states: z.ZodArray<z.ZodString>;
         status: z.ZodEnum<{
             running: "running";
             failed: "failed";
-            pending: "pending";
             calls: "calls";
+            pending: "pending";
         }>;
-        run_id: z.ZodNullable<z.ZodString>;
-        states: z.ZodArray<z.ZodString>;
         subjects: z.ZodArray<z.ZodObject<{
             state: z.ZodString;
             subject: z.ZodObject<{
+                key: z.ZodString;
+                kind: z.ZodString;
                 target_kind: z.ZodEnum<{
                     tool: "tool";
                     agent: "agent";
                 }>;
                 target_name: z.ZodString;
-                kind: z.ZodString;
-                key: z.ZodString;
-            }, z.core.$strip>;
+            }, z.core.$strict>;
         }, z.core.$strip>>;
-        calls: z.ZodArray<z.ZodObject<{
-            kind: z.ZodString;
-            target: z.ZodString;
-        }, z.core.$strip>>;
-        attempts: z.ZodNumber;
-        last_error: z.ZodNullable<z.ZodString>;
-        failed_phase: z.ZodNullable<z.ZodEnum<{
-            records: "records";
-            calls: "calls";
-        }>>;
-        created_at: z.ZodString;
-        failed_at: z.ZodNullable<z.ZodString>;
     }, z.core.$strip>>;
-    next_cursor: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    next_cursor: z.ZodNullable<z.ZodString>;
     outstanding: z.ZodNumber;
-    failed: z.ZodNumber;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -12640,8 +14272,8 @@ type PendingSaveStatus = z.infer<typeof pendingSaveStatus>;
 const pendingSaveStatus: z.ZodEnum<{
     running: "running";
     failed: "failed";
-    pending: "pending";
     calls: "calls";
+    pending: "pending";
 }>;
 
 // @public
@@ -12715,19 +14347,19 @@ type PolicyBody = z.infer<typeof policyBody>;
 
 // @public (undocumented)
 const policyBody: z.ZodObject<{
-    condition: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    condition: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     policy_data: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     scopes: z.ZodDefault<z.ZodArray<z.ZodString>>;
 }, z.core.$strip>;
 
 // @public
 const policyRollback: z.ZodObject<{
-    user_id: z.ZodString;
     active_version: z.ZodNumber;
+    user_id: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -12735,36 +14367,36 @@ type PolicyVersion = z.infer<typeof policyVersion>;
 
 // @public
 const policyVersion: z.ZodObject<{
+    created_at: z.ZodString;
+    is_current: z.ZodDefault<z.ZodBoolean>;
+    tags: z.ZodDefault<z.ZodArray<z.ZodString>>;
     version: z.ZodNumber;
     body: z.ZodObject<{
-        condition: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        condition: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         policy_data: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         scopes: z.ZodDefault<z.ZodArray<z.ZodString>>;
     }, z.core.$strip>;
-    tags: z.ZodArray<z.ZodString>;
-    created_at: z.ZodString;
-    is_current: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public (undocumented)
 const policyVersionList: z.ZodArray<z.ZodObject<{
+    created_at: z.ZodString;
+    is_current: z.ZodDefault<z.ZodBoolean>;
+    tags: z.ZodDefault<z.ZodArray<z.ZodString>>;
     version: z.ZodNumber;
     body: z.ZodObject<{
-        condition: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        condition: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         policy_data: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         scopes: z.ZodDefault<z.ZodArray<z.ZodString>>;
     }, z.core.$strip>;
-    tags: z.ZodArray<z.ZodString>;
-    created_at: z.ZodString;
-    is_current: z.ZodBoolean;
 }, z.core.$strip>>;
 
 // @public (undocumented)
@@ -12786,22 +14418,22 @@ const presetBody: z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>, z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
-    state_binding: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         states: z.ZodArray<z.ZodObject<{
             input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                 into: z.ZodString;
-                jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                }, z.core.$strict>>>;
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             }, z.core.$strict>>>;
-            scope_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 content: z.ZodOptional<z.ZodString>;
                 id: z.ZodOptional<z.ZodString>;
                 kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-            }, z.core.$strict>, z.ZodNull]>>;
+            }, z.core.$strict>>>;
             state: z.ZodString;
             subject_expr: z.ZodObject<{
                 content: z.ZodOptional<z.ZodString>;
@@ -12810,31 +14442,46 @@ const presetBody: z.ZodObject<{
             }, z.core.$strict>;
             templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
             updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
-                adapter: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                }, z.core.$strict>>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                op_id: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                }, z.core.$strict>>>;
+                op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                }, z.core.$strict>>>;
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             }, z.core.$strict>>>;
         }, z.core.$strict>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
 }, z.core.$strip>;
 
 // @public
 const presetDeleted: z.ZodObject<{
+    deleted: z.ZodBoolean;
+    fanout: z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodNullable<z.ZodBoolean>>;
+        mode: z.ZodString;
+        note: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        op: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        reachable: z.ZodDefault<z.ZodNullable<z.ZodBoolean>>;
+        results: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            name: z.ZodString;
+            outcome: z.ZodString;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>>;
+    }, z.core.$strip>;
     name: z.ZodString;
-    deleted: z.ZodLiteral<true>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -12842,21 +14489,21 @@ type PresetDetail = z.infer<typeof presetDetail>;
 
 // @public
 const presetDetail: z.ZodObject<{
-    name: z.ZodString;
-    base_tool: z.ZodString;
-    description: z.ZodString;
     active_version: z.ZodNumber;
+    base_tool: z.ZodString;
+    conflicted: z.ZodBoolean;
+    conflicted_reason: z.ZodNullable<z.ZodString>;
+    description: z.ZodString;
+    fixed_kwargs: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    name: z.ZodString;
+    output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    used_by: z.ZodArray<z.ZodString>;
+    uses: z.ZodArray<z.ZodString>;
     extensions: z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
         name: z.ZodString;
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     }, z.core.$strip>]>>>;
-    output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    conflicted: z.ZodBoolean;
-    conflicted_reason: z.ZodNullable<z.ZodString>;
-    uses: z.ZodArray<z.ZodString>;
-    used_by: z.ZodArray<z.ZodString>;
-    fixed_kwargs: z.ZodRecord<z.ZodString, z.ZodUnknown>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -12876,20 +14523,20 @@ const presetExtensions: z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, 
 
 // @public (undocumented)
 const presetList: z.ZodArray<z.ZodObject<{
-    name: z.ZodString;
-    base_tool: z.ZodString;
-    description: z.ZodString;
     active_version: z.ZodNumber;
+    base_tool: z.ZodString;
+    conflicted: z.ZodBoolean;
+    conflicted_reason: z.ZodNullable<z.ZodString>;
+    description: z.ZodString;
+    input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    name: z.ZodString;
+    output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    used_by: z.ZodArray<z.ZodString>;
+    uses: z.ZodArray<z.ZodString>;
     extensions: z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
         name: z.ZodString;
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     }, z.core.$strip>]>>>;
-    output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    conflicted: z.ZodBoolean;
-    conflicted_reason: z.ZodNullable<z.ZodString>;
-    uses: z.ZodArray<z.ZodString>;
-    used_by: z.ZodArray<z.ZodString>;
 }, z.core.$strip>>;
 
 // @public (undocumented)
@@ -12897,20 +14544,20 @@ type PresetRecord = z.infer<typeof presetRecord>;
 
 // @public
 const presetRecord: z.ZodObject<{
-    name: z.ZodString;
-    base_tool: z.ZodString;
-    description: z.ZodString;
     active_version: z.ZodNumber;
+    base_tool: z.ZodString;
+    conflicted: z.ZodBoolean;
+    conflicted_reason: z.ZodNullable<z.ZodString>;
+    description: z.ZodString;
+    input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    name: z.ZodString;
+    output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    used_by: z.ZodArray<z.ZodString>;
+    uses: z.ZodArray<z.ZodString>;
     extensions: z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
         name: z.ZodString;
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     }, z.core.$strip>]>>>;
-    output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    conflicted: z.ZodBoolean;
-    conflicted_reason: z.ZodNullable<z.ZodString>;
-    uses: z.ZodArray<z.ZodString>;
-    used_by: z.ZodArray<z.ZodString>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -12927,15 +14574,45 @@ type PresetRenamed = z.infer<typeof presetRenamed>;
 
 // @public
 const presetRenamed: z.ZodObject<{
+    active_version: z.ZodNumber;
+    fanout: z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodNullable<z.ZodBoolean>>;
+        mode: z.ZodString;
+        note: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        op: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        reachable: z.ZodDefault<z.ZodNullable<z.ZodBoolean>>;
+        results: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            name: z.ZodString;
+            outcome: z.ZodString;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>>;
+    }, z.core.$strip>;
     name: z.ZodString;
     renamed_from: z.ZodString;
-    active_version: z.ZodNumber;
 }, z.core.$strip>;
 
 // @public
 const presetRollback: z.ZodObject<{
-    name: z.ZodString;
     active_version: z.ZodNumber;
+    fanout: z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodNullable<z.ZodBoolean>>;
+        mode: z.ZodString;
+        note: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        op: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        reachable: z.ZodDefault<z.ZodNullable<z.ZodBoolean>>;
+        results: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            name: z.ZodString;
+            outcome: z.ZodString;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>>;
+    }, z.core.$strip>;
+    name: z.ZodString;
 }, z.core.$strip>;
 
 // @public
@@ -12946,8 +14623,8 @@ type PresetValidation = z.infer<typeof presetValidation>;
 
 // @public
 const presetValidation: z.ZodObject<{
-    valid: z.ZodBoolean;
     error: z.ZodNullable<z.ZodString>;
+    valid: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -12955,6 +14632,9 @@ type PresetVersion = z.infer<typeof presetVersion>;
 
 // @public
 const presetVersion: z.ZodObject<{
+    created_at: z.ZodString;
+    is_current: z.ZodDefault<z.ZodBoolean>;
+    tags: z.ZodDefault<z.ZodArray<z.ZodString>>;
     version: z.ZodNumber;
     body: z.ZodObject<{
         base_tool: z.ZodString;
@@ -12971,22 +14651,22 @@ const presetVersion: z.ZodObject<{
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, z.core.$strict>, z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
-        state_binding: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             states: z.ZodArray<z.ZodObject<{
                 input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     into: z.ZodString;
-                    jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                    }, z.core.$strict>>>;
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
-                scope_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
+                }, z.core.$strict>>>;
                 state: z.ZodString;
                 subject_expr: z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
@@ -12995,33 +14675,33 @@ const presetVersion: z.ZodObject<{
                 }, z.core.$strict>;
                 templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
                 updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
-                    adapter: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    }, z.core.$strict>>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    op_id: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    }, z.core.$strict>>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                    }, z.core.$strict>>>;
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
             }, z.core.$strict>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
     }, z.core.$strip>;
-    tags: z.ZodArray<z.ZodString>;
-    created_at: z.ZodString;
-    is_current: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public (undocumented)
 const presetVersionList: z.ZodArray<z.ZodObject<{
+    created_at: z.ZodString;
+    is_current: z.ZodDefault<z.ZodBoolean>;
+    tags: z.ZodDefault<z.ZodArray<z.ZodString>>;
     version: z.ZodNumber;
     body: z.ZodObject<{
         base_tool: z.ZodString;
@@ -13038,22 +14718,22 @@ const presetVersionList: z.ZodArray<z.ZodObject<{
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, z.core.$strict>, z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
-        state_binding: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             states: z.ZodArray<z.ZodObject<{
                 input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     into: z.ZodString;
-                    jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                    }, z.core.$strict>>>;
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
-                scope_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
+                }, z.core.$strict>>>;
                 state: z.ZodString;
                 subject_expr: z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
@@ -13062,29 +14742,26 @@ const presetVersionList: z.ZodArray<z.ZodObject<{
                 }, z.core.$strict>;
                 templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
                 updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
-                    adapter: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    }, z.core.$strict>>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    op_id: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                    }, z.core.$strict>>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         content: z.ZodOptional<z.ZodString>;
                         id: z.ZodOptional<z.ZodString>;
                         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                    }, z.core.$strict>, z.ZodNull]>>;
-                    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                    }, z.core.$strict>>>;
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
             }, z.core.$strict>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
     }, z.core.$strip>;
-    tags: z.ZodArray<z.ZodString>;
-    created_at: z.ZodString;
-    is_current: z.ZodBoolean;
 }, z.core.$strip>>;
 
 // @public (undocumented)
@@ -13093,62 +14770,77 @@ type PresetVersionTags = z.infer<typeof presetVersionTags>;
 // @public
 const presetVersionTags: z.ZodObject<{
     name: z.ZodString;
-    version: z.ZodNumber;
     tags: z.ZodArray<z.ZodString>;
+    version: z.ZodNumber;
 }, z.core.$strip>;
+
+// @public (undocumented)
+type PreviousProfileName = z.infer<typeof previousProfileName>;
+
+// @public (undocumented)
+const previousProfileName: z.ZodLiteral<"@previous">;
 
 // @public (undocumented)
 type Principal = z.infer<typeof principal>;
 
 // @public
 const principal: z.ZodObject<{
-    user_id: z.ZodString;
+    created_at: z.ZodString;
+    created_by: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    disabled: z.ZodDefault<z.ZodBoolean>;
+    display_name: z.ZodString;
     kind: z.ZodEnum<{
         human: "human";
         service: "service";
     }>;
-    display_name: z.ZodString;
-    created_by: z.ZodNullable<z.ZodString>;
-    disabled: z.ZodBoolean;
-    created_at: z.ZodString;
-}, z.core.$strip>;
+    user_id: z.ZodString;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type PrincipalDeleted = z.infer<typeof principalDeleted>;
 
 // @public
 const principalDeleted: z.ZodObject<{
-    user_id: z.ZodString;
     deleted: z.ZodBoolean;
+    user_id: z.ZodString;
 }, z.core.$strip>;
+
+// @public (undocumented)
+type PrincipalKind = z.infer<typeof principalKind>;
+
+// @public
+const principalKind: z.ZodEnum<{
+    human: "human";
+    service: "service";
+}>;
 
 // @public (undocumented)
 type PrincipalList = z.infer<typeof principalList>;
 
 // @public
 const principalList: z.ZodArray<z.ZodObject<{
-    user_id: z.ZodString;
+    created_at: z.ZodString;
+    created_by: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    disabled: z.ZodDefault<z.ZodBoolean>;
+    display_name: z.ZodString;
     kind: z.ZodEnum<{
         human: "human";
         service: "service";
     }>;
-    display_name: z.ZodString;
-    created_by: z.ZodNullable<z.ZodString>;
-    disabled: z.ZodBoolean;
-    created_at: z.ZodString;
-}, z.core.$strip>>;
+    user_id: z.ZodString;
+}, z.core.$strict>>;
 
 // @public (undocumented)
 type PrincipalRef = z.infer<typeof principalRef>;
 
 // @public
 const principalRef: z.ZodObject<{
-    user_id: z.ZodString;
+    display_name: z.ZodString;
     kind: z.ZodEnum<{
         human: "human";
         service: "service";
     }>;
-    display_name: z.ZodString;
+    user_id: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -13156,78 +14848,71 @@ type ProfileApplyResponse = z.infer<typeof profileApplyResponse>;
 
 // @public
 const profileApplyResponse: z.ZodObject<{
+    fresh: z.ZodArray<z.ZodObject<{
+        generation: z.ZodNumber;
+        kind: z.ZodString;
+        name: z.ZodString;
+    }, z.core.$strip>>;
     hot: z.ZodArray<z.ZodString>;
     recycle: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
-        kind: z.ZodString;
-        status: z.ZodString;
+        detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         generation_before: z.ZodNumber;
-        detail: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    }, z.core.$strip>>;
-    fresh: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
         kind: z.ZodString;
-        generation: z.ZodNumber;
+        name: z.ZodString;
+        status: z.ZodString;
     }, z.core.$strip>>;
-    refused: z.ZodArray<z.ZodObject<{
-        key: z.ZodString;
-        reason: z.ZodString;
-    }, z.core.$strip>>;
-    recycle_stopped: z.ZodNullable<z.ZodObject<{
+    recycle_stopped: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        detail: z.ZodString;
         kind: z.ZodString;
         name: z.ZodNullable<z.ZodString>;
-        detail: z.ZodString;
-    }, z.core.$strip>>;
-    awaiting_respawn: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
-        keys: z.ZodArray<z.ZodString>;
-    }, z.core.$strip>>;
+    }, z.core.$strip>>>;
+    refused: z.ZodArray<z.ZodString>;
     fanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
         note: z.ZodString;
     }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
         op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
             }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
         mode: z.ZodLiteral<"fleet">;
     }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
         op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
             }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
         mode: z.ZodLiteral<"unreachable">;
     }, z.core.$strip>], "mode">;
 }, z.core.$strip>;
@@ -13253,106 +14938,29 @@ export interface ProseScrollLabels {
 // @public (undocumented)
 type ProviderCatalogResponse = z.infer<typeof providers>;
 
-// @public (undocumented)
-type ProviderMutationResult = z.infer<typeof providerMutationResult>;
-
-// @public
-const providerMutationResult: z.ZodObject<{
-    provider: z.ZodObject<{
-        id: z.ZodString;
-        display_name: z.ZodString;
-        description: z.ZodString;
-        icon_url: z.ZodNullable<z.ZodURL>;
-        kind: z.ZodEnum<{
-            none: "none";
-            oauth: "oauth";
-        }>;
-        origin: z.ZodEnum<{
-            system: "system";
-            community: "community";
-        }>;
-        category: z.ZodString;
-        sub_services: z.ZodArray<z.ZodObject<{
-            id: z.ZodString;
-            display_name: z.ZodString;
-            description: z.ZodString;
-            scopes: z.ZodArray<z.ZodString>;
-        }, z.core.$strip>>;
-        config_fields: z.ZodArray<z.ZodObject<{
-            key: z.ZodString;
-            label: z.ZodString;
-            target: z.ZodEnum<{
-                env: "env";
-                header: "header";
-            }>;
-            required: z.ZodBoolean;
-            secret: z.ZodBoolean;
-        }, z.core.$strip>>;
-        removable: z.ZodDefault<z.ZodBoolean>;
-        client_source: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
-            manual: "manual";
-            env: "env";
-            dynamic: "dynamic";
-            unset: "unset";
-        }>>>;
-    }, z.core.$strip>;
-    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
-        mode: z.ZodLiteral<"local-only">;
-        note: z.ZodString;
-    }, z.core.$strip>, z.ZodObject<{
-        op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
-            outcome: z.ZodEnum<{
-                failed: "failed";
-                applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
-                missing: "missing";
-                departed: "departed";
-                timed_out: "timed_out";
-            }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
-        mode: z.ZodLiteral<"fleet">;
-    }, z.core.$strip>, z.ZodObject<{
-        op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
-            outcome: z.ZodEnum<{
-                failed: "failed";
-                applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
-                missing: "missing";
-                departed: "departed";
-                timed_out: "timed_out";
-            }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
-        mode: z.ZodLiteral<"unreachable">;
-    }, z.core.$strip>], "mode">>;
-}, z.core.$strip>;
-
 // @public
 const providers: z.ZodObject<{
-    providers: z.ZodArray<z.ZodObject<{
-        id: z.ZodString;
+    categories: z.ZodArray<z.ZodObject<{
         display_name: z.ZodString;
-        description: z.ZodString;
-        icon_url: z.ZodNullable<z.ZodURL>;
+        id: z.ZodString;
+        sort_order: z.ZodNumber;
+    }, z.core.$strip>>;
+    providers: z.ZodArray<z.ZodObject<{
+        category: z.ZodString;
+        config_fields: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            key: z.ZodString;
+            label: z.ZodString;
+            required: z.ZodDefault<z.ZodBoolean>;
+            secret: z.ZodDefault<z.ZodBoolean>;
+            target: z.ZodEnum<{
+                header: "header";
+                env: "env";
+            }>;
+        }, z.core.$strip>>>;
+        description: z.ZodDefault<z.ZodString>;
+        display_name: z.ZodString;
+        icon_url: z.ZodString;
+        id: z.ZodString;
         kind: z.ZodEnum<{
             none: "none";
             oauth: "oauth";
@@ -13361,35 +14969,12 @@ const providers: z.ZodObject<{
             system: "system";
             community: "community";
         }>;
-        category: z.ZodString;
         sub_services: z.ZodArray<z.ZodObject<{
-            id: z.ZodString;
+            description: z.ZodDefault<z.ZodString>;
             display_name: z.ZodString;
-            description: z.ZodString;
-            scopes: z.ZodArray<z.ZodString>;
+            id: z.ZodString;
+            scopes: z.ZodDefault<z.ZodArray<z.ZodString>>;
         }, z.core.$strip>>;
-        config_fields: z.ZodArray<z.ZodObject<{
-            key: z.ZodString;
-            label: z.ZodString;
-            target: z.ZodEnum<{
-                env: "env";
-                header: "header";
-            }>;
-            required: z.ZodBoolean;
-            secret: z.ZodBoolean;
-        }, z.core.$strip>>;
-        removable: z.ZodDefault<z.ZodBoolean>;
-        client_source: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
-            manual: "manual";
-            env: "env";
-            dynamic: "dynamic";
-            unset: "unset";
-        }>>>;
-    }, z.core.$strip>>;
-    categories: z.ZodArray<z.ZodObject<{
-        id: z.ZodString;
-        display_name: z.ZodString;
-        sort_order: z.ZodNumber;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 
@@ -13398,10 +14983,21 @@ type ProviderView = z.infer<typeof providerView>;
 
 // @public (undocumented)
 const providerView: z.ZodObject<{
-    id: z.ZodString;
+    category: z.ZodString;
+    config_fields: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        key: z.ZodString;
+        label: z.ZodString;
+        required: z.ZodDefault<z.ZodBoolean>;
+        secret: z.ZodDefault<z.ZodBoolean>;
+        target: z.ZodEnum<{
+            header: "header";
+            env: "env";
+        }>;
+    }, z.core.$strip>>>;
+    description: z.ZodDefault<z.ZodString>;
     display_name: z.ZodString;
-    description: z.ZodString;
-    icon_url: z.ZodNullable<z.ZodURL>;
+    icon_url: z.ZodString;
+    id: z.ZodString;
     kind: z.ZodEnum<{
         none: "none";
         oauth: "oauth";
@@ -13410,30 +15006,12 @@ const providerView: z.ZodObject<{
         system: "system";
         community: "community";
     }>;
-    category: z.ZodString;
     sub_services: z.ZodArray<z.ZodObject<{
-        id: z.ZodString;
+        description: z.ZodDefault<z.ZodString>;
         display_name: z.ZodString;
-        description: z.ZodString;
-        scopes: z.ZodArray<z.ZodString>;
+        id: z.ZodString;
+        scopes: z.ZodDefault<z.ZodArray<z.ZodString>>;
     }, z.core.$strip>>;
-    config_fields: z.ZodArray<z.ZodObject<{
-        key: z.ZodString;
-        label: z.ZodString;
-        target: z.ZodEnum<{
-            env: "env";
-            header: "header";
-        }>;
-        required: z.ZodBoolean;
-        secret: z.ZodBoolean;
-    }, z.core.$strip>>;
-    removable: z.ZodDefault<z.ZodBoolean>;
-    client_source: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
-        manual: "manual";
-        env: "env";
-        dynamic: "dynamic";
-        unset: "unset";
-    }>>>;
 }, z.core.$strip>;
 
 // @public
@@ -13477,31 +15055,24 @@ export interface RadioOption {
 // @public (undocumented)
 type ReactionEvent = z.infer<typeof reactionEvent>;
 
-// @public (undocumented)
-const reactionEvent: z.ZodObject<{
-    kind: z.ZodEnum<{
-        field_changed: "field_changed";
-        page_advanced: "page_advanced";
-        submitted: "submitted";
-    }>;
-    field: z.ZodOptional<z.ZodString>;
-    page: z.ZodOptional<z.ZodString>;
-}, z.core.$strip>;
-
-// @public (undocumented)
-type ReactionEventKind = z.infer<typeof reactionEventKind>;
-
 // @public
-const reactionEventKind: z.ZodEnum<{
-    field_changed: "field_changed";
-    page_advanced: "page_advanced";
-    submitted: "submitted";
-}>;
+const reactionEvent: z.ZodDiscriminatedUnion<[z.ZodObject<{
+    field: z.ZodString;
+    kind: z.ZodDefault<z.ZodLiteral<"field_changed">>;
+}, z.core.$strict>, z.ZodObject<{
+    kind: z.ZodDefault<z.ZodLiteral<"page_advanced">>;
+    page: z.ZodString;
+}, z.core.$strict>, z.ZodObject<{
+    kind: z.ZodDefault<z.ZodLiteral<"submitted">>;
+}, z.core.$strict>], "kind">;
+
+// @public (undocumented)
+type ReactionEventKind = ReactionEvent['kind'];
 
 // @public (undocumented)
 const reconnectResult: z.ZodObject<{
-    flow_id: z.ZodString;
     authorize_url: z.ZodString;
+    flow_id: z.ZodString;
 }, z.core.$strip>;
 
 // @public
@@ -13524,7 +15095,7 @@ export const RecordEntryRendererContext: Context<RecordEntryRenderer | undefined
 
 // @public
 const recordErased: z.ZodObject<{
-    erased: z.ZodLiteral<true>;
+    erased: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -13532,78 +15103,32 @@ type RecordSearchPage = z.infer<typeof recordSearchPage>;
 
 // @public
 const recordSearchPage: z.ZodObject<{
+    held: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        held_by: z.ZodString;
+        save_id: z.ZodString;
+        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            key: z.ZodString;
+            kind: z.ZodString;
+            target_kind: z.ZodEnum<{
+                tool: "tool";
+                agent: "agent";
+            }>;
+            target_name: z.ZodString;
+        }, z.core.$strict>>>;
+    }, z.core.$strict>>>;
     matches: z.ZodArray<z.ZodObject<{
         subject: z.ZodObject<{
+            key: z.ZodString;
+            kind: z.ZodString;
             target_kind: z.ZodEnum<{
                 tool: "tool";
                 agent: "agent";
             }>;
             target_name: z.ZodString;
-            kind: z.ZodString;
-            key: z.ZodString;
-        }, z.core.$strip>;
+        }, z.core.$strict>;
         updated_at: z.ZodNumber;
     }, z.core.$strip>>;
-    next_cursor: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
-        save_id: z.ZodString;
-        held_by: z.ZodString;
-        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
-            target_kind: z.ZodEnum<{
-                tool: "tool";
-                agent: "agent";
-            }>;
-            target_name: z.ZodString;
-            kind: z.ZodString;
-            key: z.ZodString;
-        }, z.core.$strip>>>;
-    }, z.core.$strip>>>;
-}, z.core.$strip>;
-
-// @public (undocumented)
-type RecycleEntry = z.infer<typeof recycleEntry>;
-
-// @public
-const recycleEntry: z.ZodObject<{
-    name: z.ZodString;
-    kind: z.ZodString;
-    status: z.ZodString;
-    generation_before: z.ZodNumber;
-    detail: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-}, z.core.$strip>;
-
-// @public (undocumented)
-type RecycleRoll = z.infer<typeof recycleRoll>;
-
-// @public
-const recycleRoll: z.ZodObject<{
-    recycle: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
-        kind: z.ZodString;
-        status: z.ZodString;
-        generation_before: z.ZodNumber;
-        detail: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    }, z.core.$strip>>;
-    fresh: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
-        kind: z.ZodString;
-        generation: z.ZodNumber;
-    }, z.core.$strip>>;
-    recycle_stopped: z.ZodNullable<z.ZodObject<{
-        kind: z.ZodString;
-        name: z.ZodNullable<z.ZodString>;
-        detail: z.ZodString;
-    }, z.core.$strip>>;
-}, z.core.$strip>;
-
-// @public (undocumented)
-type RecycleStop = z.infer<typeof recycleStop>;
-
-// @public
-const recycleStop: z.ZodObject<{
-    kind: z.ZodString;
-    name: z.ZodNullable<z.ZodString>;
-    detail: z.ZodString;
+    next_cursor: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
 
 // @public
@@ -13629,142 +15154,62 @@ type ReloadConfigResult = z.infer<typeof reloadConfigResult>;
 
 // @public
 const reloadConfigResult: z.ZodObject<{
-    status: z.ZodString;
     env_keys: z.ZodNumber;
-    awaiting_respawn: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
-        keys: z.ZodArray<z.ZodString>;
-    }, z.core.$strip>>;
+    status: z.ZodString;
     fanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
         note: z.ZodString;
     }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
         op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
             }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
         mode: z.ZodLiteral<"fleet">;
     }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
         op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
             }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
         mode: z.ZodLiteral<"unreachable">;
     }, z.core.$strip>], "mode">;
-    recycle: z.ZodNullable<z.ZodObject<{
-        recycle: z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
-            kind: z.ZodString;
-            status: z.ZodString;
-            generation_before: z.ZodNumber;
-            detail: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        }, z.core.$strip>>;
-        fresh: z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
-            kind: z.ZodString;
-            generation: z.ZodNumber;
-        }, z.core.$strip>>;
-        recycle_stopped: z.ZodNullable<z.ZodObject<{
-            kind: z.ZodString;
-            name: z.ZodNullable<z.ZodString>;
-            detail: z.ZodString;
-        }, z.core.$strip>>;
-    }, z.core.$strip>>;
-}, z.core.$strip>;
-
-// @public (undocumented)
-type RemoveProviderResult = z.infer<typeof removeProviderResult>;
-
-// @public
-const removeProviderResult: z.ZodObject<{
-    provider_id: z.ZodString;
-    removed_clients: z.ZodNumber;
-    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
-        mode: z.ZodLiteral<"local-only">;
-        note: z.ZodString;
-    }, z.core.$strip>, z.ZodObject<{
-        op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
-            outcome: z.ZodEnum<{
-                failed: "failed";
-                applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
-                missing: "missing";
-                departed: "departed";
-                timed_out: "timed_out";
-            }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
-        mode: z.ZodLiteral<"fleet">;
-    }, z.core.$strip>, z.ZodObject<{
-        op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
-            outcome: z.ZodEnum<{
-                failed: "failed";
-                applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
-                missing: "missing";
-                departed: "departed";
-                timed_out: "timed_out";
-            }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
-        mode: z.ZodLiteral<"unreachable">;
-    }, z.core.$strip>], "mode">>;
 }, z.core.$strip>;
 
 // @public (undocumented)
 const removeScopeResult: z.ZodObject<{
-    scope_id: z.ZodString;
     deleted_keys: z.ZodNumber;
+    scope_id: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -13793,14 +15238,14 @@ type ResolvedSpanValue = z.infer<typeof resolvedSpanValue>;
 
 // @public
 const resolvedSpanValue: z.ZodObject<{
-    traceId: z.ZodString;
-    spanId: z.ZodString;
     field: z.ZodEnum<{
         output: "output";
         input: "input";
     }>;
     pointer: z.ZodString;
-    value: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+    spanId: z.ZodString;
+    traceId: z.ZodString;
+    value: z.ZodDefault<z.ZodUnknown>;
 }, z.core.$strip>;
 
 // @public
@@ -13842,8 +15287,8 @@ export interface RevealInputProps {
 
 // @public (undocumented)
 const revokeApiKeyResult: z.ZodObject<{
-    user_id: z.ZodString;
     revoked: z.ZodBoolean;
+    user_id: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -13851,6 +15296,9 @@ type RoleAuditEvent = z.infer<typeof roleAuditEvent>;
 
 // @public
 const roleAuditEvent: z.ZodObject<{
+    created_at: z.ZodString;
+    is_current: z.ZodDefault<z.ZodBoolean>;
+    tags: z.ZodDefault<z.ZodArray<z.ZodString>>;
     version: z.ZodNumber;
     body: z.ZodObject<{
         action: z.ZodString;
@@ -13858,9 +15306,6 @@ const roleAuditEvent: z.ZodObject<{
         before: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
         after: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
     }, z.core.$strip>;
-    tags: z.ZodArray<z.ZodString>;
-    created_at: z.ZodString;
-    is_current: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -13869,12 +15314,12 @@ type RoleBody = z.infer<typeof roleBody>;
 // @public (undocumented)
 const roleBody: z.ZodObject<{
     allow_all: z.ZodDefault<z.ZodBoolean>;
-    base_tier: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-    condition: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    base_tier: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    condition: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     description: z.ZodString;
     grants: z.ZodRecord<z.ZodString, z.ZodEnum<{
         none: "none";
@@ -13899,8 +15344,8 @@ interface RoleCreateBody {
 
 // @public
 const roleDeleted: z.ZodObject<{
-    name: z.ZodString;
     deleted: z.ZodBoolean;
+    name: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -13916,12 +15361,12 @@ const roleGrants: z.ZodRecord<z.ZodString, z.ZodEnum<{
 // @public (undocumented)
 const roleList: z.ZodArray<z.ZodObject<{
     allow_all: z.ZodDefault<z.ZodBoolean>;
-    base_tier: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-    condition: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    base_tier: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    condition: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     description: z.ZodString;
     grants: z.ZodRecord<z.ZodString, z.ZodEnum<{
         none: "none";
@@ -13945,15 +15390,18 @@ type RoleVersion = z.infer<typeof roleVersion>;
 
 // @public
 const roleVersion: z.ZodObject<{
+    created_at: z.ZodString;
+    is_current: z.ZodDefault<z.ZodBoolean>;
+    tags: z.ZodDefault<z.ZodArray<z.ZodString>>;
     version: z.ZodNumber;
     body: z.ZodObject<{
         allow_all: z.ZodDefault<z.ZodBoolean>;
-        base_tier: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-        condition: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        base_tier: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        condition: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         description: z.ZodString;
         grants: z.ZodRecord<z.ZodString, z.ZodEnum<{
             none: "none";
@@ -13963,9 +15411,6 @@ const roleVersion: z.ZodObject<{
         name: z.ZodString;
         scopes: z.ZodDefault<z.ZodArray<z.ZodString>>;
     }, z.core.$strip>;
-    tags: z.ZodArray<z.ZodString>;
-    created_at: z.ZodString;
-    is_current: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -13974,15 +15419,18 @@ type RoleVersions = z.infer<typeof roleVersions>;
 // @public
 const roleVersions: z.ZodObject<{
     versions: z.ZodArray<z.ZodObject<{
+        created_at: z.ZodString;
+        is_current: z.ZodDefault<z.ZodBoolean>;
+        tags: z.ZodDefault<z.ZodArray<z.ZodString>>;
         version: z.ZodNumber;
         body: z.ZodObject<{
             allow_all: z.ZodDefault<z.ZodBoolean>;
-            base_tier: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-            condition: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+            base_tier: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            condition: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 content: z.ZodOptional<z.ZodString>;
                 id: z.ZodOptional<z.ZodString>;
                 kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-            }, z.core.$strict>, z.ZodNull]>>;
+            }, z.core.$strict>>>;
             description: z.ZodString;
             grants: z.ZodRecord<z.ZodString, z.ZodEnum<{
                 none: "none";
@@ -13992,11 +15440,11 @@ const roleVersions: z.ZodObject<{
             name: z.ZodString;
             scopes: z.ZodDefault<z.ZodArray<z.ZodString>>;
         }, z.core.$strip>;
-        tags: z.ZodArray<z.ZodString>;
-        created_at: z.ZodString;
-        is_current: z.ZodBoolean;
     }, z.core.$strip>>;
     audit: z.ZodArray<z.ZodObject<{
+        created_at: z.ZodString;
+        is_current: z.ZodDefault<z.ZodBoolean>;
+        tags: z.ZodDefault<z.ZodArray<z.ZodString>>;
         version: z.ZodNumber;
         body: z.ZodObject<{
             action: z.ZodString;
@@ -14004,9 +15452,6 @@ const roleVersions: z.ZodObject<{
             before: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
             after: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
         }, z.core.$strip>;
-        tags: z.ZodArray<z.ZodString>;
-        created_at: z.ZodString;
-        is_current: z.ZodBoolean;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 
@@ -14017,8 +15462,8 @@ type RouteAction = z.infer<typeof routeAction>;
 const routeAction: z.ZodEnum<{
     read: "read";
     write: "write";
-    fenced: "fenced";
     secret: "secret";
+    fenced: "fenced";
 }>;
 
 // @public (undocumented)
@@ -14026,8 +15471,8 @@ type RouteEntry = z.infer<typeof routeEntry>;
 
 // @public
 const routeEntry: z.ZodObject<{
-    path: z.ZodString;
     methods: z.ZodArray<z.ZodString>;
+    path: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -14036,10 +15481,10 @@ type RouteMethod = z.infer<typeof routeMethod>;
 // @public
 const routeMethod: z.ZodEnum<{
     GET: "GET";
+    DELETE: "DELETE";
+    PATCH: "PATCH";
     POST: "POST";
     PUT: "PUT";
-    PATCH: "PATCH";
-    DELETE: "DELETE";
 }>;
 
 // @public
@@ -14150,40 +15595,101 @@ type Run = z.infer<typeof run>;
 
 // @public (undocumented)
 const run: z.ZodObject<{
+    cost: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    createdAt: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     id: z.ZodString;
-    traceId: z.ZodString;
-    createdAt: z.ZodNullable<z.ZodString>;
-    tags: z.ZodArray<z.ZodString>;
+    inputPreview: z.ZodUnknown;
+    latencyMs: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    outputPreview: z.ZodUnknown;
     status: z.ZodEnum<{
         error: "error";
         success: "success";
     }>;
-    cost: z.ZodNullable<z.ZodNumber>;
-    latencyMs: z.ZodNullable<z.ZodNumber>;
-    totalTokens: z.ZodNullable<z.ZodNumber>;
-    inputPreview: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-    outputPreview: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+    tags: z.ZodArray<z.ZodString>;
+    totalTokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    traceId: z.ZodString;
 }, z.core.$strip>;
+
+// @public (undocumented)
+type RunAnswer = z.infer<typeof runAnswer>;
+
+// @public
+const runAnswer: z.ZodDiscriminatedUnion<[z.ZodObject<{
+    kind: z.ZodDefault<z.ZodLiteral<"result">>;
+    result: z.ZodUnknown;
+}, z.core.$strip>, z.ZodObject<{
+    asks: z.ZodArray<z.ZodObject<{
+        answer_format: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        asked_by: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+        audience: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        channel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        created_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        error: z.ZodDefault<z.ZodUnknown>;
+        expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        format_payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        group_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        id: z.ZodString;
+        media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>>;
+        on_expiry: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            kill: "kill";
+            resume: "resume";
+        }>>>;
+        payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        question: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        recipient: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        result: z.ZodDefault<z.ZodUnknown>;
+        status: z.ZodEnum<{
+            running: "running";
+            asking: "asking";
+            failed: "failed";
+            finished: "finished";
+        }>;
+        thread_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        to: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            caller: "caller";
+            user: "user";
+        }>>>;
+    }, z.core.$strict>>;
+    kind: z.ZodDefault<z.ZodLiteral<"asks">>;
+    suspended: z.ZodObject<{
+        caller_interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        interaction_id: z.ZodString;
+        interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        resume_owner: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>;
+}, z.core.$strip>, z.ZodObject<{
+    kind: z.ZodDefault<z.ZodLiteral<"parked">>;
+    suspended: z.ZodObject<{
+        caller_interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        interaction_id: z.ZodString;
+        interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        resume_owner: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>;
+}, z.core.$strip>, z.ZodObject<{
+    kind: z.ZodDefault<z.ZodLiteral<"none">>;
+}, z.core.$strip>], "kind">;
 
 // @public (undocumented)
 const runsPage: z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
+        cost: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        createdAt: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         id: z.ZodString;
-        traceId: z.ZodString;
-        createdAt: z.ZodNullable<z.ZodString>;
-        tags: z.ZodArray<z.ZodString>;
+        inputPreview: z.ZodUnknown;
+        latencyMs: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        outputPreview: z.ZodUnknown;
         status: z.ZodEnum<{
             error: "error";
             success: "success";
         }>;
-        cost: z.ZodNullable<z.ZodNumber>;
-        latencyMs: z.ZodNullable<z.ZodNumber>;
-        totalTokens: z.ZodNullable<z.ZodNumber>;
-        inputPreview: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-        outputPreview: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+        tags: z.ZodArray<z.ZodString>;
+        totalTokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        traceId: z.ZodString;
     }, z.core.$strip>>;
+    nextPage: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     page: z.ZodNumber;
-    nextPage: z.ZodNullable<z.ZodNumber>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -14191,27 +15697,27 @@ type RunSpan = z.infer<typeof runSpan>;
 
 // @public (undocumented)
 const runSpan: z.ZodObject<{
+    end: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     id: z.ZodString;
-    parentId: z.ZodNullable<z.ZodString>;
-    traceId: z.ZodNullable<z.ZodString>;
-    name: z.ZodNullable<z.ZodString>;
-    kind: z.ZodNullable<z.ZodEnum<{
+    input: z.ZodDefault<z.ZodUnknown>;
+    inputTokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    kind: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
         LLM: "LLM";
         TOOL: "TOOL";
         CHAIN: "CHAIN";
         EVENT: "EVENT";
-    }>>;
-    level: z.ZodNullable<z.ZodString>;
-    statusMessage: z.ZodNullable<z.ZodString>;
-    start: z.ZodNullable<z.ZodString>;
-    end: z.ZodNullable<z.ZodString>;
-    model: z.ZodNullable<z.ZodString>;
-    inputTokens: z.ZodNullable<z.ZodNumber>;
-    outputTokens: z.ZodNullable<z.ZodNumber>;
-    totalTokens: z.ZodNullable<z.ZodNumber>;
-    metadata: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
-    input: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-    output: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+    }>>>;
+    level: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    metadata: z.ZodDefault<z.ZodUnknown>;
+    model: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    output: z.ZodDefault<z.ZodUnknown>;
+    outputTokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    parentId: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    start: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    statusMessage: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    totalTokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    traceId: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -14219,25 +15725,25 @@ type RunSpanOutline = z.infer<typeof runSpanOutline>;
 
 // @public
 const runSpanOutline: z.ZodObject<{
+    end: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     id: z.ZodString;
-    parentId: z.ZodNullable<z.ZodString>;
-    traceId: z.ZodNullable<z.ZodString>;
-    name: z.ZodNullable<z.ZodString>;
-    kind: z.ZodNullable<z.ZodEnum<{
+    inputTokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    kind: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
         LLM: "LLM";
         TOOL: "TOOL";
         CHAIN: "CHAIN";
         EVENT: "EVENT";
-    }>>;
-    level: z.ZodNullable<z.ZodString>;
-    statusMessage: z.ZodNullable<z.ZodString>;
-    start: z.ZodNullable<z.ZodString>;
-    end: z.ZodNullable<z.ZodString>;
-    model: z.ZodNullable<z.ZodString>;
-    inputTokens: z.ZodNullable<z.ZodNumber>;
-    outputTokens: z.ZodNullable<z.ZodNumber>;
-    totalTokens: z.ZodNullable<z.ZodNumber>;
-    metadata: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    }>>>;
+    level: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    metadata: z.ZodDefault<z.ZodUnknown>;
+    model: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    outputTokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    parentId: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    start: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    statusMessage: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    totalTokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    traceId: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>;
 
 // @public
@@ -14282,43 +15788,98 @@ interface RunToolArgs {
 }
 
 // @public (undocumented)
-const runToolResult: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+const runToolResult: z.ZodDiscriminatedUnion<[z.ZodObject<{
+    kind: z.ZodDefault<z.ZodLiteral<"result">>;
+    result: z.ZodUnknown;
+}, z.core.$strip>, z.ZodObject<{
+    asks: z.ZodArray<z.ZodObject<{
+        answer_format: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        asked_by: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+        audience: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        channel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        created_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        error: z.ZodDefault<z.ZodUnknown>;
+        expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        format_payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        group_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        id: z.ZodString;
+        media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>>;
+        on_expiry: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            kill: "kill";
+            resume: "resume";
+        }>>>;
+        payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        question: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        recipient: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        result: z.ZodDefault<z.ZodUnknown>;
+        status: z.ZodEnum<{
+            running: "running";
+            asking: "asking";
+            failed: "failed";
+            finished: "finished";
+        }>;
+        thread_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        to: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            caller: "caller";
+            user: "user";
+        }>>>;
+    }, z.core.$strict>>;
+    kind: z.ZodDefault<z.ZodLiteral<"asks">>;
+    suspended: z.ZodObject<{
+        caller_interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        interaction_id: z.ZodString;
+        interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        resume_owner: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>;
+}, z.core.$strip>, z.ZodObject<{
+    kind: z.ZodDefault<z.ZodLiteral<"parked">>;
+    suspended: z.ZodObject<{
+        caller_interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        interaction_id: z.ZodString;
+        interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        resume_owner: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>;
+}, z.core.$strip>, z.ZodObject<{
+    kind: z.ZodDefault<z.ZodLiteral<"none">>;
+}, z.core.$strip>], "kind">;
 
 // @public (undocumented)
 type RunTrace = z.infer<typeof runTrace>;
 
 // @public (undocumented)
 const runTrace: z.ZodObject<{
-    traceId: z.ZodString;
-    timestamp: z.ZodNullable<z.ZodString>;
-    tags: z.ZodArray<z.ZodString>;
-    totalCost: z.ZodNullable<z.ZodNumber>;
-    input: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-    output: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-    metadata: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    input: z.ZodDefault<z.ZodUnknown>;
+    metadata: z.ZodDefault<z.ZodUnknown>;
+    output: z.ZodDefault<z.ZodUnknown>;
     spans: z.ZodArray<z.ZodObject<{
+        end: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         id: z.ZodString;
-        parentId: z.ZodNullable<z.ZodString>;
-        traceId: z.ZodNullable<z.ZodString>;
-        name: z.ZodNullable<z.ZodString>;
-        kind: z.ZodNullable<z.ZodEnum<{
+        input: z.ZodDefault<z.ZodUnknown>;
+        inputTokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        kind: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
             LLM: "LLM";
             TOOL: "TOOL";
             CHAIN: "CHAIN";
             EVENT: "EVENT";
-        }>>;
-        level: z.ZodNullable<z.ZodString>;
-        statusMessage: z.ZodNullable<z.ZodString>;
-        start: z.ZodNullable<z.ZodString>;
-        end: z.ZodNullable<z.ZodString>;
-        model: z.ZodNullable<z.ZodString>;
-        inputTokens: z.ZodNullable<z.ZodNumber>;
-        outputTokens: z.ZodNullable<z.ZodNumber>;
-        totalTokens: z.ZodNullable<z.ZodNumber>;
-        metadata: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
-        input: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-        output: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+        }>>>;
+        level: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        metadata: z.ZodDefault<z.ZodUnknown>;
+        model: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        output: z.ZodDefault<z.ZodUnknown>;
+        outputTokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        parentId: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        start: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        statusMessage: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        totalTokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        traceId: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strip>>;
+    tags: z.ZodArray<z.ZodString>;
+    timestamp: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    totalCost: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    traceId: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -14326,28 +15887,28 @@ type RunTraceOutline = z.infer<typeof runTraceOutline>;
 
 // @public
 const runTraceOutline: z.ZodObject<{
-    traceId: z.ZodString;
     spans: z.ZodArray<z.ZodObject<{
+        end: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         id: z.ZodString;
-        parentId: z.ZodNullable<z.ZodString>;
-        traceId: z.ZodNullable<z.ZodString>;
-        name: z.ZodNullable<z.ZodString>;
-        kind: z.ZodNullable<z.ZodEnum<{
+        inputTokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        kind: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
             LLM: "LLM";
             TOOL: "TOOL";
             CHAIN: "CHAIN";
             EVENT: "EVENT";
-        }>>;
-        level: z.ZodNullable<z.ZodString>;
-        statusMessage: z.ZodNullable<z.ZodString>;
-        start: z.ZodNullable<z.ZodString>;
-        end: z.ZodNullable<z.ZodString>;
-        model: z.ZodNullable<z.ZodString>;
-        inputTokens: z.ZodNullable<z.ZodNumber>;
-        outputTokens: z.ZodNullable<z.ZodNumber>;
-        totalTokens: z.ZodNullable<z.ZodNumber>;
-        metadata: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        }>>>;
+        level: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        metadata: z.ZodDefault<z.ZodUnknown>;
+        model: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        outputTokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        parentId: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        start: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        statusMessage: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        totalTokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        traceId: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strip>>;
+    traceId: z.ZodString;
 }, z.core.$strip>;
 
 declare namespace s {
@@ -14366,17 +15927,21 @@ declare namespace s {
         addUrlToScopeResult,
         removeUrlFromScopeResult,
         removeScopeResult,
-        routeAction,
-        RouteAction,
         authRoute,
         AuthRoute,
         authRoutes,
+        routeAction,
+        RouteAction,
         publicRoutes,
         pinPublicResult,
         unpinPublicResult,
         backupSections,
         backupDocument,
         BackupDocument,
+        backupNewApiKeys,
+        BackupNewApiKeys,
+        backupSectionReport,
+        BackupSectionReport,
         backupImportReport,
         BackupImportReport,
         routeEntry,
@@ -14414,12 +15979,6 @@ declare namespace s {
         patchSubServicesResult,
         oauthCompleteResult,
         OAuthCompleteResult,
-        discoveredServer,
-        DiscoveredServer,
-        providerMutationResult,
-        ProviderMutationResult,
-        removeProviderResult,
-        RemoveProviderResult,
         conversationDoor,
         ConversationDoor,
         conversationTargetKind,
@@ -14432,6 +15991,8 @@ declare namespace s {
         ConversationAnswerStatus,
         conversationRecordOrigin,
         ConversationRecordOrigin,
+        conversationRouteView,
+        ConversationRouteView,
         conversationRoutes,
         ConversationRoutes,
         conversationRouteWritten,
@@ -14497,16 +16058,6 @@ declare namespace s {
         FleetReloadResult,
         fleetReportFanout,
         FleetReportFanout,
-        recycleEntry,
-        RecycleEntry,
-        freshLife,
-        FreshLife,
-        recycleStop,
-        RecycleStop,
-        recycleRoll,
-        RecycleRoll,
-        awaitingWorker,
-        AwaitingWorker,
         triggerAuth,
         TriggerAuth,
         hookList,
@@ -14544,10 +16095,11 @@ declare namespace s {
         FormReactions,
         formUpdate,
         FormUpdate,
-        reactionEventKind,
-        ReactionEventKind,
         reactionEvent,
         ReactionEvent,
+        ReactionEventKind,
+        interactionReaction,
+        InteractionReaction,
         interaction,
         Interaction,
         interactionAnswered,
@@ -14700,6 +16252,8 @@ declare namespace s {
         PresetVersionTags,
         principalRef,
         PrincipalRef,
+        principalKind,
+        PrincipalKind,
         principal,
         Principal,
         principalList,
@@ -14756,6 +16310,10 @@ declare namespace s {
         PresetBody,
         conversationRoute,
         ConversationRoute,
+        apiConversationRouteCreate,
+        ApiConversationRouteCreate,
+        channelConversationRouteCreate,
+        ChannelConversationRouteCreate,
         conversationRouteCreate,
         ConversationRouteCreate,
         targetConversationConfig,
@@ -14788,6 +16346,19 @@ declare namespace s {
         PolicyBody,
         roleBody,
         RoleBody,
+        settingsProfileName,
+        SettingsProfileName,
+        previousProfileName,
+        PreviousProfileName,
+        scheduleCreate,
+        ScheduleCreate,
+        scheduleListRow,
+        ScheduleListRow,
+        scheduleRecord,
+        ScheduleRecord,
+        servedConstants,
+        servedVectors,
+        servedDocumentsJson,
         settingsSchema,
         SettingsSchema,
         setupResult,
@@ -14904,6 +16475,8 @@ declare namespace s {
         toolSchema,
         ToolSchema,
         allToolSchemas,
+        runAnswer,
+        RunAnswer,
         runToolResult,
         parkedStatus,
         ParkedStatus,
@@ -14961,6 +16534,101 @@ interface SavePresetVersionBody {
 }
 
 // @public (undocumented)
+type ScheduleCreate = z.input<typeof scheduleCreate>;
+
+// @public (undocumented)
+const scheduleCreate: z.ZodObject<{
+    cadence: z.ZodDefault<z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        every: z.ZodNumber;
+        kind: z.ZodDefault<z.ZodLiteral<"interval">>;
+        relative: z.ZodDefault<z.ZodBoolean>;
+    }, z.core.$strict>, z.ZodObject<{
+        day_of_month: z.ZodDefault<z.ZodString>;
+        day_of_week: z.ZodDefault<z.ZodString>;
+        hour: z.ZodDefault<z.ZodString>;
+        kind: z.ZodDefault<z.ZodLiteral<"crontab">>;
+        minute: z.ZodDefault<z.ZodString>;
+        month_of_year: z.ZodDefault<z.ZodString>;
+    }, z.core.$strict>], "kind">>>;
+    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    execution_key: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    schedule_name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        states: z.ZodArray<z.ZodObject<{
+            input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                into: z.ZodString;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strict>>>;
+            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>>>;
+            state: z.ZodString;
+            subject_expr: z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>;
+            templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
+            updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
+                op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strict>>>;
+        }, z.core.$strict>>;
+    }, z.core.$strict>>>;
+    subject: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        key: z.ZodString;
+        kind: z.ZodString;
+        target_kind: z.ZodEnum<{
+            tool: "tool";
+            agent: "agent";
+        }>;
+        target_name: z.ZodString;
+    }, z.core.$strict>>>;
+    tool_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    tool_name: z.ZodString;
+}, z.core.$strict>;
+
+// @public (undocumented)
 type ScheduleItem = z.infer<typeof scheduleItem>;
 
 // @public (undocumented)
@@ -14982,6 +16650,58 @@ const scheduleList: z.ZodArray<z.ZodObject<{
     args: z.ZodOptional<z.ZodArray<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>>;
     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>>;
 }, z.core.$loose>>;
+
+// @public (undocumented)
+type ScheduleListRow = z.infer<typeof scheduleListRow>;
+
+// @public (undocumented)
+const scheduleListRow: z.ZodObject<{
+    cadence: z.ZodDiscriminatedUnion<[z.ZodObject<{
+        every: z.ZodNumber;
+        kind: z.ZodDefault<z.ZodLiteral<"interval">>;
+        relative: z.ZodDefault<z.ZodBoolean>;
+    }, z.core.$strict>, z.ZodObject<{
+        day_of_month: z.ZodDefault<z.ZodString>;
+        day_of_week: z.ZodDefault<z.ZodString>;
+        hour: z.ZodDefault<z.ZodString>;
+        kind: z.ZodDefault<z.ZodLiteral<"crontab">>;
+        minute: z.ZodDefault<z.ZodString>;
+        month_of_year: z.ZodDefault<z.ZodString>;
+    }, z.core.$strict>], "kind">;
+    enabled: z.ZodBoolean;
+    error: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        at_iso: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        message: z.ZodString;
+    }, z.core.$strict>>>;
+    name: z.ZodString;
+    next_run_at_iso: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    next_run_at_ts: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    tool: z.ZodString;
+}, z.core.$strict>;
+
+// @public (undocumented)
+type ScheduleRecord = z.infer<typeof scheduleRecord>;
+
+// @public (undocumented)
+const scheduleRecord: z.ZodObject<{
+    args: z.ZodDefault<z.ZodArray<z.ZodUnknown>>;
+    cadence: z.ZodDiscriminatedUnion<[z.ZodObject<{
+        every: z.ZodNumber;
+        kind: z.ZodDefault<z.ZodLiteral<"interval">>;
+        relative: z.ZodDefault<z.ZodBoolean>;
+    }, z.core.$strict>, z.ZodObject<{
+        day_of_month: z.ZodDefault<z.ZodString>;
+        day_of_week: z.ZodDefault<z.ZodString>;
+        hour: z.ZodDefault<z.ZodString>;
+        kind: z.ZodDefault<z.ZodLiteral<"crontab">>;
+        minute: z.ZodDefault<z.ZodString>;
+        month_of_year: z.ZodDefault<z.ZodString>;
+    }, z.core.$strict>], "kind">;
+    enabled: z.ZodBoolean;
+    kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    name: z.ZodString;
+    tool: z.ZodString;
+}, z.core.$strict>;
 
 // @public
 export const SchedulingIcon: IconComponent;
@@ -15171,7 +16891,5800 @@ interface SelectSharedProps {
 }
 
 // @public
+const servedConstants: {
+    readonly MEDIA_ID_PATTERN: "[A-Za-z0-9_-]{43}";
+    readonly MEDIA_ROUTE_PREFIX: "/api/interactions/media/";
+    readonly PERSON_KIND: "person";
+};
+
+// @public
+const servedDocumentsJson: {
+    readonly AccessPolicy: {
+        readonly $defs: {
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly description: "Schema for data stored at 'ac:policy:{user_id}'. Represents WHAT the user can do (permissions & logic).";
+        readonly properties: {
+            readonly condition: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the auth context (a dumped JqAuthContext)";
+                    readonly keys: readonly [{
+                        readonly gloss: "the caller's subject id";
+                        readonly name: "sub";
+                    }, {
+                        readonly gloss: "the caller's granted scopes";
+                        readonly name: "scopes";
+                    }, {
+                        readonly gloss: "who the caller is — the token's identity claims";
+                        readonly name: "identity";
+                    }, {
+                        readonly gloss: "the caller's static policy data";
+                        readonly name: "policy";
+                    }, {
+                        readonly gloss: "dynamic environment data for this decision";
+                        readonly name: "context";
+                    }, {
+                        readonly gloss: "the operation being authorized";
+                        readonly name: "request";
+                    }, {
+                        readonly gloss: "caller-supplied time/constants (e.g. the current epoch)";
+                        readonly name: "system";
+                    }];
+                    readonly label: "condition";
+                    readonly language: "jq";
+                    readonly returns: "EXACTLY boolean true to allow; any other value — including any other truthy result — DENIES";
+                };
+            };
+            readonly policy_data: {
+                readonly additionalProperties: true;
+                readonly default: {};
+                readonly title: "Policy Data";
+                readonly type: "object";
+            };
+            readonly scopes: {
+                readonly default: readonly [];
+                readonly items: {
+                    readonly type: "string";
+                };
+                readonly title: "Scopes";
+                readonly type: "array";
+            };
+        };
+        readonly title: "AccessPolicy";
+        readonly type: "object";
+    };
+    readonly CallbackSchema: {
+        readonly $defs: {
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly description: "A backend task's follow-up: an optional guard ``condition`` and a follow-up tool kwargs ``expr``.";
+        readonly properties: {
+            readonly carried_kwargs: {
+                readonly additionalProperties: true;
+                readonly default: {};
+                readonly title: "Carried Kwargs";
+                readonly type: "object";
+            };
+            readonly condition: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the backend task's tool result";
+                    readonly keys: readonly [];
+                    readonly label: "condition";
+                    readonly language: "jq";
+                    readonly returns: "truthy to run the callback";
+                    readonly sample: {};
+                };
+            };
+            readonly expr: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the backend task's tool result";
+                    readonly caveats: readonly ["an empty expression, or a jq pipeline producing no output, yields {} (the follow-up tool runs with empty kwargs) — not an error"];
+                    readonly keys: readonly [];
+                    readonly label: "expression";
+                    readonly language: "jq";
+                    readonly returns: "an object — the follow-up tool's kwargs";
+                    readonly sample: {};
+                };
+            };
+            readonly tool: {
+                readonly default: "";
+                readonly title: "Tool";
+                readonly type: "string";
+            };
+        };
+        readonly title: "CallbackSchema";
+        readonly type: "object";
+    };
+    readonly ChannelTemplate: {
+        readonly additionalProperties: false;
+        readonly description: "A pre-approved, named template a channel sends outside its freeform window.\n\nSome media only accept arbitrary text inside a bounded conversation window (a provider's\ncustomer-service window); outside it, the sole accepted send is an operator-authored,\npre-approved template referenced by ``name`` in an approved ``language`` locale — both\nrequired and non-blank.\n\n``parameters`` is the template's runtime arguments as an OPAQUE object: the platform\nthreads it UNOPENED (never looking inside it), and the channel that declares the\n``supports_template_notifications`` capability owns its shape — it validates ``parameters``\nagainst its OWN template-parameter schema through its OPTIONAL ``validate_template`` hook\n(see :class:`~tai42_contract.channels.Channel`) and maps it to its own send API in its own\ncode. A template with no runtime arguments carries no ``parameters``; a present\n``parameters`` is a non-empty dict.";
+        readonly properties: {
+            readonly language: {
+                readonly title: "Language";
+                readonly type: "string";
+            };
+            readonly name: {
+                readonly title: "Name";
+                readonly type: "string";
+            };
+            readonly parameters: {
+                readonly anyOf: readonly [{
+                    readonly additionalProperties: true;
+                    readonly type: "object";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Parameters";
+            };
+        };
+        readonly required: readonly ["name", "language"];
+        readonly title: "ChannelTemplate";
+        readonly type: "object";
+    };
+    readonly ConversationRoute: {
+        readonly $defs: {
+            readonly ApiConversationRoute: {
+                readonly description: "The stored ``api`` routing row: the create shape plus the two server-derived fields.\n\n``callback_secret`` (present only when the row declares a ``callback_url``) signs the\ndelivery callback; it is excluded from export and re-minted per row on import, so\ncallbacks signed with the pre-import secret no longer verify.\n``execution_key_fingerprint`` is the bound key's per-mint identity: a turn matches it\nagainst the live key, so a revoke+remint of the same ``user_id`` fails closed.";
+                readonly properties: {
+                    readonly callback_secret: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Callback Secret";
+                    };
+                    readonly callback_url: {
+                        readonly anyOf: readonly [{
+                            readonly pattern: "^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?#]|$)";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Callback Url";
+                    };
+                    readonly cancel_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the door's input document";
+                            readonly label: "cancel expression";
+                            readonly language: "jq";
+                            readonly returns: "null (cancel nothing), a parked interaction id, or a list of ids to cancel";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly channel: {
+                        readonly default: null;
+                        readonly title: "Channel";
+                        readonly type: "null";
+                    };
+                    readonly door: {
+                        readonly const: "api";
+                        readonly title: "Door";
+                        readonly type: "string";
+                    };
+                    readonly error_reply_text: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Error Reply Text";
+                    };
+                    readonly execution_key: {
+                        readonly description: "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.";
+                        readonly minLength: 1;
+                        readonly title: "Execution Key";
+                        readonly type: "string";
+                    };
+                    readonly execution_key_fingerprint: {
+                        readonly description: "The bound key's per-mint identity the turn resolves against, derived server-side at create and never client-supplied.";
+                        readonly minLength: 1;
+                        readonly title: "Execution Key Fingerprint";
+                        readonly type: "string";
+                    };
+                    readonly extras_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the door's input document";
+                            readonly label: "extras expression";
+                            readonly language: "jq";
+                            readonly returns: "the extras mapping handed to the started target; null for no extras";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly initial_mode: {
+                        readonly default: "agent";
+                        readonly enum: readonly ["agent", "manual"];
+                        readonly title: "Initial Mode";
+                        readonly type: "string";
+                    };
+                    readonly locale: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Locale";
+                    };
+                    readonly our_identity: {
+                        readonly default: null;
+                        readonly title: "Our Identity";
+                        readonly type: "null";
+                    };
+                    readonly overlap: {
+                        readonly $ref: "#/$defs/OverlapPolicy";
+                        readonly default: {
+                            readonly deliver: "one";
+                            readonly running: "continue";
+                            readonly settle_seconds: 0;
+                        };
+                    };
+                    readonly reply_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the started run's result (the SUCCESS shape) the route maps to the participant reply; null when the run asked its caller instead of finishing";
+                            readonly label: "reply expression";
+                            readonly language: "jq";
+                            readonly returns: "the reply: null (silent), a string, or a list of answer parts";
+                            readonly variables: readonly [{
+                                readonly blurb: "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out";
+                                readonly name: "turn";
+                                readonly sample: {
+                                    readonly id: "m-1";
+                                    readonly inbound: {
+                                        readonly id: "i-1";
+                                        readonly kind: "message";
+                                        readonly source: "api";
+                                    };
+                                };
+                            }, {
+                                readonly blurb: "the run's caller-ask entries when it asked instead of finishing (each the full parked entry); an empty list on a plain result";
+                                readonly name: "asks";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                }];
+                            }, {
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly resume_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the door's input document";
+                            readonly label: "resume expression";
+                            readonly language: "jq";
+                            readonly returns: "null (resume nothing), {id, payload} to resume an ask with an answer, a bare id to take a waiting outcome, or a list of these";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly route_name: {
+                        readonly pattern: "^[a-z0-9-]+$";
+                        readonly title: "Route Name";
+                        readonly type: "string";
+                    };
+                    readonly start_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the inbound turn payload the route maps to the started run's kwargs";
+                            readonly keys: readonly [{
+                                readonly gloss: "the inbound message text";
+                                readonly name: "message";
+                            }, {
+                                readonly gloss: "the sending address";
+                                readonly name: "sender";
+                            }, {
+                                readonly gloss: "door=channel: the medium address we are texted at";
+                                readonly name: "our_identity";
+                            }, {
+                                readonly gloss: "door=channel: the registry channel name";
+                                readonly name: "channel";
+                            }, {
+                                readonly gloss: "the turn's canonical thread id (the thread doors' id)";
+                                readonly name: "thread_id";
+                            }, {
+                                readonly gloss: "multichannel only: the linked person's id";
+                                readonly name: "person_id";
+                            }, {
+                                readonly gloss: "multichannel only: the person's known addresses";
+                                readonly name: "person_addresses";
+                            }, {
+                                readonly gloss: "non-empty entry params, nested under this key";
+                                readonly name: "params";
+                            }, {
+                                readonly gloss: "a structured form submission, present only when the inbound carried one";
+                                readonly name: "form";
+                            }, {
+                                readonly gloss: "the caller-set opaque per-send form tag, present only when the submission carried one";
+                                readonly name: "form_tag";
+                            }, {
+                                readonly gloss: "inbound media the participant sent, present only when the inbound carried some";
+                                readonly name: "attachments";
+                            }, {
+                                readonly gloss: "a geographic point the participant shared, present only when the inbound carried one";
+                                readonly name: "location";
+                            }, {
+                                readonly gloss: "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)";
+                                readonly name: "messages";
+                            }, {
+                                readonly gloss: "overlap deliver=all: messages dropped in favour of this turn, in the same shape; present only when non-empty";
+                                readonly name: "superseded";
+                            }, {
+                                readonly gloss: "the turn ids: {id, inbound: {id, kind, source}}";
+                                readonly name: "turn";
+                            }, {
+                                readonly gloss: "an event turn's structured payload {id, kind, payload}; absent on a message turn";
+                                readonly name: "event";
+                            }];
+                            readonly label: "start expression";
+                            readonly language: "jq";
+                            readonly returns: "the JSON object dispatched as the started run's kwargs; null starts nothing";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly target_kind: {
+                        readonly enum: readonly ["agent", "tool"];
+                        readonly title: "Target Kind";
+                        readonly type: "string";
+                    };
+                    readonly target_name: {
+                        readonly minLength: 1;
+                        readonly title: "Target Name";
+                        readonly type: "string";
+                    };
+                    readonly turns_per_hour_override: {
+                        readonly anyOf: readonly [{
+                            readonly exclusiveMinimum: 0;
+                            readonly type: "integer";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Turns Per Hour Override";
+                    };
+                };
+                readonly required: readonly ["route_name", "target_kind", "target_name", "execution_key", "door", "execution_key_fingerprint"];
+                readonly title: "ApiConversationRoute";
+                readonly type: "object";
+            };
+            readonly ChannelConversationRoute: {
+                readonly description: "The stored ``channel`` routing row: the create shape plus the bound key's fingerprint (no callback secret).";
+                readonly properties: {
+                    readonly callback_secret: {
+                        readonly default: null;
+                        readonly title: "Callback Secret";
+                        readonly type: "null";
+                    };
+                    readonly callback_url: {
+                        readonly default: null;
+                        readonly title: "Callback Url";
+                        readonly type: "null";
+                    };
+                    readonly cancel_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the door's input document";
+                            readonly label: "cancel expression";
+                            readonly language: "jq";
+                            readonly returns: "null (cancel nothing), a parked interaction id, or a list of ids to cancel";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly channel: {
+                        readonly pattern: "^[^:]*[^:\\s][^:]*$";
+                        readonly title: "Channel";
+                        readonly type: "string";
+                    };
+                    readonly door: {
+                        readonly const: "channel";
+                        readonly title: "Door";
+                        readonly type: "string";
+                    };
+                    readonly error_reply_text: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Error Reply Text";
+                    };
+                    readonly execution_key: {
+                        readonly description: "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.";
+                        readonly minLength: 1;
+                        readonly title: "Execution Key";
+                        readonly type: "string";
+                    };
+                    readonly execution_key_fingerprint: {
+                        readonly description: "The bound key's per-mint identity the turn resolves against, derived server-side at create and never client-supplied.";
+                        readonly minLength: 1;
+                        readonly title: "Execution Key Fingerprint";
+                        readonly type: "string";
+                    };
+                    readonly extras_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the door's input document";
+                            readonly label: "extras expression";
+                            readonly language: "jq";
+                            readonly returns: "the extras mapping handed to the started target; null for no extras";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly initial_mode: {
+                        readonly default: "agent";
+                        readonly enum: readonly ["agent", "manual"];
+                        readonly title: "Initial Mode";
+                        readonly type: "string";
+                    };
+                    readonly locale: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Locale";
+                    };
+                    readonly our_identity: {
+                        readonly pattern: "\\S";
+                        readonly title: "Our Identity";
+                        readonly type: "string";
+                    };
+                    readonly overlap: {
+                        readonly $ref: "#/$defs/OverlapPolicy";
+                        readonly default: {
+                            readonly deliver: "one";
+                            readonly running: "continue";
+                            readonly settle_seconds: 0;
+                        };
+                    };
+                    readonly reply_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the started run's result (the SUCCESS shape) the route maps to the participant reply; null when the run asked its caller instead of finishing";
+                            readonly label: "reply expression";
+                            readonly language: "jq";
+                            readonly returns: "the reply: null (silent), a string, or a list of answer parts";
+                            readonly variables: readonly [{
+                                readonly blurb: "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out";
+                                readonly name: "turn";
+                                readonly sample: {
+                                    readonly id: "m-1";
+                                    readonly inbound: {
+                                        readonly id: "i-1";
+                                        readonly kind: "message";
+                                        readonly source: "api";
+                                    };
+                                };
+                            }, {
+                                readonly blurb: "the run's caller-ask entries when it asked instead of finishing (each the full parked entry); an empty list on a plain result";
+                                readonly name: "asks";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                }];
+                            }, {
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly resume_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the door's input document";
+                            readonly label: "resume expression";
+                            readonly language: "jq";
+                            readonly returns: "null (resume nothing), {id, payload} to resume an ask with an answer, a bare id to take a waiting outcome, or a list of these";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly route_name: {
+                        readonly pattern: "^[a-z0-9-]+$";
+                        readonly title: "Route Name";
+                        readonly type: "string";
+                    };
+                    readonly start_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the inbound turn payload the route maps to the started run's kwargs";
+                            readonly keys: readonly [{
+                                readonly gloss: "the inbound message text";
+                                readonly name: "message";
+                            }, {
+                                readonly gloss: "the sending address";
+                                readonly name: "sender";
+                            }, {
+                                readonly gloss: "door=channel: the medium address we are texted at";
+                                readonly name: "our_identity";
+                            }, {
+                                readonly gloss: "door=channel: the registry channel name";
+                                readonly name: "channel";
+                            }, {
+                                readonly gloss: "the turn's canonical thread id (the thread doors' id)";
+                                readonly name: "thread_id";
+                            }, {
+                                readonly gloss: "multichannel only: the linked person's id";
+                                readonly name: "person_id";
+                            }, {
+                                readonly gloss: "multichannel only: the person's known addresses";
+                                readonly name: "person_addresses";
+                            }, {
+                                readonly gloss: "non-empty entry params, nested under this key";
+                                readonly name: "params";
+                            }, {
+                                readonly gloss: "a structured form submission, present only when the inbound carried one";
+                                readonly name: "form";
+                            }, {
+                                readonly gloss: "the caller-set opaque per-send form tag, present only when the submission carried one";
+                                readonly name: "form_tag";
+                            }, {
+                                readonly gloss: "inbound media the participant sent, present only when the inbound carried some";
+                                readonly name: "attachments";
+                            }, {
+                                readonly gloss: "a geographic point the participant shared, present only when the inbound carried one";
+                                readonly name: "location";
+                            }, {
+                                readonly gloss: "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)";
+                                readonly name: "messages";
+                            }, {
+                                readonly gloss: "overlap deliver=all: messages dropped in favour of this turn, in the same shape; present only when non-empty";
+                                readonly name: "superseded";
+                            }, {
+                                readonly gloss: "the turn ids: {id, inbound: {id, kind, source}}";
+                                readonly name: "turn";
+                            }, {
+                                readonly gloss: "an event turn's structured payload {id, kind, payload}; absent on a message turn";
+                                readonly name: "event";
+                            }];
+                            readonly label: "start expression";
+                            readonly language: "jq";
+                            readonly returns: "the JSON object dispatched as the started run's kwargs; null starts nothing";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly target_kind: {
+                        readonly enum: readonly ["agent", "tool"];
+                        readonly title: "Target Kind";
+                        readonly type: "string";
+                    };
+                    readonly target_name: {
+                        readonly minLength: 1;
+                        readonly title: "Target Name";
+                        readonly type: "string";
+                    };
+                    readonly turns_per_hour_override: {
+                        readonly anyOf: readonly [{
+                            readonly exclusiveMinimum: 0;
+                            readonly type: "integer";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Turns Per Hour Override";
+                    };
+                };
+                readonly required: readonly ["route_name", "target_kind", "target_name", "execution_key", "door", "channel", "our_identity", "execution_key_fingerprint"];
+                readonly title: "ChannelConversationRoute";
+                readonly type: "object";
+            };
+            readonly OverlapPolicy: {
+                readonly description: "How a route treats a running turn and the newer participant messages that overlap it.\n\nGoverns participant MESSAGE turns on one thread only (``origin=\"client\"``,\n``inbound_kind=\"message\"``); an event turn always runs as its own turn. Two knobs and a\nwindow:\n\n* ``running`` — what happens to the turn in flight when a newer message is accepted:\n  ``continue`` leaves it running (one turn per message), ``cancel`` cancels it cooperatively\n  in favour of the newer message.\n* ``deliver`` — what a turn carries: ``one`` exactly one message per turn, ``all`` every\n  message accepted since the last turn started, in order, as one turn.\n* ``settle_seconds`` — a turn starts no earlier than this many seconds after its lead\n  message was accepted, so a burst inside the window rides in one turn. ``0`` disables it.\n\nThe default policy (``continue``/``one``/``0``) runs one turn per message and leaves the\npayload unchanged. Frozen.";
+                readonly properties: {
+                    readonly deliver: {
+                        readonly default: "one";
+                        readonly enum: readonly ["one", "all"];
+                        readonly title: "Deliver";
+                        readonly type: "string";
+                    };
+                    readonly running: {
+                        readonly default: "continue";
+                        readonly enum: readonly ["continue", "cancel"];
+                        readonly title: "Running";
+                        readonly type: "string";
+                    };
+                    readonly settle_seconds: {
+                        readonly default: 0;
+                        readonly description: "Seconds a turn waits after its lead message was accepted before it starts, so a burst inside the window rides one turn; 0 disables the window.";
+                        readonly maximum: 30;
+                        readonly minimum: 0;
+                        readonly title: "Settle Seconds";
+                        readonly type: "integer";
+                    };
+                };
+                readonly title: "OverlapPolicy";
+                readonly type: "object";
+            };
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly description: "The validating form of a stored route row: ``.root`` is the door's variant.";
+        readonly discriminator: {
+            readonly mapping: {
+                readonly api: "#/$defs/ApiConversationRoute";
+                readonly channel: "#/$defs/ChannelConversationRoute";
+            };
+            readonly propertyName: "door";
+        };
+        readonly oneOf: readonly [{
+            readonly $ref: "#/$defs/ApiConversationRoute";
+        }, {
+            readonly $ref: "#/$defs/ChannelConversationRoute";
+        }];
+        readonly title: "ConversationRouteBody";
+    };
+    readonly ConversationRouteCreate: {
+        readonly $defs: {
+            readonly ApiConversationRouteCreate: {
+                readonly description: "An ``api`` route: answers by signed callback to ``callback_url`` when set, else by the poll door.";
+                readonly properties: {
+                    readonly callback_url: {
+                        readonly anyOf: readonly [{
+                            readonly pattern: "^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?#]|$)";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Callback Url";
+                    };
+                    readonly cancel_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the door's input document";
+                            readonly label: "cancel expression";
+                            readonly language: "jq";
+                            readonly returns: "null (cancel nothing), a parked interaction id, or a list of ids to cancel";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly channel: {
+                        readonly default: null;
+                        readonly title: "Channel";
+                        readonly type: "null";
+                    };
+                    readonly door: {
+                        readonly const: "api";
+                        readonly title: "Door";
+                        readonly type: "string";
+                    };
+                    readonly error_reply_text: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Error Reply Text";
+                    };
+                    readonly execution_key: {
+                        readonly description: "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.";
+                        readonly minLength: 1;
+                        readonly title: "Execution Key";
+                        readonly type: "string";
+                    };
+                    readonly extras_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the door's input document";
+                            readonly label: "extras expression";
+                            readonly language: "jq";
+                            readonly returns: "the extras mapping handed to the started target; null for no extras";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly initial_mode: {
+                        readonly default: "agent";
+                        readonly enum: readonly ["agent", "manual"];
+                        readonly title: "Initial Mode";
+                        readonly type: "string";
+                    };
+                    readonly locale: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Locale";
+                    };
+                    readonly our_identity: {
+                        readonly default: null;
+                        readonly title: "Our Identity";
+                        readonly type: "null";
+                    };
+                    readonly overlap: {
+                        readonly $ref: "#/$defs/OverlapPolicy";
+                        readonly default: {
+                            readonly deliver: "one";
+                            readonly running: "continue";
+                            readonly settle_seconds: 0;
+                        };
+                    };
+                    readonly reply_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the started run's result (the SUCCESS shape) the route maps to the participant reply; null when the run asked its caller instead of finishing";
+                            readonly label: "reply expression";
+                            readonly language: "jq";
+                            readonly returns: "the reply: null (silent), a string, or a list of answer parts";
+                            readonly variables: readonly [{
+                                readonly blurb: "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out";
+                                readonly name: "turn";
+                                readonly sample: {
+                                    readonly id: "m-1";
+                                    readonly inbound: {
+                                        readonly id: "i-1";
+                                        readonly kind: "message";
+                                        readonly source: "api";
+                                    };
+                                };
+                            }, {
+                                readonly blurb: "the run's caller-ask entries when it asked instead of finishing (each the full parked entry); an empty list on a plain result";
+                                readonly name: "asks";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                }];
+                            }, {
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly resume_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the door's input document";
+                            readonly label: "resume expression";
+                            readonly language: "jq";
+                            readonly returns: "null (resume nothing), {id, payload} to resume an ask with an answer, a bare id to take a waiting outcome, or a list of these";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly route_name: {
+                        readonly pattern: "^[a-z0-9-]+$";
+                        readonly title: "Route Name";
+                        readonly type: "string";
+                    };
+                    readonly start_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the inbound turn payload the route maps to the started run's kwargs";
+                            readonly keys: readonly [{
+                                readonly gloss: "the inbound message text";
+                                readonly name: "message";
+                            }, {
+                                readonly gloss: "the sending address";
+                                readonly name: "sender";
+                            }, {
+                                readonly gloss: "door=channel: the medium address we are texted at";
+                                readonly name: "our_identity";
+                            }, {
+                                readonly gloss: "door=channel: the registry channel name";
+                                readonly name: "channel";
+                            }, {
+                                readonly gloss: "the turn's canonical thread id (the thread doors' id)";
+                                readonly name: "thread_id";
+                            }, {
+                                readonly gloss: "multichannel only: the linked person's id";
+                                readonly name: "person_id";
+                            }, {
+                                readonly gloss: "multichannel only: the person's known addresses";
+                                readonly name: "person_addresses";
+                            }, {
+                                readonly gloss: "non-empty entry params, nested under this key";
+                                readonly name: "params";
+                            }, {
+                                readonly gloss: "a structured form submission, present only when the inbound carried one";
+                                readonly name: "form";
+                            }, {
+                                readonly gloss: "the caller-set opaque per-send form tag, present only when the submission carried one";
+                                readonly name: "form_tag";
+                            }, {
+                                readonly gloss: "inbound media the participant sent, present only when the inbound carried some";
+                                readonly name: "attachments";
+                            }, {
+                                readonly gloss: "a geographic point the participant shared, present only when the inbound carried one";
+                                readonly name: "location";
+                            }, {
+                                readonly gloss: "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)";
+                                readonly name: "messages";
+                            }, {
+                                readonly gloss: "overlap deliver=all: messages dropped in favour of this turn, in the same shape; present only when non-empty";
+                                readonly name: "superseded";
+                            }, {
+                                readonly gloss: "the turn ids: {id, inbound: {id, kind, source}}";
+                                readonly name: "turn";
+                            }, {
+                                readonly gloss: "an event turn's structured payload {id, kind, payload}; absent on a message turn";
+                                readonly name: "event";
+                            }];
+                            readonly label: "start expression";
+                            readonly language: "jq";
+                            readonly returns: "the JSON object dispatched as the started run's kwargs; null starts nothing";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly target_kind: {
+                        readonly enum: readonly ["agent", "tool"];
+                        readonly title: "Target Kind";
+                        readonly type: "string";
+                    };
+                    readonly target_name: {
+                        readonly minLength: 1;
+                        readonly title: "Target Name";
+                        readonly type: "string";
+                    };
+                    readonly turns_per_hour_override: {
+                        readonly anyOf: readonly [{
+                            readonly exclusiveMinimum: 0;
+                            readonly type: "integer";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Turns Per Hour Override";
+                    };
+                };
+                readonly required: readonly ["route_name", "target_kind", "target_name", "execution_key", "door"];
+                readonly title: "ApiConversationRouteCreate";
+                readonly type: "object";
+            };
+            readonly ChannelConversationRouteCreate: {
+                readonly description: "A ``channel`` route: answers through the registry ``channel`` at the ``our_identity`` address.";
+                readonly properties: {
+                    readonly callback_url: {
+                        readonly default: null;
+                        readonly title: "Callback Url";
+                        readonly type: "null";
+                    };
+                    readonly cancel_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the door's input document";
+                            readonly label: "cancel expression";
+                            readonly language: "jq";
+                            readonly returns: "null (cancel nothing), a parked interaction id, or a list of ids to cancel";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly channel: {
+                        readonly pattern: "^[^:]*[^:\\s][^:]*$";
+                        readonly title: "Channel";
+                        readonly type: "string";
+                    };
+                    readonly door: {
+                        readonly const: "channel";
+                        readonly title: "Door";
+                        readonly type: "string";
+                    };
+                    readonly error_reply_text: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Error Reply Text";
+                    };
+                    readonly execution_key: {
+                        readonly description: "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.";
+                        readonly minLength: 1;
+                        readonly title: "Execution Key";
+                        readonly type: "string";
+                    };
+                    readonly extras_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the door's input document";
+                            readonly label: "extras expression";
+                            readonly language: "jq";
+                            readonly returns: "the extras mapping handed to the started target; null for no extras";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly initial_mode: {
+                        readonly default: "agent";
+                        readonly enum: readonly ["agent", "manual"];
+                        readonly title: "Initial Mode";
+                        readonly type: "string";
+                    };
+                    readonly locale: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Locale";
+                    };
+                    readonly our_identity: {
+                        readonly pattern: "\\S";
+                        readonly title: "Our Identity";
+                        readonly type: "string";
+                    };
+                    readonly overlap: {
+                        readonly $ref: "#/$defs/OverlapPolicy";
+                        readonly default: {
+                            readonly deliver: "one";
+                            readonly running: "continue";
+                            readonly settle_seconds: 0;
+                        };
+                    };
+                    readonly reply_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the started run's result (the SUCCESS shape) the route maps to the participant reply; null when the run asked its caller instead of finishing";
+                            readonly label: "reply expression";
+                            readonly language: "jq";
+                            readonly returns: "the reply: null (silent), a string, or a list of answer parts";
+                            readonly variables: readonly [{
+                                readonly blurb: "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out";
+                                readonly name: "turn";
+                                readonly sample: {
+                                    readonly id: "m-1";
+                                    readonly inbound: {
+                                        readonly id: "i-1";
+                                        readonly kind: "message";
+                                        readonly source: "api";
+                                    };
+                                };
+                            }, {
+                                readonly blurb: "the run's caller-ask entries when it asked instead of finishing (each the full parked entry); an empty list on a plain result";
+                                readonly name: "asks";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                }];
+                            }, {
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly resume_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the door's input document";
+                            readonly label: "resume expression";
+                            readonly language: "jq";
+                            readonly returns: "null (resume nothing), {id, payload} to resume an ask with an answer, a bare id to take a waiting outcome, or a list of these";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly route_name: {
+                        readonly pattern: "^[a-z0-9-]+$";
+                        readonly title: "Route Name";
+                        readonly type: "string";
+                    };
+                    readonly start_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the inbound turn payload the route maps to the started run's kwargs";
+                            readonly keys: readonly [{
+                                readonly gloss: "the inbound message text";
+                                readonly name: "message";
+                            }, {
+                                readonly gloss: "the sending address";
+                                readonly name: "sender";
+                            }, {
+                                readonly gloss: "door=channel: the medium address we are texted at";
+                                readonly name: "our_identity";
+                            }, {
+                                readonly gloss: "door=channel: the registry channel name";
+                                readonly name: "channel";
+                            }, {
+                                readonly gloss: "the turn's canonical thread id (the thread doors' id)";
+                                readonly name: "thread_id";
+                            }, {
+                                readonly gloss: "multichannel only: the linked person's id";
+                                readonly name: "person_id";
+                            }, {
+                                readonly gloss: "multichannel only: the person's known addresses";
+                                readonly name: "person_addresses";
+                            }, {
+                                readonly gloss: "non-empty entry params, nested under this key";
+                                readonly name: "params";
+                            }, {
+                                readonly gloss: "a structured form submission, present only when the inbound carried one";
+                                readonly name: "form";
+                            }, {
+                                readonly gloss: "the caller-set opaque per-send form tag, present only when the submission carried one";
+                                readonly name: "form_tag";
+                            }, {
+                                readonly gloss: "inbound media the participant sent, present only when the inbound carried some";
+                                readonly name: "attachments";
+                            }, {
+                                readonly gloss: "a geographic point the participant shared, present only when the inbound carried one";
+                                readonly name: "location";
+                            }, {
+                                readonly gloss: "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)";
+                                readonly name: "messages";
+                            }, {
+                                readonly gloss: "overlap deliver=all: messages dropped in favour of this turn, in the same shape; present only when non-empty";
+                                readonly name: "superseded";
+                            }, {
+                                readonly gloss: "the turn ids: {id, inbound: {id, kind, source}}";
+                                readonly name: "turn";
+                            }, {
+                                readonly gloss: "an event turn's structured payload {id, kind, payload}; absent on a message turn";
+                                readonly name: "event";
+                            }];
+                            readonly label: "start expression";
+                            readonly language: "jq";
+                            readonly returns: "the JSON object dispatched as the started run's kwargs; null starts nothing";
+                            readonly variables: readonly [{
+                                readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                                readonly name: "parked";
+                                readonly sample: readonly [{
+                                    readonly answer_format: "confirm";
+                                    readonly asked_by: readonly ["main"];
+                                    readonly group_id: "g-1";
+                                    readonly id: "i-42";
+                                    readonly question: "proceed?";
+                                    readonly status: "asking";
+                                    readonly to: "caller";
+                                }];
+                            }];
+                        };
+                    };
+                    readonly target_kind: {
+                        readonly enum: readonly ["agent", "tool"];
+                        readonly title: "Target Kind";
+                        readonly type: "string";
+                    };
+                    readonly target_name: {
+                        readonly minLength: 1;
+                        readonly title: "Target Name";
+                        readonly type: "string";
+                    };
+                    readonly turns_per_hour_override: {
+                        readonly anyOf: readonly [{
+                            readonly exclusiveMinimum: 0;
+                            readonly type: "integer";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Turns Per Hour Override";
+                    };
+                };
+                readonly required: readonly ["route_name", "target_kind", "target_name", "execution_key", "door", "channel", "our_identity"];
+                readonly title: "ChannelConversationRouteCreate";
+                readonly type: "object";
+            };
+            readonly OverlapPolicy: {
+                readonly description: "How a route treats a running turn and the newer participant messages that overlap it.\n\nGoverns participant MESSAGE turns on one thread only (``origin=\"client\"``,\n``inbound_kind=\"message\"``); an event turn always runs as its own turn. Two knobs and a\nwindow:\n\n* ``running`` — what happens to the turn in flight when a newer message is accepted:\n  ``continue`` leaves it running (one turn per message), ``cancel`` cancels it cooperatively\n  in favour of the newer message.\n* ``deliver`` — what a turn carries: ``one`` exactly one message per turn, ``all`` every\n  message accepted since the last turn started, in order, as one turn.\n* ``settle_seconds`` — a turn starts no earlier than this many seconds after its lead\n  message was accepted, so a burst inside the window rides in one turn. ``0`` disables it.\n\nThe default policy (``continue``/``one``/``0``) runs one turn per message and leaves the\npayload unchanged. Frozen.";
+                readonly properties: {
+                    readonly deliver: {
+                        readonly default: "one";
+                        readonly enum: readonly ["one", "all"];
+                        readonly title: "Deliver";
+                        readonly type: "string";
+                    };
+                    readonly running: {
+                        readonly default: "continue";
+                        readonly enum: readonly ["continue", "cancel"];
+                        readonly title: "Running";
+                        readonly type: "string";
+                    };
+                    readonly settle_seconds: {
+                        readonly default: 0;
+                        readonly description: "Seconds a turn waits after its lead message was accepted before it starts, so a burst inside the window rides one turn; 0 disables the window.";
+                        readonly maximum: 30;
+                        readonly minimum: 0;
+                        readonly title: "Settle Seconds";
+                        readonly type: "integer";
+                    };
+                };
+                readonly title: "OverlapPolicy";
+                readonly type: "object";
+            };
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly description: "The published, validating form of a route create: ``.root`` is the door's variant.";
+        readonly discriminator: {
+            readonly mapping: {
+                readonly api: "#/$defs/ApiConversationRouteCreate";
+                readonly channel: "#/$defs/ChannelConversationRouteCreate";
+            };
+            readonly propertyName: "door";
+        };
+        readonly oneOf: readonly [{
+            readonly $ref: "#/$defs/ApiConversationRouteCreate";
+        }, {
+            readonly $ref: "#/$defs/ChannelConversationRouteCreate";
+        }];
+        readonly title: "ConversationRouteCreateBody";
+    };
+    readonly FormReactionEvent: {
+        readonly $defs: {
+            readonly FieldChangedEvent: {
+                readonly additionalProperties: false;
+                readonly description: "A declared ``field_changed`` input field changed.";
+                readonly properties: {
+                    readonly field: {
+                        readonly minLength: 1;
+                        readonly title: "Field";
+                        readonly type: "string";
+                    };
+                    readonly kind: {
+                        readonly const: "field_changed";
+                        readonly default: "field_changed";
+                        readonly title: "Kind";
+                        readonly type: "string";
+                    };
+                };
+                readonly required: readonly ["field"];
+                readonly title: "FieldChangedEvent";
+                readonly type: "object";
+            };
+            readonly PageAdvancedEvent: {
+                readonly additionalProperties: false;
+                readonly description: "A declared ``page_advanced`` page was advanced past.";
+                readonly properties: {
+                    readonly kind: {
+                        readonly const: "page_advanced";
+                        readonly default: "page_advanced";
+                        readonly title: "Kind";
+                        readonly type: "string";
+                    };
+                    readonly page: {
+                        readonly minLength: 1;
+                        readonly title: "Page";
+                        readonly type: "string";
+                    };
+                };
+                readonly required: readonly ["page"];
+                readonly title: "PageAdvancedEvent";
+                readonly type: "object";
+            };
+            readonly SubmittedEvent: {
+                readonly additionalProperties: false;
+                readonly description: "The form was submitted and its ``submitted`` reaction checks it before it is accepted.";
+                readonly properties: {
+                    readonly kind: {
+                        readonly const: "submitted";
+                        readonly default: "submitted";
+                        readonly title: "Kind";
+                        readonly type: "string";
+                    };
+                };
+                readonly title: "SubmittedEvent";
+                readonly type: "object";
+            };
+        };
+        readonly description: "The published form of one form-reaction event.";
+        readonly discriminator: {
+            readonly mapping: {
+                readonly field_changed: "#/$defs/FieldChangedEvent";
+                readonly page_advanced: "#/$defs/PageAdvancedEvent";
+                readonly submitted: "#/$defs/SubmittedEvent";
+            };
+            readonly propertyName: "kind";
+        };
+        readonly oneOf: readonly [{
+            readonly $ref: "#/$defs/FieldChangedEvent";
+        }, {
+            readonly $ref: "#/$defs/PageAdvancedEvent";
+        }, {
+            readonly $ref: "#/$defs/SubmittedEvent";
+        }];
+        readonly title: "FormReactionEventBody";
+    };
+    readonly HookParams: {
+        readonly $defs: {
+            readonly HookSubject: {
+                readonly additionalProperties: false;
+                readonly description: "The optional state subject a hook fire targets.\n\nCarries the conversation-target scope ``(target_kind, target_name)``, the subject ``kind`` (matching\n:data:`~tai42_contract.states.SUBJECT_KIND_RE`), and a ``key_expr`` — a templated text\ncarrying (inline or by stored id) a jq program evaluated over the event payload at\nfire — it must yield a non-empty string, else the fire fails loudly like any hook\nerror. Frozen; deposited as the ambient state context so a state write during the fire\nis keyed and attributed to the hook.";
+                readonly properties: {
+                    readonly key_expr: {
+                        readonly $ref: "#/$defs/TemplatedText";
+                    };
+                    readonly kind: {
+                        readonly title: "Kind";
+                        readonly type: "string";
+                    };
+                    readonly target_kind: {
+                        readonly enum: readonly ["agent", "tool"];
+                        readonly title: "Target Kind";
+                        readonly type: "string";
+                    };
+                    readonly target_name: {
+                        readonly minLength: 1;
+                        readonly title: "Target Name";
+                        readonly type: "string";
+                    };
+                };
+                readonly required: readonly ["target_kind", "target_name", "kind", "key_expr"];
+                readonly title: "HookSubject";
+                readonly type: "object";
+            };
+            readonly StateAttach: {
+                readonly additionalProperties: false;
+                readonly description: "One state attached by a binding.\n\nCarries the ``state`` name, the ``templates`` to attach on it (attach-on-use, idempotent at save),\nthe ``subject_expr`` (a templated text rendering to a jq over the run input → a full subject object\nor the record KEY, its scope taken from the ambient door context and its kind from the state's\ndeclared subject kind), an optional ``scope_expr`` (a templated text rendering to a BOOLEAN predicate\nover the run input evaluated first — ``false`` skips this state for the run, a non-boolean is a loud\nerror, absent engages), and the ordered ``input_injections`` / ``updates``. Frozen.";
+                readonly properties: {
+                    readonly input_injections: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateInjection";
+                        };
+                        readonly title: "Input Injections";
+                        readonly type: "array";
+                    };
+                    readonly scope_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run input the dispatch is about to run on";
+                            readonly label: "scope expression";
+                            readonly language: "jq";
+                            readonly returns: "a boolean — false skips this state for the run, true (or absent) engages it";
+                            readonly sample: {
+                                readonly account_id: "acct_42";
+                            };
+                        };
+                    };
+                    readonly state: {
+                        readonly title: "State";
+                        readonly type: "string";
+                    };
+                    readonly subject_expr: {
+                        readonly $ref: "#/$defs/TemplatedText";
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run input the dispatch is about to run on";
+                            readonly label: "subject expression";
+                            readonly language: "jq";
+                            readonly returns: "a full subject object {target_kind, target_name, kind, key}, or a bare key string";
+                            readonly sample: {
+                                readonly account_id: "acct_42";
+                            };
+                        };
+                    };
+                    readonly templates: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly type: "string";
+                        };
+                        readonly title: "Templates";
+                        readonly type: "array";
+                    };
+                    readonly updates: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateUpdate";
+                        };
+                        readonly title: "Updates";
+                        readonly type: "array";
+                    };
+                };
+                readonly required: readonly ["state", "subject_expr"];
+                readonly title: "StateAttach";
+                readonly type: "object";
+            };
+            readonly StateBinding: {
+                readonly additionalProperties: false;
+                readonly description: "The optional binding a door carries: one or more :class:`StateAttach` entries. Frozen.\n\nThe same shape is stored on ``PresetBody``/``PresetSeed``, ``TargetConversationConfig``,\n``HookRegister`` and ``ScheduleCreate``, deposited on ``ToolInvocation`` through the\nambient dispatch context, and re-applied per binding site by a consumer.";
+                readonly properties: {
+                    readonly states: {
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateAttach";
+                        };
+                        readonly minItems: 1;
+                        readonly title: "States";
+                        readonly type: "array";
+                    };
+                };
+                readonly required: readonly ["states"];
+                readonly title: "StateBinding";
+                readonly type: "object";
+            };
+            readonly StateInjection: {
+                readonly additionalProperties: false;
+                readonly description: "One input injection placed into the run input under ``into`` before the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``input``-purpose template jq\n(``name`` or ``<template>.<name>``) evaluated over the record, or ``jq`` is a templated\ntext rendering to a custom program over the record (its ``.``) with the run input bound as\n``$input``. ``into`` IS the adapter for an injection — the run-input field the value lands\nunder. Frozen.";
+                readonly properties: {
+                    readonly into: {
+                        readonly minLength: 1;
+                        readonly title: "Into";
+                        readonly type: "string";
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                            readonly label: "injection jq";
+                            readonly language: "jq";
+                            readonly returns: "the value placed into the run input at 'into'";
+                            readonly sample: {
+                                readonly count: 3;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch is about to run on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly required: readonly ["into"];
+                readonly title: "StateInjection";
+                readonly type: "object";
+            };
+            readonly StateUpdate: {
+                readonly additionalProperties: false;
+                readonly description: "One update applied through the store after the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``update``-purpose template jq\n(``name`` or ``<template>.<name>``) whose ``.input`` object the optional ``adapter`` (a\ntemplated text rendering to a jq over the tool output, its ``.``, with the run input bound\nas ``$input``) shapes from the run's output/input; or ``jq`` is a templated text rendering\nto a custom program over the tool output (its ``.``) with the run input bound as ``$input``\nand the record as ``$record``, authoring the whole op batch itself (a custom update carries\nno adapter). ``op_id`` is an optional templated text rendering to an idempotency-key\nexpression. Frozen.";
+                readonly properties: {
+                    readonly adapter: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "update adapter";
+                            readonly language: "jq";
+                            readonly returns: "the template program's '.input' object";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "custom update jq";
+                            readonly language: "jq";
+                            readonly returns: "the op batch (a list of ops) applied to the record";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }, {
+                                readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                                readonly name: "record";
+                                readonly sample: {
+                                    readonly count: 3;
+                                };
+                            }];
+                        };
+                    };
+                    readonly op_id: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "op_id expression";
+                            readonly language: "jq";
+                            readonly returns: "a string idempotency key, or null for no key";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly title: "StateUpdate";
+                readonly type: "object";
+            };
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly description: "The stored hook record: :class:`HookRegister` plus the server-derived ``execution_key_fingerprint``.\n\nManagers persist this shape, never the request body.";
+        readonly properties: {
+            readonly cancel_expr: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the door's input document";
+                    readonly label: "cancel expression";
+                    readonly language: "jq";
+                    readonly returns: "null (cancel nothing), a parked interaction id, or a list of ids to cancel";
+                    readonly variables: readonly [{
+                        readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                        readonly name: "parked";
+                        readonly sample: readonly [{
+                            readonly answer_format: "confirm";
+                            readonly asked_by: readonly ["main"];
+                            readonly group_id: "g-1";
+                            readonly id: "i-42";
+                            readonly question: "proceed?";
+                            readonly status: "asking";
+                            readonly to: "caller";
+                        }];
+                    }];
+                };
+            };
+            readonly condition: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the declaring surface's input document";
+                    readonly label: "condition";
+                    readonly language: "jq";
+                    readonly returns: "truthy to proceed; a falsy result gates the surface's action off";
+                };
+            };
+            readonly execution_key: {
+                readonly description: "The api-key ``user_id`` the hook fires as; its live stored grants authorize every tool call the fire makes.";
+                readonly minLength: 1;
+                readonly title: "Execution Key";
+                readonly type: "string";
+            };
+            readonly execution_key_fingerprint: {
+                readonly description: "The bound key's per-mint identity, derived server-side at bind and never client-supplied. The fire matches it against the live key, so a revoke+remint of the same ``user_id`` fails closed.";
+                readonly minLength: 1;
+                readonly title: "Execution Key Fingerprint";
+                readonly type: "string";
+            };
+            readonly extras_expr: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the door's input document";
+                    readonly label: "extras expression";
+                    readonly language: "jq";
+                    readonly returns: "the extras mapping handed to the started target; null for no extras";
+                    readonly variables: readonly [{
+                        readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                        readonly name: "parked";
+                        readonly sample: readonly [{
+                            readonly answer_format: "confirm";
+                            readonly asked_by: readonly ["main"];
+                            readonly group_id: "g-1";
+                            readonly id: "i-42";
+                            readonly question: "proceed?";
+                            readonly status: "asking";
+                            readonly to: "caller";
+                        }];
+                    }];
+                };
+            };
+            readonly name: {
+                readonly minLength: 1;
+                readonly title: "Name";
+                readonly type: "string";
+            };
+            readonly resume_expr: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the door's input document";
+                    readonly label: "resume expression";
+                    readonly language: "jq";
+                    readonly returns: "null (resume nothing), {id, payload} to resume an ask with an answer, a bare id to take a waiting outcome, or a list of these";
+                    readonly variables: readonly [{
+                        readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                        readonly name: "parked";
+                        readonly sample: readonly [{
+                            readonly answer_format: "confirm";
+                            readonly asked_by: readonly ["main"];
+                            readonly group_id: "g-1";
+                            readonly id: "i-42";
+                            readonly question: "proceed?";
+                            readonly status: "asking";
+                            readonly to: "caller";
+                        }];
+                    }];
+                };
+            };
+            readonly start_expr: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the door's input document";
+                    readonly label: "start expression";
+                    readonly language: "jq";
+                    readonly returns: "the object dispatched as the started target's kwargs; null starts nothing";
+                    readonly variables: readonly [{
+                        readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                        readonly name: "parked";
+                        readonly sample: readonly [{
+                            readonly answer_format: "confirm";
+                            readonly asked_by: readonly ["main"];
+                            readonly group_id: "g-1";
+                            readonly id: "i-42";
+                            readonly question: "proceed?";
+                            readonly status: "asking";
+                            readonly to: "caller";
+                        }];
+                    }];
+                };
+            };
+            readonly state_binding: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/StateBinding";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+            };
+            readonly subject: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/HookSubject";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+            };
+            readonly tool: {
+                readonly minLength: 1;
+                readonly title: "Tool";
+                readonly type: "string";
+            };
+            readonly tool_kwargs: {
+                readonly additionalProperties: true;
+                readonly default: {};
+                readonly title: "Tool Kwargs";
+                readonly type: "object";
+            };
+            readonly topic: {
+                readonly minLength: 1;
+                readonly title: "Topic";
+                readonly type: "string";
+            };
+        };
+        readonly required: readonly ["name", "topic", "tool", "execution_key", "execution_key_fingerprint"];
+        readonly title: "HookParams";
+        readonly type: "object";
+    };
+    readonly HookRegister: {
+        readonly $defs: {
+            readonly HookSubject: {
+                readonly additionalProperties: false;
+                readonly description: "The optional state subject a hook fire targets.\n\nCarries the conversation-target scope ``(target_kind, target_name)``, the subject ``kind`` (matching\n:data:`~tai42_contract.states.SUBJECT_KIND_RE`), and a ``key_expr`` — a templated text\ncarrying (inline or by stored id) a jq program evaluated over the event payload at\nfire — it must yield a non-empty string, else the fire fails loudly like any hook\nerror. Frozen; deposited as the ambient state context so a state write during the fire\nis keyed and attributed to the hook.";
+                readonly properties: {
+                    readonly key_expr: {
+                        readonly $ref: "#/$defs/TemplatedText";
+                    };
+                    readonly kind: {
+                        readonly title: "Kind";
+                        readonly type: "string";
+                    };
+                    readonly target_kind: {
+                        readonly enum: readonly ["agent", "tool"];
+                        readonly title: "Target Kind";
+                        readonly type: "string";
+                    };
+                    readonly target_name: {
+                        readonly minLength: 1;
+                        readonly title: "Target Name";
+                        readonly type: "string";
+                    };
+                };
+                readonly required: readonly ["target_kind", "target_name", "kind", "key_expr"];
+                readonly title: "HookSubject";
+                readonly type: "object";
+            };
+            readonly StateAttach: {
+                readonly additionalProperties: false;
+                readonly description: "One state attached by a binding.\n\nCarries the ``state`` name, the ``templates`` to attach on it (attach-on-use, idempotent at save),\nthe ``subject_expr`` (a templated text rendering to a jq over the run input → a full subject object\nor the record KEY, its scope taken from the ambient door context and its kind from the state's\ndeclared subject kind), an optional ``scope_expr`` (a templated text rendering to a BOOLEAN predicate\nover the run input evaluated first — ``false`` skips this state for the run, a non-boolean is a loud\nerror, absent engages), and the ordered ``input_injections`` / ``updates``. Frozen.";
+                readonly properties: {
+                    readonly input_injections: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateInjection";
+                        };
+                        readonly title: "Input Injections";
+                        readonly type: "array";
+                    };
+                    readonly scope_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run input the dispatch is about to run on";
+                            readonly label: "scope expression";
+                            readonly language: "jq";
+                            readonly returns: "a boolean — false skips this state for the run, true (or absent) engages it";
+                            readonly sample: {
+                                readonly account_id: "acct_42";
+                            };
+                        };
+                    };
+                    readonly state: {
+                        readonly title: "State";
+                        readonly type: "string";
+                    };
+                    readonly subject_expr: {
+                        readonly $ref: "#/$defs/TemplatedText";
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run input the dispatch is about to run on";
+                            readonly label: "subject expression";
+                            readonly language: "jq";
+                            readonly returns: "a full subject object {target_kind, target_name, kind, key}, or a bare key string";
+                            readonly sample: {
+                                readonly account_id: "acct_42";
+                            };
+                        };
+                    };
+                    readonly templates: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly type: "string";
+                        };
+                        readonly title: "Templates";
+                        readonly type: "array";
+                    };
+                    readonly updates: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateUpdate";
+                        };
+                        readonly title: "Updates";
+                        readonly type: "array";
+                    };
+                };
+                readonly required: readonly ["state", "subject_expr"];
+                readonly title: "StateAttach";
+                readonly type: "object";
+            };
+            readonly StateBinding: {
+                readonly additionalProperties: false;
+                readonly description: "The optional binding a door carries: one or more :class:`StateAttach` entries. Frozen.\n\nThe same shape is stored on ``PresetBody``/``PresetSeed``, ``TargetConversationConfig``,\n``HookRegister`` and ``ScheduleCreate``, deposited on ``ToolInvocation`` through the\nambient dispatch context, and re-applied per binding site by a consumer.";
+                readonly properties: {
+                    readonly states: {
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateAttach";
+                        };
+                        readonly minItems: 1;
+                        readonly title: "States";
+                        readonly type: "array";
+                    };
+                };
+                readonly required: readonly ["states"];
+                readonly title: "StateBinding";
+                readonly type: "object";
+            };
+            readonly StateInjection: {
+                readonly additionalProperties: false;
+                readonly description: "One input injection placed into the run input under ``into`` before the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``input``-purpose template jq\n(``name`` or ``<template>.<name>``) evaluated over the record, or ``jq`` is a templated\ntext rendering to a custom program over the record (its ``.``) with the run input bound as\n``$input``. ``into`` IS the adapter for an injection — the run-input field the value lands\nunder. Frozen.";
+                readonly properties: {
+                    readonly into: {
+                        readonly minLength: 1;
+                        readonly title: "Into";
+                        readonly type: "string";
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                            readonly label: "injection jq";
+                            readonly language: "jq";
+                            readonly returns: "the value placed into the run input at 'into'";
+                            readonly sample: {
+                                readonly count: 3;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch is about to run on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly required: readonly ["into"];
+                readonly title: "StateInjection";
+                readonly type: "object";
+            };
+            readonly StateUpdate: {
+                readonly additionalProperties: false;
+                readonly description: "One update applied through the store after the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``update``-purpose template jq\n(``name`` or ``<template>.<name>``) whose ``.input`` object the optional ``adapter`` (a\ntemplated text rendering to a jq over the tool output, its ``.``, with the run input bound\nas ``$input``) shapes from the run's output/input; or ``jq`` is a templated text rendering\nto a custom program over the tool output (its ``.``) with the run input bound as ``$input``\nand the record as ``$record``, authoring the whole op batch itself (a custom update carries\nno adapter). ``op_id`` is an optional templated text rendering to an idempotency-key\nexpression. Frozen.";
+                readonly properties: {
+                    readonly adapter: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "update adapter";
+                            readonly language: "jq";
+                            readonly returns: "the template program's '.input' object";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "custom update jq";
+                            readonly language: "jq";
+                            readonly returns: "the op batch (a list of ops) applied to the record";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }, {
+                                readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                                readonly name: "record";
+                                readonly sample: {
+                                    readonly count: 3;
+                                };
+                            }];
+                        };
+                    };
+                    readonly op_id: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "op_id expression";
+                            readonly language: "jq";
+                            readonly returns: "a string idempotency key, or null for no key";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly title: "StateUpdate";
+                readonly type: "object";
+            };
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly description: "The client-facing register-a-hook request body: the fields a caller supplies.\n\nA hook is a parkable-driving door: it carries the four :class:`ParkableDoorMixin`\njqs (``start_expr`` builds the fired tool's kwargs; ``cancel_expr`` / ``resume_expr``\nact on the run's parked interactions; ``extras_expr`` builds the started run's extras),\neach evaluated over the event payload with the run's parked interactions bound as\n``$parked``.\n\n``execution_key_fingerprint`` is server-derived at bind and deliberately absent\nhere; :class:`HookParams` is this shape plus that one stored field.";
+        readonly properties: {
+            readonly cancel_expr: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the door's input document";
+                    readonly label: "cancel expression";
+                    readonly language: "jq";
+                    readonly returns: "null (cancel nothing), a parked interaction id, or a list of ids to cancel";
+                    readonly variables: readonly [{
+                        readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                        readonly name: "parked";
+                        readonly sample: readonly [{
+                            readonly answer_format: "confirm";
+                            readonly asked_by: readonly ["main"];
+                            readonly group_id: "g-1";
+                            readonly id: "i-42";
+                            readonly question: "proceed?";
+                            readonly status: "asking";
+                            readonly to: "caller";
+                        }];
+                    }];
+                };
+            };
+            readonly condition: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the declaring surface's input document";
+                    readonly label: "condition";
+                    readonly language: "jq";
+                    readonly returns: "truthy to proceed; a falsy result gates the surface's action off";
+                };
+            };
+            readonly execution_key: {
+                readonly description: "The api-key ``user_id`` the hook fires as; its live stored grants authorize every tool call the fire makes.";
+                readonly minLength: 1;
+                readonly title: "Execution Key";
+                readonly type: "string";
+            };
+            readonly extras_expr: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the door's input document";
+                    readonly label: "extras expression";
+                    readonly language: "jq";
+                    readonly returns: "the extras mapping handed to the started target; null for no extras";
+                    readonly variables: readonly [{
+                        readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                        readonly name: "parked";
+                        readonly sample: readonly [{
+                            readonly answer_format: "confirm";
+                            readonly asked_by: readonly ["main"];
+                            readonly group_id: "g-1";
+                            readonly id: "i-42";
+                            readonly question: "proceed?";
+                            readonly status: "asking";
+                            readonly to: "caller";
+                        }];
+                    }];
+                };
+            };
+            readonly name: {
+                readonly minLength: 1;
+                readonly title: "Name";
+                readonly type: "string";
+            };
+            readonly resume_expr: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the door's input document";
+                    readonly label: "resume expression";
+                    readonly language: "jq";
+                    readonly returns: "null (resume nothing), {id, payload} to resume an ask with an answer, a bare id to take a waiting outcome, or a list of these";
+                    readonly variables: readonly [{
+                        readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                        readonly name: "parked";
+                        readonly sample: readonly [{
+                            readonly answer_format: "confirm";
+                            readonly asked_by: readonly ["main"];
+                            readonly group_id: "g-1";
+                            readonly id: "i-42";
+                            readonly question: "proceed?";
+                            readonly status: "asking";
+                            readonly to: "caller";
+                        }];
+                    }];
+                };
+            };
+            readonly start_expr: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the door's input document";
+                    readonly label: "start expression";
+                    readonly language: "jq";
+                    readonly returns: "the object dispatched as the started target's kwargs; null starts nothing";
+                    readonly variables: readonly [{
+                        readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                        readonly name: "parked";
+                        readonly sample: readonly [{
+                            readonly answer_format: "confirm";
+                            readonly asked_by: readonly ["main"];
+                            readonly group_id: "g-1";
+                            readonly id: "i-42";
+                            readonly question: "proceed?";
+                            readonly status: "asking";
+                            readonly to: "caller";
+                        }];
+                    }];
+                };
+            };
+            readonly state_binding: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/StateBinding";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+            };
+            readonly subject: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/HookSubject";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+            };
+            readonly tool: {
+                readonly minLength: 1;
+                readonly title: "Tool";
+                readonly type: "string";
+            };
+            readonly tool_kwargs: {
+                readonly additionalProperties: true;
+                readonly default: {};
+                readonly title: "Tool Kwargs";
+                readonly type: "object";
+            };
+            readonly topic: {
+                readonly minLength: 1;
+                readonly title: "Topic";
+                readonly type: "string";
+            };
+        };
+        readonly required: readonly ["name", "topic", "tool", "execution_key"];
+        readonly title: "HookRegister";
+        readonly type: "object";
+    };
+    readonly HookSubject: {
+        readonly $defs: {
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly additionalProperties: false;
+        readonly description: "The optional state subject a hook fire targets.\n\nCarries the conversation-target scope ``(target_kind, target_name)``, the subject ``kind`` (matching\n:data:`~tai42_contract.states.SUBJECT_KIND_RE`), and a ``key_expr`` — a templated text\ncarrying (inline or by stored id) a jq program evaluated over the event payload at\nfire — it must yield a non-empty string, else the fire fails loudly like any hook\nerror. Frozen; deposited as the ambient state context so a state write during the fire\nis keyed and attributed to the hook.";
+        readonly properties: {
+            readonly key_expr: {
+                readonly $ref: "#/$defs/TemplatedText";
+            };
+            readonly kind: {
+                readonly title: "Kind";
+                readonly type: "string";
+            };
+            readonly target_kind: {
+                readonly enum: readonly ["agent", "tool"];
+                readonly title: "Target Kind";
+                readonly type: "string";
+            };
+            readonly target_name: {
+                readonly minLength: 1;
+                readonly title: "Target Name";
+                readonly type: "string";
+            };
+        };
+        readonly required: readonly ["target_kind", "target_name", "kind", "key_expr"];
+        readonly title: "HookSubject";
+        readonly type: "object";
+    };
+    readonly PresetBody: {
+        readonly $defs: {
+            readonly StateAttach: {
+                readonly additionalProperties: false;
+                readonly description: "One state attached by a binding.\n\nCarries the ``state`` name, the ``templates`` to attach on it (attach-on-use, idempotent at save),\nthe ``subject_expr`` (a templated text rendering to a jq over the run input → a full subject object\nor the record KEY, its scope taken from the ambient door context and its kind from the state's\ndeclared subject kind), an optional ``scope_expr`` (a templated text rendering to a BOOLEAN predicate\nover the run input evaluated first — ``false`` skips this state for the run, a non-boolean is a loud\nerror, absent engages), and the ordered ``input_injections`` / ``updates``. Frozen.";
+                readonly properties: {
+                    readonly input_injections: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateInjection";
+                        };
+                        readonly title: "Input Injections";
+                        readonly type: "array";
+                    };
+                    readonly scope_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run input the dispatch is about to run on";
+                            readonly label: "scope expression";
+                            readonly language: "jq";
+                            readonly returns: "a boolean — false skips this state for the run, true (or absent) engages it";
+                            readonly sample: {
+                                readonly account_id: "acct_42";
+                            };
+                        };
+                    };
+                    readonly state: {
+                        readonly title: "State";
+                        readonly type: "string";
+                    };
+                    readonly subject_expr: {
+                        readonly $ref: "#/$defs/TemplatedText";
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run input the dispatch is about to run on";
+                            readonly label: "subject expression";
+                            readonly language: "jq";
+                            readonly returns: "a full subject object {target_kind, target_name, kind, key}, or a bare key string";
+                            readonly sample: {
+                                readonly account_id: "acct_42";
+                            };
+                        };
+                    };
+                    readonly templates: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly type: "string";
+                        };
+                        readonly title: "Templates";
+                        readonly type: "array";
+                    };
+                    readonly updates: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateUpdate";
+                        };
+                        readonly title: "Updates";
+                        readonly type: "array";
+                    };
+                };
+                readonly required: readonly ["state", "subject_expr"];
+                readonly title: "StateAttach";
+                readonly type: "object";
+            };
+            readonly StateBinding: {
+                readonly additionalProperties: false;
+                readonly description: "The optional binding a door carries: one or more :class:`StateAttach` entries. Frozen.\n\nThe same shape is stored on ``PresetBody``/``PresetSeed``, ``TargetConversationConfig``,\n``HookRegister`` and ``ScheduleCreate``, deposited on ``ToolInvocation`` through the\nambient dispatch context, and re-applied per binding site by a consumer.";
+                readonly properties: {
+                    readonly states: {
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateAttach";
+                        };
+                        readonly minItems: 1;
+                        readonly title: "States";
+                        readonly type: "array";
+                    };
+                };
+                readonly required: readonly ["states"];
+                readonly title: "StateBinding";
+                readonly type: "object";
+            };
+            readonly StateInjection: {
+                readonly additionalProperties: false;
+                readonly description: "One input injection placed into the run input under ``into`` before the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``input``-purpose template jq\n(``name`` or ``<template>.<name>``) evaluated over the record, or ``jq`` is a templated\ntext rendering to a custom program over the record (its ``.``) with the run input bound as\n``$input``. ``into`` IS the adapter for an injection — the run-input field the value lands\nunder. Frozen.";
+                readonly properties: {
+                    readonly into: {
+                        readonly minLength: 1;
+                        readonly title: "Into";
+                        readonly type: "string";
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                            readonly label: "injection jq";
+                            readonly language: "jq";
+                            readonly returns: "the value placed into the run input at 'into'";
+                            readonly sample: {
+                                readonly count: 3;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch is about to run on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly required: readonly ["into"];
+                readonly title: "StateInjection";
+                readonly type: "object";
+            };
+            readonly StateUpdate: {
+                readonly additionalProperties: false;
+                readonly description: "One update applied through the store after the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``update``-purpose template jq\n(``name`` or ``<template>.<name>``) whose ``.input`` object the optional ``adapter`` (a\ntemplated text rendering to a jq over the tool output, its ``.``, with the run input bound\nas ``$input``) shapes from the run's output/input; or ``jq`` is a templated text rendering\nto a custom program over the tool output (its ``.``) with the run input bound as ``$input``\nand the record as ``$record``, authoring the whole op batch itself (a custom update carries\nno adapter). ``op_id`` is an optional templated text rendering to an idempotency-key\nexpression. Frozen.";
+                readonly properties: {
+                    readonly adapter: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "update adapter";
+                            readonly language: "jq";
+                            readonly returns: "the template program's '.input' object";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "custom update jq";
+                            readonly language: "jq";
+                            readonly returns: "the op batch (a list of ops) applied to the record";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }, {
+                                readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                                readonly name: "record";
+                                readonly sample: {
+                                    readonly count: 3;
+                                };
+                            }];
+                        };
+                    };
+                    readonly op_id: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "op_id expression";
+                            readonly language: "jq";
+                            readonly returns: "a string idempotency key, or null for no key";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly title: "StateUpdate";
+                readonly type: "object";
+            };
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly description: "The persisted body of a versioned preset.\n\n``base_tool`` is the tool the preset binds; ``description`` is the preset's\nhuman description; ``fixed_kwargs`` are the baked kwargs (each becomes a\nhidden, fixed constant on the bound tool). ``extensions`` is a list of\nextension COMBOS — the SAME shape as a manifest ``extensions`` map value,\neach combo element an extension name or a ``{\"name\", \"config\"}`` mapping\nbinding author config (e.g. an ``ask_external`` verifier) — fed unconverted\nto the structured runtime-attach API at register (an empty outer list means\nno extensions; an empty INNER combo is rejected by the validating view).\n``output_schema`` is an optional author-set OUTPUT JSON Schema (an object\nschema): on an AGENT base it is baked into the run tool's ``response_format``\nso the agent FORCES a structured output matching it; on a plain tool it is\nadvertised as the bound tool's output schema and every result is validated\nagainst it at run time. ``input_schema`` is an optional author-set INPUT JSON\nSchema: it becomes the exposed named tool's input contract, and the caller's\nvalidated object is routed into the base tool's declared payload argument (see\n:class:`PresetInputSchemaSupport`). Only a base tool that DECLARES input-schema\nsupport accepts one; otherwise a set ``input_schema`` is a loud authoring error.\n\nEach schema is the ``TemplatedText | dict`` union: an inline ``dict`` is the JSON\nSchema document itself; a :class:`~tai42_contract.template.TemplatedText` names a stored\nschema by ``id`` (or carries it inline as ``content``), rendered and parsed as JSON to the\nsame schema at the point of use and save.\n\nEvery field must survive carry-forward on a version save: dropping\n``extensions`` would make the branch tools vanish on reload, dropping\n``base_tool`` would break the bind, dropping ``description`` would strip the\ntool's description, dropping ``output_schema`` would silently un-enforce the\nstructured output, and dropping ``input_schema`` would silently un-enforce the\nstructured input.\n\nA ``fixed_kwargs`` scalar-string value written ``!ENV ${VAR}`` is a SECRET\nREFERENCE, not a credential: the server resolves it from the environment at bind\nand the store keeps only the reference — never the resolved value.";
+        readonly properties: {
+            readonly base_tool: {
+                readonly title: "Base Tool";
+                readonly type: "string";
+            };
+            readonly description: {
+                readonly default: "";
+                readonly title: "Description";
+                readonly type: "string";
+            };
+            readonly extensions: {
+                readonly default: readonly [];
+                readonly items: {
+                    readonly items: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly additionalProperties: true;
+                            readonly type: "object";
+                        }];
+                    };
+                    readonly type: "array";
+                };
+                readonly title: "Extensions";
+                readonly type: "array";
+            };
+            readonly fixed_kwargs: {
+                readonly additionalProperties: true;
+                readonly default: {};
+                readonly description: "Baked kwargs, each a hidden fixed constant on the bound tool. A scalar-string value written `!ENV ${VAR}` (or `!ENV ${VAR:default}`) is a SECRET REFERENCE: the server resolves it from that environment variable server-side at bind and bakes the resolved value, while the stored body, its versions and any export keep only the reference — never the credential. A `:default` is baked and stored in the clear, so a credential must never be written as a default.";
+                readonly title: "Fixed Kwargs";
+                readonly type: "object";
+            };
+            readonly input_schema: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly additionalProperties: true;
+                    readonly type: "object";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Input Schema";
+            };
+            readonly output_schema: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly additionalProperties: true;
+                    readonly type: "object";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Output Schema";
+            };
+            readonly state_binding: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/StateBinding";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+            };
+        };
+        readonly required: readonly ["base_tool"];
+        readonly title: "PresetBody";
+        readonly type: "object";
+    };
+    readonly PresetSeed: {
+        readonly $defs: {
+            readonly PresetSeedToolMeta: {
+                readonly description: "The optional display metadata a :class:`PresetSeed` seeds onto its preset's tool_meta.\n\nEach field is applied only where the preset's tool_meta leaves it absent — a seed never overwrites\nan operator-set display value.\n\n``display_name`` is the human tool title; ``tags`` label it in listings;\n``folder_path`` is a ``/``-style path the applier resolves into the tool_meta\nfolder tree (creating missing segments), never a raw stored string.";
+                readonly properties: {
+                    readonly display_name: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Display Name";
+                    };
+                    readonly folder_path: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Folder Path";
+                    };
+                    readonly tags: {
+                        readonly anyOf: readonly [{
+                            readonly items: {
+                                readonly type: "string";
+                            };
+                            readonly type: "array";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Tags";
+                    };
+                };
+                readonly title: "PresetSeedToolMeta";
+                readonly type: "object";
+            };
+            readonly StateAttach: {
+                readonly additionalProperties: false;
+                readonly description: "One state attached by a binding.\n\nCarries the ``state`` name, the ``templates`` to attach on it (attach-on-use, idempotent at save),\nthe ``subject_expr`` (a templated text rendering to a jq over the run input → a full subject object\nor the record KEY, its scope taken from the ambient door context and its kind from the state's\ndeclared subject kind), an optional ``scope_expr`` (a templated text rendering to a BOOLEAN predicate\nover the run input evaluated first — ``false`` skips this state for the run, a non-boolean is a loud\nerror, absent engages), and the ordered ``input_injections`` / ``updates``. Frozen.";
+                readonly properties: {
+                    readonly input_injections: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateInjection";
+                        };
+                        readonly title: "Input Injections";
+                        readonly type: "array";
+                    };
+                    readonly scope_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run input the dispatch is about to run on";
+                            readonly label: "scope expression";
+                            readonly language: "jq";
+                            readonly returns: "a boolean — false skips this state for the run, true (or absent) engages it";
+                            readonly sample: {
+                                readonly account_id: "acct_42";
+                            };
+                        };
+                    };
+                    readonly state: {
+                        readonly title: "State";
+                        readonly type: "string";
+                    };
+                    readonly subject_expr: {
+                        readonly $ref: "#/$defs/TemplatedText";
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run input the dispatch is about to run on";
+                            readonly label: "subject expression";
+                            readonly language: "jq";
+                            readonly returns: "a full subject object {target_kind, target_name, kind, key}, or a bare key string";
+                            readonly sample: {
+                                readonly account_id: "acct_42";
+                            };
+                        };
+                    };
+                    readonly templates: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly type: "string";
+                        };
+                        readonly title: "Templates";
+                        readonly type: "array";
+                    };
+                    readonly updates: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateUpdate";
+                        };
+                        readonly title: "Updates";
+                        readonly type: "array";
+                    };
+                };
+                readonly required: readonly ["state", "subject_expr"];
+                readonly title: "StateAttach";
+                readonly type: "object";
+            };
+            readonly StateBinding: {
+                readonly additionalProperties: false;
+                readonly description: "The optional binding a door carries: one or more :class:`StateAttach` entries. Frozen.\n\nThe same shape is stored on ``PresetBody``/``PresetSeed``, ``TargetConversationConfig``,\n``HookRegister`` and ``ScheduleCreate``, deposited on ``ToolInvocation`` through the\nambient dispatch context, and re-applied per binding site by a consumer.";
+                readonly properties: {
+                    readonly states: {
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateAttach";
+                        };
+                        readonly minItems: 1;
+                        readonly title: "States";
+                        readonly type: "array";
+                    };
+                };
+                readonly required: readonly ["states"];
+                readonly title: "StateBinding";
+                readonly type: "object";
+            };
+            readonly StateInjection: {
+                readonly additionalProperties: false;
+                readonly description: "One input injection placed into the run input under ``into`` before the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``input``-purpose template jq\n(``name`` or ``<template>.<name>``) evaluated over the record, or ``jq`` is a templated\ntext rendering to a custom program over the record (its ``.``) with the run input bound as\n``$input``. ``into`` IS the adapter for an injection — the run-input field the value lands\nunder. Frozen.";
+                readonly properties: {
+                    readonly into: {
+                        readonly minLength: 1;
+                        readonly title: "Into";
+                        readonly type: "string";
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                            readonly label: "injection jq";
+                            readonly language: "jq";
+                            readonly returns: "the value placed into the run input at 'into'";
+                            readonly sample: {
+                                readonly count: 3;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch is about to run on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly required: readonly ["into"];
+                readonly title: "StateInjection";
+                readonly type: "object";
+            };
+            readonly StateUpdate: {
+                readonly additionalProperties: false;
+                readonly description: "One update applied through the store after the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``update``-purpose template jq\n(``name`` or ``<template>.<name>``) whose ``.input`` object the optional ``adapter`` (a\ntemplated text rendering to a jq over the tool output, its ``.``, with the run input bound\nas ``$input``) shapes from the run's output/input; or ``jq`` is a templated text rendering\nto a custom program over the tool output (its ``.``) with the run input bound as ``$input``\nand the record as ``$record``, authoring the whole op batch itself (a custom update carries\nno adapter). ``op_id`` is an optional templated text rendering to an idempotency-key\nexpression. Frozen.";
+                readonly properties: {
+                    readonly adapter: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "update adapter";
+                            readonly language: "jq";
+                            readonly returns: "the template program's '.input' object";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "custom update jq";
+                            readonly language: "jq";
+                            readonly returns: "the op batch (a list of ops) applied to the record";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }, {
+                                readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                                readonly name: "record";
+                                readonly sample: {
+                                    readonly count: 3;
+                                };
+                            }];
+                        };
+                    };
+                    readonly op_id: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "op_id expression";
+                            readonly language: "jq";
+                            readonly returns: "a string idempotency key, or null for no key";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly title: "StateUpdate";
+                readonly type: "object";
+            };
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly description: "A declared default preset a plugin ships for import-time seeding.\n\nA seed names the preset (``name``), its human ``description``, the\n``base_tool`` it binds, and the ``fixed_kwargs`` baked in — the same body a\n:class:`PresetBody` carries — plus the optional author ``input_schema`` /\n``output_schema`` and optional ``tool_meta`` display seed. The applier creates\nor upgrades the preset from this shape; the contract holds only the SHAPE,\nnever the applier logic.\n\nA ``fixed_kwargs`` scalar-string value written ``!ENV ${VAR}`` is a SECRET\nREFERENCE, not a credential: the server resolves it from the environment at bind\nand the store keeps only the reference — never the resolved value.";
+        readonly properties: {
+            readonly base_tool: {
+                readonly title: "Base Tool";
+                readonly type: "string";
+            };
+            readonly description: {
+                readonly title: "Description";
+                readonly type: "string";
+            };
+            readonly fixed_kwargs: {
+                readonly additionalProperties: true;
+                readonly default: {};
+                readonly description: "Baked kwargs, each a hidden fixed constant on the bound tool. A scalar-string value written `!ENV ${VAR}` (or `!ENV ${VAR:default}`) is a SECRET REFERENCE: the server resolves it from that environment variable server-side at bind and bakes the resolved value, while the stored body, its versions and any export keep only the reference — never the credential. A `:default` is baked and stored in the clear, so a credential must never be written as a default.";
+                readonly title: "Fixed Kwargs";
+                readonly type: "object";
+            };
+            readonly input_schema: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly additionalProperties: true;
+                    readonly type: "object";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Input Schema";
+            };
+            readonly name: {
+                readonly title: "Name";
+                readonly type: "string";
+            };
+            readonly output_schema: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly additionalProperties: true;
+                    readonly type: "object";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Output Schema";
+            };
+            readonly state_binding: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/StateBinding";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+            };
+            readonly tool_meta: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/PresetSeedToolMeta";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+            };
+        };
+        readonly required: readonly ["name", "description", "base_tool"];
+        readonly title: "PresetSeed";
+        readonly type: "object";
+    };
+    readonly PreviousProfileName: {
+        readonly const: "@previous";
+        readonly description: "The rollback snapshot's name.";
+        readonly title: "PreviousProfileName";
+        readonly type: "string";
+    };
+    readonly RoleDefinition: {
+        readonly $defs: {
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly description: "An operator-authored role: the one validated shape every access-control surface shares.\n\nShared by the enforcer / membership-check, the management operations, and the generated\nStudio SDK.\n\nA role composes TWO layers. Layer 1 is a KEPT jq security base — carried on\nthe ``condition`` field (from ``ConditionMixin``) so the body round-trips it,\nbut NEVER authored through the grant map: the seed sets it (admin → ``None``,\neditor/viewer → their base jq) and a new role inherits it from its\n``base_tier``. Layer 2 is the editable ``grants`` — a per-tag ACCESS LEVEL\nmap (feature-group TAG name → ``none``/``read``/``write``) naming the role's\nlevel on each feature group. An absent tag means level ``none`` (deny).";
+        readonly properties: {
+            readonly allow_all: {
+                readonly default: false;
+                readonly title: "Allow All";
+                readonly type: "boolean";
+            };
+            readonly base_tier: {
+                readonly anyOf: readonly [{
+                    readonly type: "string";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Base Tier";
+            };
+            readonly condition: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the auth context (a dumped JqAuthContext)";
+                    readonly keys: readonly [{
+                        readonly gloss: "the caller's subject id";
+                        readonly name: "sub";
+                    }, {
+                        readonly gloss: "the caller's granted scopes";
+                        readonly name: "scopes";
+                    }, {
+                        readonly gloss: "who the caller is — the token's identity claims";
+                        readonly name: "identity";
+                    }, {
+                        readonly gloss: "the caller's static policy data";
+                        readonly name: "policy";
+                    }, {
+                        readonly gloss: "dynamic environment data for this decision";
+                        readonly name: "context";
+                    }, {
+                        readonly gloss: "the operation being authorized";
+                        readonly name: "request";
+                    }, {
+                        readonly gloss: "caller-supplied time/constants (e.g. the current epoch)";
+                        readonly name: "system";
+                    }];
+                    readonly label: "condition";
+                    readonly language: "jq";
+                    readonly returns: "EXACTLY boolean true to allow; any other value — including any other truthy result — DENIES";
+                };
+            };
+            readonly description: {
+                readonly title: "Description";
+                readonly type: "string";
+            };
+            readonly grants: {
+                readonly additionalProperties: {
+                    readonly enum: readonly ["none", "read", "write"];
+                    readonly type: "string";
+                };
+                readonly title: "Grants";
+                readonly type: "object";
+            };
+            readonly name: {
+                readonly title: "Name";
+                readonly type: "string";
+            };
+            readonly scopes: {
+                readonly default: readonly [];
+                readonly items: {
+                    readonly type: "string";
+                };
+                readonly title: "Scopes";
+                readonly type: "array";
+            };
+        };
+        readonly required: readonly ["name", "description", "grants"];
+        readonly title: "RoleDefinition";
+        readonly type: "object";
+    };
+    readonly ScheduleCreate: {
+        readonly $defs: {
+            readonly CrontabCadence: {
+                readonly additionalProperties: false;
+                readonly description: "Fire on a five-field crontab (minute, hour, day of month, month, day of week).";
+                readonly properties: {
+                    readonly day_of_month: {
+                        readonly default: "*";
+                        readonly title: "Day Of Month";
+                        readonly type: "string";
+                    };
+                    readonly day_of_week: {
+                        readonly default: "*";
+                        readonly title: "Day Of Week";
+                        readonly type: "string";
+                    };
+                    readonly hour: {
+                        readonly default: "*";
+                        readonly title: "Hour";
+                        readonly type: "string";
+                    };
+                    readonly kind: {
+                        readonly const: "crontab";
+                        readonly default: "crontab";
+                        readonly title: "Kind";
+                        readonly type: "string";
+                    };
+                    readonly minute: {
+                        readonly default: "*";
+                        readonly title: "Minute";
+                        readonly type: "string";
+                    };
+                    readonly month_of_year: {
+                        readonly default: "*";
+                        readonly title: "Month Of Year";
+                        readonly type: "string";
+                    };
+                };
+                readonly title: "CrontabCadence";
+                readonly type: "object";
+            };
+            readonly IntervalCadence: {
+                readonly additionalProperties: false;
+                readonly description: "Fire every ``every`` seconds; ``relative`` aligns the schedule to the interval's own clock.";
+                readonly properties: {
+                    readonly every: {
+                        readonly description: "The interval in seconds.";
+                        readonly exclusiveMinimum: 0;
+                        readonly title: "Every";
+                        readonly type: "number";
+                    };
+                    readonly kind: {
+                        readonly const: "interval";
+                        readonly default: "interval";
+                        readonly title: "Kind";
+                        readonly type: "string";
+                    };
+                    readonly relative: {
+                        readonly default: false;
+                        readonly title: "Relative";
+                        readonly type: "boolean";
+                    };
+                };
+                readonly required: readonly ["every"];
+                readonly title: "IntervalCadence";
+                readonly type: "object";
+            };
+            readonly StateAttach: {
+                readonly additionalProperties: false;
+                readonly description: "One state attached by a binding.\n\nCarries the ``state`` name, the ``templates`` to attach on it (attach-on-use, idempotent at save),\nthe ``subject_expr`` (a templated text rendering to a jq over the run input → a full subject object\nor the record KEY, its scope taken from the ambient door context and its kind from the state's\ndeclared subject kind), an optional ``scope_expr`` (a templated text rendering to a BOOLEAN predicate\nover the run input evaluated first — ``false`` skips this state for the run, a non-boolean is a loud\nerror, absent engages), and the ordered ``input_injections`` / ``updates``. Frozen.";
+                readonly properties: {
+                    readonly input_injections: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateInjection";
+                        };
+                        readonly title: "Input Injections";
+                        readonly type: "array";
+                    };
+                    readonly scope_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run input the dispatch is about to run on";
+                            readonly label: "scope expression";
+                            readonly language: "jq";
+                            readonly returns: "a boolean — false skips this state for the run, true (or absent) engages it";
+                            readonly sample: {
+                                readonly account_id: "acct_42";
+                            };
+                        };
+                    };
+                    readonly state: {
+                        readonly title: "State";
+                        readonly type: "string";
+                    };
+                    readonly subject_expr: {
+                        readonly $ref: "#/$defs/TemplatedText";
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run input the dispatch is about to run on";
+                            readonly label: "subject expression";
+                            readonly language: "jq";
+                            readonly returns: "a full subject object {target_kind, target_name, kind, key}, or a bare key string";
+                            readonly sample: {
+                                readonly account_id: "acct_42";
+                            };
+                        };
+                    };
+                    readonly templates: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly type: "string";
+                        };
+                        readonly title: "Templates";
+                        readonly type: "array";
+                    };
+                    readonly updates: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateUpdate";
+                        };
+                        readonly title: "Updates";
+                        readonly type: "array";
+                    };
+                };
+                readonly required: readonly ["state", "subject_expr"];
+                readonly title: "StateAttach";
+                readonly type: "object";
+            };
+            readonly StateBinding: {
+                readonly additionalProperties: false;
+                readonly description: "The optional binding a door carries: one or more :class:`StateAttach` entries. Frozen.\n\nThe same shape is stored on ``PresetBody``/``PresetSeed``, ``TargetConversationConfig``,\n``HookRegister`` and ``ScheduleCreate``, deposited on ``ToolInvocation`` through the\nambient dispatch context, and re-applied per binding site by a consumer.";
+                readonly properties: {
+                    readonly states: {
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateAttach";
+                        };
+                        readonly minItems: 1;
+                        readonly title: "States";
+                        readonly type: "array";
+                    };
+                };
+                readonly required: readonly ["states"];
+                readonly title: "StateBinding";
+                readonly type: "object";
+            };
+            readonly StateInjection: {
+                readonly additionalProperties: false;
+                readonly description: "One input injection placed into the run input under ``into`` before the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``input``-purpose template jq\n(``name`` or ``<template>.<name>``) evaluated over the record, or ``jq`` is a templated\ntext rendering to a custom program over the record (its ``.``) with the run input bound as\n``$input``. ``into`` IS the adapter for an injection — the run-input field the value lands\nunder. Frozen.";
+                readonly properties: {
+                    readonly into: {
+                        readonly minLength: 1;
+                        readonly title: "Into";
+                        readonly type: "string";
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                            readonly label: "injection jq";
+                            readonly language: "jq";
+                            readonly returns: "the value placed into the run input at 'into'";
+                            readonly sample: {
+                                readonly count: 3;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch is about to run on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly required: readonly ["into"];
+                readonly title: "StateInjection";
+                readonly type: "object";
+            };
+            readonly StateSubject: {
+                readonly additionalProperties: false;
+                readonly description: "One addressed subject: a scope ``(target_kind, target_name)`` plus ``(kind, key)`` within it.\n\nEquality (and identity across every store method) is all four fields. ``key`` is\nstripped and must be 1..512 characters; ``kind`` matches :data:`SUBJECT_KIND_RE`.\nFrozen so a validated subject cannot be mutated after it is read back.";
+                readonly properties: {
+                    readonly key: {
+                        readonly title: "Key";
+                        readonly type: "string";
+                    };
+                    readonly kind: {
+                        readonly title: "Kind";
+                        readonly type: "string";
+                    };
+                    readonly target_kind: {
+                        readonly enum: readonly ["agent", "tool"];
+                        readonly title: "Target Kind";
+                        readonly type: "string";
+                    };
+                    readonly target_name: {
+                        readonly minLength: 1;
+                        readonly title: "Target Name";
+                        readonly type: "string";
+                    };
+                };
+                readonly required: readonly ["target_kind", "target_name", "kind", "key"];
+                readonly title: "StateSubject";
+                readonly type: "object";
+            };
+            readonly StateUpdate: {
+                readonly additionalProperties: false;
+                readonly description: "One update applied through the store after the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``update``-purpose template jq\n(``name`` or ``<template>.<name>``) whose ``.input`` object the optional ``adapter`` (a\ntemplated text rendering to a jq over the tool output, its ``.``, with the run input bound\nas ``$input``) shapes from the run's output/input; or ``jq`` is a templated text rendering\nto a custom program over the tool output (its ``.``) with the run input bound as ``$input``\nand the record as ``$record``, authoring the whole op batch itself (a custom update carries\nno adapter). ``op_id`` is an optional templated text rendering to an idempotency-key\nexpression. Frozen.";
+                readonly properties: {
+                    readonly adapter: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "update adapter";
+                            readonly language: "jq";
+                            readonly returns: "the template program's '.input' object";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "custom update jq";
+                            readonly language: "jq";
+                            readonly returns: "the op batch (a list of ops) applied to the record";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }, {
+                                readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                                readonly name: "record";
+                                readonly sample: {
+                                    readonly count: 3;
+                                };
+                            }];
+                        };
+                    };
+                    readonly op_id: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "op_id expression";
+                            readonly language: "jq";
+                            readonly returns: "a string idempotency key, or null for no key";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly title: "StateUpdate";
+                readonly type: "object";
+            };
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly additionalProperties: false;
+        readonly description: "Create a schedule that runs ``tool_name`` on ``cadence``, or once now when no cadence is given.\n\n``tool_kwargs`` are the arguments each fire passes to the tool, the tool's alone and forwarded\nuntouched — a tool whose OWN argument is named ``subject`` carries it here like any argument.\n``subject`` is the OPTIONAL top-level door field naming the ``schedule``-door state context each\nfire re-establishes: the create door stamps it onto the job, and the fire keys its state writes and\nparks on it (it never reaches the base tool). ``state_binding`` is the OPTIONAL door-layer binding\nthe fire applies around the started tool alone (never the base tool's). ``schedule_name`` names a\nrecurring schedule; without it the door derives one from the tool, its arguments and the cadence.\n\nA schedule is a parkable-driving door: it carries the four :class:`ParkableDoorMixin` jqs\n(``start_expr`` builds the fired tool's kwargs; ``cancel_expr`` / ``resume_expr`` act on the run's\nparked interactions; ``extras_expr`` builds the started run's extras), each evaluated over the\nfired tool's arguments with the run's parked interactions bound as ``$parked``. Any contract jq\nneeds an ``execution_key`` (the api-key ``user_id`` the recurring fire runs as, so a park it\nraises can be rebound and resumed under that authority).";
+        readonly properties: {
+            readonly cadence: {
+                readonly anyOf: readonly [{
+                    readonly discriminator: {
+                        readonly mapping: {
+                            readonly crontab: "#/$defs/CrontabCadence";
+                            readonly interval: "#/$defs/IntervalCadence";
+                        };
+                        readonly propertyName: "kind";
+                    };
+                    readonly oneOf: readonly [{
+                        readonly $ref: "#/$defs/IntervalCadence";
+                    }, {
+                        readonly $ref: "#/$defs/CrontabCadence";
+                    }];
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly description: "The cadence; none runs the tool once now.";
+                readonly title: "Cadence";
+            };
+            readonly cancel_expr: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the door's input document";
+                    readonly label: "cancel expression";
+                    readonly language: "jq";
+                    readonly returns: "null (cancel nothing), a parked interaction id, or a list of ids to cancel";
+                    readonly variables: readonly [{
+                        readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                        readonly name: "parked";
+                        readonly sample: readonly [{
+                            readonly answer_format: "confirm";
+                            readonly asked_by: readonly ["main"];
+                            readonly group_id: "g-1";
+                            readonly id: "i-42";
+                            readonly question: "proceed?";
+                            readonly status: "asking";
+                            readonly to: "caller";
+                        }];
+                    }];
+                };
+            };
+            readonly execution_key: {
+                readonly anyOf: readonly [{
+                    readonly minLength: 1;
+                    readonly type: "string";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly description: "The api-key user_id a contract-bearing recurring fire runs as (required with any contract jq).";
+                readonly title: "Execution Key";
+            };
+            readonly extras_expr: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the door's input document";
+                    readonly label: "extras expression";
+                    readonly language: "jq";
+                    readonly returns: "the extras mapping handed to the started target; null for no extras";
+                    readonly variables: readonly [{
+                        readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                        readonly name: "parked";
+                        readonly sample: readonly [{
+                            readonly answer_format: "confirm";
+                            readonly asked_by: readonly ["main"];
+                            readonly group_id: "g-1";
+                            readonly id: "i-42";
+                            readonly question: "proceed?";
+                            readonly status: "asking";
+                            readonly to: "caller";
+                        }];
+                    }];
+                };
+            };
+            readonly resume_expr: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the door's input document";
+                    readonly label: "resume expression";
+                    readonly language: "jq";
+                    readonly returns: "null (resume nothing), {id, payload} to resume an ask with an answer, a bare id to take a waiting outcome, or a list of these";
+                    readonly variables: readonly [{
+                        readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                        readonly name: "parked";
+                        readonly sample: readonly [{
+                            readonly answer_format: "confirm";
+                            readonly asked_by: readonly ["main"];
+                            readonly group_id: "g-1";
+                            readonly id: "i-42";
+                            readonly question: "proceed?";
+                            readonly status: "asking";
+                            readonly to: "caller";
+                        }];
+                    }];
+                };
+            };
+            readonly schedule_name: {
+                readonly anyOf: readonly [{
+                    readonly minLength: 1;
+                    readonly type: "string";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Schedule Name";
+            };
+            readonly start_expr: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the door's input document";
+                    readonly label: "start expression";
+                    readonly language: "jq";
+                    readonly returns: "the object dispatched as the started target's kwargs; null starts nothing";
+                    readonly variables: readonly [{
+                        readonly blurb: "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields";
+                        readonly name: "parked";
+                        readonly sample: readonly [{
+                            readonly answer_format: "confirm";
+                            readonly asked_by: readonly ["main"];
+                            readonly group_id: "g-1";
+                            readonly id: "i-42";
+                            readonly question: "proceed?";
+                            readonly status: "asking";
+                            readonly to: "caller";
+                        }];
+                    }];
+                };
+            };
+            readonly state_binding: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/StateBinding";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+            };
+            readonly subject: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/StateSubject";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+            };
+            readonly tool_kwargs: {
+                readonly additionalProperties: true;
+                readonly default: {};
+                readonly title: "Tool Kwargs";
+                readonly type: "object";
+            };
+            readonly tool_name: {
+                readonly description: "The base tool to run.";
+                readonly minLength: 1;
+                readonly title: "Tool Name";
+                readonly type: "string";
+            };
+        };
+        readonly required: readonly ["tool_name"];
+        readonly title: "ScheduleCreate";
+        readonly type: "object";
+    };
+    readonly ScheduleListRow: {
+        readonly $defs: {
+            readonly CrontabCadence: {
+                readonly additionalProperties: false;
+                readonly description: "Fire on a five-field crontab (minute, hour, day of month, month, day of week).";
+                readonly properties: {
+                    readonly day_of_month: {
+                        readonly default: "*";
+                        readonly title: "Day Of Month";
+                        readonly type: "string";
+                    };
+                    readonly day_of_week: {
+                        readonly default: "*";
+                        readonly title: "Day Of Week";
+                        readonly type: "string";
+                    };
+                    readonly hour: {
+                        readonly default: "*";
+                        readonly title: "Hour";
+                        readonly type: "string";
+                    };
+                    readonly kind: {
+                        readonly const: "crontab";
+                        readonly default: "crontab";
+                        readonly title: "Kind";
+                        readonly type: "string";
+                    };
+                    readonly minute: {
+                        readonly default: "*";
+                        readonly title: "Minute";
+                        readonly type: "string";
+                    };
+                    readonly month_of_year: {
+                        readonly default: "*";
+                        readonly title: "Month Of Year";
+                        readonly type: "string";
+                    };
+                };
+                readonly title: "CrontabCadence";
+                readonly type: "object";
+            };
+            readonly IntervalCadence: {
+                readonly additionalProperties: false;
+                readonly description: "Fire every ``every`` seconds; ``relative`` aligns the schedule to the interval's own clock.";
+                readonly properties: {
+                    readonly every: {
+                        readonly description: "The interval in seconds.";
+                        readonly exclusiveMinimum: 0;
+                        readonly title: "Every";
+                        readonly type: "number";
+                    };
+                    readonly kind: {
+                        readonly const: "interval";
+                        readonly default: "interval";
+                        readonly title: "Kind";
+                        readonly type: "string";
+                    };
+                    readonly relative: {
+                        readonly default: false;
+                        readonly title: "Relative";
+                        readonly type: "boolean";
+                    };
+                };
+                readonly required: readonly ["every"];
+                readonly title: "IntervalCadence";
+                readonly type: "object";
+            };
+            readonly ScheduleRowError: {
+                readonly additionalProperties: false;
+                readonly description: "A backend's last scheduling failure for a schedule, when the backend records one.";
+                readonly properties: {
+                    readonly at_iso: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "At Iso";
+                    };
+                    readonly message: {
+                        readonly title: "Message";
+                        readonly type: "string";
+                    };
+                };
+                readonly required: readonly ["message"];
+                readonly title: "ScheduleRowError";
+                readonly type: "object";
+            };
+        };
+        readonly additionalProperties: false;
+        readonly description: "One row of the schedule listing: no arguments, no kwargs.";
+        readonly properties: {
+            readonly cadence: {
+                readonly discriminator: {
+                    readonly mapping: {
+                        readonly crontab: "#/$defs/CrontabCadence";
+                        readonly interval: "#/$defs/IntervalCadence";
+                    };
+                    readonly propertyName: "kind";
+                };
+                readonly oneOf: readonly [{
+                    readonly $ref: "#/$defs/IntervalCadence";
+                }, {
+                    readonly $ref: "#/$defs/CrontabCadence";
+                }];
+                readonly title: "Cadence";
+            };
+            readonly enabled: {
+                readonly title: "Enabled";
+                readonly type: "boolean";
+            };
+            readonly error: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/ScheduleRowError";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+            };
+            readonly name: {
+                readonly title: "Name";
+                readonly type: "string";
+            };
+            readonly next_run_at_iso: {
+                readonly anyOf: readonly [{
+                    readonly type: "string";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Next Run At Iso";
+            };
+            readonly next_run_at_ts: {
+                readonly anyOf: readonly [{
+                    readonly type: "number";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Next Run At Ts";
+            };
+            readonly tool: {
+                readonly title: "Tool";
+                readonly type: "string";
+            };
+        };
+        readonly required: readonly ["name", "tool", "cadence", "enabled"];
+        readonly title: "ScheduleListRow";
+        readonly type: "object";
+    };
+    readonly ScheduleRecord: {
+        readonly $defs: {
+            readonly CrontabCadence: {
+                readonly additionalProperties: false;
+                readonly description: "Fire on a five-field crontab (minute, hour, day of month, month, day of week).";
+                readonly properties: {
+                    readonly day_of_month: {
+                        readonly default: "*";
+                        readonly title: "Day Of Month";
+                        readonly type: "string";
+                    };
+                    readonly day_of_week: {
+                        readonly default: "*";
+                        readonly title: "Day Of Week";
+                        readonly type: "string";
+                    };
+                    readonly hour: {
+                        readonly default: "*";
+                        readonly title: "Hour";
+                        readonly type: "string";
+                    };
+                    readonly kind: {
+                        readonly const: "crontab";
+                        readonly default: "crontab";
+                        readonly title: "Kind";
+                        readonly type: "string";
+                    };
+                    readonly minute: {
+                        readonly default: "*";
+                        readonly title: "Minute";
+                        readonly type: "string";
+                    };
+                    readonly month_of_year: {
+                        readonly default: "*";
+                        readonly title: "Month Of Year";
+                        readonly type: "string";
+                    };
+                };
+                readonly title: "CrontabCadence";
+                readonly type: "object";
+            };
+            readonly IntervalCadence: {
+                readonly additionalProperties: false;
+                readonly description: "Fire every ``every`` seconds; ``relative`` aligns the schedule to the interval's own clock.";
+                readonly properties: {
+                    readonly every: {
+                        readonly description: "The interval in seconds.";
+                        readonly exclusiveMinimum: 0;
+                        readonly title: "Every";
+                        readonly type: "number";
+                    };
+                    readonly kind: {
+                        readonly const: "interval";
+                        readonly default: "interval";
+                        readonly title: "Kind";
+                        readonly type: "string";
+                    };
+                    readonly relative: {
+                        readonly default: false;
+                        readonly title: "Relative";
+                        readonly type: "boolean";
+                    };
+                };
+                readonly required: readonly ["every"];
+                readonly title: "IntervalCadence";
+                readonly type: "object";
+            };
+        };
+        readonly additionalProperties: false;
+        readonly description: "One exported or imported schedule: the durable definition, never runtime state.";
+        readonly properties: {
+            readonly args: {
+                readonly default: readonly [];
+                readonly items: {};
+                readonly title: "Args";
+                readonly type: "array";
+            };
+            readonly cadence: {
+                readonly discriminator: {
+                    readonly mapping: {
+                        readonly crontab: "#/$defs/CrontabCadence";
+                        readonly interval: "#/$defs/IntervalCadence";
+                    };
+                    readonly propertyName: "kind";
+                };
+                readonly oneOf: readonly [{
+                    readonly $ref: "#/$defs/IntervalCadence";
+                }, {
+                    readonly $ref: "#/$defs/CrontabCadence";
+                }];
+                readonly title: "Cadence";
+            };
+            readonly enabled: {
+                readonly title: "Enabled";
+                readonly type: "boolean";
+            };
+            readonly kwargs: {
+                readonly additionalProperties: true;
+                readonly default: {};
+                readonly description: "The tool arguments plus the reserved door stamps the fire needs.";
+                readonly title: "Kwargs";
+                readonly type: "object";
+            };
+            readonly name: {
+                readonly minLength: 1;
+                readonly title: "Name";
+                readonly type: "string";
+            };
+            readonly tool: {
+                readonly description: "The name of the tool the schedule fires.";
+                readonly minLength: 1;
+                readonly title: "Tool";
+                readonly type: "string";
+            };
+        };
+        readonly required: readonly ["name", "tool", "cadence", "enabled"];
+        readonly title: "ScheduleRecord";
+        readonly type: "object";
+    };
+    readonly SettingsProfileName: {
+        readonly description: "A user-created profile name: non-empty, not starting with the reserved prefix.";
+        readonly minLength: 1;
+        readonly pattern: "^[^@]";
+        readonly title: "SettingsProfileName";
+        readonly type: "string";
+    };
+    readonly StateAttach: {
+        readonly $defs: {
+            readonly StateInjection: {
+                readonly additionalProperties: false;
+                readonly description: "One input injection placed into the run input under ``into`` before the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``input``-purpose template jq\n(``name`` or ``<template>.<name>``) evaluated over the record, or ``jq`` is a templated\ntext rendering to a custom program over the record (its ``.``) with the run input bound as\n``$input``. ``into`` IS the adapter for an injection — the run-input field the value lands\nunder. Frozen.";
+                readonly properties: {
+                    readonly into: {
+                        readonly minLength: 1;
+                        readonly title: "Into";
+                        readonly type: "string";
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                            readonly label: "injection jq";
+                            readonly language: "jq";
+                            readonly returns: "the value placed into the run input at 'into'";
+                            readonly sample: {
+                                readonly count: 3;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch is about to run on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly required: readonly ["into"];
+                readonly title: "StateInjection";
+                readonly type: "object";
+            };
+            readonly StateUpdate: {
+                readonly additionalProperties: false;
+                readonly description: "One update applied through the store after the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``update``-purpose template jq\n(``name`` or ``<template>.<name>``) whose ``.input`` object the optional ``adapter`` (a\ntemplated text rendering to a jq over the tool output, its ``.``, with the run input bound\nas ``$input``) shapes from the run's output/input; or ``jq`` is a templated text rendering\nto a custom program over the tool output (its ``.``) with the run input bound as ``$input``\nand the record as ``$record``, authoring the whole op batch itself (a custom update carries\nno adapter). ``op_id`` is an optional templated text rendering to an idempotency-key\nexpression. Frozen.";
+                readonly properties: {
+                    readonly adapter: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "update adapter";
+                            readonly language: "jq";
+                            readonly returns: "the template program's '.input' object";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "custom update jq";
+                            readonly language: "jq";
+                            readonly returns: "the op batch (a list of ops) applied to the record";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }, {
+                                readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                                readonly name: "record";
+                                readonly sample: {
+                                    readonly count: 3;
+                                };
+                            }];
+                        };
+                    };
+                    readonly op_id: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "op_id expression";
+                            readonly language: "jq";
+                            readonly returns: "a string idempotency key, or null for no key";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly title: "StateUpdate";
+                readonly type: "object";
+            };
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly additionalProperties: false;
+        readonly description: "One state attached by a binding.\n\nCarries the ``state`` name, the ``templates`` to attach on it (attach-on-use, idempotent at save),\nthe ``subject_expr`` (a templated text rendering to a jq over the run input → a full subject object\nor the record KEY, its scope taken from the ambient door context and its kind from the state's\ndeclared subject kind), an optional ``scope_expr`` (a templated text rendering to a BOOLEAN predicate\nover the run input evaluated first — ``false`` skips this state for the run, a non-boolean is a loud\nerror, absent engages), and the ordered ``input_injections`` / ``updates``. Frozen.";
+        readonly properties: {
+            readonly input_injections: {
+                readonly items: {
+                    readonly $ref: "#/$defs/StateInjection";
+                };
+                readonly title: "Input Injections";
+                readonly type: "array";
+            };
+            readonly scope_expr: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the run input the dispatch is about to run on";
+                    readonly label: "scope expression";
+                    readonly language: "jq";
+                    readonly returns: "a boolean — false skips this state for the run, true (or absent) engages it";
+                    readonly sample: {
+                        readonly account_id: "acct_42";
+                    };
+                };
+            };
+            readonly state: {
+                readonly title: "State";
+                readonly type: "string";
+            };
+            readonly subject_expr: {
+                readonly $ref: "#/$defs/TemplatedText";
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the run input the dispatch is about to run on";
+                    readonly label: "subject expression";
+                    readonly language: "jq";
+                    readonly returns: "a full subject object {target_kind, target_name, kind, key}, or a bare key string";
+                    readonly sample: {
+                        readonly account_id: "acct_42";
+                    };
+                };
+            };
+            readonly templates: {
+                readonly items: {
+                    readonly type: "string";
+                };
+                readonly title: "Templates";
+                readonly type: "array";
+            };
+            readonly updates: {
+                readonly items: {
+                    readonly $ref: "#/$defs/StateUpdate";
+                };
+                readonly title: "Updates";
+                readonly type: "array";
+            };
+        };
+        readonly required: readonly ["state", "subject_expr"];
+        readonly title: "StateAttach";
+        readonly type: "object";
+    };
+    readonly StateBinding: {
+        readonly $defs: {
+            readonly StateAttach: {
+                readonly additionalProperties: false;
+                readonly description: "One state attached by a binding.\n\nCarries the ``state`` name, the ``templates`` to attach on it (attach-on-use, idempotent at save),\nthe ``subject_expr`` (a templated text rendering to a jq over the run input → a full subject object\nor the record KEY, its scope taken from the ambient door context and its kind from the state's\ndeclared subject kind), an optional ``scope_expr`` (a templated text rendering to a BOOLEAN predicate\nover the run input evaluated first — ``false`` skips this state for the run, a non-boolean is a loud\nerror, absent engages), and the ordered ``input_injections`` / ``updates``. Frozen.";
+                readonly properties: {
+                    readonly input_injections: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateInjection";
+                        };
+                        readonly title: "Input Injections";
+                        readonly type: "array";
+                    };
+                    readonly scope_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run input the dispatch is about to run on";
+                            readonly label: "scope expression";
+                            readonly language: "jq";
+                            readonly returns: "a boolean — false skips this state for the run, true (or absent) engages it";
+                            readonly sample: {
+                                readonly account_id: "acct_42";
+                            };
+                        };
+                    };
+                    readonly state: {
+                        readonly title: "State";
+                        readonly type: "string";
+                    };
+                    readonly subject_expr: {
+                        readonly $ref: "#/$defs/TemplatedText";
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run input the dispatch is about to run on";
+                            readonly label: "subject expression";
+                            readonly language: "jq";
+                            readonly returns: "a full subject object {target_kind, target_name, kind, key}, or a bare key string";
+                            readonly sample: {
+                                readonly account_id: "acct_42";
+                            };
+                        };
+                    };
+                    readonly templates: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly type: "string";
+                        };
+                        readonly title: "Templates";
+                        readonly type: "array";
+                    };
+                    readonly updates: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateUpdate";
+                        };
+                        readonly title: "Updates";
+                        readonly type: "array";
+                    };
+                };
+                readonly required: readonly ["state", "subject_expr"];
+                readonly title: "StateAttach";
+                readonly type: "object";
+            };
+            readonly StateInjection: {
+                readonly additionalProperties: false;
+                readonly description: "One input injection placed into the run input under ``into`` before the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``input``-purpose template jq\n(``name`` or ``<template>.<name>``) evaluated over the record, or ``jq`` is a templated\ntext rendering to a custom program over the record (its ``.``) with the run input bound as\n``$input``. ``into`` IS the adapter for an injection — the run-input field the value lands\nunder. Frozen.";
+                readonly properties: {
+                    readonly into: {
+                        readonly minLength: 1;
+                        readonly title: "Into";
+                        readonly type: "string";
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                            readonly label: "injection jq";
+                            readonly language: "jq";
+                            readonly returns: "the value placed into the run input at 'into'";
+                            readonly sample: {
+                                readonly count: 3;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch is about to run on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly required: readonly ["into"];
+                readonly title: "StateInjection";
+                readonly type: "object";
+            };
+            readonly StateUpdate: {
+                readonly additionalProperties: false;
+                readonly description: "One update applied through the store after the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``update``-purpose template jq\n(``name`` or ``<template>.<name>``) whose ``.input`` object the optional ``adapter`` (a\ntemplated text rendering to a jq over the tool output, its ``.``, with the run input bound\nas ``$input``) shapes from the run's output/input; or ``jq`` is a templated text rendering\nto a custom program over the tool output (its ``.``) with the run input bound as ``$input``\nand the record as ``$record``, authoring the whole op batch itself (a custom update carries\nno adapter). ``op_id`` is an optional templated text rendering to an idempotency-key\nexpression. Frozen.";
+                readonly properties: {
+                    readonly adapter: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "update adapter";
+                            readonly language: "jq";
+                            readonly returns: "the template program's '.input' object";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "custom update jq";
+                            readonly language: "jq";
+                            readonly returns: "the op batch (a list of ops) applied to the record";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }, {
+                                readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                                readonly name: "record";
+                                readonly sample: {
+                                    readonly count: 3;
+                                };
+                            }];
+                        };
+                    };
+                    readonly op_id: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "op_id expression";
+                            readonly language: "jq";
+                            readonly returns: "a string idempotency key, or null for no key";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly title: "StateUpdate";
+                readonly type: "object";
+            };
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly additionalProperties: false;
+        readonly description: "The optional binding a door carries: one or more :class:`StateAttach` entries. Frozen.\n\nThe same shape is stored on ``PresetBody``/``PresetSeed``, ``TargetConversationConfig``,\n``HookRegister`` and ``ScheduleCreate``, deposited on ``ToolInvocation`` through the\nambient dispatch context, and re-applied per binding site by a consumer.";
+        readonly properties: {
+            readonly states: {
+                readonly items: {
+                    readonly $ref: "#/$defs/StateAttach";
+                };
+                readonly minItems: 1;
+                readonly title: "States";
+                readonly type: "array";
+            };
+        };
+        readonly required: readonly ["states"];
+        readonly title: "StateBinding";
+        readonly type: "object";
+    };
+    readonly StateDeclaration: {
+        readonly $defs: {
+            readonly StateRegimeRule: {
+                readonly additionalProperties: false;
+                readonly description: "One write-regime rule: a ``path`` (object keys and the ``\"*\"`` wildcard; ``[]`` is the root) and its ``regime``.\n\nAn undeclared path is ``free``.";
+                readonly properties: {
+                    readonly path: {
+                        readonly items: {
+                            readonly minLength: 1;
+                            readonly type: "string";
+                        };
+                        readonly title: "Path";
+                        readonly type: "array";
+                    };
+                    readonly regime: {
+                        readonly enum: readonly ["single", "composing", "free"];
+                        readonly title: "Regime";
+                        readonly type: "string";
+                    };
+                };
+                readonly required: readonly ["path", "regime"];
+                readonly title: "StateRegimeRule";
+                readonly type: "object";
+            };
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly additionalProperties: false;
+        readonly description: "A declared state: its identity, base schema, subject kinds, and optional retention.\n\nCarries its ``name``, human ``description``, base JSON ``schema`` (wire key ``schema``,\nattribute ``schema_``), the ``subject_kinds`` it serves (≥1, unique, each matching\n:data:`SUBJECT_KIND_RE`), the ``default_subject_kind`` a door's ambient subject resolves\nto (one of ``subject_kinds``), and an optional ``retention_days`` (a positive INT4, or\nunset to keep records forever).\n\n``effective_schema`` is the base ``schema`` composed with every attached template's\nfragment, and ``regimes`` are the absolute write-regime rules composed over the\nattachments (each ``{path, regime}``, the attachment path prefixed onto the template's regime\npaths). ``updated_at`` is the row's last-write timestamp. The platform computes all\nthree and serves them on every read; a client that supplies a non-``None`` value for\nany of them on a write is refused (``… is set/computed by the platform``), so none can\nbe forged across the wire.";
+        readonly properties: {
+            readonly default_subject_kind: {
+                readonly title: "Default Subject Kind";
+                readonly type: "string";
+            };
+            readonly description: {
+                readonly default: "";
+                readonly title: "Description";
+                readonly type: "string";
+            };
+            readonly effective_schema: {
+                readonly anyOf: readonly [{
+                    readonly additionalProperties: true;
+                    readonly type: "object";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Effective Schema";
+            };
+            readonly name: {
+                readonly title: "Name";
+                readonly type: "string";
+            };
+            readonly regimes: {
+                readonly anyOf: readonly [{
+                    readonly items: {
+                        readonly $ref: "#/$defs/StateRegimeRule";
+                    };
+                    readonly type: "array";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Regimes";
+            };
+            readonly retention_days: {
+                readonly anyOf: readonly [{
+                    readonly exclusiveMinimum: 0;
+                    readonly maximum: 2147483647;
+                    readonly type: "integer";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Retention Days";
+            };
+            readonly schema: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly additionalProperties: true;
+                    readonly type: "object";
+                }];
+                readonly title: "Schema";
+            };
+            readonly subject_kinds: {
+                readonly items: {
+                    readonly type: "string";
+                };
+                readonly minItems: 1;
+                readonly title: "Subject Kinds";
+                readonly type: "array";
+            };
+            readonly updated_at: {
+                readonly anyOf: readonly [{
+                    readonly format: "date-time";
+                    readonly type: "string";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Updated At";
+            };
+        };
+        readonly required: readonly ["name", "subject_kinds", "default_subject_kind"];
+        readonly title: "StateDeclaration";
+        readonly type: "object";
+    };
+    readonly StateInjection: {
+        readonly $defs: {
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly additionalProperties: false;
+        readonly description: "One input injection placed into the run input under ``into`` before the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``input``-purpose template jq\n(``name`` or ``<template>.<name>``) evaluated over the record, or ``jq`` is a templated\ntext rendering to a custom program over the record (its ``.``) with the run input bound as\n``$input``. ``into`` IS the adapter for an injection — the run-input field the value lands\nunder. Frozen.";
+        readonly properties: {
+            readonly into: {
+                readonly minLength: 1;
+                readonly title: "Into";
+                readonly type: "string";
+            };
+            readonly jq: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                    readonly label: "injection jq";
+                    readonly language: "jq";
+                    readonly returns: "the value placed into the run input at 'into'";
+                    readonly sample: {
+                        readonly count: 3;
+                    };
+                    readonly variables: readonly [{
+                        readonly blurb: "the run input the dispatch is about to run on";
+                        readonly name: "input";
+                        readonly sample: {
+                            readonly value: 2;
+                        };
+                    }];
+                };
+            };
+            readonly template_jq: {
+                readonly anyOf: readonly [{
+                    readonly type: "string";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Template Jq";
+            };
+        };
+        readonly required: readonly ["into"];
+        readonly title: "StateInjection";
+        readonly type: "object";
+    };
+    readonly StateTemplateDocument: {
+        readonly $defs: {
+            readonly StateRegimeRule: {
+                readonly additionalProperties: false;
+                readonly description: "One write-regime rule: a ``path`` (object keys and the ``\"*\"`` wildcard; ``[]`` is the root) and its ``regime``.\n\nAn undeclared path is ``free``.";
+                readonly properties: {
+                    readonly path: {
+                        readonly items: {
+                            readonly minLength: 1;
+                            readonly type: "string";
+                        };
+                        readonly title: "Path";
+                        readonly type: "array";
+                    };
+                    readonly regime: {
+                        readonly enum: readonly ["single", "composing", "free"];
+                        readonly title: "Regime";
+                        readonly type: "string";
+                    };
+                };
+                readonly required: readonly ["path", "regime"];
+                readonly title: "StateRegimeRule";
+                readonly type: "object";
+            };
+            readonly StateTemplateDeclarations: {
+                readonly additionalProperties: false;
+                readonly description: "The ``declarations`` section of a state-template document.\n\nThe JSON ``schema`` (wire key ``schema``, attribute ``schema_``) of the static values an\nattachment stores, and an OPTIONAL ``check`` — a :class:`~tai42_contract.template.TemplatedText`\ncarrying a jq predicate over those values. Structural validation (the check's jq, the schema's\nshape) lives at the store; this model pins the served wire shape.\n\nThe wire key ``schema`` is the attribute ``schema_`` (alias) because a ``schema`` field\nwould shadow ``BaseModel.schema``.";
+                readonly properties: {
+                    readonly check: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                    };
+                    readonly schema: {
+                        readonly additionalProperties: true;
+                        readonly title: "Schema";
+                        readonly type: "object";
+                    };
+                };
+                readonly required: readonly ["schema"];
+                readonly title: "StateTemplateDeclarations";
+                readonly type: "object";
+            };
+            readonly StateTemplateJq: {
+                readonly additionalProperties: false;
+                readonly description: "One named jq program on a state template.\n\n``purpose`` is ``input`` — a read over the record returning a value — or ``update`` — a program\nover the record subtree (its ``.``) with ``$input`` bound, returning a template-relative op\nbatch. ``jq`` is the program body as a\n:class:`~tai42_contract.template.TemplatedText` (inline ``content`` or a stored ``id``).\n``params`` names the keys the program takes; ``reads``/``writes`` are the\ntemplate-relative record paths an ``update`` program declares and are absent on an\n``input`` program. Structural checks (jq compilation, path resolution) live at the store;\nthis model pins the served wire shape.";
+                readonly properties: {
+                    readonly description: {
+                        readonly default: "";
+                        readonly title: "Description";
+                        readonly type: "string";
+                    };
+                    readonly jq: {
+                        readonly $ref: "#/$defs/TemplatedText";
+                    };
+                    readonly params: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly type: "string";
+                        };
+                        readonly title: "Params";
+                        readonly type: "array";
+                    };
+                    readonly purpose: {
+                        readonly enum: readonly ["input", "update"];
+                        readonly title: "Purpose";
+                        readonly type: "string";
+                    };
+                    readonly reads: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly items: {
+                                readonly type: "string";
+                            };
+                            readonly type: "array";
+                        };
+                        readonly title: "Reads";
+                        readonly type: "array";
+                    };
+                    readonly writes: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly items: {
+                                readonly type: "string";
+                            };
+                            readonly type: "array";
+                        };
+                        readonly title: "Writes";
+                        readonly type: "array";
+                    };
+                };
+                readonly required: readonly ["purpose", "jq"];
+                readonly title: "StateTemplateJq";
+                readonly type: "object";
+            };
+            readonly StateTemplateParameter: {
+                readonly additionalProperties: false;
+                readonly description: "One fillable template parameter: its value ``schema`` and an OPTIONAL ``default``.\n\n``has_default`` tells an absent default from an explicit ``null`` one; the wire shape omits\n``default`` when none was given.";
+                readonly properties: {
+                    readonly default: {
+                        readonly title: "Default";
+                    };
+                    readonly schema: {
+                        readonly additionalProperties: true;
+                        readonly title: "Schema";
+                        readonly type: "object";
+                    };
+                };
+                readonly required: readonly ["schema"];
+                readonly title: "StateTemplateParameter";
+                readonly type: "object";
+            };
+            readonly StateTemplateReconcile: {
+                readonly additionalProperties: false;
+                readonly description: "The ``reconcile`` section of a state-template document.\n\nThree jq programs the store runs to settle a state's OPEN records on a declarations edit —\n``orphans`` names the items a record subtree orphans against the new declarations,\n``resolutions`` names the not-done resolutions a close may name, and ``close`` returns the op\nbatch that closes one orphan. Each is a :class:`~tai42_contract.template.TemplatedText` (inline\n``content`` or a stored ``id``).";
+                readonly properties: {
+                    readonly close: {
+                        readonly $ref: "#/$defs/TemplatedText";
+                    };
+                    readonly orphans: {
+                        readonly $ref: "#/$defs/TemplatedText";
+                    };
+                    readonly resolutions: {
+                        readonly $ref: "#/$defs/TemplatedText";
+                    };
+                };
+                readonly required: readonly ["orphans", "close", "resolutions"];
+                readonly title: "StateTemplateReconcile";
+                readonly type: "object";
+            };
+            readonly StateTemplateTrace: {
+                readonly additionalProperties: false;
+                readonly description: "The trace switch: when ``enabled``, every write under an attachment of the template stamps ``_trace``.";
+                readonly properties: {
+                    readonly enabled: {
+                        readonly default: false;
+                        readonly title: "Enabled";
+                        readonly type: "boolean";
+                    };
+                };
+                readonly title: "StateTemplateTrace";
+                readonly type: "object";
+            };
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly additionalProperties: false;
+        readonly description: "A state-template document: a reusable schema fragment and the programs that give records meaning.\n\nIt carries the reusable schema fragment plus the parameters, write regimes, attach-time\n``declarations`` and ``trace`` switch the platform owns, plus ``template_jq`` (named jq\nprograms — ``input``-purpose reads and ``update``-purpose record operations) and ``reconcile``\n(how a declarations edit settles open records) that give the record its meaning. A template is\ndata end to end: the states API serves an input-purpose result for a subject and applies an\nupdate-purpose program to a subject generically, so a template is usable through the API with no\nother engine. ``extra=\"forbid\"`` refuses any key outside these.\n\nThe wire key ``schema`` is the attribute ``schema_`` (alias). The ``declarations``,\n``template_jq`` and ``reconcile`` sections carry their served sub-shapes\n(:class:`StateTemplateDeclarations`, :class:`StateTemplateJq`,\n:class:`StateTemplateReconcile`); the skeleton store does the semantic validation (jq\ncompilation, regime/record path resolution against the fragment) these models do not.";
+        readonly properties: {
+            readonly declarations: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/StateTemplateDeclarations";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+            };
+            readonly description: {
+                readonly default: "";
+                readonly title: "Description";
+                readonly type: "string";
+            };
+            readonly kind: {
+                readonly const: "state-template";
+                readonly default: "state-template";
+                readonly title: "Kind";
+                readonly type: "string";
+            };
+            readonly name: {
+                readonly title: "Name";
+                readonly type: "string";
+            };
+            readonly parameters: {
+                readonly additionalProperties: {
+                    readonly $ref: "#/$defs/StateTemplateParameter";
+                };
+                readonly default: {};
+                readonly title: "Parameters";
+                readonly type: "object";
+            };
+            readonly reconcile: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/StateTemplateReconcile";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+            };
+            readonly regimes: {
+                readonly default: readonly [];
+                readonly items: {
+                    readonly $ref: "#/$defs/StateRegimeRule";
+                };
+                readonly title: "Regimes";
+                readonly type: "array";
+            };
+            readonly schema: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly additionalProperties: true;
+                    readonly type: "object";
+                }];
+                readonly title: "Schema";
+            };
+            readonly template_jq: {
+                readonly anyOf: readonly [{
+                    readonly additionalProperties: {
+                        readonly $ref: "#/$defs/StateTemplateJq";
+                    };
+                    readonly type: "object";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Template Jq";
+            };
+            readonly trace: {
+                readonly $ref: "#/$defs/StateTemplateTrace";
+            };
+        };
+        readonly required: readonly ["name"];
+        readonly title: "StateTemplateDocument";
+        readonly type: "object";
+    };
+    readonly StateUpdate: {
+        readonly $defs: {
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly additionalProperties: false;
+        readonly description: "One update applied through the store after the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``update``-purpose template jq\n(``name`` or ``<template>.<name>``) whose ``.input`` object the optional ``adapter`` (a\ntemplated text rendering to a jq over the tool output, its ``.``, with the run input bound\nas ``$input``) shapes from the run's output/input; or ``jq`` is a templated text rendering\nto a custom program over the tool output (its ``.``) with the run input bound as ``$input``\nand the record as ``$record``, authoring the whole op batch itself (a custom update carries\nno adapter). ``op_id`` is an optional templated text rendering to an idempotency-key\nexpression. Frozen.";
+        readonly properties: {
+            readonly adapter: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the run's output the update runs after";
+                    readonly label: "update adapter";
+                    readonly language: "jq";
+                    readonly returns: "the template program's '.input' object";
+                    readonly sample: {
+                        readonly ok: true;
+                    };
+                    readonly variables: readonly [{
+                        readonly blurb: "the run input the dispatch ran on";
+                        readonly name: "input";
+                        readonly sample: {
+                            readonly value: 2;
+                        };
+                    }];
+                };
+            };
+            readonly jq: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the run's output the update runs after";
+                    readonly label: "custom update jq";
+                    readonly language: "jq";
+                    readonly returns: "the op batch (a list of ops) applied to the record";
+                    readonly sample: {
+                        readonly ok: true;
+                    };
+                    readonly variables: readonly [{
+                        readonly blurb: "the run input the dispatch ran on";
+                        readonly name: "input";
+                        readonly sample: {
+                            readonly value: 2;
+                        };
+                    }, {
+                        readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                        readonly name: "record";
+                        readonly sample: {
+                            readonly count: 3;
+                        };
+                    }];
+                };
+            };
+            readonly op_id: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/TemplatedText";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the run's output the update runs after";
+                    readonly label: "op_id expression";
+                    readonly language: "jq";
+                    readonly returns: "a string idempotency key, or null for no key";
+                    readonly sample: {
+                        readonly ok: true;
+                    };
+                    readonly variables: readonly [{
+                        readonly blurb: "the run input the dispatch ran on";
+                        readonly name: "input";
+                        readonly sample: {
+                            readonly value: 2;
+                        };
+                    }];
+                };
+            };
+            readonly template_jq: {
+                readonly anyOf: readonly [{
+                    readonly type: "string";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Template Jq";
+            };
+        };
+        readonly title: "StateUpdate";
+        readonly type: "object";
+    };
+    readonly TargetConversationConfig: {
+        readonly $defs: {
+            readonly StateAttach: {
+                readonly additionalProperties: false;
+                readonly description: "One state attached by a binding.\n\nCarries the ``state`` name, the ``templates`` to attach on it (attach-on-use, idempotent at save),\nthe ``subject_expr`` (a templated text rendering to a jq over the run input → a full subject object\nor the record KEY, its scope taken from the ambient door context and its kind from the state's\ndeclared subject kind), an optional ``scope_expr`` (a templated text rendering to a BOOLEAN predicate\nover the run input evaluated first — ``false`` skips this state for the run, a non-boolean is a loud\nerror, absent engages), and the ordered ``input_injections`` / ``updates``. Frozen.";
+                readonly properties: {
+                    readonly input_injections: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateInjection";
+                        };
+                        readonly title: "Input Injections";
+                        readonly type: "array";
+                    };
+                    readonly scope_expr: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run input the dispatch is about to run on";
+                            readonly label: "scope expression";
+                            readonly language: "jq";
+                            readonly returns: "a boolean — false skips this state for the run, true (or absent) engages it";
+                            readonly sample: {
+                                readonly account_id: "acct_42";
+                            };
+                        };
+                    };
+                    readonly state: {
+                        readonly title: "State";
+                        readonly type: "string";
+                    };
+                    readonly subject_expr: {
+                        readonly $ref: "#/$defs/TemplatedText";
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run input the dispatch is about to run on";
+                            readonly label: "subject expression";
+                            readonly language: "jq";
+                            readonly returns: "a full subject object {target_kind, target_name, kind, key}, or a bare key string";
+                            readonly sample: {
+                                readonly account_id: "acct_42";
+                            };
+                        };
+                    };
+                    readonly templates: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly type: "string";
+                        };
+                        readonly title: "Templates";
+                        readonly type: "array";
+                    };
+                    readonly updates: {
+                        readonly default: readonly [];
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateUpdate";
+                        };
+                        readonly title: "Updates";
+                        readonly type: "array";
+                    };
+                };
+                readonly required: readonly ["state", "subject_expr"];
+                readonly title: "StateAttach";
+                readonly type: "object";
+            };
+            readonly StateBinding: {
+                readonly additionalProperties: false;
+                readonly description: "The optional binding a door carries: one or more :class:`StateAttach` entries. Frozen.\n\nThe same shape is stored on ``PresetBody``/``PresetSeed``, ``TargetConversationConfig``,\n``HookRegister`` and ``ScheduleCreate``, deposited on ``ToolInvocation`` through the\nambient dispatch context, and re-applied per binding site by a consumer.";
+                readonly properties: {
+                    readonly states: {
+                        readonly items: {
+                            readonly $ref: "#/$defs/StateAttach";
+                        };
+                        readonly minItems: 1;
+                        readonly title: "States";
+                        readonly type: "array";
+                    };
+                };
+                readonly required: readonly ["states"];
+                readonly title: "StateBinding";
+                readonly type: "object";
+            };
+            readonly StateInjection: {
+                readonly additionalProperties: false;
+                readonly description: "One input injection placed into the run input under ``into`` before the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``input``-purpose template jq\n(``name`` or ``<template>.<name>``) evaluated over the record, or ``jq`` is a templated\ntext rendering to a custom program over the record (its ``.``) with the run input bound as\n``$input``. ``into`` IS the adapter for an injection — the run-input field the value lands\nunder. Frozen.";
+                readonly properties: {
+                    readonly into: {
+                        readonly minLength: 1;
+                        readonly title: "Into";
+                        readonly type: "string";
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                            readonly label: "injection jq";
+                            readonly language: "jq";
+                            readonly returns: "the value placed into the run input at 'into'";
+                            readonly sample: {
+                                readonly count: 3;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch is about to run on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly required: readonly ["into"];
+                readonly title: "StateInjection";
+                readonly type: "object";
+            };
+            readonly StateUpdate: {
+                readonly additionalProperties: false;
+                readonly description: "One update applied through the store after the dispatch.\n\nExactly one source is set: ``template_jq`` names an ``update``-purpose template jq\n(``name`` or ``<template>.<name>``) whose ``.input`` object the optional ``adapter`` (a\ntemplated text rendering to a jq over the tool output, its ``.``, with the run input bound\nas ``$input``) shapes from the run's output/input; or ``jq`` is a templated text rendering\nto a custom program over the tool output (its ``.``) with the run input bound as ``$input``\nand the record as ``$record``, authoring the whole op batch itself (a custom update carries\nno adapter). ``op_id`` is an optional templated text rendering to an idempotency-key\nexpression. Frozen.";
+                readonly properties: {
+                    readonly adapter: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "update adapter";
+                            readonly language: "jq";
+                            readonly returns: "the template program's '.input' object";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly jq: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "custom update jq";
+                            readonly language: "jq";
+                            readonly returns: "the op batch (a list of ops) applied to the record";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }, {
+                                readonly blurb: "the attached record's subtree, or {} when no record exists yet";
+                                readonly name: "record";
+                                readonly sample: {
+                                    readonly count: 3;
+                                };
+                            }];
+                        };
+                    };
+                    readonly op_id: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/TemplatedText";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the run's output the update runs after";
+                            readonly label: "op_id expression";
+                            readonly language: "jq";
+                            readonly returns: "a string idempotency key, or null for no key";
+                            readonly sample: {
+                                readonly ok: true;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the run input the dispatch ran on";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly value: 2;
+                                };
+                            }];
+                        };
+                    };
+                    readonly template_jq: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Template Jq";
+                    };
+                };
+                readonly title: "StateUpdate";
+                readonly type: "object";
+            };
+            readonly TemplatedText: {
+                readonly additionalProperties: false;
+                readonly description: "A renderable text: its source plus the parameters its render takes.\n\nEXACTLY ONE source is set — ``content`` (the text inline) or ``id`` (the id of a\nstored resource holding the text); neither and both are refused at construction.\n``kwargs`` are the render parameters for the TEXT and apply either way, so moving a\ntext from inline to stored (or back) leaves its parameters untouched.";
+                readonly properties: {
+                    readonly content: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Content";
+                    };
+                    readonly id: {
+                        readonly anyOf: readonly [{
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Id";
+                    };
+                    readonly kwargs: {
+                        readonly additionalProperties: true;
+                        readonly title: "Kwargs";
+                        readonly type: "object";
+                    };
+                };
+                readonly title: "TemplatedText";
+                readonly type: "object";
+                readonly "x-tai42-templated-text": {
+                    readonly language: "jinja";
+                };
+            };
+        };
+        readonly description: "Per-target configuration for the conversation bridge, keyed by ``(target_kind, target_name)``.\n\nThe key names the agent or tool an inbound turn is routed to.\n``multichannel`` opts the target into person linking; ``greeting_template`` is the\nfirst-contact greeting, which may reference at most the ``{pairing_code}`` placeholder\n(minted at greeting time). The row carries no server-derived fields, so it IS its own\ncreate payload — no Create/stored split. An unknown ``{...}`` placeholder is refused so\na typo cannot render literally; a blank template string is refused, because ``None`` is\nthe explicit spelling for \"no greeting\". Frozen.";
+        readonly properties: {
+            readonly greeting_template: {
+                readonly anyOf: readonly [{
+                    readonly type: "string";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+                readonly title: "Greeting Template";
+            };
+            readonly multichannel: {
+                readonly default: false;
+                readonly title: "Multichannel";
+                readonly type: "boolean";
+            };
+            readonly state_binding: {
+                readonly anyOf: readonly [{
+                    readonly $ref: "#/$defs/StateBinding";
+                }, {
+                    readonly type: "null";
+                }];
+                readonly default: null;
+            };
+            readonly target_kind: {
+                readonly enum: readonly ["agent", "tool"];
+                readonly title: "Target Kind";
+                readonly type: "string";
+            };
+            readonly target_name: {
+                readonly minLength: 1;
+                readonly title: "Target Name";
+                readonly type: "string";
+            };
+        };
+        readonly required: readonly ["target_kind", "target_name"];
+        readonly title: "TargetConversationConfig";
+        readonly type: "object";
+    };
+};
+
+// @public
 export const ServedEndpointsIcon: IconComponent;
+
+// @public
+const servedVectors: {
+    readonly path_coverage: readonly [{
+        readonly covered: true;
+        readonly path: "/api/a";
+        readonly prefix: "/api/a";
+    }, {
+        readonly covered: true;
+        readonly path: "/api/a/b";
+        readonly prefix: "/api/a";
+    }, {
+        readonly covered: true;
+        readonly path: "/api/a/b/c";
+        readonly prefix: "/api/a";
+    }, {
+        readonly covered: false;
+        readonly path: "/api/ab";
+        readonly prefix: "/api/a";
+    }, {
+        readonly covered: false;
+        readonly path: "/api/a";
+        readonly prefix: "/api/a/b";
+    }, {
+        readonly covered: false;
+        readonly path: "/api/b";
+        readonly prefix: "/api/a";
+    }, {
+        readonly covered: false;
+        readonly path: "/api/a/b";
+        readonly prefix: "/api/A";
+    }, {
+        readonly covered: false;
+        readonly path: "/api";
+        readonly prefix: "/api/a";
+    }];
+    readonly pattern_open_prefix: readonly [{
+        readonly open_prefix: "/api/x/";
+        readonly pattern: "^/api/x/.*$";
+    }, {
+        readonly open_prefix: "/api/x/";
+        readonly pattern: "^/api/x/.*";
+    }, {
+        readonly open_prefix: "/api/x";
+        readonly pattern: "^/api/x.*$";
+    }, {
+        readonly open_prefix: null;
+        readonly pattern: "/api/x/.*$";
+    }, {
+        readonly open_prefix: null;
+        readonly pattern: "^/api/x/$";
+    }, {
+        readonly open_prefix: null;
+        readonly pattern: "^/api/x/.+$";
+    }, {
+        readonly open_prefix: null;
+        readonly pattern: "^.*$";
+    }, {
+        readonly open_prefix: null;
+        readonly pattern: "^/api/(a|b)/.*$";
+    }, {
+        readonly open_prefix: null;
+        readonly pattern: "^/api/x/[0-9]+.*$";
+    }, {
+        readonly open_prefix: null;
+        readonly pattern: "^/api/x\\.y/.*$";
+    }, {
+        readonly open_prefix: null;
+        readonly pattern: "^/app/my\\-slug/.*$";
+    }, {
+        readonly open_prefix: "/app/my_slug1/";
+        readonly pattern: "^/app/my_slug1/.*$";
+    }];
+};
 
 // @public (undocumented)
 const serverDateTime: z.ZodObject<{
@@ -15191,18 +22704,6 @@ interface SetMcpSecretEnvBody {
 }
 
 // @public
-interface SetProviderClientArgs {
-    // (undocumented)
-    readonly client_id: string;
-    // (undocumented)
-    readonly client_secret?: string | null;
-    // (undocumented)
-    readonly issuer?: string;
-    // (undocumented)
-    readonly token_endpoint_auth_method?: 'client_secret_post' | 'client_secret_basic' | 'none';
-}
-
-// @public
 export const SettingsIcon: IconComponent;
 
 // @public (undocumented)
@@ -15210,14 +22711,14 @@ type SettingsProfileBody = z.infer<typeof settingsProfileBody>;
 
 // @public
 const settingsProfileBody: z.ZodObject<{
-    description: z.ZodString;
-    env: z.ZodRecord<z.ZodString, z.ZodString>;
-    secret_keys: z.ZodArray<z.ZodString>;
+    description: z.ZodDefault<z.ZodString>;
+    env: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
+    secret_keys: z.ZodDefault<z.ZodArray<z.ZodString>>;
 }, z.core.$strip>;
 
 // @public
 const settingsProfileDeleted: z.ZodObject<{
-    ok: z.ZodLiteral<true>;
+    ok: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -15226,28 +22727,34 @@ type SettingsProfileDiff = z.infer<typeof settingsProfileDiff>;
 // @public
 const settingsProfileDiff: z.ZodObject<{
     added: z.ZodArray<z.ZodString>;
-    removed: z.ZodArray<z.ZodString>;
     changed: z.ZodArray<z.ZodObject<{
         key: z.ZodString;
-        old: z.ZodString;
         new: z.ZodString;
+        old: z.ZodString;
     }, z.core.$strip>>;
     recycle_keys: z.ZodArray<z.ZodString>;
     refused_keys: z.ZodArray<z.ZodString>;
+    removed: z.ZodArray<z.ZodString>;
 }, z.core.$strip>;
 
 // @public (undocumented)
 const settingsProfileList: z.ZodArray<z.ZodObject<{
-    name: z.ZodString;
     description: z.ZodString;
+    name: z.ZodString;
 }, z.core.$strip>>;
+
+// @public (undocumented)
+type SettingsProfileName = z.infer<typeof settingsProfileName>;
+
+// @public (undocumented)
+const settingsProfileName: z.ZodString;
 
 // @public (undocumented)
 type SettingsProfileRollback = z.infer<typeof settingsProfileRollback>;
 
 // @public
 const settingsProfileRollback: z.ZodObject<{
-    ok: z.ZodLiteral<true>;
+    ok: z.ZodBoolean;
     version: z.ZodNumber;
 }, z.core.$strip>;
 
@@ -15256,8 +22763,8 @@ type SettingsProfileSaved = z.infer<typeof settingsProfileSaved>;
 
 // @public
 const settingsProfileSaved: z.ZodObject<{
-    ok: z.ZodLiteral<true>;
-    version: z.ZodOptional<z.ZodNumber>;
+    ok: z.ZodBoolean;
+    version: z.ZodNumber;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -15265,8 +22772,8 @@ type SettingsProfileSummary = z.infer<typeof settingsProfileSummary>;
 
 // @public
 const settingsProfileSummary: z.ZodObject<{
-    name: z.ZodString;
     description: z.ZodString;
+    name: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -15274,23 +22781,23 @@ type SettingsProfileVersion = z.infer<typeof settingsProfileVersion>;
 
 // @public
 const settingsProfileVersion: z.ZodObject<{
-    version: z.ZodNumber;
-    tags: z.ZodArray<z.ZodString>;
+    body: z.ZodObject<{
+        description: z.ZodDefault<z.ZodString>;
+        env: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
+        secret_keys: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    }, z.core.$strip>;
     created_at: z.ZodString;
     is_current: z.ZodBoolean;
-    body: z.ZodObject<{
-        description: z.ZodString;
-        env: z.ZodRecord<z.ZodString, z.ZodString>;
-        secret_keys: z.ZodArray<z.ZodString>;
-    }, z.core.$strip>;
+    tags: z.ZodArray<z.ZodString>;
+    version: z.ZodNumber;
 }, z.core.$strip>;
 
 // @public (undocumented)
 const settingsProfileVersionList: z.ZodArray<z.ZodObject<{
-    version: z.ZodNumber;
-    tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
     is_current: z.ZodBoolean;
+    tags: z.ZodArray<z.ZodString>;
+    version: z.ZodNumber;
 }, z.core.$strip>>;
 
 // @public (undocumented)
@@ -15298,10 +22805,10 @@ type SettingsProfileVersionMeta = z.infer<typeof settingsProfileVersionMeta>;
 
 // @public
 const settingsProfileVersionMeta: z.ZodObject<{
-    version: z.ZodNumber;
-    tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
     is_current: z.ZodBoolean;
+    tags: z.ZodArray<z.ZodString>;
+    version: z.ZodNumber;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -15310,8 +22817,8 @@ type SettingsSchema = z.infer<typeof settingsSchema>;
 // @public (undocumented)
 const settingsSchema: z.ZodObject<{
     groups: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
         module: z.ZodString;
+        name: z.ZodString;
         qualname: z.ZodString;
         fields: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
@@ -15373,14 +22880,14 @@ type SetupResult = z.infer<typeof setupResult>;
 
 // @public
 const setupResult: z.ZodObject<{
-    owner_user_id: z.ZodString;
-    key_user_id: z.ZodString;
     api_key: z.ZodString;
+    invite_token: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     key_fingerprint: z.ZodString;
+    key_user_id: z.ZodString;
     login_attached: z.ZodBoolean;
-    invite_token: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    login_path: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-}, z.core.$strip>;
+    login_path: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    owner_user_id: z.ZodString;
+}, z.core.$strict>;
 
 // @public
 export const SignOutIcon: IconComponent;
@@ -15456,59 +22963,59 @@ interface StartConnectArgs {
 
 // @public (undocumented)
 const startConnectResult: z.ZodUnion<readonly [z.ZodObject<{
-    flow_id: z.ZodString;
     authorize_url: z.ZodString;
+    flow_id: z.ZodString;
 }, z.core.$strip>, z.ZodObject<{
+    added_manifest_entries: z.ZodDefault<z.ZodArray<z.ZodString>>;
     connection_id: z.ZodString;
-    added_manifest_entries: z.ZodArray<z.ZodString>;
-    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
+    fanout: z.ZodDefault<z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
         note: z.ZodString;
     }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
         op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
             }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
         mode: z.ZodLiteral<"fleet">;
     }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
         op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
             }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
         mode: z.ZodLiteral<"unreachable">;
-    }, z.core.$strip>], "mode">>;
+    }, z.core.$strip>], "mode">>>;
 }, z.core.$strip>]>;
 
 // @public (undocumented)
@@ -15518,18 +23025,18 @@ type StateAttach = z.infer<typeof stateAttach>;
 const stateAttach: z.ZodObject<{
     input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
         into: z.ZodString;
-        jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
-        template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+        }, z.core.$strict>>>;
+        template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
-    scope_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     state: z.ZodString;
     subject_expr: z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
@@ -15538,22 +23045,22 @@ const stateAttach: z.ZodObject<{
     }, z.core.$strict>;
     templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
     updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
-        adapter: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
-        jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        }, z.core.$strict>>>;
+        jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
-        op_id: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        }, z.core.$strict>>>;
+        op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
-        template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+        }, z.core.$strict>>>;
+        template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
 }, z.core.$strict>;
 
@@ -15562,22 +23069,22 @@ type StateAttached = z.infer<typeof stateAttached>;
 
 // @public
 const stateAttached: z.ZodObject<{
-    attached: z.ZodLiteral<true>;
-    state: z.ZodString;
-    template: z.ZodString;
-    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
-        save_id: z.ZodString;
+    attached: z.ZodBoolean;
+    held: z.ZodOptional<z.ZodArray<z.ZodObject<{
         held_by: z.ZodString;
+        save_id: z.ZodString;
         subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            key: z.ZodString;
+            kind: z.ZodString;
             target_kind: z.ZodEnum<{
                 tool: "tool";
                 agent: "agent";
             }>;
             target_name: z.ZodString;
-            kind: z.ZodString;
-            key: z.ZodString;
-        }, z.core.$strip>>>;
-    }, z.core.$strip>>>;
+        }, z.core.$strict>>>;
+    }, z.core.$strict>>>;
+    state: z.ZodString;
+    template: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -15585,10 +23092,10 @@ type StateAttachment = z.infer<typeof stateAttachment>;
 
 // @public
 const stateAttachment: z.ZodObject<{
-    template: z.ZodString;
+    declarations: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    parameters: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     path: z.ZodArray<z.ZodString>;
-    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    declarations: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    template: z.ZodString;
 }, z.core.$strip>;
 
 // @public
@@ -15605,10 +23112,11 @@ interface StateAttachmentBody {
 
 // @public (undocumented)
 const stateAttachmentList: z.ZodArray<z.ZodObject<{
-    template: z.ZodString;
+    declarations: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    parameters: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     path: z.ZodArray<z.ZodString>;
-    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    declarations: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    state: z.ZodString;
+    template: z.ZodString;
 }, z.core.$strip>>;
 
 // @public (undocumented)
@@ -15616,22 +23124,9 @@ type StateAttachmentUpdated = z.infer<typeof stateAttachmentUpdated>;
 
 // @public
 const stateAttachmentUpdated: z.ZodObject<{
-    updated: z.ZodLiteral<true>;
     state: z.ZodString;
     template: z.ZodString;
-    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
-        save_id: z.ZodString;
-        held_by: z.ZodString;
-        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
-            target_kind: z.ZodEnum<{
-                tool: "tool";
-                agent: "agent";
-            }>;
-            target_name: z.ZodString;
-            kind: z.ZodString;
-            key: z.ZodString;
-        }, z.core.$strip>>>;
-    }, z.core.$strip>>>;
+    updated: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -15665,18 +23160,18 @@ const stateBinding: z.ZodObject<{
     states: z.ZodArray<z.ZodObject<{
         input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
             into: z.ZodString;
-            jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+            jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 content: z.ZodOptional<z.ZodString>;
                 id: z.ZodOptional<z.ZodString>;
                 kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-            }, z.core.$strict>, z.ZodNull]>>;
-            template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+            }, z.core.$strict>>>;
+            template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         }, z.core.$strict>>>;
-        scope_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+        scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         state: z.ZodString;
         subject_expr: z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
@@ -15685,22 +23180,22 @@ const stateBinding: z.ZodObject<{
         }, z.core.$strict>;
         templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
         updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
-            adapter: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+            adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 content: z.ZodOptional<z.ZodString>;
                 id: z.ZodOptional<z.ZodString>;
                 kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-            }, z.core.$strict>, z.ZodNull]>>;
-            jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+            }, z.core.$strict>>>;
+            jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 content: z.ZodOptional<z.ZodString>;
                 id: z.ZodOptional<z.ZodString>;
                 kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-            }, z.core.$strict>, z.ZodNull]>>;
-            op_id: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+            }, z.core.$strict>>>;
+            op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 content: z.ZodOptional<z.ZodString>;
                 id: z.ZodOptional<z.ZodString>;
                 kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-            }, z.core.$strict>, z.ZodNull]>>;
-            template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+            }, z.core.$strict>>>;
+            template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         }, z.core.$strict>>>;
     }, z.core.$strict>>;
 }, z.core.$strict>;
@@ -15735,16 +23230,16 @@ type StateConsumers = z.infer<typeof stateConsumers>;
 
 // @public
 const stateConsumers: z.ZodArray<z.ZodObject<{
-    kind: z.ZodString;
-    name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    kind: z.ZodString;
     link: z.ZodDefault<z.ZodNullable<z.ZodObject<{
-        token: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         plugin_path: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         search: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-    }, z.core.$strip>>>;
+        token: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strict>>>;
+    name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-}, z.core.$strip>>;
+}, z.core.$strict>>;
 
 // @public (undocumented)
 type StateDeclaration = z.infer<typeof stateDeclaration>;
@@ -15753,24 +23248,24 @@ type StateDeclaration = z.infer<typeof stateDeclaration>;
 const stateDeclaration: z.ZodObject<{
     default_subject_kind: z.ZodString;
     description: z.ZodDefault<z.ZodString>;
-    effective_schema: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
+    effective_schema: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
     name: z.ZodString;
-    regimes: z.ZodDefault<z.ZodUnion<readonly [z.ZodArray<z.ZodObject<{
+    regimes: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
         path: z.ZodArray<z.ZodString>;
         regime: z.ZodEnum<{
             single: "single";
             composing: "composing";
             free: "free";
         }>;
-    }, z.core.$strict>>, z.ZodNull]>>;
-    retention_days: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
+    }, z.core.$strict>>>>;
+    retention_days: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     schema: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>, z.ZodRecord<z.ZodString, z.ZodUnknown>]>>;
     subject_kinds: z.ZodArray<z.ZodString>;
-    updated_at: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+    updated_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strict>;
 
 // @public
@@ -15796,43 +23291,43 @@ type StateDeclarationSaved = z.infer<typeof stateDeclarationSaved>;
 const stateDeclarationSaved: z.ZodObject<{
     default_subject_kind: z.ZodString;
     description: z.ZodDefault<z.ZodString>;
-    effective_schema: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
+    effective_schema: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    held: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        held_by: z.ZodString;
+        save_id: z.ZodString;
+        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            key: z.ZodString;
+            kind: z.ZodString;
+            target_kind: z.ZodEnum<{
+                tool: "tool";
+                agent: "agent";
+            }>;
+            target_name: z.ZodString;
+        }, z.core.$strict>>>;
+    }, z.core.$strict>>>;
     name: z.ZodString;
-    regimes: z.ZodDefault<z.ZodUnion<readonly [z.ZodArray<z.ZodObject<{
+    regimes: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
         path: z.ZodArray<z.ZodString>;
         regime: z.ZodEnum<{
             single: "single";
             composing: "composing";
             free: "free";
         }>;
-    }, z.core.$strict>>, z.ZodNull]>>;
-    retention_days: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
+    }, z.core.$strict>>>>;
+    retention_days: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     schema: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>, z.ZodRecord<z.ZodString, z.ZodUnknown>]>>;
     subject_kinds: z.ZodArray<z.ZodString>;
-    updated_at: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
-        save_id: z.ZodString;
-        held_by: z.ZodString;
-        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
-            target_kind: z.ZodEnum<{
-                tool: "tool";
-                agent: "agent";
-            }>;
-            target_name: z.ZodString;
-            kind: z.ZodString;
-            key: z.ZodString;
-        }, z.core.$strip>>>;
-    }, z.core.$strip>>>;
+    updated_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strict>;
 
 // @public
 const stateDeleted: z.ZodObject<{
+    deleted: z.ZodBoolean;
     name: z.ZodString;
-    deleted: z.ZodLiteral<true>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -15840,7 +23335,7 @@ type StateDetached = z.infer<typeof stateDetached>;
 
 // @public
 const stateDetached: z.ZodObject<{
-    detached: z.ZodLiteral<true>;
+    detached: z.ZodBoolean;
     state: z.ZodString;
     template: z.ZodString;
 }, z.core.$strip>;
@@ -15852,30 +23347,30 @@ type StateDetail = z.infer<typeof stateDetail>;
 const stateDetail: z.ZodObject<{
     default_subject_kind: z.ZodString;
     description: z.ZodDefault<z.ZodString>;
-    effective_schema: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
+    effective_schema: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
     name: z.ZodString;
-    regimes: z.ZodDefault<z.ZodUnion<readonly [z.ZodArray<z.ZodObject<{
+    regimes: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
         path: z.ZodArray<z.ZodString>;
         regime: z.ZodEnum<{
             single: "single";
             composing: "composing";
             free: "free";
         }>;
-    }, z.core.$strict>>, z.ZodNull]>>;
-    retention_days: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
+    }, z.core.$strict>>>>;
+    retention_days: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     schema: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>, z.ZodRecord<z.ZodString, z.ZodUnknown>]>>;
     subject_kinds: z.ZodArray<z.ZodString>;
-    updated_at: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-    attachments: z.ZodDefault<z.ZodArray<z.ZodObject<{
-        template: z.ZodString;
+    updated_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    attachments: z.ZodArray<z.ZodObject<{
+        declarations: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+        parameters: z.ZodRecord<z.ZodString, z.ZodUnknown>;
         path: z.ZodArray<z.ZodString>;
-        parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        declarations: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strip>>>;
+        template: z.ZodString;
+    }, z.core.$strip>>;
 }, z.core.$strict>;
 
 // @public (undocumented)
@@ -15883,20 +23378,21 @@ type StateFoldReport = z.infer<typeof stateFoldReport>;
 
 // @public
 const stateFoldReport: z.ZodObject<{
+    already: z.ZodBoolean;
+    flattened: z.ZodNumber;
+    from: z.ZodObject<{
+        key: z.ZodString;
+        kind: z.ZodString;
+    }, z.core.$strip>;
+    into: z.ZodObject<{
+        key: z.ZodString;
+        kind: z.ZodString;
+    }, z.core.$strip>;
+    merged_members: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
     mode: z.ZodEnum<{
         switch: "switch";
         merge: "merge";
     }>;
-    from: z.ZodObject<{
-        kind: z.ZodString;
-        key: z.ZodString;
-    }, z.core.$strip>;
-    into: z.ZodObject<{
-        kind: z.ZodString;
-        key: z.ZodString;
-    }, z.core.$strip>;
-    already: z.ZodBoolean;
-    flattened: z.ZodDefault<z.ZodNumber>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -15905,29 +23401,29 @@ type StateInjection = z.infer<typeof stateInjection>;
 // @public (undocumented)
 const stateInjection: z.ZodObject<{
     into: z.ZodString;
-    jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+    }, z.core.$strict>>>;
+    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strict>;
 
 // @public (undocumented)
 const stateList: z.ZodArray<z.ZodObject<{
     default_subject_kind: z.ZodString;
     description: z.ZodDefault<z.ZodString>;
-    effective_schema: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
+    effective_schema: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
     name: z.ZodString;
-    regimes: z.ZodDefault<z.ZodUnion<readonly [z.ZodArray<z.ZodObject<{
+    regimes: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
         path: z.ZodArray<z.ZodString>;
         regime: z.ZodEnum<{
             single: "single";
             composing: "composing";
             free: "free";
         }>;
-    }, z.core.$strict>>, z.ZodNull]>>;
-    retention_days: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
+    }, z.core.$strict>>>>;
+    retention_days: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     schema: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
@@ -15944,17 +23440,17 @@ type StateListItem = z.infer<typeof stateListItem>;
 const stateListItem: z.ZodObject<{
     default_subject_kind: z.ZodString;
     description: z.ZodDefault<z.ZodString>;
-    effective_schema: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
+    effective_schema: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
     name: z.ZodString;
-    regimes: z.ZodDefault<z.ZodUnion<readonly [z.ZodArray<z.ZodObject<{
+    regimes: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
         path: z.ZodArray<z.ZodString>;
         regime: z.ZodEnum<{
             single: "single";
             composing: "composing";
             free: "free";
         }>;
-    }, z.core.$strict>>, z.ZodNull]>>;
-    retention_days: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
+    }, z.core.$strict>>>>;
+    retention_days: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     schema: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
@@ -15977,40 +23473,47 @@ type StateRecord = z.infer<typeof stateRecord>;
 
 // @public
 const stateRecord: z.ZodObject<{
+    canonical_subject: z.ZodObject<{
+        key: z.ZodString;
+        kind: z.ZodString;
+        target_kind: z.ZodEnum<{
+            tool: "tool";
+            agent: "agent";
+        }>;
+        target_name: z.ZodString;
+    }, z.core.$strict>;
+    data: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    folded_from: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        key: z.ZodString;
+        kind: z.ZodString;
+        target_kind: z.ZodEnum<{
+            tool: "tool";
+            agent: "agent";
+        }>;
+        target_name: z.ZodString;
+    }, z.core.$strict>>>;
+    seq: z.ZodNumber;
     state: z.ZodString;
     subject: z.ZodObject<{
+        key: z.ZodString;
+        kind: z.ZodString;
         target_kind: z.ZodEnum<{
             tool: "tool";
             agent: "agent";
         }>;
         target_name: z.ZodString;
-        kind: z.ZodString;
-        key: z.ZodString;
-    }, z.core.$strip>;
-    data: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    seq: z.ZodNumber;
-    canonical_subject: z.ZodObject<{
-        target_kind: z.ZodEnum<{
-            tool: "tool";
-            agent: "agent";
-        }>;
-        target_name: z.ZodString;
-        kind: z.ZodString;
-        key: z.ZodString;
-    }, z.core.$strip>;
-    folded_from: z.ZodDefault<z.ZodArray<z.ZodObject<{
-        target_kind: z.ZodEnum<{
-            tool: "tool";
-            agent: "agent";
-        }>;
-        target_name: z.ZodString;
-        kind: z.ZodString;
-        key: z.ZodString;
-    }, z.core.$strip>>>;
-}, z.core.$strip>;
+    }, z.core.$strict>;
+}, z.core.$strict>;
 
 // @public
-const stateRegime: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+const stateRegime: z.ZodObject<{
+    path: z.ZodArray<z.ZodString>;
+    regime: z.ZodEnum<{
+        single: "single";
+        composing: "composing";
+        free: "free";
+    }>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type StateRegimeRule = z.infer<typeof stateRegimeRule>;
@@ -16030,20 +23533,20 @@ type StateRetentionPruned = z.infer<typeof stateRetentionPruned>;
 
 // @public
 const stateRetentionPruned: z.ZodObject<{
-    pruned: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodNumber>>;
-    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
-        save_id: z.ZodString;
+    held: z.ZodOptional<z.ZodArray<z.ZodObject<{
         held_by: z.ZodString;
+        save_id: z.ZodString;
         subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            key: z.ZodString;
+            kind: z.ZodString;
             target_kind: z.ZodEnum<{
                 tool: "tool";
                 agent: "agent";
             }>;
             target_name: z.ZodString;
-            kind: z.ZodString;
-            key: z.ZodString;
-        }, z.core.$strip>>>;
-    }, z.core.$strip>>>;
+        }, z.core.$strict>>>;
+    }, z.core.$strict>>>;
+    pruned: z.ZodRecord<z.ZodString, z.ZodNumber>;
 }, z.core.$strip>;
 
 // @public
@@ -16057,23 +23560,23 @@ type StateStats = z.infer<typeof stateStats>;
 
 // @public
 const stateStats: z.ZodObject<{
-    records: z.ZodNumber;
-    per_field: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodNumber>>;
-    per_kind: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodNumber>>;
-    consumers: z.ZodDefault<z.ZodNumber>;
-    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
-        save_id: z.ZodString;
+    consumers: z.ZodNumber;
+    held: z.ZodOptional<z.ZodArray<z.ZodObject<{
         held_by: z.ZodString;
+        save_id: z.ZodString;
         subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            key: z.ZodString;
+            kind: z.ZodString;
             target_kind: z.ZodEnum<{
                 tool: "tool";
                 agent: "agent";
             }>;
             target_name: z.ZodString;
-            kind: z.ZodString;
-            key: z.ZodString;
-        }, z.core.$strip>>>;
-    }, z.core.$strip>>>;
+        }, z.core.$strict>>>;
+    }, z.core.$strict>>>;
+    per_field: z.ZodRecord<z.ZodString, z.ZodNumber>;
+    per_kind: z.ZodRecord<z.ZodString, z.ZodNumber>;
+    records: z.ZodNumber;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -16081,14 +23584,14 @@ type StateSubject = z.infer<typeof stateSubject>;
 
 // @public
 const stateSubject: z.ZodObject<{
+    key: z.ZodString;
+    kind: z.ZodString;
     target_kind: z.ZodEnum<{
         tool: "tool";
         agent: "agent";
     }>;
     target_name: z.ZodString;
-    kind: z.ZodString;
-    key: z.ZodString;
-}, z.core.$strip>;
+}, z.core.$strict>;
 
 // @public
 interface StateSubjectRef {
@@ -16122,8 +23625,8 @@ interface StateTemplateBody {
 
 // @public
 const stateTemplateDeleted: z.ZodObject<{
+    deleted: z.ZodBoolean;
     name: z.ZodString;
-    deleted: z.ZodLiteral<true>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -16131,14 +23634,14 @@ type StateTemplateDocument = z.infer<typeof stateTemplateDocument>;
 
 // @public (undocumented)
 const stateTemplateDocument: z.ZodObject<{
-    declarations: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
-        check: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    declarations: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        check: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     description: z.ZodDefault<z.ZodString>;
     kind: z.ZodDefault<z.ZodLiteral<"state-template">>;
     name: z.ZodString;
@@ -16146,7 +23649,7 @@ const stateTemplateDocument: z.ZodObject<{
         default: z.ZodOptional<z.ZodUnknown>;
         schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     }, z.core.$strict>>>;
-    reconcile: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    reconcile: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         close: z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
@@ -16162,7 +23665,7 @@ const stateTemplateDocument: z.ZodObject<{
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, z.core.$strict>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     regimes: z.ZodDefault<z.ZodArray<z.ZodObject<{
         path: z.ZodArray<z.ZodString>;
         regime: z.ZodEnum<{
@@ -16176,7 +23679,7 @@ const stateTemplateDocument: z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>, z.ZodRecord<z.ZodString, z.ZodUnknown>]>>;
-    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodObject<{
+    template_jq: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
         description: z.ZodDefault<z.ZodString>;
         jq: z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
@@ -16190,7 +23693,7 @@ const stateTemplateDocument: z.ZodObject<{
         }>;
         reads: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
         writes: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
-    }, z.core.$strict>>, z.ZodNull]>>;
+    }, z.core.$strict>>>>;
     trace: z.ZodOptional<z.ZodObject<{
         enabled: z.ZodDefault<z.ZodBoolean>;
     }, z.core.$strict>>;
@@ -16198,14 +23701,14 @@ const stateTemplateDocument: z.ZodObject<{
 
 // @public (undocumented)
 const stateTemplateList: z.ZodArray<z.ZodObject<{
-    declarations: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
-        check: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    declarations: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        check: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     description: z.ZodDefault<z.ZodString>;
     kind: z.ZodDefault<z.ZodLiteral<"state-template">>;
     name: z.ZodString;
@@ -16213,7 +23716,7 @@ const stateTemplateList: z.ZodArray<z.ZodObject<{
         default: z.ZodOptional<z.ZodUnknown>;
         schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     }, z.core.$strict>>>;
-    reconcile: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    reconcile: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         close: z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
@@ -16229,7 +23732,7 @@ const stateTemplateList: z.ZodArray<z.ZodObject<{
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, z.core.$strict>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     regimes: z.ZodDefault<z.ZodArray<z.ZodObject<{
         path: z.ZodArray<z.ZodString>;
         regime: z.ZodEnum<{
@@ -16243,7 +23746,7 @@ const stateTemplateList: z.ZodArray<z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>, z.ZodRecord<z.ZodString, z.ZodUnknown>]>>;
-    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodObject<{
+    template_jq: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
         description: z.ZodDefault<z.ZodString>;
         jq: z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
@@ -16257,12 +23760,12 @@ const stateTemplateList: z.ZodArray<z.ZodObject<{
         }>;
         reads: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
         writes: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
-    }, z.core.$strict>>, z.ZodNull]>>;
+    }, z.core.$strict>>>>;
     trace: z.ZodOptional<z.ZodObject<{
         enabled: z.ZodDefault<z.ZodBoolean>;
     }, z.core.$strict>>;
-    attached_to: z.ZodDefault<z.ZodNumber>;
-    shipped_default: z.ZodDefault<z.ZodBoolean>;
+    attached_to: z.ZodNumber;
+    shipped_default: z.ZodBoolean;
 }, z.core.$strict>>;
 
 // @public (undocumented)
@@ -16270,14 +23773,14 @@ type StateTemplateListItem = z.infer<typeof stateTemplateListItem>;
 
 // @public
 const stateTemplateListItem: z.ZodObject<{
-    declarations: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
-        check: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    declarations: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        check: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        }, z.core.$strict>, z.ZodNull]>>;
+        }, z.core.$strict>>>;
         schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     description: z.ZodDefault<z.ZodString>;
     kind: z.ZodDefault<z.ZodLiteral<"state-template">>;
     name: z.ZodString;
@@ -16285,7 +23788,7 @@ const stateTemplateListItem: z.ZodObject<{
         default: z.ZodOptional<z.ZodUnknown>;
         schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     }, z.core.$strict>>>;
-    reconcile: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    reconcile: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         close: z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
@@ -16301,7 +23804,7 @@ const stateTemplateListItem: z.ZodObject<{
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, z.core.$strict>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     regimes: z.ZodDefault<z.ZodArray<z.ZodObject<{
         path: z.ZodArray<z.ZodString>;
         regime: z.ZodEnum<{
@@ -16315,7 +23818,7 @@ const stateTemplateListItem: z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>, z.ZodRecord<z.ZodString, z.ZodUnknown>]>>;
-    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodObject<{
+    template_jq: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
         description: z.ZodDefault<z.ZodString>;
         jq: z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
@@ -16329,12 +23832,12 @@ const stateTemplateListItem: z.ZodObject<{
         }>;
         reads: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
         writes: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
-    }, z.core.$strict>>, z.ZodNull]>>;
+    }, z.core.$strict>>>>;
     trace: z.ZodOptional<z.ZodObject<{
         enabled: z.ZodDefault<z.ZodBoolean>;
     }, z.core.$strict>>;
-    attached_to: z.ZodDefault<z.ZodNumber>;
-    shipped_default: z.ZodDefault<z.ZodBoolean>;
+    attached_to: z.ZodNumber;
+    shipped_default: z.ZodBoolean;
 }, z.core.$strict>;
 
 // @public (undocumented)
@@ -16362,28 +23865,28 @@ type StateUpdate = z.infer<typeof stateUpdate>;
 
 // @public (undocumented)
 const stateUpdate: z.ZodObject<{
-    adapter: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    }, z.core.$strict>>>;
+    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    op_id: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    }, z.core.$strict>>>;
+    op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
-    template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+    }, z.core.$strict>>>;
+    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strict>;
 
 // @public
 const storageDirDeleted: z.ZodObject<{
+    deleted: z.ZodBoolean;
     dir: z.ZodString;
-    deleted: z.ZodLiteral<true>;
 }, z.core.$strip>;
 
 // @public
@@ -16394,9 +23897,9 @@ type StorageInfo = z.infer<typeof storageInfo>;
 
 // @public
 const storageInfo: z.ZodObject<{
+    module: z.ZodNullable<z.ZodString>;
     present: z.ZodBoolean;
     provider: z.ZodNullable<z.ZodString>;
-    module: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
 
 // @public
@@ -16417,8 +23920,8 @@ export interface StoragePresenceQueryLike {
 
 // @public
 const storageResourceDeleted: z.ZodObject<{
+    deleted: z.ZodBoolean;
     id: z.ZodString;
-    deleted: z.ZodLiteral<true>;
 }, z.core.$strip>;
 
 // @public
@@ -16431,14 +23934,14 @@ type StorageResourceStat = z.infer<typeof storageResourceStat>;
 
 // @public
 const storageResourceStat: z.ZodObject<{
+    content_type: z.ZodString;
     id: z.ZodString;
-    content_type: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
 
 // @public
 const storageResourceStored: z.ZodObject<{
     id: z.ZodString;
-    stored: z.ZodLiteral<true>;
+    stored: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public
@@ -16473,33 +23976,33 @@ type StudioPluginManifest = z.infer<typeof studioPluginManifest>;
 
 // @public (undocumented)
 const studioPluginManifest: z.ZodObject<{
-    name: z.ZodString;
-    version: z.ZodString;
     api_version: z.ZodNumber;
-    entry: z.ZodString;
-    integrity: z.ZodRecord<z.ZodString, z.ZodString>;
     contributions: z.ZodObject<{
-        tool_panels: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
+        nav_entries: z.ZodDefault<z.ZodArray<z.ZodString>>;
         pages: z.ZodDefault<z.ZodArray<z.ZodString>>;
         settings_tabs: z.ZodDefault<z.ZodArray<z.ZodString>>;
-        nav_entries: z.ZodDefault<z.ZodArray<z.ZodString>>;
-    }, z.core.$strip>;
-}, z.core.$strip>;
+        tool_panels: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
+    }, z.core.$strict>;
+    entry: z.ZodString;
+    integrity: z.ZodRecord<z.ZodString, z.ZodString>;
+    name: z.ZodString;
+    version: z.ZodString;
+}, z.core.$strict>;
 
 // @public (undocumented)
 const studioPluginRegistry: z.ZodArray<z.ZodObject<{
-    name: z.ZodString;
-    version: z.ZodString;
     api_version: z.ZodNumber;
-    entry: z.ZodString;
-    integrity: z.ZodRecord<z.ZodString, z.ZodString>;
     contributions: z.ZodObject<{
-        tool_panels: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
+        nav_entries: z.ZodDefault<z.ZodArray<z.ZodString>>;
         pages: z.ZodDefault<z.ZodArray<z.ZodString>>;
         settings_tabs: z.ZodDefault<z.ZodArray<z.ZodString>>;
-        nav_entries: z.ZodDefault<z.ZodArray<z.ZodString>>;
-    }, z.core.$strip>;
-}, z.core.$strip>>;
+        tool_panels: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
+    }, z.core.$strict>;
+    entry: z.ZodString;
+    integrity: z.ZodRecord<z.ZodString, z.ZodString>;
+    name: z.ZodString;
+    version: z.ZodString;
+}, z.core.$strict>>;
 
 // @public
 export const SUBJECT_INCOMPLETE_MESSAGE = "A subject needs a target, a kind, and a key.";
@@ -16509,32 +24012,32 @@ type SubjectPage = z.infer<typeof subjectPage>;
 
 // @public
 const subjectPage: z.ZodObject<{
+    held: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        held_by: z.ZodString;
+        save_id: z.ZodString;
+        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            key: z.ZodString;
+            kind: z.ZodString;
+            target_kind: z.ZodEnum<{
+                tool: "tool";
+                agent: "agent";
+            }>;
+            target_name: z.ZodString;
+        }, z.core.$strict>>>;
+    }, z.core.$strict>>>;
+    next_cursor: z.ZodNullable<z.ZodString>;
     subjects: z.ZodArray<z.ZodObject<{
         subject: z.ZodObject<{
+            key: z.ZodString;
+            kind: z.ZodString;
             target_kind: z.ZodEnum<{
                 tool: "tool";
                 agent: "agent";
             }>;
             target_name: z.ZodString;
-            kind: z.ZodString;
-            key: z.ZodString;
-        }, z.core.$strip>;
+        }, z.core.$strict>;
         updated_at: z.ZodNumber;
     }, z.core.$strip>>;
-    next_cursor: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
-        save_id: z.ZodString;
-        held_by: z.ZodString;
-        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
-            target_kind: z.ZodEnum<{
-                tool: "tool";
-                agent: "agent";
-            }>;
-            target_name: z.ZodString;
-            kind: z.ZodString;
-            key: z.ZodString;
-        }, z.core.$strip>>>;
-    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -16543,14 +24046,14 @@ type SubjectRow = z.infer<typeof subjectRow>;
 // @public
 const subjectRow: z.ZodObject<{
     subject: z.ZodObject<{
+        key: z.ZodString;
+        kind: z.ZodString;
         target_kind: z.ZodEnum<{
             tool: "tool";
             agent: "agent";
         }>;
         target_name: z.ZodString;
-        kind: z.ZodString;
-        key: z.ZodString;
-    }, z.core.$strip>;
+    }, z.core.$strict>;
     updated_at: z.ZodNumber;
 }, z.core.$strip>;
 
@@ -16625,11 +24128,11 @@ type SubMcpEntry = z.infer<typeof subMcpEntry>;
 
 // @public
 const subMcpEntry: z.ZodObject<{
+    access_pattern: z.ZodString;
+    mount_url: z.ZodString;
+    slug: z.ZodString;
     tools: z.ZodArray<z.ZodString>;
     transport: z.ZodString;
-    mount_url: z.ZodString;
-    access_pattern: z.ZodString;
-    slug: z.ZodString;
 }, z.core.$strip>;
 
 // @public
@@ -16637,10 +24140,10 @@ export const subMcpKey: readonly ["sub-mcp"];
 
 // @public (undocumented)
 const subMcpList: z.ZodRecord<z.ZodString, z.ZodObject<{
+    access_pattern: z.ZodString;
+    mount_url: z.ZodString;
     tools: z.ZodArray<z.ZodString>;
     transport: z.ZodString;
-    mount_url: z.ZodString;
-    access_pattern: z.ZodString;
 }, z.core.$strip>>;
 
 // @public (undocumented)
@@ -16648,16 +24151,16 @@ type SubMcpMount = z.infer<typeof subMcpMount>;
 
 // @public
 const subMcpMount: z.ZodObject<{
+    access_pattern: z.ZodString;
+    mount_url: z.ZodString;
     tools: z.ZodArray<z.ZodString>;
     transport: z.ZodString;
-    mount_url: z.ZodString;
-    access_pattern: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
 const subMcpRemoved: z.ZodObject<{
+    removed: z.ZodBoolean;
     slug: z.ZodString;
-    removed: z.ZodLiteral<true>;
 }, z.core.$strip>;
 
 // @public
@@ -16671,10 +24174,10 @@ interface SubmitToolRunArgs {
 
 // @public (undocumented)
 const subServiceView: z.ZodObject<{
-    id: z.ZodString;
+    description: z.ZodDefault<z.ZodString>;
     display_name: z.ZodString;
-    description: z.ZodString;
-    scopes: z.ZodArray<z.ZodString>;
+    id: z.ZodString;
+    scopes: z.ZodDefault<z.ZodArray<z.ZodString>>;
 }, z.core.$strip>;
 
 // @public
@@ -16808,24 +24311,24 @@ type TargetConversationConfig = z.input<typeof targetConversationConfig>;
 
 // @public (undocumented)
 const targetConversationConfig: z.ZodObject<{
-    greeting_template: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+    greeting_template: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     multichannel: z.ZodDefault<z.ZodBoolean>;
-    state_binding: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         states: z.ZodArray<z.ZodObject<{
             input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                 into: z.ZodString;
-                jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                }, z.core.$strict>>>;
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             }, z.core.$strict>>>;
-            scope_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 content: z.ZodOptional<z.ZodString>;
                 id: z.ZodOptional<z.ZodString>;
                 kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-            }, z.core.$strict>, z.ZodNull]>>;
+            }, z.core.$strict>>>;
             state: z.ZodString;
             subject_expr: z.ZodObject<{
                 content: z.ZodOptional<z.ZodString>;
@@ -16834,25 +24337,25 @@ const targetConversationConfig: z.ZodObject<{
             }, z.core.$strict>;
             templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
             updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
-                adapter: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                }, z.core.$strict>>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                op_id: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+                }, z.core.$strict>>>;
+                op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     content: z.ZodOptional<z.ZodString>;
                     id: z.ZodOptional<z.ZodString>;
                     kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-                }, z.core.$strict>, z.ZodNull]>>;
-                template_jq: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+                }, z.core.$strict>>>;
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             }, z.core.$strict>>>;
         }, z.core.$strict>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     target_kind: z.ZodEnum<{
         tool: "tool";
         agent: "agent";
@@ -16874,40 +24377,85 @@ export interface TDProps extends TdHTMLAttributes<HTMLTableCellElement>, Numeric
 }
 
 // @public (undocumented)
-const templateCacheCleared: z.ZodObject<{
-    cleared: z.ZodLiteral<true>;
-}, z.core.$strip>;
+const templateCacheCleared: ZodObject<    {
+cleared: ZodBoolean;
+fanout: ZodObject<    {
+error: ZodDefault<ZodNullable<ZodString>>;
+local_only: ZodDefault<ZodNullable<ZodBoolean>>;
+mode: ZodString;
+note: ZodDefault<ZodNullable<ZodString>>;
+op: ZodDefault<ZodNullable<ZodString>>;
+reachable: ZodDefault<ZodNullable<ZodBoolean>>;
+results: ZodDefault<ZodNullable<ZodArray<ZodObject<    {
+detail: ZodDefault<ZodNullable<ZodString>>;
+error: ZodDefault<ZodNullable<ZodString>>;
+name: ZodString;
+outcome: ZodString;
+payload: ZodDefault<ZodNullable<ZodUnknown>>;
+}, $strip>>>>;
+}, $strip>;
+}, $strip>;
 
 // @public (undocumented)
 type TemplateDeclarations = z.infer<typeof templateDeclarations>;
 
 // @public (undocumented)
 const templateDeclarations: z.ZodObject<{
-    check: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
+    check: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>, z.ZodNull]>>;
+    }, z.core.$strict>>>;
     schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
 }, z.core.$strict>;
 
 // @public (undocumented)
-const templateDeleted: z.ZodObject<{
-    path: z.ZodString;
-    deleted: z.ZodLiteral<true>;
-}, z.core.$strip>;
+const templateDeleted: ZodObject<    {
+deleted: ZodBoolean;
+fanout: ZodObject<    {
+error: ZodDefault<ZodNullable<ZodString>>;
+local_only: ZodDefault<ZodNullable<ZodBoolean>>;
+mode: ZodString;
+note: ZodDefault<ZodNullable<ZodString>>;
+op: ZodDefault<ZodNullable<ZodString>>;
+reachable: ZodDefault<ZodNullable<ZodBoolean>>;
+results: ZodDefault<ZodNullable<ZodArray<ZodObject<    {
+detail: ZodDefault<ZodNullable<ZodString>>;
+error: ZodDefault<ZodNullable<ZodString>>;
+name: ZodString;
+outcome: ZodString;
+payload: ZodDefault<ZodNullable<ZodUnknown>>;
+}, $strip>>>>;
+}, $strip>;
+path: ZodString;
+}, $strip>;
 
 // @public (undocumented)
-const templateDetail: z.ZodObject<{
-    template: z.ZodString;
-    schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-}, z.core.$strip>;
+const templateDetail: ZodObject<    {
+schema: ZodRecord<ZodString, ZodUnknown>;
+template: ZodString;
+}, $strip>;
 
 // @public (undocumented)
-const templateDirDeleted: z.ZodObject<{
-    path: z.ZodString;
-    deleted: z.ZodLiteral<true>;
-}, z.core.$strip>;
+const templateDirDeleted: ZodObject<    {
+deleted: ZodBoolean;
+fanout: ZodObject<    {
+error: ZodDefault<ZodNullable<ZodString>>;
+local_only: ZodDefault<ZodNullable<ZodBoolean>>;
+mode: ZodString;
+note: ZodDefault<ZodNullable<ZodString>>;
+op: ZodDefault<ZodNullable<ZodString>>;
+reachable: ZodDefault<ZodNullable<ZodBoolean>>;
+results: ZodDefault<ZodNullable<ZodArray<ZodObject<    {
+detail: ZodDefault<ZodNullable<ZodString>>;
+error: ZodDefault<ZodNullable<ZodString>>;
+name: ZodString;
+outcome: ZodString;
+payload: ZodDefault<ZodNullable<ZodUnknown>>;
+}, $strip>>>>;
+}, $strip>;
+path: ZodString;
+}, $strip>;
 
 // @public (undocumented)
 export type TemplatedText = z.infer<typeof templatedText>;
@@ -17011,12 +24559,12 @@ type TemplateJqApplyResult = z.infer<typeof templateJqApplyResult>;
 
 // @public
 const templateJqApplyResult: z.ZodObject<{
-    name: z.ZodString;
     applied: z.ZodBoolean;
     data: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    name: z.ZodString;
     seq: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     skipped: z.ZodDefault<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-}, z.core.$strip>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type TemplateJqResult = z.infer<typeof templateJqResult>;
@@ -17024,9 +24572,9 @@ type TemplateJqResult = z.infer<typeof templateJqResult>;
 // @public
 const templateJqResult: z.ZodObject<{
     name: z.ZodString;
-    purpose: z.ZodLiteral<"input">;
-    value: z.ZodUnknown;
-}, z.core.$strip>;
+    purpose: z.ZodDefault<z.ZodLiteral<"input">>;
+    value: z.ZodDefault<z.ZodUnknown>;
+}, z.core.$strict>;
 
 // @public
 export interface TemplateJqSuggestion {
@@ -17038,7 +24586,7 @@ export interface TemplateJqSuggestion {
 }
 
 // @public (undocumented)
-const templateNames: z.ZodArray<z.ZodString>;
+const templateNames: ZodArray<ZodString>;
 
 // @public
 export interface TemplateNamesQueryLike {
@@ -17077,9 +24625,9 @@ const templateReconcile: z.ZodObject<{
 }, z.core.$strict>;
 
 // @public (undocumented)
-const templateRendered: z.ZodObject<{
-    rendered: z.ZodString;
-}, z.core.$strip>;
+const templateRendered: ZodObject<    {
+rendered: ZodString;
+}, $strip>;
 
 // @public
 export function templatesCatalogFromList(items: readonly StateTemplateListItem[]): BindingTemplateOption[];
@@ -17088,10 +24636,25 @@ export function templatesCatalogFromList(items: readonly StateTemplateListItem[]
 export const TemplatesIcon: IconComponent;
 
 // @public (undocumented)
-const templateUploaded: z.ZodObject<{
-    path: z.ZodString;
-    uploaded: z.ZodLiteral<true>;
-}, z.core.$strip>;
+const templateUploaded: ZodObject<    {
+fanout: ZodObject<    {
+error: ZodDefault<ZodNullable<ZodString>>;
+local_only: ZodDefault<ZodNullable<ZodBoolean>>;
+mode: ZodString;
+note: ZodDefault<ZodNullable<ZodString>>;
+op: ZodDefault<ZodNullable<ZodString>>;
+reachable: ZodDefault<ZodNullable<ZodBoolean>>;
+results: ZodDefault<ZodNullable<ZodArray<ZodObject<    {
+detail: ZodDefault<ZodNullable<ZodString>>;
+error: ZodDefault<ZodNullable<ZodString>>;
+name: ZodString;
+outcome: ZodString;
+payload: ZodDefault<ZodNullable<ZodUnknown>>;
+}, $strip>>>>;
+}, $strip>;
+path: ZodString;
+uploaded: ZodBoolean;
+}, $strip>;
 
 // @public (undocumented)
 export function Textarea(input: TextareaProps): JSX.Element;
@@ -17149,24 +24712,24 @@ type TokensPayload = z.infer<typeof tokensPayload>;
 
 // @public
 const tokensPayload: z.ZodArray<z.ZodObject<{
-    user_id: z.ZodString;
-    description: z.ZodString;
-    scopes: z.ZodArray<z.ZodString>;
-    policy_data: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-    condition: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+    condition: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>>>;
-    principal: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-        user_id: z.ZodString;
+    description: z.ZodString;
+    orphaned: z.ZodDefault<z.ZodBoolean>;
+    policy_data: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    principal: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        display_name: z.ZodString;
         kind: z.ZodEnum<{
             human: "human";
             service: "service";
         }>;
-        display_name: z.ZodString;
+        user_id: z.ZodString;
     }, z.core.$strip>>>;
-    orphaned: z.ZodOptional<z.ZodBoolean>;
+    scopes: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+    user_id: z.ZodString;
 }, z.core.$strip>>;
 
 // @public
@@ -17216,14 +24779,15 @@ type ToolExtensions = z.infer<typeof toolExtensions>;
 
 // @public
 const toolExtensions: z.ZodObject<{
+    available: z.ZodArray<z.ZodObject<{
+        kind: z.ZodString;
+        multiple: z.ZodBoolean;
+        name: z.ZodString;
+    }, z.core.$strip>>;
     combos: z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
         name: z.ZodString;
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     }, z.core.$strip>]>>>;
-    available: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
-        kind: z.ZodString;
-    }, z.core.$strip>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -17231,79 +24795,56 @@ type ToolExtensionsApplyResult = z.infer<typeof toolExtensionsApplyResult>;
 
 // @public
 const toolExtensionsApplyResult: z.ZodObject<{
-    status: z.ZodString;
     env_keys: z.ZodNumber;
-    awaiting_respawn: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
-        keys: z.ZodArray<z.ZodString>;
-    }, z.core.$strip>>;
+    status: z.ZodString;
     fanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
         note: z.ZodString;
     }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
         op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
             }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
         mode: z.ZodLiteral<"fleet">;
     }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
         op: z.ZodString;
-        reachable: z.ZodBoolean;
-        local_only: z.ZodBoolean;
-        results: z.ZodArray<z.ZodObject<{
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 applied: "applied";
-                resyncing: "resyncing";
-                recycling: "recycling";
-                stale: "stale";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
             }>;
-            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-            error: z.ZodNullable<z.ZodString>;
-            detail: z.ZodNullable<z.ZodString>;
-        }, z.core.$strip>>;
-        error: z.ZodNullable<z.ZodString>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
         mode: z.ZodLiteral<"unreachable">;
     }, z.core.$strip>], "mode">;
-    recycle: z.ZodNullable<z.ZodObject<{
-        recycle: z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
-            kind: z.ZodString;
-            status: z.ZodString;
-            generation_before: z.ZodNumber;
-            detail: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        }, z.core.$strip>>;
-        fresh: z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
-            kind: z.ZodString;
-            generation: z.ZodNumber;
-        }, z.core.$strip>>;
-        recycle_stopped: z.ZodNullable<z.ZodObject<{
-            kind: z.ZodString;
-            name: z.ZodNullable<z.ZodString>;
-            detail: z.ZodString;
-        }, z.core.$strip>>;
-    }, z.core.$strip>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -17321,8 +24862,8 @@ const toolMediaResult: z.ZodObject<{
 
 // @public
 const toolMetaDeleted: z.ZodObject<{
+    deleted: z.ZodBoolean;
     tool_name: z.ZodString;
-    deleted: z.ZodLiteral<true>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -17333,15 +24874,15 @@ const toolMetaOverlay: z.ZodObject<{
     folders: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         name: z.ZodString;
-        parent_id: z.ZodNullable<z.ZodString>;
+        parent_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strip>>;
     meta: z.ZodArray<z.ZodObject<{
+        badges: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        display_name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        folder_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        hidden: z.ZodDefault<z.ZodNullable<z.ZodBoolean>>;
+        tags: z.ZodDefault<z.ZodArray<z.ZodString>>;
         tool_name: z.ZodString;
-        display_name: z.ZodNullable<z.ZodString>;
-        folder_id: z.ZodNullable<z.ZodString>;
-        tags: z.ZodArray<z.ZodString>;
-        badges: z.ZodArray<z.ZodString>;
-        hidden: z.ZodNullable<z.ZodBoolean>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 
@@ -17364,12 +24905,12 @@ type ToolMetaRecord = z.infer<typeof toolMetaRecord>;
 
 // @public
 const toolMetaRecord: z.ZodObject<{
+    badges: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    display_name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    folder_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    hidden: z.ZodDefault<z.ZodNullable<z.ZodBoolean>>;
+    tags: z.ZodDefault<z.ZodArray<z.ZodString>>;
     tool_name: z.ZodString;
-    display_name: z.ZodNullable<z.ZodString>;
-    folder_id: z.ZodNullable<z.ZodString>;
-    tags: z.ZodArray<z.ZodString>;
-    badges: z.ZodArray<z.ZodString>;
-    hidden: z.ZodNullable<z.ZodBoolean>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -17423,8 +24964,8 @@ const toolRunList: z.ZodArray<z.ZodObject<{
     tool_name: z.ZodString;
     status: z.ZodEnum<{
         running: "running";
-        failed: "failed";
         parked: "parked";
+        failed: "failed";
         succeeded: "succeeded";
         lost: "lost";
     }>;
@@ -17438,8 +24979,8 @@ const toolRunRecord: z.ZodObject<{
     tool_name: z.ZodString;
     status: z.ZodEnum<{
         running: "running";
-        failed: "failed";
         parked: "parked";
+        failed: "failed";
         succeeded: "succeeded";
         lost: "lost";
     }>;
@@ -17447,7 +24988,6 @@ const toolRunRecord: z.ZodObject<{
     finished_at: z.ZodOptional<z.ZodString>;
     result: z.ZodOptional<z.ZodUnknown>;
     error: z.ZodOptional<z.ZodString>;
-    outcome: z.ZodOptional<z.ZodUnknown>;
     resumed_interactions: z.ZodOptional<z.ZodArray<z.ZodString>>;
 }, z.core.$strip>;
 
@@ -17461,9 +25001,9 @@ type ToolSchema = z.infer<typeof toolSchema>;
 
 // @public (undocumented)
 const toolSchema: z.ZodObject<{
+    description: z.ZodNullable<z.ZodString>;
     input: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     output: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    description: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
 
 // @public
@@ -17477,18 +25017,20 @@ type ToolTagEntry = z.infer<typeof toolTagEntry>;
 
 // @public
 const toolTagEntry: z.ZodObject<{
-    name: z.ZodString;
-    tags: z.ZodArray<z.ZodString>;
     badges: z.ZodArray<z.ZodString>;
     hidden: z.ZodBoolean;
+    name: z.ZodString;
+    schedulable: z.ZodBoolean;
+    tags: z.ZodArray<z.ZodString>;
 }, z.core.$strip>;
 
 // @public (undocumented)
 const toolTags: z.ZodArray<z.ZodObject<{
-    name: z.ZodString;
-    tags: z.ZodArray<z.ZodString>;
     badges: z.ZodArray<z.ZodString>;
     hidden: z.ZodBoolean;
+    name: z.ZodString;
+    schedulable: z.ZodBoolean;
+    tags: z.ZodArray<z.ZodString>;
 }, z.core.$strip>>;
 
 // @public (undocumented)
@@ -17574,11 +25116,11 @@ type TriggerLinkCreated = z.infer<typeof triggerLinkCreated>;
 
 // @public
 const triggerLinkCreated: z.ZodObject<{
+    expires_at: z.ZodNullable<z.ZodString>;
     name: z.ZodString;
-    trigger_path: z.ZodString;
     token: z.ZodString;
     topic: z.ZodString;
-    expires_at: z.ZodNullable<z.ZodString>;
+    trigger_path: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -17586,8 +25128,8 @@ type TriggerLinkDeleted = z.infer<typeof triggerLinkDeleted>;
 
 // @public
 const triggerLinkDeleted: z.ZodObject<{
-    removed: z.ZodBoolean;
     name: z.ZodString;
+    removed: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -17596,9 +25138,16 @@ type TriggerLinkList = z.infer<typeof triggerLinkList>;
 // @public
 const triggerLinkList: z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
-        topic: z.ZodString;
+        created_at: z.ZodString;
+        created_by: z.ZodNullable<z.ZodString>;
         execution_key: z.ZodString;
+        execution_key_fingerprint: z.ZodString;
+        expires_at: z.ZodNullable<z.ZodString>;
+        name: z.ZodString;
+        require_api_key: z.ZodBoolean;
+        token_hash_prefix: z.ZodString;
+        tool_kwargs: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        topic: z.ZodString;
         trigger_auth: z.ZodEnum<{
             token: "token";
             public: "public";
@@ -17606,11 +25155,6 @@ const triggerLinkList: z.ZodObject<{
             "token+api_key": "token+api_key";
             "out-of-service": "out-of-service";
         }>;
-        tool_kwargs: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        created_by: z.ZodNullable<z.ZodString>;
-        created_at: z.ZodString;
-        expires_at: z.ZodNullable<z.ZodString>;
-        token_hash_prefix: z.ZodString;
     }, z.core.$strip>>;
     total: z.ZodNumber;
 }, z.core.$strip>;
@@ -17620,9 +25164,16 @@ type TriggerLinkRecord = z.infer<typeof triggerLinkRecord>;
 
 // @public
 const triggerLinkRecord: z.ZodObject<{
-    name: z.ZodString;
-    topic: z.ZodString;
+    created_at: z.ZodString;
+    created_by: z.ZodNullable<z.ZodString>;
     execution_key: z.ZodString;
+    execution_key_fingerprint: z.ZodString;
+    expires_at: z.ZodNullable<z.ZodString>;
+    name: z.ZodString;
+    require_api_key: z.ZodBoolean;
+    token_hash_prefix: z.ZodString;
+    tool_kwargs: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    topic: z.ZodString;
     trigger_auth: z.ZodEnum<{
         token: "token";
         public: "public";
@@ -17630,11 +25181,6 @@ const triggerLinkRecord: z.ZodObject<{
         "token+api_key": "token+api_key";
         "out-of-service": "out-of-service";
     }>;
-    tool_kwargs: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    created_by: z.ZodNullable<z.ZodString>;
-    created_at: z.ZodString;
-    expires_at: z.ZodNullable<z.ZodString>;
-    token_hash_prefix: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -17902,26 +25448,42 @@ const visitOutcome: z.ZodObject<{
     kind: z.ZodEnum<{
         result: "result";
         none: "none";
-        asks: "asks";
         parked: "parked";
+        asks: "asks";
     }>;
     result: z.ZodOptional<z.ZodUnknown>;
     asks: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        answer_format: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        asked_by: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+        audience: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        channel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        created_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        error: z.ZodDefault<z.ZodUnknown>;
+        expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        format_payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        group_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         id: z.ZodString;
+        media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>>;
+        on_expiry: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            kill: "kill";
+            resume: "resume";
+        }>>>;
+        payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        question: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        recipient: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        result: z.ZodDefault<z.ZodUnknown>;
         status: z.ZodEnum<{
             running: "running";
-            failed: "failed";
             asking: "asking";
+            failed: "failed";
             finished: "finished";
         }>;
-        to: z.ZodOptional<z.ZodNullable<z.ZodEnum<{
-            user: "user";
+        thread_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        to: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
             caller: "caller";
+            user: "user";
         }>>>;
-        question: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        payload: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-        asked_by: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
-    }, z.core.$strip>>>;
+    }, z.core.$strict>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -17997,9 +25559,9 @@ type WorkerLastOp = z.infer<typeof workerLastOp>;
 
 // @public
 const workerLastOp: z.ZodObject<{
+    at: z.ZodString;
     op: z.ZodString;
     outcome: z.ZodString;
-    at: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -18007,9 +25569,9 @@ type WorkerState = z.infer<typeof workerState>;
 
 // @public
 const workerState: z.ZodEnum<{
-    ready: "ready";
     resyncing: "resyncing";
     recycling: "recycling";
+    ready: "ready";
 }>;
 
 // @public (undocumented)
@@ -18017,43 +25579,57 @@ type WriteEntry = z.infer<typeof writeEntry>;
 
 // @public
 const writeEntry: z.ZodObject<{
-    seq: z.ZodNumber;
     at: z.ZodString;
     origin: z.ZodObject<{
-        consumer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        meta: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-        run_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        door: z.ZodString;
         actor: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        turn_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        consumer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        door: z.ZodEnum<{
+            tool: "tool";
+            api: "api";
+            conversation: "conversation";
+            hook: "hook";
+            schedule: "schedule";
+            operator: "operator";
+        }>;
         inbound_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    }, z.core.$strip>;
+        meta: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        run_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        turn_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strict>;
     paths: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>>>;
-}, z.core.$strip>;
+    seq: z.ZodNumber;
+}, z.core.$strict>;
 
 // @public (undocumented)
 type WritesPage = z.infer<typeof writesPage>;
 
 // @public
 const writesPage: z.ZodObject<{
-    items: z.ZodArray<z.ZodObject<{
-        seq: z.ZodNumber;
+    items: z.ZodDefault<z.ZodArray<z.ZodObject<{
         at: z.ZodString;
         origin: z.ZodObject<{
-            consumer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-            meta: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-            run_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-            op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-            door: z.ZodString;
             actor: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-            turn_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            consumer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            door: z.ZodEnum<{
+                tool: "tool";
+                api: "api";
+                conversation: "conversation";
+                hook: "hook";
+                schedule: "schedule";
+                operator: "operator";
+            }>;
             inbound_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        }, z.core.$strip>;
+            meta: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+            op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            run_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            turn_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strict>;
         paths: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>>>;
-    }, z.core.$strip>>;
+        seq: z.ZodNumber;
+    }, z.core.$strict>>>;
     next_cursor: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-}, z.core.$strip>;
+}, z.core.$strict>;
 
 // @public
 export const XCircleIcon: IconComponent;
