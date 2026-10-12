@@ -76,6 +76,7 @@ export type ScheduleRecord = z.infer<typeof scheduleRecord>;
  * expression matched against a whole id).
  */
 export const servedConstants = generated.servedConstants;
+export type ServedConstants = typeof servedConstants;
 /** The conformance vectors of the platform rules a browser mirrors. */
 export const servedVectors = generated.servedVectors;
 /** Each served document as JSON Schema, with the `$defs` it references. */

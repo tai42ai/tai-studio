@@ -7319,6 +7319,11 @@ export function createApiClient(config: ApiConfig): {
         tags: string[];
     }[]>;
     readonly baseUrl: string;
+    readonly constants: {
+        readonly MEDIA_ID_PATTERN: "[A-Za-z0-9_-]{43}";
+        readonly MEDIA_ROUTE_PREFIX: "/api/interactions/media/";
+        readonly PERSON_KIND: "person";
+    };
 };
 
 // @public
@@ -11792,6 +11797,7 @@ declare namespace s {
         scheduleRecord,
         ScheduleRecord,
         servedConstants,
+        ServedConstants,
         servedVectors,
         servedDocumentsJson,
         settingsSchema,
@@ -12581,6 +12587,7 @@ declare namespace schemas {
         scheduleRecord,
         ScheduleRecord,
         servedConstants,
+        ServedConstants,
         servedVectors,
         servedDocumentsJson,
         settingsSchema,
@@ -12737,6 +12744,9 @@ declare namespace schemas {
         WebEntryCodeRevoked
     }
 }
+
+// @public (undocumented)
+export type ServedConstants = typeof servedConstants;
 
 // @public
 export const servedConstants: {

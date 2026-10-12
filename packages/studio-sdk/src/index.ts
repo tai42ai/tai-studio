@@ -298,6 +298,7 @@ export type {
   MediaDocumentProps,
   MediaImageProps,
   MediaPlayerProps,
+  ServedMediaGrammar,
 } from './components/served-media';
 export {
   isRenderableMediaSrc,

@@ -4067,6 +4067,11 @@ schedulable: boolean;
 tags: string[];
 }[]>;
 readonly baseUrl: string;
+readonly constants: {
+readonly MEDIA_ID_PATTERN: "[A-Za-z0-9_-]{43}";
+readonly MEDIA_ROUTE_PREFIX: "/api/interactions/media/";
+readonly PERSON_KIND: "person";
+};
 } | null>;
 
 // @public
@@ -10495,6 +10500,11 @@ function createApiClient(config: ApiConfig): {
         tags: string[];
     }[]>;
     readonly baseUrl: string;
+    readonly constants: {
+        readonly MEDIA_ID_PATTERN: "[A-Za-z0-9_-]{43}";
+        readonly MEDIA_ROUTE_PREFIX: "/api/interactions/media/";
+        readonly PERSON_KIND: "person";
+    };
 };
 
 // @public
@@ -12246,13 +12256,13 @@ export function isFieldVisible(schema: JsonSchema, values: Record<string, unknow
 export function isFullProjection(projection: MeProjection): boolean;
 
 // @public
-export function isRenderableMediaSrc(url: string, allowDataImage?: boolean): boolean;
+export function isRenderableMediaSrc(url: string, grammar: ServedMediaGrammar, allowDataImage?: boolean): boolean;
 
 // @public
 export function isSafeHttpUrl(url: string): boolean;
 
 // @public
-export function isServedMediaUrl(url: string): boolean;
+export function isServedMediaUrl(url: string, grammar: ServedMediaGrammar): boolean;
 
 // @public
 export function jqKey(key: string): string;
@@ -15279,7 +15289,7 @@ export interface ResolvedTemplateJq extends BindingTemplateJqOption {
 }
 
 // @public
-export function resolveMediaSrc(url: string, baseUrl: string): string;
+export function resolveMediaSrc(url: string, baseUrl: string, grammar: ServedMediaGrammar): string;
 
 // @public
 export function resolveRef(schema: JsonSchema, root: JsonSchema): JsonSchema;
@@ -16381,6 +16391,7 @@ declare namespace s {
         scheduleRecord,
         ScheduleRecord,
         servedConstants,
+        ServedConstants,
         servedVectors,
         servedDocumentsJson,
         settingsSchema,
@@ -16913,6 +16924,9 @@ interface SelectSharedProps {
     // (undocumented)
     readonly value?: string;
 }
+
+// @public (undocumented)
+type ServedConstants = typeof servedConstants;
 
 // @public
 const servedConstants: {
@@ -22635,6 +22649,9 @@ const servedDocumentsJson: {
 
 // @public
 export const ServedEndpointsIcon: IconComponent;
+
+// @public
+export type ServedMediaGrammar = Pick<ServedConstants, 'MEDIA_ROUTE_PREFIX' | 'MEDIA_ID_PATTERN'>;
 
 // @public
 const servedVectors: {

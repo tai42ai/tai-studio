@@ -260,6 +260,7 @@ export type {
   ScheduleItem,
   ScheduleListRow,
   ScheduleRecord,
+  ServedConstants,
   SettingsProfileName,
   SettingsSchema,
   SetupBody,
