@@ -4,6 +4,11 @@
  * plus a routed detail view. Selecting a connection sets the `connection` search param
  * (the shell owns the route); the detail view renders when that param is present.
  *
+ * An administrator also reaches the provider door here: "Add MCP server" adds a server
+ * by its address, a provider added that way can be removed, and a provider whose app is
+ * registered by hand takes its client credentials. One gate (`useConnectorAdmin`) hides
+ * every such control from anyone else.
+ *
  * When a popup-blocked sign-in redirected the whole tab, the provider round-trips back
  * here with its result on the URL; {@link ConnectorsPage} completes that exchange on
  * arrival (see {@link useOAuthRedirectResume}).
@@ -36,12 +41,17 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
+import { AddServerDialog } from './add-server-dialog';
+import { ClientCredentialsDialog } from './client-credentials-dialog';
 import { ConnectDialog } from './connect-dialog';
 import { ConnectionDetail } from './connection-detail';
 import { connectionKey, CONNECTIONS_KEY, PROVIDERS_KEY } from './keys';
 import { McpServersSection } from './mcp-servers';
 import { Notice } from './notice';
 import { useOAuthRedirectResume } from './oauth';
+import { NoProviders, type ProviderActions, ProviderCard } from './provider-card';
+import { NeedsMorePermissions, RemoveProviderDialog } from './provider-controls';
+import { useConnectorAdmin } from './use-add-server-dialog';
 
 const HEALTH_VARIANT: Record<ConnectionView['auth_health_state'], string> = {
   healthy: 'success',
@@ -104,117 +114,12 @@ function LoadingRows(): ReactNode {
   );
 }
 
-function ProviderCard({
-  provider,
-  connections,
-  connectionsUnavailable,
-  onConnect,
-}: {
-  provider: ProviderView;
-  connections: ConnectionView[];
-  // The connections request failed: this card's connection state is unknown, so
-  // it must not imply zero connections (Connect) or a healthy fleet.
-  connectionsUnavailable: boolean;
-  onConnect: (provider: ProviderView) => void;
-}): ReactNode {
-  const connectedCount = connections.length;
-  const needsAttention = connections.some((c) => c.auth_health_state !== 'healthy');
-  return (
-    <Card>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 'var(--tai-space-4)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
-          {/* The provider mark is decorative — the display name beside it is the
-              accessible name, so the icon carries an empty alt rather than a
-              duplicate. `icon_url` is a required URL (the api-client schema parses
-              it with `z.string().url()`), so it renders unconditionally. */}
-          <img
-            src={provider.icon_url}
-            alt=""
-            width={28}
-            height={28}
-            style={{ borderRadius: 'var(--tai-radius-sm)', flexShrink: 0 }}
-          />
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}>
-              <strong>{provider.display_name}</strong>
-              <Badge variant={provider.kind === 'oauth' ? 'primary' : 'neutral'}>
-                {provider.kind}
-              </Badge>
-              {!connectionsUnavailable && needsAttention ? (
-                <Badge variant="warning">Needs attention</Badge>
-              ) : null}
-            </div>
-            <p style={{ margin: 'var(--tai-space-1) 0 0', color: 'var(--tai-color-text-muted)' }}>
-              {provider.description}
-            </p>
-          </div>
-        </div>
-        {connectionsUnavailable ? (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-end',
-              gap: 'var(--tai-space-1)',
-              flexShrink: 0,
-            }}
-          >
-            <Badge variant="warning">Connection state unavailable</Badge>
-            <Button
-              onClick={() => {
-                onConnect(provider);
-              }}
-            >
-              Connect
-            </Button>
-          </div>
-        ) : connectedCount === 0 ? (
-          <Button
-            variant="primary"
-            onClick={() => {
-              onConnect(provider);
-            }}
-          >
-            Connect
-          </Button>
-        ) : (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-end',
-              gap: 'var(--tai-space-1)',
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
-              {`${String(connectedCount)} connected`}
-            </span>
-            <Button
-              onClick={() => {
-                onConnect(provider);
-              }}
-            >
-              Add another account
-            </Button>
-          </div>
-        )}
-      </div>
-    </Card>
-  );
-}
-
 function ProvidersSection({
-  onConnect,
+  actions,
+  onAdd,
 }: {
-  onConnect: (provider: ProviderView) => void;
+  actions: ProviderActions;
+  onAdd: () => void;
 }): ReactNode {
   const api = useApi();
   const query = useQuery({
@@ -239,21 +144,7 @@ function ProvidersSection({
       />
     );
   } else if (query.data.providers.length === 0) {
-    body = (
-      <EmptyState
-        title="No connectors installed"
-        description="Connectors arrive as marketplace plugins — install one to add a provider."
-        action={
-          <AppLink
-            to="marketplace"
-            search={{ kind: 'connector' }}
-            className="tai-btn tai-btn-secondary"
-          >
-            Browse marketplace
-          </AppLink>
-        }
-      />
-    );
+    body = <NoProviders isAdmin={actions.isAdmin} onAdd={onAdd} />;
   } else {
     const connectionsByProvider = new Map<string, ConnectionView[]>();
     for (const connection of connectionsQuery.data?.items ?? []) {
@@ -283,7 +174,7 @@ function ProvidersSection({
                   provider={provider}
                   connections={connectionsByProvider.get(provider.id) ?? []}
                   connectionsUnavailable={connectionsQuery.isError}
-                  onConnect={onConnect}
+                  actions={actions}
                 />
               ))}
             </div>
@@ -295,7 +186,18 @@ function ProvidersSection({
 
   return (
     <section aria-label="Providers">
-      <SectionHeading>Providers</SectionHeading>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 'var(--tai-space-2)',
+        }}
+      >
+        <SectionHeading>Providers</SectionHeading>
+        {actions.isAdmin ? <Button onClick={onAdd}>Add MCP server</Button> : null}
+      </div>
       {body}
     </section>
   );
@@ -374,6 +276,7 @@ function ConnectionsSection(): ReactNode {
                   {connection.provider_id}
                   {connection.account_identity !== null ? ` · ${connection.account_identity}` : ''}
                 </p>
+                <NeedsMorePermissions connection={connection} />
               </div>
             </div>
           </Card>
@@ -390,22 +293,115 @@ function ConnectionsSection(): ReactNode {
   );
 }
 
-function ConnectorsList(): ReactNode {
+/** A page-level confirmation after a provider-door change. */
+interface PageNotice {
+  readonly title: string;
+  readonly message: string;
+}
+
+/** The provider-door dialogs the list opens, one at a time, and the page notice. */
+function useProviderDoor() {
   const [connectProvider, setConnectProvider] = useState<ProviderView | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [credentialsFor, setCredentialsFor] = useState<ProviderView | null>(null);
+  const [removing, setRemoving] = useState<ProviderView | null>(null);
+  const [notice, setNotice] = useState<PageNotice | null>(null);
+  const onAdded = (provider: ProviderView, automatic: boolean): void => {
+    setAdding(false);
+    if (automatic) {
+      setConnectProvider(provider);
+      return;
+    }
+    setNotice({
+      title: 'Server added',
+      message: 'Set its client credentials before anyone can connect.',
+    });
+  };
+  const openCredentials = (provider: ProviderView): void => {
+    setConnectProvider(null);
+    setCredentialsFor(provider);
+  };
+  return {
+    connectProvider,
+    setConnectProvider,
+    adding,
+    setAdding,
+    credentialsFor,
+    setCredentialsFor,
+    removing,
+    setRemoving,
+    notice,
+    setNotice,
+    onAdded,
+    openCredentials,
+  };
+}
+
+function ConnectorsList(): ReactNode {
+  const door = useProviderDoor();
+  const isAdmin = useConnectorAdmin();
+  const actions: ProviderActions = {
+    isAdmin,
+    onConnect: door.setConnectProvider,
+    onCredentials: door.openCredentials,
+    onRemove: door.setRemoving,
+  };
   return (
     <Stack gap={6}>
       <PageHeader eyebrow="Connections" title="Connectors" />
+      {door.notice !== null ? (
+        <Notice
+          notice={{ kind: 'success', message: door.notice.message }}
+          title={door.notice.title}
+          onDismiss={() => {
+            door.setNotice(null);
+          }}
+        />
+      ) : null}
       {/* The unified page lists every sourced MCP server (mounted status + manifest
           config, each row showing how it was added) alongside the provider connectors
           below — one surface for all the tool sources the deployment mounts. */}
       <McpServersSection />
-      <ProvidersSection onConnect={setConnectProvider} />
+      <ProvidersSection
+        actions={actions}
+        onAdd={() => {
+          door.setAdding(true);
+        }}
+      />
       <ConnectionsSection />
-      {connectProvider !== null ? (
+      {door.connectProvider !== null ? (
         <ConnectDialog
-          provider={connectProvider}
+          provider={door.connectProvider}
           onClose={() => {
-            setConnectProvider(null);
+            door.setConnectProvider(null);
+          }}
+          onSetClientCredentials={door.openCredentials}
+        />
+      ) : null}
+      {door.adding ? (
+        <AddServerDialog
+          onClose={() => {
+            door.setAdding(false);
+          }}
+          onAdded={door.onAdded}
+        />
+      ) : null}
+      {door.credentialsFor !== null ? (
+        <ClientCredentialsDialog
+          provider={door.credentialsFor}
+          onClose={() => {
+            door.setCredentialsFor(null);
+          }}
+          onSaved={() => {
+            door.setNotice({ title: 'Saved', message: 'Client credentials saved.' });
+          }}
+        />
+      ) : null}
+      {door.removing !== null ? (
+        <RemoveProviderDialog
+          provider={door.removing}
+          onClose={() => {
+            door.setRemoving(null);
           }}
         />
       ) : null}

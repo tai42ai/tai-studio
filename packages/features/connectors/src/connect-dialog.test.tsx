@@ -16,8 +16,15 @@ import {
   provider,
   renderWithProviders,
 } from './test-utils';
+import { fullProjection, scopedProjection } from './test-utils-mcp-servers';
 
-const goodMessage = { type: OAUTH_MESSAGE_TYPE, code: 'the-code', state: 'the-state', error: null };
+const goodMessage = {
+  type: OAUTH_MESSAGE_TYPE,
+  code: 'the-code',
+  state: 'the-state',
+  error: null,
+  iss: null,
+};
 
 /** A `fleet` fan-out with one applied and one stranded (`departed`) worker. */
 const nonConvergedFanout = {
@@ -250,6 +257,60 @@ describe('ConnectDialog', () => {
     const note = await screen.findByTestId('connector-provider-off');
     expect(note).toHaveTextContent('GITHUB_OAUTH_CLIENT_SECRET');
     expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
+  });
+
+  it('says a server needs client credentials and offers to set them to an administrator', async () => {
+    const user = userEvent.setup();
+    const onSetClientCredentials = vi.fn();
+    const startConnect = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError(
+          "provider 'remote_files' has no client credentials for its sign-in service",
+          501,
+          'connector-client-credentials-required',
+        ),
+      );
+    const target = provider({ id: 'remote_files', display_name: 'Remote files' });
+    renderWithProviders(
+      <ConnectDialog
+        provider={target}
+        onClose={vi.fn()}
+        onSetClientCredentials={onSetClientCredentials}
+      />,
+      { client: makeClient({ startConnect }), projection: fullProjection() },
+    );
+
+    await user.type(screen.getByLabelText('Alias'), 'work-account');
+    fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+
+    expect(await screen.findByText('This server needs client credentials')).toBeInTheDocument();
+    expect(
+      screen.getByText("provider 'remote_files' has no client credentials for its sign-in service"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
+    await user.click(await screen.findByRole('button', { name: 'Set client credentials' }));
+    expect(onSetClientCredentials).toHaveBeenCalledWith(target);
+  });
+
+  it('says a server needs client credentials without the action to a caller who cannot set them', async () => {
+    const user = userEvent.setup();
+    const startConnect = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError('no client credentials', 501, 'connector-client-credentials-required'),
+      );
+    renderWithProviders(
+      <ConnectDialog provider={provider()} onClose={vi.fn()} onSetClientCredentials={vi.fn()} />,
+      { client: makeClient({ startConnect }), projection: scopedProjection() },
+    );
+
+    await user.type(screen.getByLabelText('Alias'), 'work-account');
+    fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+
+    expect(await screen.findByText('This server needs client credentials')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Set client credentials' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
   });
 

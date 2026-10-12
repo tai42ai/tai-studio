@@ -23,7 +23,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
-import { seedCredential } from './helpers';
+import { openAddServerReview, seedCredential } from './helpers';
 
 needs();
 
@@ -88,6 +88,15 @@ for (const scheme of ['light', 'dark'] as const) {
           await horizontalOverflow(page),
           `${route} overflows horizontally at 1280 px (${scheme})`,
         ).toBeLessThanOrEqual(0);
+        if (route === '/connectors') {
+          // The "Add MCP server" dialog at its review step: its long address, issuer
+          // and scope list wrap inside the panel, never pushing the page sideways.
+          await openAddServerReview(page);
+          expect(
+            await horizontalOverflow(page),
+            `${route} with the add-server review step overflows at 1280 px (${scheme})`,
+          ).toBeLessThanOrEqual(0);
+        }
       }
     });
   });

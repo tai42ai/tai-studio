@@ -30,18 +30,24 @@ export const OAUTH_RESUME_PARAMS = {
   state: 'tai_oauth_state',
   code: 'tai_oauth_code',
   error: 'tai_oauth_error',
+  iss: 'tai_oauth_iss',
 } as const;
 
 const POPUP_NAME = 'tai-oauth';
 const POPUP_FEATURES = 'popup,width=520,height=640';
 const POLL_INTERVAL_MS = 400;
 
-/** The trusted payload shape carried by an `OAUTH_MESSAGE_TYPE` message. */
+/**
+ * The trusted payload shape carried by an `OAUTH_MESSAGE_TYPE` message. `iss` is the
+ * redirect's issuer parameter: handed to the completion call as received, never shown
+ * or interpreted here — the platform checks it.
+ */
 export interface OAuthCallbackMessage {
   readonly type: typeof OAUTH_MESSAGE_TYPE;
   readonly code: string | null;
   readonly state: string | null;
   readonly error: string | null;
+  readonly iss: string | null;
 }
 
 /** The outcome surfaced to the operator after a flow settles. */
@@ -58,16 +64,23 @@ function isStringOrNull(v: unknown): v is string | null {
 
 /**
  * Read a trusted callback payload from an untrusted `event.data`, or `null` when
- * the shape does not match. The `type` discriminator plus string|null fields are
- * all validated — a malformed message is treated as untrusted and ignored.
+ * the shape does not match. The `type` discriminator plus the four string|null fields
+ * are all validated — a malformed message is treated as untrusted and ignored.
  */
 export function readCallback(data: unknown): OAuthCallbackMessage | null {
   if (typeof data !== 'object' || data === null) return null;
   const record = data as Record<string, unknown>;
   if (record.type !== OAUTH_MESSAGE_TYPE) return null;
-  const { code, state, error } = record;
-  if (!isStringOrNull(code) || !isStringOrNull(state) || !isStringOrNull(error)) return null;
-  return { type: OAUTH_MESSAGE_TYPE, code, state, error };
+  const { code, state, error, iss } = record;
+  if (
+    !isStringOrNull(code) ||
+    !isStringOrNull(state) ||
+    !isStringOrNull(error) ||
+    !isStringOrNull(iss)
+  ) {
+    return null;
+  }
+  return { type: OAUTH_MESSAGE_TYPE, code, state, error, iss };
 }
 
 /**
