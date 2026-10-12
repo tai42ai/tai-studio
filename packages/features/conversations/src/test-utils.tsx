@@ -354,12 +354,14 @@ export function transcriptPage<T>(
     pageNumber = 1,
     order = 'desc',
     truncated = false,
+    personId = null,
   }: {
     nextPage?: number | null;
     pageNumber?: number;
     order?: 'asc' | 'desc';
     truncated?: boolean;
+    personId?: string | null;
   } = {},
 ) {
-  return { ...page(items, nextPage, pageNumber, truncated), order, person_id: null };
+  return { ...page(items, nextPage, pageNumber, truncated), order, person_id: personId };
 }

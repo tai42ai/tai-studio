@@ -11,7 +11,7 @@
  * lets the operator tell "do not retry — side effects may be live" from
  * "failed — safe to retry".
  */
-import type { StateSubject } from '@tai42/api-client';
+import type { RunAnswer, StateSubject } from '@tai42/api-client';
 import type { ApiClient } from '@tai42/studio-sdk';
 
 /** The configurable client-side run timeout. Deployments proxying the skeleton
@@ -32,7 +32,7 @@ export class RunTimeoutError extends Error {
 
 /**
  * Run a tool with the client timeout applied. Resolves with the completed run's
- * result, or throws: a `RunTimeoutError` when the timeout fired, otherwise the
+ * answer (the served `RunAnswer`), or throws: a `RunTimeoutError` when the timeout fired, otherwise the
  * underlying transport error (both surface loudly — never swallowed).
  *
  * `subject` addresses the conversation subject an async park of this run indexes
@@ -45,7 +45,7 @@ export async function runToolWithTimeout(
   tool: string,
   kwargs: Record<string, unknown>,
   subject?: StateSubject,
-): Promise<unknown> {
+): Promise<RunAnswer> {
   const controller = new AbortController();
   const timer: ReturnType<typeof setTimeout> = setTimeout(() => {
     controller.abort();

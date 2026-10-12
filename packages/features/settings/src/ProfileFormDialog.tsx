@@ -7,6 +7,7 @@
  * `useRegisterDirty` reports a diverging draft so a tab switch confirms before the
  * unsaved profile is dropped.
  */
+import { schemas } from '@tai42/api-client';
 import {
   Button,
   Dialog,
@@ -88,7 +89,8 @@ function ProfileFormFields({
               onDraftNameChange(event.target.value);
             }}
           />
-          {draftName.startsWith('@') ? (
+          {draftName.trim() !== '' &&
+          !schemas.settingsProfileName.safeParse(draftName.trim()).success ? (
             <span style={validationStyle}>
               Names starting with “@” are reserved and cannot be used.
             </span>
@@ -164,8 +166,8 @@ function ProfileFormBody({
   const [draftName, setDraftName] = useState(name ?? '');
   const [description, setDescription] = useState(initial.description);
 
-  // A reserved `@`-prefixed name is invalid for a user profile.
-  const nameValid = editing || (draftName.trim().length > 0 && !draftName.startsWith('@'));
+  // The served profile-name document rules a user profile's name (a reserved `@` name fails it).
+  const nameValid = editing || schemas.settingsProfileName.safeParse(draftName.trim()).success;
   const isValid = nameValid && !editor.hasBlankKey && !editor.hasDuplicateKey;
 
   const currentSignature = JSON.stringify({

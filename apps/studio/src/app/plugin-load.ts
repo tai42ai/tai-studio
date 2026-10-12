@@ -92,7 +92,10 @@ export async function loadOnePlugin(
     // `loadPlugin` awaits `register` (sync or async), stages its contributions, and
     // commits them only if it resolves — a throw here commits nothing, so a failed
     // plugin never leaves a partial registration.
-    await loadPlugin(manifest.name, register as PluginEntry);
+    await loadPlugin(manifest.name, register as PluginEntry, {
+      mounts: manifest.mounts,
+      declaredRoutePanels: manifest.contributions.route_panels,
+    });
     return { ok: true, version: manifest.version };
   } catch (error) {
     for (const remove of removeStylesheets) remove();

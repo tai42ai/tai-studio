@@ -14,9 +14,9 @@ import type { ReactNode, RefObject } from 'react';
 
 import { ComposeMessage } from './ComposeMessage';
 import { ConversationFilters } from './ConversationFilters';
-import { EntryGate } from './EntryGate';
 import { useSelectionFocus } from './focus';
 import { MessageSearch } from './MessageSearch';
+import { RoutePanels } from './RoutePanels';
 import type { ConversationsSearch } from './search';
 import { ThreadActions } from './ThreadActions';
 import { ThreadList, threadRowLabel } from './ThreadList';
@@ -60,9 +60,9 @@ export function RouteThreads({
         </AppLink>
       </div>
 
-      {/* Route-level management, shown only for a gated-capable (web channel)
-          route; every other route renders nothing here. */}
-      <EntryGate route={route} />
+      {/* The panel a channel plugin contributes for this route's channel; every
+          other route renders nothing here. */}
+      <RoutePanels route={route} />
 
       <ConversationFilters search={search} />
 
@@ -119,7 +119,7 @@ export function RouteThreads({
               <ThreadMode route={route} threadId={thread} />
               <Transcript route={route} threadId={thread} q={q} headingRef={focus.headingRef} />
               <ComposeMessage route={route} threadId={thread} />
-              <ThreadActions route={route} threadId={thread} />
+              <ThreadActions route={route} threadId={thread} q={q} />
             </div>
           )}
         </div>

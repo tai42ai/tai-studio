@@ -2,7 +2,8 @@
  * The reference Studio plugin's front-end bundle.
  *
  * This is a REAL minimal Studio plugin: it exports a `register(context)` entry
- * that registers one page and one tool panel. The three shared modules (react,
+ * that registers a page, a tool panel, a settings tab, a nav entry and a route panel
+ * for the routes of the neutral `synthetic` channel. The three shared modules (react,
  * react-dom, @tai42/studio-sdk) are marked EXTERNAL by the build and resolved by
  * the host's server-injected import map, so this bundle binds the host's
  * singletons — the same React instance and the same `ApiProvider` context the
@@ -25,6 +26,7 @@ import {
   JsonTree,
   type PluginContext,
   type PluginPageProps,
+  type RoutePanelProps,
   type SettingsTabProps,
   Spinner,
   TextInput,
@@ -49,6 +51,9 @@ window.__pluginReact = React;
 
 /** The tool this plugin's custom panel targets. */
 const DEMO_TOOL = 'studio_demo_echo';
+
+/** The channel whose conversation routes this plugin decorates with a route panel. */
+const SYNTHETIC_CHANNEL = 'synthetic';
 
 interface EchoResult {
   readonly original: string;
@@ -86,11 +91,12 @@ function EchoPanel(_props: ToolPanelProps): React.ReactElement {
     setResult(null);
     api
       .runTool({ tool: DEMO_TOOL, kwargs: { message, shout } })
-      .then((raw) => {
-        if (!isEchoResult(raw)) {
+      .then((answer) => {
+        // The run-tool door answers by `kind`; the tool's own value rides a `result` answer.
+        if (answer.kind !== 'result' || !isEchoResult(answer.result)) {
           throw new Error('studio_demo_echo returned an unexpected shape');
         }
-        setResult(raw);
+        setResult(answer.result);
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : String(err));
@@ -218,9 +224,29 @@ function DemoSettingsTab({ pluginId }: SettingsTabProps): React.ReactElement {
 }
 
 /**
+ * The route panel the conversations drill-in renders above a `synthetic`-channel
+ * route's threads. It shows the row the host hands it — the smallest complete
+ * `registerRoutePanel` contribution.
+ */
+function SyntheticRoutePanel({ pluginId, route }: RoutePanelProps): React.ReactElement {
+  return (
+    <Card>
+      <div data-testid="reference-route-panel">
+        <strong>Reference route panel</strong>
+        <p>
+          Contributed by <code>{pluginId}</code> for the route <code>{route.route_name}</code> at{' '}
+          <code>{route.our_identity}</code>.
+        </p>
+      </div>
+    </Card>
+  );
+}
+
+/**
  * The plugin entry the host calls with a {@link PluginContext} bound to this
- * plugin's identity. It contributes the tool panel, page, settings tab, and nav
- * entry; the host commits them atomically once this returns.
+ * plugin's identity. It contributes the tool panel, page, settings tab, nav entry
+ * and route panel; the host commits them atomically once this returns. The manifest
+ * declares the same route-panel channel under `contributions.route_panels`.
  */
 export function register(context: PluginContext): void {
   context.registerToolPanel({ toolName: DEMO_TOOL, component: EchoPanel });
@@ -229,4 +255,10 @@ export function register(context: PluginContext): void {
   context.registerNavEntry({ path: 'demo', title: 'Reference', icon: DemoIcon });
   // A settings tab in the Settings workbench.
   context.registerSettingsTab({ id: 'demo', title: 'Reference', component: DemoSettingsTab });
+  // A panel on the drill-in of every route on the synthetic channel.
+  context.registerRoutePanel({
+    channel: SYNTHETIC_CHANNEL,
+    title: 'Reference route panel',
+    component: SyntheticRoutePanel,
+  });
 }

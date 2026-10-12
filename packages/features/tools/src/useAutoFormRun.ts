@@ -4,7 +4,7 @@
  * `/api/tool-runs`. Each door gates on its OWN concrete route (projection ⊆ gate),
  * independent of tool visibility, and fails closed while the projection is not ready.
  */
-import { apiRoutes, type StateSubject } from '@tai42/api-client';
+import { apiRoutes, type RunAnswer, type StateSubject } from '@tai42/api-client';
 import {
   buildSubject,
   defaultValueForSchema,
@@ -68,7 +68,7 @@ export interface AutoFormRun {
   readonly value: unknown;
   readonly setValue: (value: unknown) => void;
   readonly errors: SchemaFormErrors | undefined;
-  readonly run: UseMutationResult<unknown, Error, Record<string, unknown>>;
+  readonly run: UseMutationResult<RunAnswer, Error, Record<string, unknown>>;
   readonly background: UseMutationResult<{ run_id: string }, Error, Record<string, unknown>>;
   readonly activeRunId: string | undefined;
   readonly canRunSync: boolean;

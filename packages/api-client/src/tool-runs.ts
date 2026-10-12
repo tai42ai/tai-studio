@@ -15,10 +15,10 @@
 import { z } from 'zod';
 
 import { apiRoutes, buildPath } from './generated/api-routes';
+import { runAsksAnswer, runParkedAnswer } from './generated/openapi-schemas';
 import type { ApiConfig } from './http';
 import { apiRequest } from './http';
 import type { StateSubject } from './schemas/states';
-import { callerAsksEnvelope, suspendedRunReceipt } from './schemas/tools';
 
 /** A run's lifecycle state. `lost` = the server restarted mid-run; the result is
  * unrecoverable. `parked` = the run's tool async-parked; its `result` is the park
@@ -30,23 +30,45 @@ export const toolRunSubmitResult = z.object({
   run_id: z.string(),
 });
 
-/** `GET /api/tool-runs/{run_id}` → the full record. `result` is arbitrary JSON: the
- * tool's own value on `succeeded`, the park answer ({@link toolRunParkAnswer}) on
- * `parked`. `error` is present only on `failed`. `outcome` is present only on a `failed`
- * record whose run reached a failed terminal: the run's outcome, whole, as the sync door
- * delivers it (`error` is then the plain `tool run failed`). `resumed_interactions` is the
- * parked interaction ids the run resumed or took while it executed (`[]` when it resumed none). */
-export const toolRunRecord = z.object({
+/**
+ * The `result` a `parked` record carries: the run answer the synchronous run-tool door
+ * returns, restricted to its two park kinds — `asks` (the tool asked its CALLER and parked)
+ * or `parked` (only USER asks remain).
+ */
+export const toolRunParkAnswer = z.discriminatedUnion('kind', [runAsksAnswer, runParkedAnswer]);
+
+const toolRunRecordBase = {
   run_id: z.string(),
   tool_name: z.string(),
-  status: toolRunStatus,
   started_at: z.string(),
   finished_at: z.string().optional(),
-  result: z.unknown().optional(),
-  error: z.string().optional(),
-  outcome: z.unknown().optional(),
   resumed_interactions: z.array(z.string()).optional(),
-});
+};
+
+/** `GET /api/tool-runs/{run_id}` → the full record, discriminated by `status`. `result` is
+ * the tool's own value on `succeeded` and the park answer ({@link toolRunParkAnswer}) on
+ * `parked`, parsed here so a reader switches on its `kind`; a parked record whose stored
+ * answer is not one of the two park kinds is refused on the read. `error` is present only on
+ * `failed`; `outcome` is present only on a `failed` record whose run reached a failed
+ * terminal: the run's outcome, whole, as the sync door delivers it (`error` is then the plain
+ * `tool run failed`). `resumed_interactions` is the parked interaction ids the run resumed or took while
+ * it executed (`[]` when it resumed none). */
+export const toolRunRecord = z.discriminatedUnion('status', [
+  z.object({ ...toolRunRecordBase, status: z.literal('running') }),
+  z.object({
+    ...toolRunRecordBase,
+    status: z.literal('succeeded'),
+    result: z.unknown().optional(),
+  }),
+  z.object({
+    ...toolRunRecordBase,
+    status: z.literal('failed'),
+    error: z.string().optional(),
+    outcome: z.unknown().optional(),
+  }),
+  z.object({ ...toolRunRecordBase, status: z.literal('lost') }),
+  z.object({ ...toolRunRecordBase, status: z.literal('parked'), result: toolRunParkAnswer }),
+]);
 
 /** One entry of `GET /api/tool-runs?tool_name=...` — id/status/timestamps only,
  * deliberately carrying NO `result`/`error` (the list is not secret-bearing). */
@@ -59,14 +81,6 @@ export const toolRunListItem = z.object({
 });
 
 export const toolRunList = z.array(toolRunListItem);
-
-/**
- * The `result` a `parked` record carries — the SAME park answer the synchronous run-tool
- * door returns: either the caller-ask envelope `{asks: [...]}` (the tool asked its CALLER
- * and parked) or the suspension receipt (the run parked only USER asks, ids only). A poller
- * reads it to tell a caller-ask park from a user-only one, exactly as the sync door's caller does.
- */
-export const toolRunParkAnswer = z.union([callerAsksEnvelope, suspendedRunReceipt]);
 
 export type ToolRunStatus = z.infer<typeof toolRunStatus>;
 export type ToolRunParkAnswer = z.infer<typeof toolRunParkAnswer>;
