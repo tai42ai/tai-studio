@@ -142,19 +142,32 @@ describe('manifest / mcp client transport', () => {
   it('getMcpStatus GETs /api/mcp-status and parses the bound + failed maps', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: { bound: { files: ['read', 'write'] }, failed: [{ title: 'db', status: 'error' }] },
+        data: {
+          bound: { files: ['read', 'write'] },
+          failed: [
+            { title: 'db', status: 'error', category: 'error', message: 'boom', http_status: null },
+          ],
+          health: {},
+        },
       }),
     );
     const out = await client.getMcpStatus();
     expect(captured[0]?.url).toBe('/api/mcp-status');
     expect(out.bound.files).toEqual(['read', 'write']);
-    expect(out.failed[0]).toEqual({ title: 'db', status: 'error' });
+    expect(out.failed[0]).toEqual({
+      title: 'db',
+      status: 'error',
+      category: 'error',
+      message: 'boom',
+      http_status: null,
+    });
   });
 
   it('reloadMcp POSTs to the title-encoded reload route and parses the fleet report', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
+          ok: true,
           op: 'reload_mcp',
           reachable: true,
           local_only: false,
@@ -267,6 +280,7 @@ describe('manifest / mcp client transport', () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
+          ok: true,
           op: 'reload_mcp',
           reachable: true,
           local_only: false,
@@ -293,6 +307,7 @@ describe('manifest / mcp client transport', () => {
 
   const fleet = (op: string, results: unknown[] = []) => ({
     op,
+    ok: true,
     reachable: true,
     local_only: false,
     results,

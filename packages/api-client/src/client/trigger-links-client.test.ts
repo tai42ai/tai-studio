@@ -86,6 +86,8 @@ function linkRecord(overrides: Record<string, unknown> = {}): Record<string, unk
     created_at: '2026-07-22T09:00:00Z',
     expires_at: null,
     token_hash_prefix: 'abc123def456',
+    execution_key_fingerprint: 'fp-events',
+    require_api_key: false,
     ...overrides,
   };
 }

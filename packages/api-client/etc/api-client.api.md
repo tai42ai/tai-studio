@@ -6286,7 +6286,7 @@ export function createApiClient(config: ApiConfig): {
         resources: string[];
     }>;
     readonly statStorageResource: (id: string, signal?: AbortSignal) => Promise<{
-        content_type: string;
+        content_type: string | null;
         id: string;
     }>;
     readonly downloadStorageResource: (id: string, signal?: AbortSignal) => Promise<Blob>;
@@ -19649,7 +19649,7 @@ export type StorageResourceStat = z.infer<typeof storageResourceStat>;
 
 // @public
 const storageResourceStat: z.ZodObject<{
-    content_type: z.ZodString;
+    content_type: z.ZodNullable<z.ZodString>;
     id: z.ZodString;
 }, z.core.$strip>;
 

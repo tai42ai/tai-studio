@@ -119,8 +119,8 @@ describe('sub-mcp client transport', () => {
     await expect(client.createSubMcp('reporting', [])).rejects.toBeInstanceOf(ApiError);
   });
 
-  it('throws ApiSchemaError LOUDLY on a drifting created mount (removed not true)', async () => {
-    const { client } = harness(() => jsonResponse({ data: { slug: 'a', removed: false } }));
+  it('throws ApiSchemaError LOUDLY on a drifting removal (removed not a boolean)', async () => {
+    const { client } = harness(() => jsonResponse({ data: { slug: 'a', removed: 'yes' } }));
     await expect(client.deleteSubMcp('a')).rejects.toBeInstanceOf(ApiSchemaError);
   });
 

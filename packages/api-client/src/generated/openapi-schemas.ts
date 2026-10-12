@@ -808,7 +808,7 @@ export type ResourceGet = z.infer<typeof resourceGet>;
 export const resourceList = z.object({ "resources": z.array(z.string()) });
 export type ResourceList = z.infer<typeof resourceList>;
 
-export const resourceStat = z.object({ "content_type": z.string(), "id": z.string() });
+export const resourceStat = z.object({ "content_type": z.string().nullable(), "id": z.string() });
 export type ResourceStat = z.infer<typeof resourceStat>;
 
 export const resourceStored = z.object({ "id": z.string(), "stored": z.boolean() });

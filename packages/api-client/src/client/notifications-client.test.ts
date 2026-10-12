@@ -72,7 +72,10 @@ describe('notifications client transport', () => {
       audience: 'u-42',
       media: [{ kind: 'image', url: 'https://cdn.example.com/x.png', caption: 'x' }],
       template: { name: 'status_update', language: 'en', parameters: { body: ['#1'] } },
-      options: ['Acknowledge', 'Snooze'],
+      options: [
+        { kind: 'reply', text: 'Acknowledge' },
+        { kind: 'link', label: 'Snooze', url: 'https://example.com/snooze' },
+      ],
     };
     const { client } = harness(() => jsonResponse({ data: { notifications: [rich] } }));
     const out = await client.listNotifications();
@@ -80,18 +83,19 @@ describe('notifications client transport', () => {
     expect(parsed?.audience).toBe('u-42');
     expect(parsed?.media).toHaveLength(1);
     expect(parsed?.template?.name).toBe('status_update');
-    expect(parsed?.options).toEqual(['Acknowledge', 'Snooze']);
+    expect(parsed?.options).toEqual([
+      { kind: 'reply', text: 'Acknowledge', id: null, description: null },
+      { kind: 'link', label: 'Snooze', url: 'https://example.com/snooze' },
+    ]);
   });
 
-  it('parses a plain record that omits the rich fields (keys absent)', async () => {
-    // A record with no audience/media/template/options keys is valid: each is
-    // `.nullish()`, so an absent key parses to a plain record.
+  it('parses a plain record that omits the rich fields (read as null)', async () => {
     const { client } = harness(() => jsonResponse({ data: { notifications: [record] } }));
     const parsed = (await client.listNotifications()).notifications[0];
-    expect(parsed?.audience).toBeUndefined();
-    expect(parsed?.media).toBeUndefined();
-    expect(parsed?.template).toBeUndefined();
-    expect(parsed?.options).toBeUndefined();
+    expect(parsed?.audience).toBeNull();
+    expect(parsed?.media).toBeNull();
+    expect(parsed?.template).toBeNull();
+    expect(parsed?.options).toBeNull();
   });
 
   it('throws ApiSchemaError LOUDLY on a drifting record (missing message)', async () => {

@@ -132,6 +132,7 @@ describe('tools client transport', () => {
 
   const fleet = (op: string) => ({
     op,
+    ok: true,
     reachable: true,
     local_only: false,
     results: [{ name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null }],

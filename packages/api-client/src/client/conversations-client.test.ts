@@ -417,6 +417,7 @@ function transcriptPage(
       next_page: nextPage,
       truncated: false,
       order,
+      person_id: null,
     },
   };
 }
@@ -502,11 +503,11 @@ describe('thread transcript transport', () => {
     expect(out.items[0]?.inbound_text).toBe('where is my request');
   });
 
-  it('accepts the CALLER projection, whose admin-only fields are absent', async () => {
+  it('accepts the CALLER projection, whose admin-only fields are absent (read as null)', async () => {
     const { client } = harness(() => jsonResponse(transcriptPage([callerRecord], 'desc')));
     const out = await client.readConversationTranscript(transcriptQuery);
-    expect(out.items[0]?.attempts).toBeUndefined();
-    expect(out.items[0]?.error).toBeUndefined();
+    expect(out.items[0]?.attempts).toBeNull();
+    expect(out.items[0]?.error).toBeNull();
     expect(out.items[0]?.answer).toBe('It completes tomorrow.');
   });
 

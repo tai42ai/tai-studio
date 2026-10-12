@@ -169,14 +169,20 @@ describe('apiText', () => {
 });
 
 describe('createApiClient', () => {
-  it('runs a tool via POST and returns the raw result', async () => {
+  it('runs a tool via POST and returns the run answer', async () => {
     const fetchImpl = vi.fn(async (_url, init) => {
       expect((init as RequestInit).method).toBe('POST');
-      return jsonResponse({ data: { ok: 1 } });
+      return jsonResponse({ data: { kind: 'result', result: { ok: 1 } } });
     });
     const client = createApiClient(config(fetchImpl));
     const result = await client.runTool({ tool: 'echo', kwargs: { x: 1 } });
-    expect(result).toEqual({ ok: 1 });
+    expect(result).toEqual({ kind: 'result', result: { ok: 1 } });
+  });
+
+  it('refuses a run answer of an unknown kind', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ data: { kind: 'maybe' } }));
+    const client = createApiClient(config(fetchImpl));
+    await expect(client.runTool({ tool: 'echo' })).rejects.toBeInstanceOf(ApiSchemaError);
   });
 
   it('maps the SPA tool/kwargs args onto the { tool_name, arguments } wire body', async () => {
@@ -186,7 +192,7 @@ describe('createApiClient', () => {
       capturedUrl = url;
       expect(init?.method).toBe('POST');
       capturedBody = JSON.parse(init?.body as string);
-      return jsonResponse({ data: { ok: 1 } });
+      return jsonResponse({ data: { kind: 'result', result: { ok: 1 } } });
     });
     const client = createApiClient(config(fetchImpl as unknown as typeof fetch));
     await client.runTool({ tool: 'echo', kwargs: { x: 1 } });
@@ -198,7 +204,7 @@ describe('createApiClient', () => {
     let capturedBody: unknown;
     const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
       capturedBody = JSON.parse(init?.body as string);
-      return jsonResponse({ data: { ok: 1 } });
+      return jsonResponse({ data: { kind: 'result', result: { ok: 1 } } });
     });
     const client = createApiClient(config(fetchImpl as unknown as typeof fetch));
     await client.runTool({ tool: 'echo' });
@@ -209,7 +215,7 @@ describe('createApiClient', () => {
     let capturedBody: Record<string, unknown> = {};
     const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
       capturedBody = JSON.parse(init?.body as string) as Record<string, unknown>;
-      return jsonResponse({ data: { ok: 1 } });
+      return jsonResponse({ data: { kind: 'result', result: { ok: 1 } } });
     });
     const client = createApiClient(config(fetchImpl as unknown as typeof fetch));
 
@@ -230,7 +236,12 @@ describe('createApiClient', () => {
   it('validates the oauth/complete discriminated union', async () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse({
-        data: { kind: 'success', connection_id: 'c', return_url: '/x', fanout: null },
+        data: {
+          kind: 'success',
+          connection_id: 'c',
+          return_url: '/x',
+          fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+        },
       }),
     );
     const client = createApiClient(config(fetchImpl));
@@ -255,6 +266,7 @@ describe('createApiClient', () => {
           ],
           total: 1,
           trigger_auth: { t: 'public' },
+          topic_verifiers: {},
         },
       });
     });
@@ -277,7 +289,7 @@ describe('createApiClient', () => {
     let capturedUrl = '';
     const fetchImpl = vi.fn(async (url: string) => {
       capturedUrl = url;
-      return jsonResponse({ data: { items: [], total: 0 } });
+      return jsonResponse({ data: { items: [], total: 0, trigger_auth: {}, topic_verifiers: {} } });
     });
     const client = createApiClient(config(fetchImpl as unknown as typeof fetch));
     await client.listHooks('events');
@@ -439,7 +451,7 @@ describe('baseUrl prefixing', () => {
     let capturedUrl = '';
     const fetchImpl = vi.fn(async (url: string) => {
       capturedUrl = url;
-      return jsonResponse({ data: { items: [], total: 0 } });
+      return jsonResponse({ data: { items: [], total: 0, trigger_auth: {}, topic_verifiers: {} } });
     });
     const client = createApiClient({
       getToken: () => 'k',

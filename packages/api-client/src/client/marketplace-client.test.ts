@@ -255,14 +255,9 @@ describe('marketplace client transport', () => {
     expect(out.installed[0]?.route_mounts).toEqual({ relay: 'channels/relay-2' });
   });
 
-  it('throws ApiSchemaError LOUDLY on an unknown key in the CLOSED installed shapes', async () => {
-    // The installed listing is a closed contract: the server is built against
-    // exactly these shapes, so an extra key is drift, never silently stripped.
-    const { client } = harness(() =>
-      jsonResponse({
-        data: { installed: [{ ...INSTALLED_ROW, surprise: 1 }] },
-      }),
-    );
+  it('throws ApiSchemaError LOUDLY on an installed row missing its compat verdict', async () => {
+    const { compat: _dropped, ...withoutCompat } = INSTALLED_ROW;
+    const { client } = harness(() => jsonResponse({ data: { installed: [withoutCompat] } }));
     await expect(client.listInstalledMarketplacePlugins()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 
@@ -321,7 +316,11 @@ describe('marketplace client transport', () => {
               public: true,
             },
           ],
-          reload: { ok: true },
+          reload: {
+            status: 'reloaded',
+            env_keys: 0,
+            fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+          },
           pip_output: 'Successfully installed tai42-toolbox-0.1.0',
         },
       }),
@@ -335,15 +334,28 @@ describe('marketplace client transport', () => {
     // The mounted-route receipt is modelled: what was opened, where, and whether public.
     expect(out.routes[0]?.full_path).toBe('/api/channels/relay/inbound');
     expect(out.routes[0]?.public).toBe(true);
-    // The un-modelled wire fields are stripped, not surfaced on the receipt.
-    expect(out).not.toHaveProperty('package');
-    expect(out).not.toHaveProperty('pip_output');
+    // The installed package and the install log ride the receipt.
+    expect(out.package).toBe('tai42-toolbox');
+    expect(out.pip_output).toBe('Successfully installed tai42-toolbox-0.1.0');
   });
 
   it('installMarketplacePlugin omits version from the body when not given', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: { ref: 'tai42/toolbox', version: '0.1.0', advisories: [], notes: [], routes: [] },
+        data: {
+          ref: 'tai42/toolbox',
+          version: '0.1.0',
+          advisories: [],
+          notes: [],
+          routes: [],
+          package: null,
+          pip_output: null,
+          reload: {
+            status: 'reloaded',
+            env_keys: 0,
+            fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+          },
+        },
       }),
     );
     await client.installMarketplacePlugin({ ref: 'tai42/toolbox' });
@@ -359,6 +371,13 @@ describe('marketplace client transport', () => {
           advisories: [],
           notes: [],
           routes: [],
+          package: null,
+          pip_output: null,
+          reload: {
+            status: 'reloaded',
+            env_keys: 0,
+            fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+          },
         },
       }),
     );
@@ -380,7 +399,20 @@ describe('marketplace client transport', () => {
   it('installMarketplacePlugin carries route_mounts + accept_public_routes through to the request body', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: { ref: 'acme/relay', version: '1.0.0', advisories: [], notes: [], routes: [] },
+        data: {
+          ref: 'acme/relay',
+          version: '1.0.0',
+          advisories: [],
+          notes: [],
+          routes: [],
+          package: null,
+          pip_output: null,
+          reload: {
+            status: 'reloaded',
+            env_keys: 0,
+            fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+          },
+        },
       }),
     );
     await client.installMarketplacePlugin({
@@ -490,7 +522,7 @@ describe('marketplace client transport', () => {
   it('uninstallMarketplacePlugin POSTs to /api/marketplace/uninstall and parses the receipt', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: { ref: 'tai42/toolbox', uninstalled: true, reload: { ok: true }, notes: [] },
+        data: { ref: 'tai42/toolbox', uninstalled: true, reload: null, notes: [] },
       }),
     );
     const out = await client.uninstallMarketplacePlugin({ ref: 'tai42/toolbox' });
@@ -503,7 +535,20 @@ describe('marketplace client transport', () => {
   it('updateMarketplacePlugin POSTs to /api/marketplace/update and parses the receipt', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: { ref: 'tai42/toolbox', version: '0.2.0', advisories: [], notes: [], routes: [] },
+        data: {
+          ref: 'tai42/toolbox',
+          version: '0.2.0',
+          advisories: [],
+          notes: [],
+          routes: [],
+          package: null,
+          pip_output: null,
+          reload: {
+            status: 'reloaded',
+            env_keys: 0,
+            fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+          },
+        },
       }),
     );
     const out = await client.updateMarketplacePlugin({ ref: 'tai42/toolbox' });

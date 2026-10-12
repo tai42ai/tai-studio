@@ -3034,7 +3034,7 @@ readonly listStorageResources: (signal?: AbortSignal) => Promise<{
 resources: string[];
 }>;
 readonly statStorageResource: (id: string, signal?: AbortSignal) => Promise<{
-content_type: string;
+content_type: string | null;
 id: string;
 }>;
 readonly downloadStorageResource: (id: string, signal?: AbortSignal) => Promise<Blob>;
@@ -9462,7 +9462,7 @@ function createApiClient(config: ApiConfig): {
         resources: string[];
     }>;
     readonly statStorageResource: (id: string, signal?: AbortSignal) => Promise<{
-        content_type: string;
+        content_type: string | null;
         id: string;
     }>;
     readonly downloadStorageResource: (id: string, signal?: AbortSignal) => Promise<Blob>;
@@ -23934,7 +23934,7 @@ type StorageResourceStat = z.infer<typeof storageResourceStat>;
 
 // @public
 const storageResourceStat: z.ZodObject<{
-    content_type: z.ZodString;
+    content_type: z.ZodNullable<z.ZodString>;
     id: z.ZodString;
 }, z.core.$strip>;
 
