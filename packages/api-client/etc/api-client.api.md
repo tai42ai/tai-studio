@@ -4784,6 +4784,7 @@ export function createApiClient(config: ApiConfig): {
         finished_at?: string | undefined;
         result?: unknown;
         error?: string | undefined;
+        outcome?: unknown;
         resumed_interactions?: string[] | undefined;
     }>;
     readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
@@ -11566,6 +11567,7 @@ export const toolRunRecord: z.ZodObject<{
     finished_at: z.ZodOptional<z.ZodString>;
     result: z.ZodOptional<z.ZodUnknown>;
     error: z.ZodOptional<z.ZodString>;
+    outcome: z.ZodOptional<z.ZodUnknown>;
     resumed_interactions: z.ZodOptional<z.ZodArray<z.ZodString>>;
 }, z.core.$strip>;
 
