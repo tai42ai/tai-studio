@@ -5,6 +5,7 @@
  * stub navigation context.
  */
 import type { ApiClient, ScheduleListRow, ToolTagEntry } from '@tai42/api-client';
+import { servedConstants } from '@tai42/api-client';
 import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderOptions, type RenderResult, waitFor } from '@testing-library/react';
@@ -55,6 +56,8 @@ export function renderWithProviders(ui: ReactNode, options: ProviderOptions): Re
  */
 export function makeClient(overrides: Partial<ApiClient>): ApiClient {
   return {
+    // The served platform constants the injected client carries (the SDK reads them).
+    constants: servedConstants,
     listToolTags: vi.fn(() => Promise.resolve([])),
     listToolMeta: vi.fn(() => Promise.resolve({ folders: [], meta: [] })),
     // The add-schedule dialog always mounts the shared execution-key picker; default it
