@@ -1,21 +1,19 @@
 /**
  * The ADD-SCHEDULE dialog. The operator names the schedule, picks the tool to run
- * (shared `ToolPicker`, fed by `listTools`), supplies the tool's kwargs as JSON,
- * and chooses a schedule spec — either an INTERVAL (seconds) or a CRONTAB string.
+ * (shared `ToolPicker`, fed by the tool tags the server serves as `schedulable`),
+ * supplies the tool's kwargs as JSON, and chooses a schedule spec — either an INTERVAL
+ * (seconds) or a CRONTAB expression.
  *
  * The kwargs JSON is validated CLIENT-SIDE before submit: bad JSON (or a non-object
  * payload) blocks the request with a visible message rather than being sent. On a
- * valid submit the dialog posts through `addSchedule`, mapping the picked tool and
- * parsed kwargs into the skeleton's `{tool_name, tool_kwargs, schedule_kwargs}`
- * body; the schedule spec rides in `schedule_kwargs.backend_schedule` (the interval
- * number or the cron string) alongside `backend_schedule_name` (the name). The
- * request names the tool's `<tool>_schedule_task` vehicle — the branch the backend's
- * `schedule_task` extension registers and the create door dispatches to register the
- * recurring schedule.
+ * valid submit the dialog posts the served `ScheduleCreate` body through `addSchedule`:
+ * the picked BASE tool, its kwargs, the typed cadence (`{kind: 'interval', every}` or
+ * the five crontab fields) and the schedule name; the server resolves the backend's
+ * schedule vehicle.
  *
- * The crontab spec is entered as a single validated cron STRING field rather than a
- * visual cron builder: the string is the exact value the skeleton expects, so it is
- * passed straight through without an intermediate builder to translate.
+ * The crontab spec is entered as a single cron expression field rather than a visual
+ * cron builder; it is split into its five fields (a sixth leading seconds field is
+ * dropped), and an expression of any other length is a field error.
  */
 import type { StateBinding } from '@tai42/api-client';
 import {
@@ -34,6 +32,7 @@ import { type ReactNode, useCallback, useState } from 'react';
 import { schedulesKey } from './keys';
 import {
   buildScheduleBody,
+  hasFieldError,
   parseKwargs,
   type ScheduleBody,
   type ScheduleMode,
@@ -79,8 +78,7 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
     },
   });
 
-  const { nameMissing, toolMissing, intervalInvalid, cronMissing, intervalValue } =
-    validateScheduleForm({ name, tool, mode, interval, cron });
+  const validation = validateScheduleForm({ name, tool, mode, interval, cron });
 
   const handleSubmit = useCallback(() => {
     setSubmitted(true);
@@ -93,14 +91,14 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
       setKwargsError(kwargsResult.message);
       return;
     }
-    if (nameMissing || toolMissing || intervalInvalid || cronMissing || tool === null) return;
+    if (hasFieldError(validation) || tool === null) return;
 
     const built = buildScheduleBody(
       {
         tool,
         name,
         mode,
-        intervalValue,
+        intervalValue: validation.intervalValue,
         cron,
         subjectTarget: subject.target,
         subjectKind: subject.kind,
@@ -112,27 +110,14 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
       kwargsResult.value,
     );
     if (!built.ok) {
+      // A cron expression of the wrong length is a field error caught above, so only the
+      // subject and the execution key reach here.
       if (built.field === 'subject') subject.setError(built.message);
-      else contract.setExecutionKeyError(built.message);
+      else if (built.field === 'executionKey') contract.setExecutionKeyError(built.message);
       return;
     }
     add.mutate(built.body);
-  }, [
-    add,
-    contract,
-    cron,
-    cronMissing,
-    intervalInvalid,
-    intervalValue,
-    kwargs,
-    mode,
-    name,
-    nameMissing,
-    stateBinding,
-    subject,
-    tool,
-    toolMissing,
-  ]);
+  }, [add, contract, cron, kwargs, mode, name, stateBinding, subject, tool, validation]);
 
   return (
     <Dialog
@@ -152,8 +137,8 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
           kwargs={kwargs}
           setKwargs={setKwargs}
           submitted={submitted}
-          nameMissing={nameMissing}
-          toolMissing={toolMissing}
+          nameMissing={validation.nameMissing}
+          toolMissing={validation.toolMissing}
           kwargsError={kwargsError}
           toolsQuery={toolsQuery}
           toolNames={toolNames}
@@ -170,8 +155,9 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
           cron={cron}
           setCron={setCron}
           submitted={submitted}
-          intervalInvalid={intervalInvalid}
-          cronMissing={cronMissing}
+          intervalInvalid={validation.intervalInvalid}
+          cronMissing={validation.cronMissing}
+          cronInvalid={validation.cronInvalid}
         />
 
         <SubjectSection

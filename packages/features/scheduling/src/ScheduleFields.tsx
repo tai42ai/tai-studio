@@ -12,7 +12,7 @@ import {
 } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
-/** The tools-list query status this surface reads. The pickable tool names ride in
+/** The tool-tags query status this surface reads. The schedulable tool names ride in
  *  their own `toolNames` prop; this shape carries only the read's loading/error legs. */
 interface ToolsQueryLike {
   readonly isError: boolean;
@@ -54,6 +54,9 @@ export function ScheduleFields({
   readonly displayNames: Readonly<Record<string, string>>;
   readonly badgesByTool: Readonly<Record<string, readonly string[]>>;
 }): ReactNode {
+  // The picker offers only the tools the server serves as schedulable; with none, it is
+  // disabled with an explanation rather than offering an empty list.
+  const nothingSchedulable = !toolsQuery.isPending && toolNames.length === 0;
   return (
     <>
       <Field label="Name" error={submitted && nameMissing ? 'A name is required.' : undefined}>
@@ -72,13 +75,27 @@ export function ScheduleFields({
           onRetry={() => void toolsQuery.refetch()}
         />
       ) : (
-        <Field label="Tool" error={submitted && toolMissing ? 'A tool is required.' : undefined}>
+        <Field
+          label="Tool"
+          description={
+            nothingSchedulable
+              ? "A tool can be scheduled when it carries the scheduling backend's schedule extension."
+              : undefined
+          }
+          error={submitted && toolMissing ? 'A tool is required.' : undefined}
+        >
           <ToolPicker
             toolNames={toolNames}
             value={tool}
             onChange={setTool}
-            disabled={toolsQuery.isPending}
-            placeholder={toolsQuery.isPending ? 'Loading tools…' : 'Select a tool…'}
+            disabled={toolsQuery.isPending || nothingSchedulable}
+            placeholder={
+              toolsQuery.isPending
+                ? 'Loading tools…'
+                : nothingSchedulable
+                  ? 'No tool can be scheduled'
+                  : 'Select a tool…'
+            }
             excludeNames={excludeToolNames}
             displayNames={displayNames}
             badgesByTool={badgesByTool}
