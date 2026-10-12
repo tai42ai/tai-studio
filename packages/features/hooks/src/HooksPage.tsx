@@ -7,6 +7,7 @@
  * All server state flows through TanStack Query with loud loading / empty /
  * error surfaces owned by {@link HooksList} and {@link RegisterHookForm}.
  */
+import { apiRoutes } from '@tai42/api-client';
 import {
   Card,
   coversAnyRoute,
@@ -29,7 +30,7 @@ import { TriggerLinksList } from './TriggerLinksList';
  * VISIBILITY: a full (admin / gate-off) projection or a hooks-granted (read or
  * write) non-admin whose projection reaches these routes sees the section; an
  * ungranted caller does not. Fails closed until the projection is ready. */
-const TRIGGER_LINKS_ROUTE = '/api/hooks/trigger-links';
+const TRIGGER_LINKS_ROUTE = apiRoutes.get_api_hooks_trigger_links.path;
 
 export function HooksPage(_props: PageProps<'hooks'>): ReactNode {
   const [topic, setTopic] = useState('');

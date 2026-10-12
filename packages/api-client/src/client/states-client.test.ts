@@ -321,7 +321,15 @@ describe('states client transport', () => {
   it('listStateAttachments() reads the attachments under the state and parses each row', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: [{ template: 'notes', path: ['notes'], parameters: { cap: 5 }, declarations: {} }],
+        data: [
+          {
+            state: 'profile',
+            template: 'notes',
+            path: ['notes'],
+            parameters: { cap: 5 },
+            declarations: {},
+          },
+        ],
       }),
     );
     const out = await client.listStateAttachments('profile');

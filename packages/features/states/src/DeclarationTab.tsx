@@ -12,7 +12,7 @@
  * additive schema changes; a change that removes or alters an existing field (or a
  * stranding subject-kind removal) is refused with a 409 whose message is shown inline.
  */
-import { type StateDeclarationBody, type StateDetail } from '@tai42/api-client';
+import { servedConstants, type StateDeclarationBody, type StateDetail } from '@tai42/api-client';
 import {
   Badge,
   Button,
@@ -44,7 +44,7 @@ import {
   storedSchemaRef,
 } from './SchemaField';
 
-const PERSON_KIND = 'person';
+const PERSON_KIND = servedConstants.PERSON_KIND;
 
 /** The mutable declaration fields the editor authors, shared by create and edit. */
 interface DeclarationDraft {

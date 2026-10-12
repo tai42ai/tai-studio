@@ -1,6 +1,7 @@
 /** Access-policy validation, version and rollback response schemas. */
 import { z } from 'zod';
 
+import * as openapi from '../generated/openapi-schemas';
 import { policyBody } from './served';
 
 /**
@@ -11,10 +12,7 @@ import { policyBody } from './served';
  * syntactically-broken condition can be caught before it locks a key out. A drift
  * throws `ApiSchemaError`.
  */
-export const validateConditionResult = z.object({
-  ok: z.boolean(),
-  result: z.boolean().nullable(),
-});
+export const validateConditionResult = openapi.conditionCheckResult;
 export type ValidateConditionResult = z.infer<typeof validateConditionResult>;
 
 /**
@@ -23,16 +21,11 @@ export type ValidateConditionResult = z.infer<typeof validateConditionResult>;
  * active pointer; `tags` is the generic per-version label list (kind-agnostic),
  * mirroring the preset version shape.
  */
-export const policyVersion = z.object({
-  version: z.number(),
-  body: policyBody,
-  tags: z.array(z.string()),
-  created_at: z.string(),
-  is_current: z.boolean(),
-});
+// The body is hand-typed: the spec publishes a version body as an open object.
+export const policyVersion = openapi.documentVersion.extend({ body: policyBody });
 export type PolicyVersion = z.infer<typeof policyVersion>;
 
 export const policyVersionList = z.array(policyVersion);
 
 /** `POST /api/auth/api-keys/{user_id}/policy/rollback` — the re-pointed version. */
-export const policyRollback = z.object({ user_id: z.string(), active_version: z.number() });
+export const policyRollback = openapi.policyRollbackResult;

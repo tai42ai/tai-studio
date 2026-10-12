@@ -12,6 +12,7 @@ const tagEntry = (overrides: Partial<ToolTagEntry> & { name: string }): ToolTagE
   tags: [],
   badges: [],
   hidden: false,
+  schedulable: false,
   ...overrides,
 });
 

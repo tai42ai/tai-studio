@@ -65,11 +65,17 @@ function applyReport(): ReturnType<ApiClient['applySettingsProfile']> {
   return Promise.resolve({
     hot: ['APP_TITLE'],
     recycle: [
-      { name: 'serve-1', kind: 'serve', status: 'recycled', generation_before: 4 },
-      { name: 'serve-2', kind: 'serve', status: 'self-deferred', generation_before: 2 },
+      { detail: null, name: 'serve-1', kind: 'serve', status: 'recycled', generation_before: 4 },
+      {
+        detail: null,
+        name: 'serve-2',
+        kind: 'serve',
+        status: 'self-deferred',
+        generation_before: 2,
+      },
     ],
     fresh: [{ name: 'serve-1', kind: 'serve', generation: 5 }],
-    refused: [] as { key: string; reason: string }[],
+    refused: [] as string[],
     recycle_stopped: null,
     awaiting_respawn: [],
     fanout: {
@@ -177,11 +183,19 @@ describe('ProfilesTab — apply', () => {
     const applySettingsProfile = vi.fn(() =>
       Promise.resolve({
         hot: [],
-        recycle: [{ name: 'serve-1', kind: 'serve', status: 'recycled', generation_before: 3 }],
+        recycle: [
+          {
+            detail: null,
+            name: 'serve-1',
+            kind: 'serve',
+            status: 'recycled',
+            generation_before: 3,
+          },
+        ],
         // The fresh life carries a DIFFERENT name than the recycled target: it is not
         // joined onto that row, it renders on its own under Fresh lives.
         fresh: [{ name: 'serve-9', kind: 'serve', generation: 1 }],
-        refused: [] as { key: string; reason: string }[],
+        refused: [] as string[],
         recycle_stopped: null,
         awaiting_respawn: [],
         fanout: { mode: 'local-only' as const, note: 'only this worker reloaded' },
@@ -220,7 +234,7 @@ describe('ProfilesTab — apply', () => {
         hot: [],
         recycle: [],
         fresh: [],
-        refused: [{ key: 'TAI_APP_PROVIDERS', reason: 'boundary-refused: no recycle path' }],
+        refused: ['TAI_APP_PROVIDERS'],
         recycle_stopped: null,
         awaiting_respawn: [],
         fanout: { mode: 'local-only' as const, note: 'only this worker reloaded' },
@@ -239,7 +253,6 @@ describe('ProfilesTab — apply', () => {
 
     const refused = await screen.findByTestId('apply-refused');
     expect(refused).toHaveTextContent('TAI_APP_PROVIDERS');
-    expect(refused).toHaveTextContent('boundary-refused: no recycle path');
   });
 
   it('ABORTS apply when the diff carries refused keys — the button is blocked', async () => {
@@ -385,11 +398,23 @@ function rolledApply(
   return Promise.resolve({
     hot: [],
     recycle: [
-      { name: 'backend-1', kind: 'backend', status: 'recycled', generation_before: 1 },
-      { name: 'serve-1', kind: 'serve', status: 'self-deferred', generation_before: 2 },
+      {
+        detail: null,
+        name: 'backend-1',
+        kind: 'backend',
+        status: 'recycled',
+        generation_before: 1,
+      },
+      {
+        detail: null,
+        name: 'serve-1',
+        kind: 'serve',
+        status: 'self-deferred',
+        generation_before: 2,
+      },
     ],
     fresh: [{ name: 'backend-1', kind: 'backend', generation: 2 }],
-    refused: [] as { key: string; reason: string }[],
+    refused: [] as string[],
     recycle_stopped: null,
     awaiting_respawn: awaiting,
     fanout: {

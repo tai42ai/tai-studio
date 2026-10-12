@@ -6,6 +6,7 @@
 import {
   type AddServerArgs,
   type ApiClient,
+  apiRoutes,
   type DiscoveredServer,
   type FleetReportSummary,
   type ProviderView,
@@ -27,7 +28,7 @@ type AddServerResult = Awaited<ReturnType<ApiClient['addServer']>>;
  * this one check gates every provider-door control on the page.
  */
 export function useConnectorAdmin(): boolean {
-  return useCanWrite('/api/connectors/providers', 'POST');
+  return useCanWrite(apiRoutes.post_api_connectors_providers.path, 'POST');
 }
 
 /** A request's failure split into a feature-off refusal and the server's message. */

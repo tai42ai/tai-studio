@@ -320,8 +320,20 @@ describe('BackupTab', () => {
           },
           recycle: {
             recycle: [
-              { name: 'backend-1', kind: 'backend', status: 'recycled', generation_before: 1 },
-              { name: 'serve-1', kind: 'serve', status: 'self-deferred', generation_before: 2 },
+              {
+                detail: null,
+                name: 'backend-1',
+                kind: 'backend',
+                status: 'recycled',
+                generation_before: 1,
+              },
+              {
+                detail: null,
+                name: 'serve-1',
+                kind: 'serve',
+                status: 'self-deferred',
+                generation_before: 2,
+              },
             ],
             fresh: [{ name: 'backend-1', kind: 'backend', generation: 2 }],
             recycle_stopped: null,

@@ -7,10 +7,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { ExtensionPicker } from './extension-picker';
 
 const CATALOG: Extension[] = [
-  { name: 'marka', kind: 'wrapper' },
-  { name: 'markb', kind: 'wrapper' },
-  { name: 'backendx', kind: 'backend' },
-  { name: 'backendy', kind: 'backend' },
+  { name: 'marka', kind: 'wrapper', multiple: false },
+  { name: 'markb', kind: 'wrapper', multiple: false },
+  { name: 'backendx', kind: 'backend', multiple: false },
+  { name: 'backendy', kind: 'backend', multiple: false },
 ];
 
 /** A controlled harness so the checked state reflects each toggle. */
@@ -95,7 +95,7 @@ describe('ExtensionPicker', () => {
     const payload = '<script>alert(1)</script>';
     const { container } = render(
       <ExtensionPicker
-        available={[{ name: payload, kind: 'wrapper' }]}
+        available={[{ name: payload, kind: 'wrapper', multiple: false }]}
         value={[payload]}
         onChange={vi.fn()}
       />,

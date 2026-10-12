@@ -11,6 +11,7 @@ import {
   blankRouteValue,
   formValueToBody,
   requiredFieldErrors,
+  routeFormErrors,
   routeFormSchema,
   type RouteFormValue,
   routeToFormValue,
@@ -151,13 +152,6 @@ describe('routeToFormValue', () => {
     expect(value.delivery).toEqual({ door: 'channel', channel: 'sms', our_identity: '+1555' });
     expect(value.turns_per_hour_override).toBeUndefined();
     expect(value.error_reply_text).toBeUndefined();
-  });
-
-  it('tolerates null channel identity fields on a prefill', () => {
-    const value = routeToFormValue(
-      makeRoute({ door: 'channel', channel: null, our_identity: null }),
-    );
-    expect(value.delivery).toEqual({ door: 'channel', channel: '', our_identity: '' });
   });
 });
 
@@ -371,8 +365,10 @@ describe('requiredFieldErrors', () => {
     expect(errors.execution_key).toBe('An execution key is required.');
   });
 
-  it('rejects a non-slug route name', () => {
-    expect(requiredFieldErrors({ route_name: 'Bad Name' }, false).route_name).toMatch(/slug/);
+  it('rejects a non-slug route name with the field text', () => {
+    expect(routeFormErrors(routeFormSchema(), { route_name: 'Bad Name' }, false).route_name).toBe(
+      'Use lowercase letters, digits and hyphens.',
+    );
   });
 
   it('skips the route-name check on edit (the name is read-only)', () => {
@@ -403,28 +399,41 @@ describe('requiredFieldErrors', () => {
       false,
     );
     expect(agentApi['target.target_name']).toBe('An agent name is required.');
-    expect(agentApi['delivery.callback_url']).toBe('A callback URL is required.');
+  });
+});
+
+describe('routeFormErrors', () => {
+  const apiRoute = (callback_url: string): RouteFormValue => ({
+    route_name: 'ok',
+    execution_key: 'svc',
+    target: { target_kind: 'agent', target_name: 'assistant' },
+    delivery: { door: 'api', callback_url },
+  });
+  const callbackError = (callback_url: string): string | undefined =>
+    routeFormErrors(routeFormSchema(), apiRoute(callback_url), false)['delivery.callback_url'];
+
+  it('accepts a poll-only api route, with no callback URL', () => {
+    expect(routeFormErrors(routeFormSchema(), apiRoute(''), false)).toEqual({});
+    expect(formValueToBody(apiRoute(''))).toMatchObject({ door: 'api', callback_url: null });
   });
 
-  it('rejects a non-https or relative callback URL and passes an absolute https one', () => {
-    const withUrl = (callback_url: string): string | undefined =>
-      requiredFieldErrors(
-        {
-          route_name: 'ok',
-          execution_key: 'svc',
-          target: { target_kind: 'agent', target_name: 'assistant' },
-          delivery: { door: 'api', callback_url },
-        },
-        false,
-      )['delivery.callback_url'];
-    expect(withUrl('http://sink.example/cb')).toBe('Must be an absolute https URL.');
-    expect(withUrl('sink.example/cb')).toBe('Must be an absolute https URL.');
-    expect(withUrl('https://sink.example/cb')).toBeUndefined();
+  it('refuses a callback URL with a user name in-form, with the field text', () => {
+    expect(callbackError('https://user@host')).toBe(
+      'Must be an absolute https URL with no user name or password.',
+    );
   });
 
-  it('rejects a channel name carrying a colon and passes a clean one', () => {
+  it('refuses a non-https or relative callback URL and passes an absolute https one', () => {
+    const text = 'Must be an absolute https URL with no user name or password.';
+    expect(callbackError('http://sink.example/cb')).toBe(text);
+    expect(callbackError('sink.example/cb')).toBe(text);
+    expect(callbackError('https://sink.example/cb')).toBeUndefined();
+  });
+
+  it('refuses a channel name carrying a colon in-form and passes a clean one', () => {
     const withChannel = (channel: string): string | undefined =>
-      requiredFieldErrors(
+      routeFormErrors(
+        routeFormSchema(),
         {
           route_name: 'ok',
           execution_key: 'svc',
@@ -435,6 +444,27 @@ describe('requiredFieldErrors', () => {
       )['delivery.channel'];
     expect(withChannel('whats:app')).toBe('Use a ":"-free channel name.');
     expect(withChannel('whatsapp')).toBeUndefined();
+  });
+
+  it('shows the error-reply bound as its field text and accepts a blank reply', () => {
+    const withReply = (error_reply_text: string): string | undefined =>
+      routeFormErrors(
+        routeFormSchema(),
+        { ...apiRoute('https://sink.example/cb'), error_reply_text },
+        false,
+      ).error_reply_text;
+    expect(withReply('x'.repeat(2001))).toBe('Enter the reply text (up to 2,000 characters).');
+    expect(withReply('   ')).toBeUndefined();
+    expect(withReply('Sorry, try again.')).toBeUndefined();
+  });
+
+  it('reads the route-name slug and the door rules from the contract document', () => {
+    const props = routeFormSchema().properties;
+    expect(props?.route_name?.pattern).toBe('^[a-z0-9-]+$');
+    const [api, channel] = props?.delivery?.oneOf ?? [];
+    expect(api?.required).toEqual(['door']);
+    expect(channel?.required).toEqual(['door', 'channel', 'our_identity']);
+    expect(props?.turns_per_hour_override).toMatchObject({ type: ['integer', 'null'], minimum: 1 });
   });
 
   it('returns no errors for a complete, valid value', () => {

@@ -103,20 +103,27 @@ function formatTimestamp(value: string): string {
 /** The tappable option labels the send offered. Display-only in the operator inbox —
  *  there is no conversation for the sink to enter — so they render as inert chips,
  *  not activatable controls, each label as escaped text. */
-function OptionChips({ options }: { readonly options: readonly string[] }): ReactNode {
+function OptionChips({ options }: { readonly options: readonly NotificationOption[] }): ReactNode {
   return (
     <div style={templateStyle} data-testid="notification-options">
       <span style={labelStyle}>Options offered</span>
       <div style={chipRowStyle}>
-        {options.map((option, index) => (
-          <Badge key={`${String(index)}-${option}`} variant="neutral">
-            {option}
-          </Badge>
-        ))}
+        {options.map((option, index) => {
+          // A reply option shows its text, a link option its label.
+          const label = option.kind === 'link' ? option.label : option.text;
+          return (
+            <Badge key={`${String(index)}-${label}`} variant="neutral">
+              {label}
+            </Badge>
+          );
+        })}
       </div>
     </div>
   );
 }
+
+/** One option a notify offered: a reply option or a link option. */
+type NotificationOption = NonNullable<Notification['options']>[number];
 
 /** A pre-approved channel template the send carried: its name + language. The
  *  template's runtime arguments ride in an opaque, per-channel `parameters` object

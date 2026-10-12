@@ -52,11 +52,12 @@ function harness(responder: () => Response, token: string | null = 'k') {
 const FULL_PROJECTION = {
   user_id: 'admin',
   owner_user_id: null,
+  principal: null,
   admin: true,
   public_resource_id: 'public',
   scopes: ['*'],
   routes: [{ path: '/api/tools', methods: ['GET'] }],
-  route_patterns: [{ pattern: '^/app/slug/.*$', scope_id: 'app' }],
+  route_patterns: [{ pattern: '^/app/slug/.*$', scope_id: 'app', open_prefix: null }],
   sub_mcp: [
     {
       slug: 'demo',
@@ -86,6 +87,7 @@ describe('getMe client transport', () => {
       ...FULL_PROJECTION,
       user_id: 'agent-1',
       owner_user_id: 'editor',
+      principal: null,
       admin: false,
       public_resource_id: 'public',
       scopes: ['tools:read'],

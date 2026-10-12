@@ -19,9 +19,9 @@ import { ApplyExtensionsPanel } from './apply-extensions';
 import { renderWithProviders } from './test-utils';
 
 const CATALOG: Extension[] = [
-  { name: 'marka', kind: 'wrapper' },
-  { name: 'markb', kind: 'wrapper' },
-  { name: 'backendx', kind: 'backend' },
+  { name: 'marka', kind: 'wrapper', multiple: false },
+  { name: 'markb', kind: 'wrapper', multiple: false },
+  { name: 'backendx', kind: 'backend', multiple: false },
 ];
 
 const parisPreset: PresetRecord = {

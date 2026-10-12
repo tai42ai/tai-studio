@@ -1,5 +1,5 @@
 /** Conversation route, thread, transcript, config and admin sub-client. */
-import { encodeSegment } from '../http';
+import { apiRoutes, buildPath } from '../generated/api-routes';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -63,22 +63,32 @@ function conversationRouteMethods(t: Transport) {
     // The stored routing rows, each with its `callback_secret` withheld — the
     // conversation monitor's route picker.
     listConversationRoutes: (signal?: AbortSignal) =>
-      req('/api/conversations', s.conversationRoutes, { signal }),
+      req(apiRoutes.get_api_conversations.path, s.conversationRoutes, { signal }),
     // Create or REPLACE a route (an UPSERT: the same door is the create and the
     // edit path). `route_name` rides the URL path AND the body; the door rejects a
     // disagreeing pair, so both come from the one create object. The reply carries
     // the freshly-minted `callback_secret` for an `api`-door row, returned ONCE.
     createOrReplaceConversationRoute: (route: s.ConversationRouteCreate) =>
-      req(`/api/conversations/${encodeSegment(route.route_name)}`, s.conversationRouteWritten, {
-        method: 'POST',
-        body: route,
-      }),
+      req(
+        buildPath(apiRoutes.post_api_conversations_route_name.path, {
+          route_name: route.route_name,
+        }),
+        s.conversationRouteWritten,
+        {
+          method: 'POST',
+          body: route,
+        },
+      ),
     // Delete a route by name (destructive + authority-changing server-side): it
     // drops the routing row and reclaims the thread indexes it owned.
     deleteConversationRoute: (routeName: string) =>
-      req(`/api/conversations/${encodeSegment(routeName)}`, s.conversationRouteDeleted, {
-        method: 'DELETE',
-      }),
+      req(
+        buildPath(apiRoutes.delete_api_conversations_route_name.path, { route_name: routeName }),
+        s.conversationRouteDeleted,
+        {
+          method: 'DELETE',
+        },
+      ),
   };
 }
 
@@ -95,10 +105,16 @@ function conversationThreadMethods(t: Transport) {
       filters: ConversationThreadFilters = {},
       signal?: AbortSignal,
     ) =>
-      req(`/api/conversations/${encodeSegment(routeName)}/threads`, s.conversationThreadsPage, {
-        signal,
-        query: { page, pageSize, status: filters.status, address: filters.address },
-      }),
+      req(
+        buildPath(apiRoutes.get_api_conversations_route_name_threads.path, {
+          route_name: routeName,
+        }),
+        s.conversationThreadsPage,
+        {
+          signal,
+          query: { page, pageSize, status: filters.status, address: filters.address },
+        },
+      ),
     // One thread's transcript, caller-scoped, read in the asked-for direction.
     // The `thread_id` rides the QUERY STRING, never the path: it embeds the api
     // door's `{principal}/{end user}` address with the principal already
@@ -107,7 +123,9 @@ function conversationThreadMethods(t: Transport) {
     // exactly once whatever it holds, so it is passed through verbatim.
     readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) =>
       req(
-        `/api/conversations/${encodeSegment(query.routeName)}/transcript`,
+        buildPath(apiRoutes.get_api_conversations_route_name_transcript.path, {
+          route_name: query.routeName,
+        }),
         s.conversationTranscriptPage,
         {
           signal,
@@ -125,7 +143,9 @@ function conversationThreadMethods(t: Transport) {
     // page's `truncated` flag says the match set outran the door's scan cap.
     searchConversationMessages: (query: ConversationMessageSearchQuery, signal?: AbortSignal) =>
       req(
-        `/api/conversations/${encodeSegment(query.routeName)}/messages/search`,
+        buildPath(apiRoutes.get_api_conversations_route_name_messages_search.path, {
+          route_name: query.routeName,
+        }),
         s.conversationMessageSearchPage,
         { signal, query: { q: query.q, page: query.page, pageSize: query.pageSize } },
       ),
@@ -133,7 +153,9 @@ function conversationThreadMethods(t: Transport) {
     // never a path segment) — same encode-once reasoning as the transcript read.
     sendConversationThreadMessage: (routeName: string, body: ConversationThreadMessageBody) =>
       req(
-        `/api/conversations/${encodeSegment(routeName)}/thread/messages`,
+        buildPath(apiRoutes.post_api_conversations_route_name_thread_messages.path, {
+          route_name: routeName,
+        }),
         s.conversationThreadMessageSent,
         { method: 'POST', body },
       ),
@@ -141,7 +163,9 @@ function conversationThreadMethods(t: Transport) {
     // `thread_id` rides the QUERY value, encoded once, as the transcript read does.
     getConversationThreadMode: (routeName: string, threadId: string, signal?: AbortSignal) =>
       req(
-        `/api/conversations/${encodeSegment(routeName)}/thread/mode`,
+        buildPath(apiRoutes.get_api_conversations_route_name_thread_mode.path, {
+          route_name: routeName,
+        }),
         s.conversationThreadModeState,
         { signal, query: { thread_id: threadId } },
       ),
@@ -152,7 +176,9 @@ function conversationThreadMethods(t: Transport) {
       mode: s.ConversationThreadMode,
     ) =>
       req(
-        `/api/conversations/${encodeSegment(routeName)}/thread/mode`,
+        buildPath(apiRoutes.put_api_conversations_route_name_thread_mode.path, {
+          route_name: routeName,
+        }),
         s.conversationThreadModeState,
         { method: 'PUT', body: { thread_id: threadId, mode } },
       ),
@@ -166,7 +192,7 @@ function conversationConfigMethods(t: Transport) {
     // The stored per-target presentation configs (each `(target_kind, target_name)`
     // pair's multichannel flag + first-contact greeting). Admin config surface.
     listConversationConfigs: (signal?: AbortSignal) =>
-      req('/api/conversation-configs', s.conversationConfigs, { signal }),
+      req(apiRoutes.get_api_conversation_configs.path, s.conversationConfigs, { signal }),
     // One config by its `(target_kind, target_name)` key. 404 when unknown.
     getConversationConfig: (
       targetKind: s.ConversationTargetKind,
@@ -174,7 +200,10 @@ function conversationConfigMethods(t: Transport) {
       signal?: AbortSignal,
     ) =>
       req(
-        `/api/conversation-configs/${encodeSegment(targetKind)}/${encodeSegment(targetName)}`,
+        buildPath(apiRoutes.get_api_conversation_configs_target_kind_target_name.path, {
+          target_kind: targetKind,
+          target_name: targetName,
+        }),
         s.targetConversationConfig,
         { signal },
       ),
@@ -183,14 +212,20 @@ function conversationConfigMethods(t: Transport) {
     // rejects a body whose key disagrees, so both come from the one config object.
     setConversationConfig: (config: s.TargetConversationConfig) =>
       req(
-        `/api/conversation-configs/${encodeSegment(config.target_kind)}/${encodeSegment(config.target_name)}`,
+        buildPath(apiRoutes.put_api_conversation_configs_target_kind_target_name.path, {
+          target_kind: config.target_kind,
+          target_name: config.target_name,
+        }),
         s.conversationConfigWritten,
         { method: 'PUT', body: config },
       ),
     // Delete a config by its key. 404 when the key is unknown.
     deleteConversationConfig: (targetKind: s.ConversationTargetKind, targetName: string) =>
       req(
-        `/api/conversation-configs/${encodeSegment(targetKind)}/${encodeSegment(targetName)}`,
+        buildPath(apiRoutes.delete_api_conversation_configs_target_kind_target_name.path, {
+          target_kind: targetKind,
+          target_name: targetName,
+        }),
         s.conversationConfigDeleted,
         { method: 'DELETE' },
       ),
@@ -204,26 +239,40 @@ function conversationAdminMethods(t: Transport) {
     // Every answer record whose delivery ended `failed`, across every route and
     // caller. Admin-only server-side; not a paged window (returns `{items, total}`).
     listFailedConversationMessages: (signal?: AbortSignal) =>
-      req('/api/conversations/messages/failed', s.conversationFailedMessages, { signal }),
+      req(apiRoutes.get_api_conversations_messages_failed.path, s.conversationFailedMessages, {
+        signal,
+      }),
     // Forget ONE thread on a route (destructive): its checkpoint, answer records and
     // thread indexes. The `thread_id` rides the QUERY value, encoded once — it embeds
     // the api door's percent-encoded `{principal}/{end user}` address, which a path
     // segment would encode a second time. `removed` counts the records this call
     // cleared; a valid id on its own route always succeeds, never a 404.
     deleteConversationThread: (routeName: string, threadId: string) =>
-      req(`/api/conversations/${encodeSegment(routeName)}/thread`, s.conversationThreadDeleted, {
-        method: 'DELETE',
-        query: { thread_id: threadId },
-      }),
+      req(
+        buildPath(apiRoutes.delete_api_conversations_route_name_thread.path, {
+          route_name: routeName,
+        }),
+        s.conversationThreadDeleted,
+        {
+          method: 'DELETE',
+          query: { thread_id: threadId },
+        },
+      ),
     // Erase a LINKED person ENTIRELY (GDPR, wide blast radius): its aggregated thread
     // and checkpoint, its person row, and every address→person index mapping, across
     // EVERY route it wrote under. The `person_id` is a uuid4 with no percent-encoded
     // principal, so it rides the PATH cleanly. `erased` says whether this call removed
     // the person row (idempotent — a retry answers `false`, never a 404).
     deleteConversationPerson: (personId: string) =>
-      req(`/api/conversations/persons/${encodeSegment(personId)}`, s.conversationPersonDeleted, {
-        method: 'DELETE',
-      }),
+      req(
+        buildPath(apiRoutes.delete_api_conversations_persons_person_id.path, {
+          person_id: personId,
+        }),
+        s.conversationPersonDeleted,
+        {
+          method: 'DELETE',
+        },
+      ),
   };
 }
 

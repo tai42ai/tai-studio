@@ -1,22 +1,22 @@
 /** Conversation route, thread, transcript and config schemas. */
-import { z } from 'zod';
+import type { z } from 'zod';
 
-import { conversationRoute, targetConversationConfig } from './served';
-import { pageWindow } from './shared';
+import * as openapi from '../generated/openapi-schemas';
 
 // The cross-channel conversation monitor's READ side: the stored routing rows
 // (the route picker) from `GET /api/conversations`, a route's threads from
 // `GET /api/conversations/{route}/threads`, and one thread's transcript from
 // `GET /api/conversations/{route}/transcript?thread_id=`. Timestamps are float
 // epoch seconds, not ISO strings, and both paged doors carry the same window
-// fields; the transcript adds the direction it was read in.
+// fields; the transcript adds the direction it was read in. Each listing reports
+// `unreadable`, the stored rows it could not read.
 
 /** The inbound door a route is bound to: the authed API, or a channel medium. */
-export const conversationDoor = z.enum(['api', 'channel']);
+export const conversationDoor = openapi.conversationRecordView.shape.door;
 export type ConversationDoor = z.infer<typeof conversationDoor>;
 
 /** What a route's turn runs: a registered agent, or a tool dispatch. */
-export const conversationTargetKind = z.enum(['agent', 'tool']);
+export const conversationTargetKind = openapi.conversationConfigSetResult.shape.target_kind;
 export type ConversationTargetKind = z.infer<typeof conversationTargetKind>;
 
 /**
@@ -25,7 +25,7 @@ export type ConversationTargetKind = z.infer<typeof conversationTargetKind>;
  * operator to answer. The same value vocabulary as a per-thread mode override, but
  * a distinct concept (the route default vs. one thread's override).
  */
-export const conversationMode = z.enum(['agent', 'manual']);
+export const conversationMode = openapi.threadModeView.shape.mode;
 export type ConversationMode = z.infer<typeof conversationMode>;
 
 /**
@@ -35,27 +35,13 @@ export type ConversationMode = z.infer<typeof conversationMode>;
  * record's text was carried into (`merged`) or dropped in favour of (`superseded`)
  * a later turn, named by `successor_id`; both are terminal and never send.
  */
-export const conversationDeliveryStatus = z.enum([
-  'accepted',
-  'pending_delivery',
-  'provisional',
-  'delivered',
-  'failed',
-  'shed',
-  'silent',
-  'merged',
-  'superseded',
-]);
+export const conversationDeliveryStatus = openapi.deliveryStatus;
 export type ConversationDeliveryStatus = z.infer<typeof conversationDeliveryStatus>;
 
 /** The nature of a turn's outcome, orthogonal to where its delivery stands. */
-export const conversationAnswerStatus = z.enum([
-  'answered',
-  'error',
-  'silent',
-  'merged',
-  'superseded',
-]);
+export const conversationAnswerStatus = openapi.conversationRecordView.shape.answer_status
+  .unwrap()
+  .unwrap();
 export type ConversationAnswerStatus = z.infer<typeof conversationAnswerStatus>;
 
 /**
@@ -63,13 +49,14 @@ export type ConversationAnswerStatus = z.infer<typeof conversationAnswerStatus>;
  * answered; `operator` is a message a human sent into the thread, whose text
  * rides `answer` (its `inbound_text` is empty).
  */
-export const conversationRecordOrigin = z.enum(['client', 'operator']);
+export const conversationRecordOrigin = openapi.conversationRecordView.shape.origin;
 export type ConversationRecordOrigin = z.infer<typeof conversationRecordOrigin>;
 
-export const conversationRoutes = z.object({
-  items: z.array(conversationRoute),
-  total: z.number(),
-});
+/** One stored routing row as a read door serves it, its `callback_secret` withheld. */
+export const conversationRouteView = openapi.conversationRouteViewBody;
+export type ConversationRouteView = z.infer<typeof conversationRouteView>;
+
+export const conversationRoutes = openapi.conversationRouteListEnvelope;
 export type ConversationRoutes = z.infer<typeof conversationRoutes>;
 
 /**
@@ -79,12 +66,7 @@ export type ConversationRoutes = z.infer<typeof conversationRoutes>;
  * row). The secret signs delivery callbacks and is never re-read from any door, so
  * a caller that needs it must capture it from this reply.
  */
-export const conversationRouteWritten = z.object({
-  created: z.boolean(),
-  route_name: z.string(),
-  route: conversationRoute,
-  callback_secret: z.string().nullable(),
-});
+export const conversationRouteWritten = openapi.conversationRouteCreateResult;
 export type ConversationRouteWritten = z.infer<typeof conversationRouteWritten>;
 
 /**
@@ -92,10 +74,7 @@ export type ConversationRouteWritten = z.infer<typeof conversationRouteWritten>;
  * retryable reclamation of orphaned thread indexes answers `false` rather than a
  * 404).
  */
-export const conversationRouteDeleted = z.object({
-  removed: z.boolean(),
-  route_name: z.string(),
-});
+export const conversationRouteDeleted = openapi.routeRemoveResult;
 export type ConversationRouteDeleted = z.infer<typeof conversationRouteDeleted>;
 
 /**
@@ -104,58 +83,22 @@ export type ConversationRouteDeleted = z.infer<typeof conversationRouteDeleted>;
  * goes back into a URL as a path segment — the transcript door takes it as a
  * query value.
  */
-export const conversationThread = z.object({
-  thread_id: z.string(),
-  client_address: z.string(),
-  last_activity_at: z.number(),
-  message_count: z.number(),
-  last_delivery_status: conversationDeliveryStatus,
-});
+export const conversationThread = openapi.threadSummaryRow;
 export type ConversationThread = z.infer<typeof conversationThread>;
 
-export const conversationThreadsPage = z.object({
-  items: z.array(conversationThread),
-  ...pageWindow,
-});
+export const conversationThreadsPage = openapi.threadSummaryEnvelope;
 export type ConversationThreadsPage = z.infer<typeof conversationThreadsPage>;
 
 /**
  * One exchange: the visitor's `inbound_text` — every record answers a message, so
  * both projections always carry it — and the agent's `answer`, plus where that
  * answer's delivery stands. `successor_id` names the later turn a `merged` or
- * `superseded` record was folded into, `null` on every other outcome. The fields
- * after `updated_at` are ADMIN ONLY — the same door serves a caller-scoped
- * projection that withholds them — so they are optional here and absence means
- * "not published to this reader".
+ * `superseded` record was folded into, `null` on every other outcome. The delivery
+ * bookkeeping fields (`channel`, `our_identity`, `provider_message_id`, `callback_url`,
+ * `error`, `outbound_message_ids`, `attempts`) are ADMIN ONLY — the same door serves a
+ * caller-scoped projection that withholds them, read here as `null`.
  */
-export const conversationMessage = z.object({
-  message_id: z.string(),
-  route_name: z.string(),
-  door: conversationDoor,
-  thread_id: z.string(),
-  client_address: z.string(),
-  caller_principal: z.string().nullable(),
-  inbound_text: z.string(),
-  // A LOOSE array (`null` = no attachments): the key is always present on the wire,
-  // carrying the array or `null`. The renderer `safeParse`s each item against
-  // `attachmentMediaItem`, so one malformed/hostile attachment is a loud per-item
-  // notice, never a whole-record parse failure that vanishes the transcript.
-  inbound_attachments: z.array(z.unknown()).nullable(),
-  answer_status: conversationAnswerStatus.nullable(),
-  answer: z.string().nullable(),
-  successor_id: z.string().nullable(),
-  origin: conversationRecordOrigin,
-  delivery_status: conversationDeliveryStatus,
-  created_at: z.number(),
-  updated_at: z.number(),
-  channel: z.string().nullable().optional(),
-  our_identity: z.string().nullable().optional(),
-  provider_message_id: z.string().nullable().optional(),
-  callback_url: z.string().nullable().optional(),
-  error: z.string().nullable().optional(),
-  outbound_message_ids: z.array(z.string()).optional(),
-  attempts: z.number().optional(),
-});
+export const conversationMessage = openapi.conversationRecordView;
 export type ConversationMessage = z.infer<typeof conversationMessage>;
 
 /**
@@ -163,15 +106,14 @@ export type ConversationMessage = z.infer<typeof conversationMessage>;
  * first); `desc` is the live-tail order, where page 1 is always the newest page
  * and paging forward walks BACKWARDS through the thread's history.
  */
-export const transcriptOrder = z.enum(['asc', 'desc']);
+export const transcriptOrder = openapi.transcriptEnvelope.shape.order;
 export type TranscriptOrder = z.infer<typeof transcriptOrder>;
 
-/** A transcript page, echoing the order it was read in. */
-export const conversationTranscriptPage = z.object({
-  items: z.array(conversationMessage),
-  ...pageWindow,
-  order: transcriptOrder,
-});
+/**
+ * A transcript page, echoing the order it was read in; `person_id` names the person a
+ * person thread aggregates (`null` for a route-keyed thread).
+ */
+export const conversationTranscriptPage = openapi.transcriptEnvelope;
 export type ConversationTranscriptPage = z.infer<typeof conversationTranscriptPage>;
 
 /**
@@ -181,10 +123,7 @@ export type ConversationTranscriptPage = z.infer<typeof conversationTranscriptPa
  * projection. `truncated` says the match set outran the door's scan cap — surfaced
  * loudly, never a silent cut.
  */
-export const conversationMessageSearchPage = z.object({
-  items: z.array(conversationMessage),
-  ...pageWindow,
-});
+export const conversationMessageSearchPage = openapi.messageSearchEnvelope;
 export type ConversationMessageSearchPage = z.infer<typeof conversationMessageSearchPage>;
 
 /**
@@ -192,47 +131,29 @@ export type ConversationMessageSearchPage = z.infer<typeof conversationMessageSe
  * own; `manual` holds the flow back so a human answers. `source` says whether the
  * setting is the thread's own (`thread`) or inherited from its route (`route`).
  */
-export const conversationThreadMode = z.enum(['agent', 'manual']);
+export const conversationThreadMode = openapi.threadModeView.shape.mode;
 export type ConversationThreadMode = z.infer<typeof conversationThreadMode>;
 
-export const conversationThreadModeState = z.object({
-  mode: conversationThreadMode,
-  source: z.enum(['thread', 'route']),
-});
+export const conversationThreadModeState = openapi.threadModeView;
 export type ConversationThreadModeState = z.infer<typeof conversationThreadModeState>;
 
 /** The receipt a thread-message write returns: the stored id and its thread. */
-export const conversationThreadMessageSent = z.object({
-  message_id: z.string(),
-  thread_id: z.string(),
-});
+export const conversationThreadMessageSent = openapi.threadMessageAck;
 export type ConversationThreadMessageSent = z.infer<typeof conversationThreadMessageSent>;
 
 /** Every stored per-target config (`GET /api/conversation-configs`). */
-export const conversationConfigs = z.object({
-  items: z.array(targetConversationConfig),
-  total: z.number(),
-});
+export const conversationConfigs = openapi.conversationConfigListEnvelope;
 export type ConversationConfigs = z.infer<typeof conversationConfigs>;
 
 /**
  * The upsert reply: whether THIS call created the config (vs. replaced an existing
  * one), its key, and the stored row.
  */
-export const conversationConfigWritten = z.object({
-  created: z.boolean(),
-  target_kind: conversationTargetKind,
-  target_name: z.string(),
-  config: targetConversationConfig,
-});
+export const conversationConfigWritten = openapi.conversationConfigSetResult;
 export type ConversationConfigWritten = z.infer<typeof conversationConfigWritten>;
 
 /** The config-delete reply: `removed` is always `true` on success (an unknown key is a 404). */
-export const conversationConfigDeleted = z.object({
-  removed: z.boolean(),
-  target_kind: conversationTargetKind,
-  target_name: z.string(),
-});
+export const conversationConfigDeleted = openapi.conversationConfigDeleteResult;
 export type ConversationConfigDeleted = z.infer<typeof conversationConfigDeleted>;
 
 /**
@@ -240,12 +161,9 @@ export type ConversationConfigDeleted = z.infer<typeof conversationConfigDeleted
  * every answer record whose delivery ended `failed`, across every route and caller.
  * The records are the ADMIN projection (delivery bookkeeping and `error` included),
  * so the row shape is {@link conversationMessage} exactly. It is NOT a paged window —
- * the door returns `{items, total}` and nothing more.
+ * the door returns `{items, total, unreadable}` and nothing more.
  */
-export const conversationFailedMessages = z.object({
-  items: z.array(conversationMessage),
-  total: z.number(),
-});
+export const conversationFailedMessages = openapi.failedConversationsEnvelope;
 export type ConversationFailedMessages = z.infer<typeof conversationFailedMessages>;
 
 /**
@@ -254,11 +172,7 @@ export type ConversationFailedMessages = z.infer<typeof conversationFailedMessag
  * run already cleared them, when they had aged out under retention, or when the id
  * was never stored (forgetting is absolute, never a 404 on a valid id).
  */
-export const conversationThreadDeleted = z.object({
-  removed: z.number(),
-  route_name: z.string(),
-  thread_id: z.string(),
-});
+export const conversationThreadDeleted = openapi.threadDeleteResult;
 export type ConversationThreadDeleted = z.infer<typeof conversationThreadDeleted>;
 
 /**
@@ -267,9 +181,5 @@ export type ConversationThreadDeleted = z.infer<typeof conversationThreadDeleted
  * says whether THIS call removed the person row (`false` on a retry or an
  * already-gone person — never a 404).
  */
-export const conversationPersonDeleted = z.object({
-  person_id: z.string(),
-  removed: z.number(),
-  erased: z.boolean(),
-});
+export const conversationPersonDeleted = openapi.personDeleteResult;
 export type ConversationPersonDeleted = z.infer<typeof conversationPersonDeleted>;

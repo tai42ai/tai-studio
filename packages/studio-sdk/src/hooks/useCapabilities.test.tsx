@@ -20,6 +20,7 @@ function projection(overrides: Partial<MeProjection> = {}): MeProjection {
   return {
     user_id: 'u',
     owner_user_id: null,
+    principal: null,
     admin: false,
     public_resource_id: 'public',
     scopes: [],
@@ -103,7 +104,9 @@ describe('coversAnyRoute — concrete routes', () => {
 });
 
 describe('coversAnyRoute — dynamic patterns', () => {
-  const p = projection({ route_patterns: [{ pattern: '^/app/slug/.*$', scope_id: 'app' }] });
+  const p = projection({
+    route_patterns: [{ pattern: '^/app/slug/.*$', scope_id: 'app', open_prefix: null }],
+  });
 
   it('covers a prefix the open-wildcard literal starts with', () => {
     expect(coversAnyRoute(p, ['/app/slug'])).toBe(true);
@@ -119,17 +122,23 @@ describe('coversAnyRoute — dynamic patterns', () => {
   });
 
   it('conservatively declines a complex (alternation) pattern — under-showing is safe', () => {
-    const complex = projection({ route_patterns: [{ pattern: '^/app/(a|b)$', scope_id: 'app' }] });
+    const complex = projection({
+      route_patterns: [{ pattern: '^/app/(a|b)$', scope_id: 'app', open_prefix: null }],
+    });
     expect(coversAnyRoute(complex, ['/app'])).toBe(false);
   });
 
   it('conservatively declines a non-anchored pattern', () => {
-    const loose = projection({ route_patterns: [{ pattern: '/app/.*', scope_id: 'app' }] });
+    const loose = projection({
+      route_patterns: [{ pattern: '/app/.*', scope_id: 'app', open_prefix: null }],
+    });
     expect(coversAnyRoute(loose, ['/app'])).toBe(false);
   });
 
   it('conservatively declines a bare literal with no open wildcard tail', () => {
-    const exact = projection({ route_patterns: [{ pattern: '^/app/slug$', scope_id: 'app' }] });
+    const exact = projection({
+      route_patterns: [{ pattern: '^/app/slug$', scope_id: 'app', open_prefix: null }],
+    });
     expect(coversAnyRoute(exact, ['/app/slug'])).toBe(false);
   });
 });
@@ -199,7 +208,7 @@ describe('coversWrite', () => {
     const state = {
       status: 'ready',
       projection: projection({
-        route_patterns: [{ pattern: '^/api/presets/.*$', scope_id: 's' }],
+        route_patterns: [{ pattern: '^/api/presets/.*$', scope_id: 's', open_prefix: null }],
       }),
     } as const;
     expect(coversWrite(state, '/api/presets/{name}', 'DELETE')).toBe(false);

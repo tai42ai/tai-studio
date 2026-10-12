@@ -1,4 +1,5 @@
 import type { ApiClient, MeProjection } from '@tai42/api-client';
+import { servedConstants } from '@tai42/api-client';
 import {
   ApiProvider,
   AuthProvider,
@@ -79,12 +80,13 @@ function renderWithProviders(
  * and the `baseUrl` the media renderer reads (`''` == same-origin deployment).
  */
 function stubClient(listNotifications: ApiClient['listNotifications']): ApiClient {
-  return { listNotifications, baseUrl: '' } as unknown as ApiClient;
+  return { listNotifications, baseUrl: '', constants: servedConstants } as unknown as ApiClient;
 }
 
 const baseProjection: MeProjection = {
   user_id: 'u-test',
   owner_user_id: null,
+  principal: null,
   admin: false,
   public_resource_id: 'public',
   scopes: [],
@@ -172,7 +174,10 @@ describe('NotificationsPage', () => {
               { kind: 'image', url: 'https://cdn.example.com/ship.png', caption: 'The ship' },
               { kind: 'link', url: 'https://example.com/notes', caption: 'Release notes' },
             ],
-            options: ['Acknowledge', 'Snooze'],
+            options: [
+              { kind: 'reply', id: null, text: 'Acknowledge', description: null },
+              { kind: 'link', label: 'Snooze', url: 'https://example.com/snooze' },
+            ],
           },
         ],
       }),

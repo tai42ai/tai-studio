@@ -3,7 +3,7 @@
  * id; the no-prompt placeholder; the empty "no open asks" note; and the bounded, scrolling,
  * truncated presentation of many/long asks.
  */
-import type { ParkedCallerAsk } from '@tai42/api-client';
+import { type ParkedCallerAsk, schemas } from '@tai42/api-client';
 import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
 import { act, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
@@ -19,9 +19,12 @@ function setListOverflowing(list: HTMLElement, overflowing: boolean): void {
   });
 }
 
-const ONE_ASK: ParkedCallerAsk[] = [
-  { id: 'ask-1', status: 'asking', question: 'Approve the deploy?' },
-];
+/** A caller ask as the server sends it, parsed so its defaulted fields are present. */
+function ask(fields: { id: string; question?: string }): ParkedCallerAsk {
+  return schemas.parkedCallerAsk.parse({ status: 'asking', ...fields });
+}
+
+const ONE_ASK: ParkedCallerAsk[] = [ask({ id: 'ask-1', question: 'Approve the deploy?' })];
 
 function renderList(props: Partial<Parameters<typeof AsksList>[0]> = {}) {
   return renderWithProviders(<AsksList asks={ONE_ASK} {...props} />, { client: {} });
@@ -39,7 +42,7 @@ describe('AsksList', () => {
   });
 
   it('renders a no-prompt placeholder for an ask with no question text', () => {
-    const noPrompt: ParkedCallerAsk[] = [{ id: 'ask-2', status: 'asking' }];
+    const noPrompt: ParkedCallerAsk[] = [ask({ id: 'ask-2' })];
     renderList({ asks: noPrompt });
     expect(screen.getByText('(no prompt)')).toBeInTheDocument();
   });
@@ -53,11 +56,9 @@ describe('AsksList', () => {
 
   it('truncates each prompt with a full-text title tooltip inside a bounded scroll region', () => {
     const long = 'A very long caller-ask prompt '.repeat(20).trim();
-    const many: ParkedCallerAsk[] = Array.from({ length: 12 }, (_, i) => ({
-      id: `ask-${String(i)}`,
-      status: 'asking',
-      question: long,
-    }));
+    const many: ParkedCallerAsk[] = Array.from({ length: 12 }, (_, i) =>
+      ask({ id: `ask-${String(i)}`, question: long }),
+    );
     renderList({ asks: many });
 
     const list = screen.getByTestId('asks-list');
@@ -83,11 +84,9 @@ describe('AsksList', () => {
   });
 
   it('becomes a focusable, labelled scroll region once the asks overflow it', () => {
-    const many: ParkedCallerAsk[] = Array.from({ length: 40 }, (_, i) => ({
-      id: `ask-${String(i)}`,
-      status: 'asking',
-      question: `Ask ${String(i)}`,
-    }));
+    const many: ParkedCallerAsk[] = Array.from({ length: 40 }, (_, i) =>
+      ask({ id: `ask-${String(i)}`, question: `Ask ${String(i)}` }),
+    );
     renderList({ asks: many });
     const list = screen.getByTestId('asks-list');
     setListOverflowing(list, true);

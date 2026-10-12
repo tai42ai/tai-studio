@@ -4,7 +4,7 @@
  * target, and the write-gated Edit / Delete actions. Every server-supplied value
  * renders as escaped React text; no route field is interpreted as markup.
  */
-import type { ConversationRoute } from '@tai42/api-client';
+import type { ConversationRouteView } from '@tai42/api-client';
 import { AppLink, Badge, Button, TD, TR } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
@@ -23,7 +23,7 @@ const OVERLAP_DEFAULTS = { running: 'continue', deliver: 'one', settle_seconds: 
  * from the default (`running: cancel · deliver: all · settle: 5s`), or `null` when the
  * policy IS the default — the row then shows the empty placeholder.
  */
-function routeOverlapSummary(overlap: ConversationRoute['overlap']): string | null {
+function routeOverlapSummary(overlap: ConversationRouteView['overlap']): string | null {
   const parts: string[] = [];
   if (overlap.running !== OVERLAP_DEFAULTS.running) parts.push(`running: ${overlap.running}`);
   if (overlap.deliver !== OVERLAP_DEFAULTS.deliver) parts.push(`deliver: ${overlap.deliver}`);
@@ -40,7 +40,7 @@ export function RouteRow({
   onEdit,
   onDelete,
 }: {
-  readonly route: ConversationRoute;
+  readonly route: ConversationRouteView;
   readonly canWrite: boolean;
   readonly canDelete: boolean;
   readonly onEdit: () => void;

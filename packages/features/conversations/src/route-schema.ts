@@ -1,24 +1,22 @@
 /**
- * The CLIENT-AUTHORED JSON Schema that drives the conversation-route form through
- * the SDK's `SchemaForm`, plus the two mappers between the form's (nested) value
- * and the flat `ConversationRouteCreate` wire body.
+ * The route form is built from the contract's published `ConversationRouteCreate`
+ * document; the grouping into target/delivery is UI-only. The form's JSON Schema drives
+ * the SDK's `SchemaForm`, and two mappers convert between the form's (nested) value and the
+ * flat `ConversationRouteCreate` wire body.
  *
- * There is no server schema for this body: the create door takes flat parameters,
- * so the form authors its own schema here. It MIRRORS the contract's cross-field
- * validators (`tai42_contract.conversations.ConversationRouteCreate`) as a pair of
- * discriminated unions, so an invalid target-kind/door combination cannot be
- * authored: the platform's STRUCTURAL 400s (the target-kind and door exclusivity
- * rules) are unreachable by construction. Value-content 400s (a malformed callback
- * URL, a colon in a channel name) stay server-enforced and surface through
- * `ErrorState`; the value checks in `requiredFieldErrors` catch the common ones
- * in-form first.
+ * The document's own constraints — the route-name slug, each door's delivery fields (an
+ * `api` door's optional absolute-https `callback_url`; a `channel` door's `:`-free
+ * `channel` and its non-blank `our_identity`), the error-reply text bounds, the positive
+ * turn rate and the overlap policy's bounds — are read from it, so the SDK validator
+ * refuses what the server refuses, in-form. The two discriminated unions keep an invalid
+ * target-kind/door combination unauthorable:
  *   - `target` is discriminated on `target_kind`: BOTH an `agent` and a `tool`
  *     target carry the same five door-contract jq fields (`start_expr`,
  *     `cancel_expr`, `resume_expr`, `extras_expr`, `reply_expr`) — either target
  *     kind can drive a parkable run.
- *   - `delivery` is discriminated on `door`: an `api` door carries a `callback_url`
- *     (and no channel identity); a `channel` door carries `channel` + `our_identity`
- *     (and no callback).
+ *   - `delivery` is discriminated on `door`: an `api` door carries an optional
+ *     `callback_url` (blank is a poll-only route); a `channel` door carries `channel` +
+ *     `our_identity`.
  *
  * The jq fields carry `x-tai42-expression`, the SDK's opt-in expression seam: with
  * the host's ambient `ExpressionFieldContext` wired (it is, app-wide), the field
@@ -26,12 +24,20 @@
  * with none it degrades to a plain text box. The feature builds NO seam of its own.
  */
 import type {
+  ApiConversationRouteCreate,
+  ChannelConversationRouteCreate,
   ConversationMode,
-  ConversationRoute,
   ConversationRouteCreate,
+  ConversationRouteView,
 } from '@tai42/api-client';
-import type { JsonSchema, SchemaFormErrors } from '@tai42/studio-sdk';
+import { type JsonSchema, type SchemaFormErrors, validateAgainstSchema } from '@tai42/studio-sdk';
 
+import {
+  API_VARIANT,
+  CHANNEL_VARIANT,
+  documentConstraints,
+  OVERLAP_POLICY,
+} from './route-document';
 import {
   CANCEL_EXPR_ANNOTATION,
   EXTRAS_EXPR_ANNOTATION,
@@ -39,18 +45,6 @@ import {
   RESUME_EXPR_ANNOTATION,
   START_EXPR_ANNOTATION,
 } from './route-jq-annotations';
-
-/** The route-name slug the server enforces (`:`-free, so thread namespaces cannot collide). */
-const ROUTE_NAME_RE = /^[a-z0-9-]+$/;
-
-/** Whether a string parses as an absolute `https:` URL — the callback door the server accepts. */
-function isAbsoluteHttpsUrl(candidate: string): boolean {
-  try {
-    return new URL(candidate).protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
 
 /** Whether a required string field is unset or whitespace-only. */
 function blank(candidate: string | undefined): boolean {
@@ -63,7 +57,7 @@ function routeNameProperty(fixed: string | undefined): JsonSchema {
     return { const: fixed, title: 'Route name' };
   }
   return {
-    type: 'string',
+    ...documentConstraints(API_VARIANT.properties.route_name),
     title: 'Route name',
     description:
       'A ":"-free slug (lowercase letters, digits, hyphens) — the route\'s stable identity. It cannot be changed later.',
@@ -171,34 +165,42 @@ function deliveryApiVariant(): JsonSchema {
   return {
     title: 'API',
     type: 'object',
-    required: ['door', 'callback_url'],
+    required: deliveryRequired(API_VARIANT.required),
     properties: {
-      door: { const: 'api', title: 'Door' },
+      door: { ...documentConstraints(API_VARIANT.properties.door), title: 'Door' },
       callback_url: {
-        type: 'string',
-        format: 'uri',
+        ...documentConstraints(API_VARIANT.properties.callback_url),
         title: 'Callback URL',
-        description: 'The absolute https URL the signed answer callback is delivered to.',
+        description:
+          'Optional. The absolute https URL the signed answer callback is delivered to. Leave blank for a poll-only route.',
       },
     },
   };
 }
+
+/** The delivery fields among a door variant's required fields. */
+function deliveryRequired(required: readonly string[]): string[] {
+  return required.filter((field) => DELIVERY_FIELDS.has(field));
+}
+
+/** The fields the `delivery` group holds; the rest of a variant is the route's own. */
+const DELIVERY_FIELDS = new Set(['door', 'callback_url', 'channel', 'our_identity']);
 
 /** The `channel`-door branch of the discriminated `delivery` union. */
 function deliveryChannelVariant(): JsonSchema {
   return {
     title: 'Channel',
     type: 'object',
-    required: ['door', 'channel', 'our_identity'],
+    required: deliveryRequired(CHANNEL_VARIANT.required),
     properties: {
-      door: { const: 'channel', title: 'Door' },
+      door: { ...documentConstraints(CHANNEL_VARIANT.properties.door), title: 'Door' },
       channel: {
-        type: 'string',
+        ...documentConstraints(CHANNEL_VARIANT.properties.channel),
         title: 'Channel',
         description: 'The registry channel name (":"-free) the medium adapter delivers through.',
       },
       our_identity: {
-        type: 'string',
+        ...documentConstraints(CHANNEL_VARIANT.properties.our_identity),
         title: 'Our identity',
         description: 'The medium address this route is texted at.',
       },
@@ -230,23 +232,20 @@ function overlapProperty(): JsonSchema {
       'What happens when a message arrives while an earlier one on the same thread is still being answered. Leave every field blank for the defaults: the running turn continues, each message is delivered on its own, and there is no settle window.',
     properties: {
       running: {
-        type: 'string',
-        enum: ['continue', 'cancel'],
+        ...documentConstraints(OVERLAP_POLICY.properties.running),
         title: 'Running turn',
         description:
           'Whether a turn already in progress continues or is cancelled when a newer message arrives.',
       },
       deliver: {
-        type: 'string',
-        enum: ['one', 'all'],
+        ...documentConstraints(OVERLAP_POLICY.properties.deliver),
         title: 'Deliver',
         description:
           'Whether the next turn answers one message at a time or carries every message that arrived while the previous turn ran.',
       },
       settle_seconds: {
+        ...documentConstraints(OVERLAP_POLICY.properties.settle_seconds),
         type: ['integer', 'null'],
-        minimum: 0,
-        maximum: 30,
         title: 'Settle window (seconds)',
         description:
           'How long the next turn waits for further messages before it starts, 0 to 30. Needs Deliver set to all or Running turn set to cancel.',
@@ -280,8 +279,7 @@ function initialModeProperty(): JsonSchema {
 /** The `turns_per_hour_override` property — an optional per-route turn rate. */
 function turnsPerHourProperty(): JsonSchema {
   return {
-    type: ['integer', 'null'],
-    minimum: 1,
+    ...documentConstraints(API_VARIANT.properties.turns_per_hour_override),
     title: 'Turns-per-hour override',
     description:
       "A positive per-hour turn rate for this route's per-address buckets, or blank for the global rate.",
@@ -291,8 +289,7 @@ function turnsPerHourProperty(): JsonSchema {
 /** The `error_reply_text` property — the participant-facing reply on a failed turn. */
 function errorReplyTextProperty(): JsonSchema {
   return {
-    type: ['string', 'null'],
-    maxLength: 2000,
+    ...documentConstraints(API_VARIANT.properties.error_reply_text),
     title: 'Error reply text',
     description:
       'The participant-facing reply sent when a turn fails; blank uses the built-in default.',
@@ -363,7 +360,7 @@ export function blankRouteValue(): RouteFormValue {
 
 /** The target sub-value prefilled from a stored route: its kind/name plus each door
  * jq's inline `content` (a stored-id expr has none, so it is dropped). */
-function routeTargetValue(route: ConversationRoute): NonNullable<RouteFormValue['target']> {
+function routeTargetValue(route: ConversationRouteView): NonNullable<RouteFormValue['target']> {
   type JqKey = 'start_expr' | 'reply_expr' | 'cancel_expr' | 'resume_expr' | 'extras_expr';
   const target: NonNullable<RouteFormValue['target']> = {
     target_kind: route.target_kind,
@@ -378,7 +375,7 @@ function routeTargetValue(route: ConversationRoute): NonNullable<RouteFormValue[
 }
 
 /** Prefill the form from a stored route (the edit path). */
-export function routeToFormValue(route: ConversationRoute): RouteFormValue {
+export function routeToFormValue(route: ConversationRouteView): RouteFormValue {
   return {
     route_name: route.route_name,
     execution_key: route.execution_key,
@@ -400,31 +397,80 @@ export function routeToFormValue(route: ConversationRoute): RouteFormValue {
     delivery:
       route.door === 'api'
         ? { door: 'api', callback_url: route.callback_url ?? '' }
-        : { door: 'channel', channel: route.channel ?? '', our_identity: route.our_identity ?? '' },
+        : { door: 'channel', channel: route.channel, our_identity: route.our_identity },
   };
 }
 
 /**
- * Non-empty and value-shape checks for the required text fields, as path-keyed
- * errors `SchemaForm` displays inline — the house style (see the hooks
- * `RegisterHookForm`). The SDK's `validateAgainstSchema` catches a MISSING required
- * field and structural drift, but a required string kept as `""` reads as "present"
- * there; these fill that gap so a blank identity is caught in-form, not only by the
- * server's 400. Beyond blankness, the common value-content rules the server also
- * enforces are mirrored here so they surface inline (route-name slug, callback URL
- * shape, colon-free channel); the rest stay the server's authority. Scoped to the
- * active variant (an unselected variant is the schema's own required-union error,
- * not a field error here).
+ * The display text a field shows when its value breaks the document's constraint, in
+ * place of the SDK validator's generic message ("must match the required pattern").
  */
-/** The create-only route-name required + slug check (edit pins it read-only). */
+const FIELD_TEXT: Readonly<Record<string, string>> = {
+  route_name: 'Use lowercase letters, digits and hyphens.',
+  'delivery.callback_url': 'Must be an absolute https URL with no user name or password.',
+  'delivery.channel': 'Use a ":"-free channel name.',
+  'delivery.our_identity': 'An identity is required.',
+  error_reply_text: 'Enter the reply text (up to 2,000 characters).',
+};
+
+/** The optional text fields, where a blank value is no value (a poll-only route, the default reply). */
+const OPTIONAL_TEXT_FIELDS: readonly string[] = ['delivery.callback_url', 'error_reply_text'];
+
+/** The form value at a dotted field path. */
+function valueAt(value: RouteFormValue, path: string): unknown {
+  let node: unknown = value;
+  for (const key of path.split('.')) {
+    node =
+      typeof node === 'object' && node !== null
+        ? (node as Record<string, unknown>)[key]
+        : undefined;
+  }
+  return node;
+}
+
+/**
+ * The SDK validator's errors over the document-derived schema, each shown with its field's
+ * display text; an optional text field left blank carries no error.
+ */
+function constraintErrors(schema: JsonSchema, value: RouteFormValue): SchemaFormErrors {
+  const errors: Record<string, string> = {};
+  for (const [path, message] of Object.entries(validateAgainstSchema(schema, value))) {
+    const fieldValue = valueAt(value, path);
+    if (
+      OPTIONAL_TEXT_FIELDS.includes(path) &&
+      (typeof fieldValue !== 'string' || blank(fieldValue))
+    ) {
+      continue;
+    }
+    errors[path] = FIELD_TEXT[path] ?? message;
+  }
+  return errors;
+}
+
+/**
+ * Every in-form error of a route value: the document's constraints, then the blank checks
+ * of the required text fields and the overlap cross-field rule.
+ */
+export function routeFormErrors(
+  schema: JsonSchema,
+  value: RouteFormValue,
+  editing: boolean,
+): SchemaFormErrors {
+  return { ...constraintErrors(schema, value), ...requiredFieldErrors(value, editing) };
+}
+
+/**
+ * Blank checks for the required text fields, as path-keyed errors `SchemaForm` displays
+ * inline — the house style (see the hooks `RegisterHookForm`). The SDK's
+ * `validateAgainstSchema` catches a MISSING required field, but a required string kept as
+ * `""` reads as "present" there; these fill that gap so a blank field is caught in-form,
+ * not only by the server's 400. Scoped to the active variant (an unselected variant is the
+ * schema's own required-union error, not a field error here).
+ */
+/** The create-only route-name blank check (edit pins it read-only). */
 function routeNameError(value: RouteFormValue, editing: boolean): Record<string, string> {
   if (editing) return {};
-  const name = (value.route_name ?? '').trim();
-  if (name === '') return { route_name: 'A route name is required.' };
-  if (!ROUTE_NAME_RE.test(name)) {
-    return { route_name: 'Use a ":"-free slug: lowercase letters, digits, and hyphens only.' };
-  }
-  return {};
+  return blank(value.route_name) ? { route_name: 'A route name is required.' } : {};
 }
 
 /** The target-name blank check, scoped to the selected target variant. */
@@ -441,35 +487,13 @@ function executionKeyError(value: RouteFormValue): Record<string, string> {
   return blank(value.execution_key) ? { execution_key: 'An execution key is required.' } : {};
 }
 
-/** The api-door callback-URL required + absolute-https checks. */
-function apiDeliveryErrors(
-  delivery: NonNullable<RouteFormValue['delivery']>,
-): Record<string, string> {
-  const callbackUrl = (delivery.callback_url ?? '').trim();
-  if (callbackUrl === '') return { 'delivery.callback_url': 'A callback URL is required.' };
-  if (!isAbsoluteHttpsUrl(callbackUrl)) {
-    return { 'delivery.callback_url': 'Must be an absolute https URL.' };
-  }
-  return {};
-}
-
-/** The channel-door required + colon-free channel and identity checks. */
-function channelDeliveryErrors(
-  delivery: NonNullable<RouteFormValue['delivery']>,
-): Record<string, string> {
+/** The channel-door blank checks: a channel and an identity are required. */
+function deliveryErrors(delivery: NonNullable<RouteFormValue['delivery']>): Record<string, string> {
+  if (delivery.door !== 'channel') return {};
   const errors: Record<string, string> = {};
-  const channel = delivery.channel ?? '';
-  if (channel.trim() === '') errors['delivery.channel'] = 'A channel is required.';
-  else if (channel.includes(':')) errors['delivery.channel'] = 'Use a ":"-free channel name.';
+  if (blank(delivery.channel)) errors['delivery.channel'] = 'A channel is required.';
   if (blank(delivery.our_identity)) errors['delivery.our_identity'] = 'An identity is required.';
   return errors;
-}
-
-/** The delivery-field checks, dispatched on the selected door variant. */
-function deliveryErrors(delivery: NonNullable<RouteFormValue['delivery']>): Record<string, string> {
-  if (delivery.door === 'api') return apiDeliveryErrors(delivery);
-  if (delivery.door === 'channel') return channelDeliveryErrors(delivery);
-  return {};
 }
 
 /**
@@ -500,11 +524,11 @@ export function requiredFieldErrors(value: RouteFormValue, editing: boolean): Sc
 }
 
 /**
- * Flatten a validated form value into the flat wire body. Runs only AFTER
- * `validateAgainstSchema` has passed, so the required fields are present; the `??`
- * fallbacks satisfy the type checker for the unreachable unset case. A field that
- * belongs to the other variant is sent as `null` (never a stale value), mirroring
- * the contract's per-door / per-target-kind exclusivity.
+ * Flatten a validated form value into the flat wire body. Runs only AFTER the form's
+ * errors are clear, so the required fields are present; the `??` fallbacks satisfy the
+ * type checker for the unreachable unset case. The body is the door's variant of the
+ * route-create union: an `api` route carries its callback URL (blank is a poll-only
+ * route, sent as `null`) and a `channel` route its channel and identity.
  */
 /** The target-kind/name fields plus the five door-contract inline jq expressions,
  * carried on BOTH target kinds. A blank field rides the wire as `null`. */
@@ -533,19 +557,6 @@ function targetBodyFields(
   };
 }
 
-/** The door field plus the per-door exclusive delivery fields (the other variant's are `null`). */
-function deliveryBodyFields(
-  delivery: NonNullable<RouteFormValue['delivery']>,
-  isApi: boolean,
-): Pick<ConversationRouteCreate, 'door' | 'channel' | 'our_identity' | 'callback_url'> {
-  return {
-    door: delivery.door ?? 'api',
-    channel: isApi ? null : (delivery.channel ?? null),
-    our_identity: isApi ? null : (delivery.our_identity ?? null),
-    callback_url: isApi ? (delivery.callback_url ?? null) : null,
-  };
-}
-
 /** The flat scalar tail — the route-level fields with no target/delivery variant fork. */
 function scalarBodyFields(
   value: RouteFormValue,
@@ -563,7 +574,7 @@ function scalarBodyFields(
     initial_mode: value.initial_mode ?? 'agent',
     execution_key: value.execution_key ?? '',
     turns_per_hour_override: value.turns_per_hour_override ?? null,
-    error_reply_text: value.error_reply_text ?? null,
+    error_reply_text: blank(value.error_reply_text) ? null : (value.error_reply_text ?? null),
     // Carried through unchanged — the form does not author the locale, and the upsert
     // replaces the whole row, so echoing it back keeps one set elsewhere.
     locale: value.locale ?? null,
@@ -587,13 +598,28 @@ function overlapBodyFields(
 }
 
 export function formValueToBody(value: RouteFormValue): ConversationRouteCreate {
-  const target = value.target ?? {};
   const delivery = value.delivery ?? {};
-  const isApi = delivery.door === 'api';
-  return {
+  const shared = {
     ...scalarBodyFields(value),
-    ...targetBodyFields(target),
-    ...deliveryBodyFields(delivery, isApi),
+    ...targetBodyFields(value.target ?? {}),
     ...overlapBodyFields(value),
   };
+  if (delivery.door === 'channel') {
+    const channelRoute: ChannelConversationRouteCreate = {
+      ...shared,
+      door: 'channel',
+      channel: delivery.channel ?? '',
+      our_identity: delivery.our_identity ?? '',
+      callback_url: null,
+    };
+    return channelRoute;
+  }
+  const apiRoute: ApiConversationRouteCreate = {
+    ...shared,
+    door: 'api',
+    callback_url: blank(delivery.callback_url) ? null : (delivery.callback_url ?? null),
+    channel: null,
+    our_identity: null,
+  };
+  return apiRoute;
 }

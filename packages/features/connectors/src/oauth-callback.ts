@@ -110,6 +110,10 @@ export function applyCompletion(
       return { kind: 'failed', message: result.reason };
     case 'cancelled':
       return { kind: 'cancelled', message: result.message };
+    case 'not_configured':
+      // The door answers this kind with a 400, which the transport raises; the type still
+      // names it, so it reads as the error it is.
+      return { kind: 'error', message: 'Connections are not configured on this deployment.' };
   }
 }
 

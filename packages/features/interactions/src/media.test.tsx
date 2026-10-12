@@ -273,6 +273,73 @@ describe('MediaGallery — display-only question media (gated render + loud fall
     expect(anchor).toHaveTextContent('Open it here');
   });
 
+  it('renders a document item as a link labelled by its caption', async () => {
+    const { channel, container } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      mediaJson({
+        interaction_id: 'q-doc',
+        media: [
+          { kind: 'document', url: 'https://docs.example/report.pdf', caption: 'The report' },
+        ],
+      }),
+    );
+
+    const anchor = container.querySelector('a');
+    expect(anchor?.getAttribute('href')).toBe('https://docs.example/report.pdf');
+    expect(anchor).toHaveTextContent('The report');
+    expect(container.querySelector('[data-testid="media-item-malformed"]')).toBeNull();
+  });
+
+  it('renders a served video item as a native player joined to the API base', async () => {
+    const { channel, container } = renderInbox(undefined, fullProjection(), 'https://api.example');
+    await emitFrame(
+      channel,
+      'interaction.add',
+      mediaJson({ interaction_id: 'q-video', media: [{ kind: 'video', url: SERVED_MEDIA_URL }] }),
+    );
+
+    const video = container.querySelector('video');
+    expect(video?.getAttribute('src')).toBe(`https://api.example${SERVED_MEDIA_URL}`);
+    expect(video?.hasAttribute('controls')).toBe(true);
+    expect(container.querySelector('[data-testid="media-item-malformed"]')).toBeNull();
+  });
+
+  it('renders a served audio item as a native player labelled by its caption', async () => {
+    const { channel, container } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      mediaJson({
+        interaction_id: 'q-audio',
+        media: [{ kind: 'audio', url: SERVED_MEDIA_URL, caption: 'The greeting' }],
+      }),
+    );
+
+    const audio = container.querySelector('audio');
+    expect(audio?.getAttribute('src')).toBe(SERVED_MEDIA_URL);
+    expect(audio?.getAttribute('aria-label')).toBe('The greeting');
+  });
+
+  it('shows a loud notice for a video that is not a served reference — no player, no anchor', async () => {
+    const { channel, container } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      mediaJson({
+        interaction_id: 'q-video-remote',
+        media: [{ kind: 'video', url: 'https://cdn.example/clip.mp4' }],
+      }),
+    );
+
+    expect(screen.getByTestId('media-item-unplayable')).toHaveTextContent(
+      'Media item 1 could not be shown.',
+    );
+    expect(container.querySelector('video')).toBeNull();
+    expect(container.querySelector('a')).toBeNull();
+  });
+
   it('renders an http:// link as a live anchor (links keep http, unlike the https-only image gate)', async () => {
     const { channel, container } = renderInbox();
     await emitFrame(
@@ -337,7 +404,7 @@ describe('MediaGallery — display-only question media (gated render + loud fall
         interaction_id: 'q-bad-item',
         prompt: 'Your name?',
         // Missing url, an unknown kind, and a non-object — all malformed per item.
-        media: [{ kind: 'image' }, { kind: 'video', url: 'x' }, 'not-an-object'],
+        media: [{ kind: 'image' }, { kind: 'sticker', url: 'x' }, 'not-an-object'],
       }),
     );
 

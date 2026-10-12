@@ -1,5 +1,6 @@
 /** Composition root: assembles the per-resource sub-clients into the client. */
 import type { ApiConfig } from '../http';
+import { servedConstants } from '../schemas';
 import { agentsClient } from './agents-client';
 import { authClient } from './auth-client';
 import { backendClient } from './backend-client';
@@ -84,6 +85,11 @@ export function createApiClient(config: ApiConfig) {
   const t = makeTransport(config);
   return {
     baseUrl: config.baseUrl ?? '',
+    /**
+     * The platform constants the contract serves, read instead of re-spelled (`PERSON_KIND`,
+     * `MEDIA_ROUTE_PREFIX`, `MEDIA_ID_PATTERN`).
+     */
+    constants: servedConstants,
     ...toolsClient(t),
     ...presetsClient(t),
     ...statesClient(t),

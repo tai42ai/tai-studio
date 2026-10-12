@@ -14,9 +14,9 @@ import { renderWithProviders, type StubApiClient } from './test-utils';
 import { ToolExtensionsCard } from './ToolExtensionsCard';
 
 const available: Extension[] = [
-  { name: 'marka', kind: 'wrapper' },
-  { name: 'markb', kind: 'wrapper' },
-  { name: 'chain', kind: 'transformer' },
+  { name: 'marka', kind: 'wrapper', multiple: false },
+  { name: 'markb', kind: 'wrapper', multiple: false },
+  { name: 'chain', kind: 'transformer', multiple: false },
 ];
 
 function baseClient(overrides: StubApiClient = {}): StubApiClient {

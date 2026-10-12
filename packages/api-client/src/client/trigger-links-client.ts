@@ -1,5 +1,5 @@
 /** Trigger-link mint, listing and revoke sub-client. */
-import { encodeSegment } from '../http';
+import { apiRoutes, buildPath } from '../generated/api-routes';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -28,7 +28,7 @@ export function triggerLinksClient(t: Transport) {
     // and 400s a dropped one; `tool_kwargs` is omitted when undefined. The raw
     // `token` rides the response ONCE (composed into the QR URL client-side).
     createTriggerLink: (body: TriggerLinkCreateBody) =>
-      req('/api/hooks/trigger-links', s.triggerLinkCreated, {
+      req(apiRoutes.post_api_hooks_trigger_links.path, s.triggerLinkCreated, {
         method: 'POST',
         body: {
           topic: body.topic,
@@ -41,11 +41,15 @@ export function triggerLinksClient(t: Transport) {
       }),
     // Every live trigger-link record (hash prefix only — never a raw token).
     listTriggerLinks: (signal?: AbortSignal) =>
-      req('/api/hooks/trigger-links', s.triggerLinkList, { signal }),
+      req(apiRoutes.get_api_hooks_trigger_links.path, s.triggerLinkList, { signal }),
     // Revoke a link by name (immediate + durable). 404 when the name is unknown.
     deleteTriggerLink: (name: string) =>
-      req(`/api/hooks/trigger-links/${encodeSegment(name)}`, s.triggerLinkDeleted, {
-        method: 'DELETE',
-      }),
+      req(
+        buildPath(apiRoutes.delete_api_hooks_trigger_links_name.path, { name }),
+        s.triggerLinkDeleted,
+        {
+          method: 'DELETE',
+        },
+      ),
   };
 }

@@ -3,7 +3,7 @@
  * over the authored-agents list, or a dedicated empty-state when no authorable agent
  * is installed.
  */
-import { ApiError } from '@tai42/api-client';
+import { ApiError, apiRoutes } from '@tai42/api-client';
 import {
   AppLink,
   Button,
@@ -26,7 +26,7 @@ import { agentsListKey, authoredPresetsKey, specRunnableAgentsKey } from './keys
 /** The write route the compose flow POSTs to (`api.createPreset`); the Compose
  * control gates on the projection reaching it with POST (projection ⊆ gate).
  * Versioning/rollback for a preset live on the presets page, not here. */
-const PRESETS_WRITE_ROUTE = '/api/presets';
+const PRESETS_WRITE_ROUTE = apiRoutes.post_api_presets.path;
 
 /** Push a following flex item to the far edge of its `.tai-row`. */
 const spacerStyle = { marginLeft: 'auto' };

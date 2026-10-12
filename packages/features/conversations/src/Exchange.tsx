@@ -96,15 +96,11 @@ function Bubble({
 }
 
 /**
- * The record fields the caller-scoped projection withholds. Present means the
- * reader is an admin; a value of `null` there is a real "nothing recorded".
+ * The record fields the caller-scoped projection withholds, read as `null` there. A set
+ * value means the reader is an admin and the record carries that detail.
  */
 function hasAdminDetail(record: ConversationMessage): boolean {
-  return (
-    record.attempts !== undefined ||
-    record.outbound_message_ids !== undefined ||
-    (record.error !== undefined && record.error !== null)
-  );
+  return record.attempts !== null || record.outbound_message_ids !== null || record.error !== null;
 }
 
 function AdminDetail({ record }: { readonly record: ConversationMessage }): ReactNode {
@@ -112,10 +108,8 @@ function AdminDetail({ record }: { readonly record: ConversationMessage }): Reac
     <details className="tai-stack tai-stack-2" data-testid="exchange-admin-detail">
       <summary>Delivery detail</summary>
       <div style={metaRowStyle}>
-        {record.attempts === undefined ? null : (
-          <span>{`Attempts: ${String(record.attempts)}`}</span>
-        )}
-        {record.outbound_message_ids === undefined ? null : (
+        {record.attempts === null ? null : <span>{`Attempts: ${String(record.attempts)}`}</span>}
+        {record.outbound_message_ids === null ? null : (
           <span className="tai-mono">
             {record.outbound_message_ids.length === 0
               ? 'No provider message id'
@@ -123,9 +117,7 @@ function AdminDetail({ record }: { readonly record: ConversationMessage }): Reac
           </span>
         )}
       </div>
-      {record.error === undefined || record.error === null ? null : (
-        <CodeBlock code={record.error} language="error" />
-      )}
+      {record.error === null ? null : <CodeBlock code={record.error} language="error" />}
     </details>
   );
 }

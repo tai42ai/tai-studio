@@ -13,6 +13,7 @@ export function scoped(paths: readonly string[]): MeProjection {
   return {
     user_id: 'u-scoped',
     owner_user_id: null,
+    principal: null,
     admin: false,
     public_resource_id: 'public',
     scopes: [],

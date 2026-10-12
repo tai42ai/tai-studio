@@ -99,15 +99,15 @@ describe('settings-profiles client transport', () => {
     expect(out).toEqual({ ok: true, version: 4 });
   });
 
-  it('putSettingsProfile parses a save ack with version omitted (a no-op save)', async () => {
-    const { client } = harness(() => jsonResponse({ data: { ok: true } }));
+  it('putSettingsProfile parses a save ack with its store version', async () => {
+    const { client } = harness(() => jsonResponse({ data: { ok: true, version: 3 } }));
     const out = await client.putSettingsProfile('prod', {
       description: '',
       env: {},
       secret_keys: [],
     });
     expect(out.ok).toBe(true);
-    expect(out.version).toBeUndefined();
+    expect(out.version).toBe(3);
   });
 
   it('deleteSettingsProfile DELETEs the encoded name and parses the removal ack', async () => {
@@ -174,7 +174,9 @@ describe('settings-profiles client transport', () => {
       kind: 'serve',
       status: 'recycled',
       generation_before: 4,
+      detail: null,
     });
+    expect(out.recycle_stopped).toBeNull();
     expect(out.recycle[1]?.status).toBe('self-deferred');
     // `fresh` is the per-kind new ready lives observed since the pre-apply snapshot.
     expect(out.fresh).toEqual([{ name: 'serve-1', kind: 'serve', generation: 5 }]);
@@ -182,17 +184,14 @@ describe('settings-profiles client transport', () => {
     expect(out.fanout.mode).toBe('local-only');
   });
 
-  it('applySettingsProfile parses a REFUSAL report — populated refused {key, reason} and a fleet fanout', async () => {
+  it('applySettingsProfile parses a REFUSAL report — the refused key names and a fleet fanout', async () => {
     const { client } = harness(() =>
       jsonResponse({
         data: {
           hot: [],
           recycle: [],
           fresh: [],
-          refused: [
-            { key: 'TAI_APP_PROVIDERS', reason: 'boundary-refused: no recycle path' },
-            { key: 'TAI_DEFAULT_REDIS_URL', reason: 'recycle_supported=false for this shape' },
-          ],
+          refused: ['TAI_APP_PROVIDERS', 'TAI_DEFAULT_REDIS_URL'],
           recycle_stopped: null,
           awaiting_respawn: [],
           fanout: {
@@ -209,10 +208,7 @@ describe('settings-profiles client transport', () => {
       }),
     );
     const out = await client.applySettingsProfile('prod');
-    expect(out.refused).toEqual([
-      { key: 'TAI_APP_PROVIDERS', reason: 'boundary-refused: no recycle path' },
-      { key: 'TAI_DEFAULT_REDIS_URL', reason: 'recycle_supported=false for this shape' },
-    ]);
+    expect(out.refused).toEqual(['TAI_APP_PROVIDERS', 'TAI_DEFAULT_REDIS_URL']);
     expect(out.fanout.mode).toBe('fleet');
   });
 
@@ -277,8 +273,10 @@ describe('settings-profiles client transport', () => {
     await expect(client.applySettingsProfile('prod')).rejects.toBeInstanceOf(ApiError);
   });
 
-  it('throws ApiSchemaError LOUDLY on a drifting profile body (secret_keys missing)', async () => {
-    const { client } = harness(() => jsonResponse({ data: { description: 'x', env: { A: '1' } } }));
+  it('throws ApiSchemaError LOUDLY on a drifting profile body (a non-string env value)', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: { description: 'x', env: { A: 1 }, secret_keys: [] } }),
+    );
     await expect(client.getSettingsProfile('prod')).rejects.toBeInstanceOf(ApiSchemaError);
   });
 

@@ -17,7 +17,9 @@
 import { z } from 'zod';
 
 import { ApiError, ApiUnauthorizedError } from './errors';
-import { type ApiConfig, encodeSegment, extractError } from './http';
+import { apiRoutes, buildPath } from './generated/api-routes';
+import { API_KEY_HEADER } from './headers';
+import { type ApiConfig, extractError } from './http';
 import { readSseFrames, type SseFrame, SseFrameParser, sseOpenToken } from './sse';
 
 // -- list schema -------------------------------------------------------------
@@ -202,7 +204,7 @@ async function openAgentStream(
     accept: 'text/event-stream',
     'content-type': 'application/json',
   };
-  if (token) headers['x-api-key'] = token;
+  if (token) headers[API_KEY_HEADER] = token;
   // Distinct-URL per open — see the canonical constraint on `sseOpenToken`.
   const url = `${config.baseUrl ?? ''}${path}?_=${sseOpenToken()}`;
   const response = await doFetch(url, {
@@ -240,7 +242,12 @@ export async function streamAgentRun(
   input: unknown,
   signal?: AbortSignal,
 ): Promise<AsyncGenerator<ParsedAgentEvent>> {
-  return openAgentStream(config, `/api/agents/${encodeSegment(name)}/runs`, input, signal);
+  return openAgentStream(
+    config,
+    buildPath(apiRoutes.post_api_agents_name_runs.path, { name }),
+    input,
+    signal,
+  );
 }
 
 /**
@@ -255,7 +262,12 @@ export async function streamAuthoredAgentRun(
   input: unknown,
   signal?: AbortSignal,
 ): Promise<AsyncGenerator<ParsedAgentEvent>> {
-  return openAgentStream(config, `/api/agents/authored/${encodeSegment(name)}/runs`, input, signal);
+  return openAgentStream(
+    config,
+    buildPath(apiRoutes.post_api_agents_authored_name_runs.path, { name }),
+    input,
+    signal,
+  );
 }
 
 /**

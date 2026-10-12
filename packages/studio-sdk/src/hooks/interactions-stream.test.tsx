@@ -361,10 +361,10 @@ describe('interactions-stream — frame parsing, overlay and count', () => {
     expect(result.current.interactions[0]?.media).toEqual(media);
   });
 
-  it('leaves media undefined when the add frame omits it', async () => {
+  it('reads media as null when the add frame omits it', async () => {
     const { result } = renderStream(scriptedClient([add('a')]), {});
     await flush();
-    expect(result.current.interactions[0]?.media).toBeUndefined();
+    expect(result.current.interactions[0]?.media).toBeNull();
   });
 
   it('surfaces an add with a present non-array media as an error, not a blank card', async () => {
@@ -394,12 +394,12 @@ describe('interactions-stream — frame parsing, overlay and count', () => {
     expect(result.current.interactions[0]?.audience).toBe('user-42');
   });
 
-  it('leaves each attribution field undefined when the add frame omits it', async () => {
+  it('reads each attribution field as null when the add frame omits it', async () => {
     const { result } = renderStream(scriptedClient([add('a')]), {});
     await flush();
-    expect(result.current.interactions[0]?.recipient).toBeUndefined();
-    expect(result.current.interactions[0]?.origin).toBeUndefined();
-    expect(result.current.interactions[0]?.audience).toBeUndefined();
+    expect(result.current.interactions[0]?.recipient).toBeNull();
+    expect(result.current.interactions[0]?.origin).toBeNull();
+    expect(result.current.interactions[0]?.audience).toBeNull();
   });
 
   it('surfaces an add with a non-string attribution field as an error, not a blank card', async () => {

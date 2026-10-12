@@ -1,14 +1,15 @@
 /** Schedule listing and mutation sub-client. */
-import { encodeSegment } from '../http';
+import { apiRoutes, buildPath } from '../generated/api-routes';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
 export function schedulesClient(t: Transport) {
   const { req } = t;
   return {
-    listSchedules: (signal?: AbortSignal) => req('/api/schedules', s.scheduleList, { signal }),
+    listSchedules: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_schedules.path, s.scheduleList, { signal }),
     getServerDateTime: (signal?: AbortSignal) =>
-      req('/api/schedules/server-datetime', s.serverDateTime, { signal }),
+      req(apiRoutes.get_api_schedules_server_datetime.path, s.serverDateTime, { signal }),
     addSchedule: (body: {
       tool_name: string;
       tool_kwargs: Record<string, unknown>;
@@ -24,8 +25,12 @@ export function schedulesClient(t: Transport) {
       cancel_expr?: s.TemplatedText | null;
       resume_expr?: s.TemplatedText | null;
       extras_expr?: s.TemplatedText | null;
-    }) => req('/api/schedules', s.jsonValue, { method: 'POST', body }),
+    }) => req(apiRoutes.post_api_schedules.path, s.jsonValue, { method: 'POST', body }),
     deleteSchedule: (name: string) =>
-      req(`/api/schedules/${encodeSegment(name)}`, s.jsonValue, { method: 'DELETE' }),
+      req(
+        buildPath(apiRoutes.delete_api_schedules_schedule_name.path, { schedule_name: name }),
+        s.jsonValue,
+        { method: 'DELETE' },
+      ),
   };
 }

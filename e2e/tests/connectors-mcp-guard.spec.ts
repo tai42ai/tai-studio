@@ -34,7 +34,7 @@ async function stubMcp(page: Page): Promise<void> {
   await page.route(
     (url) => url.pathname === '/api/connectors/connections',
     async (route) => {
-      await route.fulfill({ json: { data: { items: [], total: 0 } } });
+      await route.fulfill({ json: { data: { items: [], total: 0, unhealthy: 0 } } });
     },
   );
   // The MCP config editor seeds from the PRESERVED read (`!ENV` markers intact).
@@ -53,7 +53,7 @@ async function stubMcp(page: Page): Promise<void> {
   await page.route(
     (url) => url.pathname === '/api/mcp-status',
     async (route) => {
-      await route.fulfill({ json: { data: { bound: {}, failed: [] } } });
+      await route.fulfill({ json: { data: { bound: {}, failed: [], health: {} } } });
     },
   );
   await page.route(

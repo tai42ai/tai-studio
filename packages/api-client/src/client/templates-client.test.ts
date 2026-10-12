@@ -67,7 +67,13 @@ describe('templates client transport', () => {
 
   it('uploadTemplate POSTs { path, content } and parses the receipt', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { path: 'welcome.md', uploaded: true } }),
+      jsonResponse({
+        data: {
+          path: 'welcome.md',
+          uploaded: true,
+          fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+        },
+      }),
     );
     const out = await client.uploadTemplate('welcome.md', 'Hi {{ name }}');
     expect(captured[0]?.method).toBe('POST');
@@ -78,7 +84,13 @@ describe('templates client transport', () => {
 
   it('deleteTemplate POSTs { path } and parses the receipt', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { path: 'welcome.md', deleted: true } }),
+      jsonResponse({
+        data: {
+          path: 'welcome.md',
+          deleted: true,
+          fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+        },
+      }),
     );
     const out = await client.deleteTemplate('welcome.md');
     expect(captured[0]?.method).toBe('POST');
@@ -89,7 +101,13 @@ describe('templates client transport', () => {
 
   it('deleteTemplateDir POSTs { path } to /api/delete-template-dir and parses the receipt', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { path: 'prompts', deleted: true } }),
+      jsonResponse({
+        data: {
+          path: 'prompts',
+          deleted: true,
+          fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+        },
+      }),
     );
     const out = await client.deleteTemplateDir('prompts');
     expect(captured[0]?.method).toBe('POST');
@@ -115,7 +133,11 @@ describe('templates client transport', () => {
   });
 
   it('clearTemplatesCache POSTs to the cache route and parses the confirmation', async () => {
-    const { client, captured } = harness(() => jsonResponse({ data: { cleared: true } }));
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: { cleared: true, fanout: { mode: 'local-only', note: 'only this worker reloaded' } },
+      }),
+    );
     const out = await client.clearTemplatesCache();
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/clear-templates-cache');
@@ -127,9 +149,9 @@ describe('templates client transport', () => {
     await expect(client.renderTemplate({ id: 'ghost' })).rejects.toBeInstanceOf(ApiError);
   });
 
-  it('throws ApiSchemaError LOUDLY on a drifting upload receipt (uploaded not true)', async () => {
+  it('throws ApiSchemaError LOUDLY on a drifting upload receipt (no fan-out)', async () => {
     const { client } = harness(() =>
-      jsonResponse({ data: { path: 'welcome.md', uploaded: false } }),
+      jsonResponse({ data: { path: 'welcome.md', uploaded: true } }),
     );
     await expect(client.uploadTemplate('welcome.md', 'x')).rejects.toBeInstanceOf(ApiSchemaError);
   });

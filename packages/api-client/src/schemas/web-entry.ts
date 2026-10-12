@@ -1,6 +1,9 @@
 /** Web-channel entry-gate code response schemas. */
 import { z } from 'zod';
 
+// Hand-written: the entry-gate routes are a channel plugin's; the core spec does not carry
+// them.
+
 // The web channel's entry gate: a web route can be gated so its chat page is
 // served only to a navigation carrying a live entry code. These four doors are
 // keyed by the route's `our_identity`. A raw code exists only in flight (the

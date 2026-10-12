@@ -100,7 +100,7 @@ describe('policy client transport', () => {
   });
 
   it('throws ApiSchemaError LOUDLY on a drifting policy version (no silent coerce)', async () => {
-    const { is_current: _dropped, ...broken } = version1;
+    const { created_at: _dropped, ...broken } = version1;
     const { client } = harness(() => jsonResponse({ data: [broken] }));
     await expect(client.listPolicyVersions('u1')).rejects.toBeInstanceOf(ApiSchemaError);
   });

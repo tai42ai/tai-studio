@@ -10,6 +10,7 @@
 import type { z } from 'zod';
 
 import { ApiConflictError, ApiError, ApiSchemaError, ApiUnauthorizedError } from './errors';
+import { API_KEY_HEADER } from './headers';
 
 /** Supplies the current API key (in-memory or sessionStorage-backed) + base URL. */
 export interface ApiConfig {
@@ -153,7 +154,7 @@ export async function apiRequest<S extends z.ZodType>(
   const doFetch = config.fetch ?? globalThis.fetch;
   const token = config.getToken();
   const headers: Record<string, string> = { ...JSON_HEADERS };
-  if (token) headers['x-api-key'] = token;
+  if (token) headers[API_KEY_HEADER] = token;
 
   const response = await doFetch(buildUrl(config.baseUrl ?? '', path, options.query), {
     method: options.method ?? 'GET',
@@ -183,7 +184,7 @@ export async function apiText(
   const doFetch = config.fetch ?? globalThis.fetch;
   const token = config.getToken();
   const headers: Record<string, string> = {};
-  if (token) headers['x-api-key'] = token;
+  if (token) headers[API_KEY_HEADER] = token;
 
   const response = await doFetch(buildUrl(config.baseUrl ?? '', path, options.query), {
     method: options.method ?? 'GET',
@@ -211,7 +212,7 @@ export async function apiDownload(
   const token = config.getToken();
   const headers: Record<string, string> = {};
   if (options.body !== undefined) Object.assign(headers, JSON_HEADERS);
-  if (token) headers['x-api-key'] = token;
+  if (token) headers[API_KEY_HEADER] = token;
 
   const response = await doFetch(buildUrl(config.baseUrl ?? '', path, options.query), {
     method: options.method ?? 'GET',

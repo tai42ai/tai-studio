@@ -79,7 +79,7 @@ async function stubCatalog(page: Page): Promise<void> {
   await page.route(
     (url) => url.pathname === CONNECTIONS_PATH,
     async (route) => {
-      await route.fulfill({ json: { data: { items: [], total: 0 } } });
+      await route.fulfill({ json: { data: { items: [], total: 0, unhealthy: 0 } } });
     },
   );
 }
@@ -130,7 +130,12 @@ test('the redirect-resume completes the exchange via the forwarded state and str
   await page.route('**/api/connectors/oauth/complete', async (route) => {
     await route.fulfill({
       json: {
-        data: { kind: 'success', connection_id: 'conn-1', return_url: '/connectors', fanout: null },
+        data: {
+          kind: 'success',
+          connection_id: 'conn-1',
+          return_url: '/connectors',
+          fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+        },
       },
     });
   });
@@ -232,7 +237,7 @@ test('a connector-managed MCP entry renders read-only in the config form', async
   await page.route(
     (url) => url.pathname === '/api/mcp-status',
     async (route) => {
-      await route.fulfill({ json: { data: { bound: {}, failed: [] } } });
+      await route.fulfill({ json: { data: { bound: {}, failed: [], health: {} } } });
     },
   );
   await page.route(

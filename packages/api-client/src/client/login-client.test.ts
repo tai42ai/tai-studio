@@ -70,6 +70,7 @@ describe('getLoginMethods client transport', () => {
       jsonResponse({
         data: {
           needs_setup: false,
+          claim_fragment_key: 'claim',
           methods: [
             {
               shape: 'form',
@@ -89,15 +90,20 @@ describe('getLoginMethods client transport', () => {
     expect(out.methods).toHaveLength(2);
     // The `form` method's `purpose` defaults to 'login' when the payload omits it.
     expect(out.methods[0]).toMatchObject({ shape: 'form', purpose: 'login' });
-    // A false `needs_setup` and an absent `setup_login` parse.
+    // A false `needs_setup` and an absent `setup_login` (read as null) parse.
     expect(out.needs_setup).toBe(false);
-    expect(out.setup_login).toBeUndefined();
+    expect(out.setup_login).toBeNull();
   });
 
   it('carries needs_setup:true and the setup_login kinds through', async () => {
     const { client } = harness(() =>
       jsonResponse({
-        data: { needs_setup: true, methods: [], setup_login: { kinds: ['password', 'invite'] } },
+        data: {
+          needs_setup: true,
+          claim_fragment_key: 'claim',
+          methods: [],
+          setup_login: { kinds: ['password', 'invite'] },
+        },
       }),
     );
     const out = await client.getLoginMethods();
@@ -107,7 +113,8 @@ describe('getLoginMethods client transport', () => {
 
   it('is public: unauthenticated (no token) carries no auth header', async () => {
     const { client, captured } = harness(
-      () => jsonResponse({ data: { methods: [], needs_setup: false } }),
+      () =>
+        jsonResponse({ data: { methods: [], needs_setup: false, claim_fragment_key: 'claim' } }),
       null,
     );
     await client.getLoginMethods();

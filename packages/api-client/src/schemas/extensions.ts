@@ -1,10 +1,14 @@
 /** Extension element/combo and per-tool extension response schemas. */
 import { z } from 'zod';
 
-export const extension = z.object({ name: z.string(), kind: z.string() });
-export const extensions = z.array(extension);
+import * as openapi from '../generated/openapi-schemas';
+
+export const extension = openapi.extensionView;
+export const extensions = openapi.extensionListing;
 export type Extension = z.infer<typeof extension>;
 
+// Hand-written: the spec publishes a config-bearing element as an open object; the client
+// reads its `{ name, config }` form.
 /**
  * One element of an extension combo: a bare extension NAME, or a
  * `{ name, config }` mapping binding author config (e.g. an `output_schema` JSON
@@ -27,8 +31,7 @@ export type PresetExtensionElement = z.infer<typeof presetExtensionElement>;
  * config), never a single flattened one. `available` is the same flat catalog
  * `GET /api/extensions` returns. A drift throws `ApiSchemaError`.
  */
-export const toolExtensions = z.object({
+export const toolExtensions = openapi.toolExtensionsView.extend({
   combos: z.array(z.array(presetExtensionElement)),
-  available: extensions,
 });
 export type ToolExtensions = z.infer<typeof toolExtensions>;

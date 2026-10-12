@@ -16,7 +16,17 @@ import {
 const MINT_ROUTE = { path: '/api/auth/api-keys', methods: ['POST'] };
 
 function tokens(): TokensPayload {
-  return [{ user_id: 'alice', description: 'Alice key', scopes: ['admin'], policy_data: {} }];
+  return [
+    {
+      condition: null,
+      principal: null,
+      orphaned: false,
+      user_id: 'alice',
+      description: 'Alice key',
+      scopes: ['admin'],
+      policy_data: {},
+    },
+  ];
 }
 function scopes(): Record<string, string> {
   return {
@@ -204,6 +214,8 @@ describe('ApiKeysTab', () => {
   it('renders the principal column with a kind badge and display name, dashing a principal-less row', async () => {
     const mixed: TokensPayload = [
       {
+        condition: null,
+        orphaned: false,
         user_id: 'svc',
         description: 'Delegated key',
         scopes: ['read'],
@@ -211,6 +223,7 @@ describe('ApiKeysTab', () => {
         principal: { user_id: 'usr-owner', kind: 'service', display_name: 'Acme Bot' },
       },
       {
+        condition: null,
         user_id: 'plain',
         description: 'Restored key',
         scopes: ['read'],
@@ -365,6 +378,9 @@ describe('ApiKeysTab', () => {
   it('escapes server-supplied user_id and scope strings', async () => {
     const injected: TokensPayload = [
       {
+        condition: null,
+        principal: null,
+        orphaned: false,
         user_id: '<script>alert(1)</script>',
         description: '<img src=x onerror=alert(2)>',
         scopes: ['<b>scope</b>'],

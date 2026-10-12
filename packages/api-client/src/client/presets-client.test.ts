@@ -280,7 +280,13 @@ describe('preset client transport', () => {
 
   it('rollbackPreset POSTs {version} to the rollback route', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { name: 'paris_weather', active_version: 2 } }),
+      jsonResponse({
+        data: {
+          name: 'paris_weather',
+          active_version: 2,
+          fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+        },
+      }),
     );
     await client.rollbackPreset('paris_weather', 2);
     expect(captured[0]?.url).toBe('/api/presets/paris_weather/rollback');
@@ -289,7 +295,13 @@ describe('preset client transport', () => {
 
   it('deletePreset DELETEs the preset route', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { name: 'paris_weather', deleted: true } }),
+      jsonResponse({
+        data: {
+          name: 'paris_weather',
+          deleted: true,
+          fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+        },
+      }),
     );
     await client.deletePreset('paris_weather');
     expect(captured[0]?.method).toBe('DELETE');
@@ -299,7 +311,12 @@ describe('preset client transport', () => {
   it('renamePreset POSTs {new_name} to the rename route and parses the re-keyed record', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: { name: 'london_weather', renamed_from: 'paris weather', active_version: 3 },
+        data: {
+          name: 'london_weather',
+          renamed_from: 'paris weather',
+          active_version: 3,
+          fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+        },
       }),
     );
     const out = await client.renamePreset('paris weather', 'london_weather');
@@ -307,7 +324,7 @@ describe('preset client transport', () => {
     // The CURRENT name is URL-encoded in the path; the target rides in the body.
     expect(captured[0]?.url).toBe('/api/presets/paris%20weather/rename');
     expect(captured[0]?.body).toEqual({ new_name: 'london_weather' });
-    expect(out).toEqual({
+    expect(out).toMatchObject({
       name: 'london_weather',
       renamed_from: 'paris weather',
       active_version: 3,
@@ -458,7 +475,9 @@ describe('preset client transport', () => {
 
   it('listToolTags hits /api/tools/tags', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: [{ name: 'weather', tags: [], badges: [], hidden: false }] }),
+      jsonResponse({
+        data: [{ name: 'weather', tags: [], badges: [], hidden: false, schedulable: false }],
+      }),
     );
     const out = await client.listToolTags();
     expect(captured[0]?.url).toBe('/api/tools/tags');
