@@ -2239,6 +2239,166 @@ integrity: Record<string, string>;
 name: string;
 version: string;
 }[]>;
+readonly discoverServer: (target: DiscoverServerTarget) => Promise<{
+authorization_servers: string[];
+automatic_client: boolean;
+client_issuer: string | null;
+issuer: string;
+redirect_uri: string | null;
+registration_supported: boolean;
+resource: string;
+resource_name: string | null;
+scopes_supported: string[];
+suggested_display_name: string;
+suggested_id: string;
+url: string;
+}>;
+readonly addServer: (args: AddServerArgs) => Promise<{
+provider: {
+category: string;
+client_source: "manual" | "env" | "dynamic" | "unset" | null;
+config_fields: {
+key: string;
+label: string;
+required: boolean;
+secret: boolean;
+target: "header" | "env";
+}[];
+description: string;
+display_name: string;
+icon_url: string | null;
+id: string;
+kind: "none" | "oauth";
+origin: "system" | "community";
+removable: boolean;
+sub_services: {
+description: string;
+display_name: string;
+id: string;
+scopes: string[];
+}[];
+};
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+error: string | null;
+local_only: boolean;
+op: string;
+reachable: boolean;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
+mode: "fleet";
+} | {
+error: string | null;
+local_only: boolean;
+op: string;
+reachable: boolean;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
+mode: "unreachable";
+} | null;
+}>;
+readonly removeProvider: (id: string) => Promise<{
+provider_id: string;
+removed_clients: number;
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+error: string | null;
+local_only: boolean;
+op: string;
+reachable: boolean;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
+mode: "fleet";
+} | {
+error: string | null;
+local_only: boolean;
+op: string;
+reachable: boolean;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
+mode: "unreachable";
+} | null;
+}>;
+readonly setProviderClient: (id: string, args: SetProviderClientArgs) => Promise<{
+provider: {
+category: string;
+client_source: "manual" | "env" | "dynamic" | "unset" | null;
+config_fields: {
+key: string;
+label: string;
+required: boolean;
+secret: boolean;
+target: "header" | "env";
+}[];
+description: string;
+display_name: string;
+icon_url: string | null;
+id: string;
+kind: "none" | "oauth";
+origin: "system" | "community";
+removable: boolean;
+sub_services: {
+description: string;
+display_name: string;
+id: string;
+scopes: string[];
+}[];
+};
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+error: string | null;
+local_only: boolean;
+op: string;
+reachable: boolean;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
+mode: "fleet";
+} | {
+error: string | null;
+local_only: boolean;
+op: string;
+reachable: boolean;
+results: {
+detail: string | null;
+error: string | null;
+name: string;
+outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+payload: unknown;
+}[];
+mode: "unreachable";
+} | null;
+}>;
 readonly listProviders: (signal?: AbortSignal) => Promise<{
 categories: {
 display_name: string;
@@ -2458,166 +2618,6 @@ payload: unknown;
 }[];
 mode: "unreachable";
 };
-}>;
-readonly discoverServer: (target: DiscoverServerTarget) => Promise<{
-authorization_servers: string[];
-automatic_client: boolean;
-client_issuer: string | null;
-issuer: string;
-redirect_uri: string | null;
-registration_supported: boolean;
-resource: string;
-resource_name: string | null;
-scopes_supported: string[];
-suggested_display_name: string;
-suggested_id: string;
-url: string;
-}>;
-readonly addServer: (args: AddServerArgs) => Promise<{
-provider: {
-category: string;
-client_source: "manual" | "env" | "dynamic" | "unset" | null;
-config_fields: {
-key: string;
-label: string;
-required: boolean;
-secret: boolean;
-target: "header" | "env";
-}[];
-description: string;
-display_name: string;
-icon_url: string | null;
-id: string;
-kind: "none" | "oauth";
-origin: "system" | "community";
-removable: boolean;
-sub_services: {
-description: string;
-display_name: string;
-id: string;
-scopes: string[];
-}[];
-};
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-error: string | null;
-local_only: boolean;
-op: string;
-reachable: boolean;
-results: {
-detail: string | null;
-error: string | null;
-name: string;
-outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
-payload: unknown;
-}[];
-mode: "fleet";
-} | {
-error: string | null;
-local_only: boolean;
-op: string;
-reachable: boolean;
-results: {
-detail: string | null;
-error: string | null;
-name: string;
-outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
-payload: unknown;
-}[];
-mode: "unreachable";
-} | null;
-}>;
-readonly removeProvider: (id: string) => Promise<{
-provider_id: string;
-removed_clients: number;
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-error: string | null;
-local_only: boolean;
-op: string;
-reachable: boolean;
-results: {
-detail: string | null;
-error: string | null;
-name: string;
-outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
-payload: unknown;
-}[];
-mode: "fleet";
-} | {
-error: string | null;
-local_only: boolean;
-op: string;
-reachable: boolean;
-results: {
-detail: string | null;
-error: string | null;
-name: string;
-outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
-payload: unknown;
-}[];
-mode: "unreachable";
-} | null;
-}>;
-readonly setProviderClient: (id: string, args: SetProviderClientArgs) => Promise<{
-provider: {
-category: string;
-client_source: "manual" | "env" | "dynamic" | "unset" | null;
-config_fields: {
-key: string;
-label: string;
-required: boolean;
-secret: boolean;
-target: "header" | "env";
-}[];
-description: string;
-display_name: string;
-icon_url: string | null;
-id: string;
-kind: "none" | "oauth";
-origin: "system" | "community";
-removable: boolean;
-sub_services: {
-description: string;
-display_name: string;
-id: string;
-scopes: string[];
-}[];
-};
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-error: string | null;
-local_only: boolean;
-op: string;
-reachable: boolean;
-results: {
-detail: string | null;
-error: string | null;
-name: string;
-outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
-payload: unknown;
-}[];
-mode: "fleet";
-} | {
-error: string | null;
-local_only: boolean;
-op: string;
-reachable: boolean;
-results: {
-detail: string | null;
-error: string | null;
-name: string;
-outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
-payload: unknown;
-}[];
-mode: "unreachable";
-} | null;
 }>;
 readonly setMcpSecretEnv: (body: SetMcpSecretEnvBody) => Promise<{
 awaiting_respawn: {
@@ -9197,6 +9197,166 @@ function createApiClient(config: ApiConfig): {
         name: string;
         version: string;
     }[]>;
+    readonly discoverServer: (target: DiscoverServerTarget) => Promise<{
+        authorization_servers: string[];
+        automatic_client: boolean;
+        client_issuer: string | null;
+        issuer: string;
+        redirect_uri: string | null;
+        registration_supported: boolean;
+        resource: string;
+        resource_name: string | null;
+        scopes_supported: string[];
+        suggested_display_name: string;
+        suggested_id: string;
+        url: string;
+    }>;
+    readonly addServer: (args: AddServerArgs) => Promise<{
+        provider: {
+            category: string;
+            client_source: "manual" | "env" | "dynamic" | "unset" | null;
+            config_fields: {
+                key: string;
+                label: string;
+                required: boolean;
+                secret: boolean;
+                target: "header" | "env";
+            }[];
+            description: string;
+            display_name: string;
+            icon_url: string | null;
+            id: string;
+            kind: "none" | "oauth";
+            origin: "system" | "community";
+            removable: boolean;
+            sub_services: {
+                description: string;
+                display_name: string;
+                id: string;
+                scopes: string[];
+            }[];
+        };
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            error: string | null;
+            local_only: boolean;
+            op: string;
+            reachable: boolean;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
+            }[];
+            mode: "fleet";
+        } | {
+            error: string | null;
+            local_only: boolean;
+            op: string;
+            reachable: boolean;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
+            }[];
+            mode: "unreachable";
+        } | null;
+    }>;
+    readonly removeProvider: (id: string) => Promise<{
+        provider_id: string;
+        removed_clients: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            error: string | null;
+            local_only: boolean;
+            op: string;
+            reachable: boolean;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
+            }[];
+            mode: "fleet";
+        } | {
+            error: string | null;
+            local_only: boolean;
+            op: string;
+            reachable: boolean;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
+            }[];
+            mode: "unreachable";
+        } | null;
+    }>;
+    readonly setProviderClient: (id: string, args: SetProviderClientArgs) => Promise<{
+        provider: {
+            category: string;
+            client_source: "manual" | "env" | "dynamic" | "unset" | null;
+            config_fields: {
+                key: string;
+                label: string;
+                required: boolean;
+                secret: boolean;
+                target: "header" | "env";
+            }[];
+            description: string;
+            display_name: string;
+            icon_url: string | null;
+            id: string;
+            kind: "none" | "oauth";
+            origin: "system" | "community";
+            removable: boolean;
+            sub_services: {
+                description: string;
+                display_name: string;
+                id: string;
+                scopes: string[];
+            }[];
+        };
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            error: string | null;
+            local_only: boolean;
+            op: string;
+            reachable: boolean;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
+            }[];
+            mode: "fleet";
+        } | {
+            error: string | null;
+            local_only: boolean;
+            op: string;
+            reachable: boolean;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
+            }[];
+            mode: "unreachable";
+        } | null;
+    }>;
     readonly listProviders: (signal?: AbortSignal) => Promise<{
         categories: {
             display_name: string;
@@ -9416,166 +9576,6 @@ function createApiClient(config: ApiConfig): {
             }[];
             mode: "unreachable";
         };
-    }>;
-    readonly discoverServer: (target: DiscoverServerTarget) => Promise<{
-        authorization_servers: string[];
-        automatic_client: boolean;
-        client_issuer: string | null;
-        issuer: string;
-        redirect_uri: string | null;
-        registration_supported: boolean;
-        resource: string;
-        resource_name: string | null;
-        scopes_supported: string[];
-        suggested_display_name: string;
-        suggested_id: string;
-        url: string;
-    }>;
-    readonly addServer: (args: AddServerArgs) => Promise<{
-        provider: {
-            category: string;
-            client_source: "manual" | "env" | "dynamic" | "unset" | null;
-            config_fields: {
-                key: string;
-                label: string;
-                required: boolean;
-                secret: boolean;
-                target: "header" | "env";
-            }[];
-            description: string;
-            display_name: string;
-            icon_url: string | null;
-            id: string;
-            kind: "none" | "oauth";
-            origin: "system" | "community";
-            removable: boolean;
-            sub_services: {
-                description: string;
-                display_name: string;
-                id: string;
-                scopes: string[];
-            }[];
-        };
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            error: string | null;
-            local_only: boolean;
-            op: string;
-            reachable: boolean;
-            results: {
-                detail: string | null;
-                error: string | null;
-                name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
-                payload: unknown;
-            }[];
-            mode: "fleet";
-        } | {
-            error: string | null;
-            local_only: boolean;
-            op: string;
-            reachable: boolean;
-            results: {
-                detail: string | null;
-                error: string | null;
-                name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
-                payload: unknown;
-            }[];
-            mode: "unreachable";
-        } | null;
-    }>;
-    readonly removeProvider: (id: string) => Promise<{
-        provider_id: string;
-        removed_clients: number;
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            error: string | null;
-            local_only: boolean;
-            op: string;
-            reachable: boolean;
-            results: {
-                detail: string | null;
-                error: string | null;
-                name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
-                payload: unknown;
-            }[];
-            mode: "fleet";
-        } | {
-            error: string | null;
-            local_only: boolean;
-            op: string;
-            reachable: boolean;
-            results: {
-                detail: string | null;
-                error: string | null;
-                name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
-                payload: unknown;
-            }[];
-            mode: "unreachable";
-        } | null;
-    }>;
-    readonly setProviderClient: (id: string, args: SetProviderClientArgs) => Promise<{
-        provider: {
-            category: string;
-            client_source: "manual" | "env" | "dynamic" | "unset" | null;
-            config_fields: {
-                key: string;
-                label: string;
-                required: boolean;
-                secret: boolean;
-                target: "header" | "env";
-            }[];
-            description: string;
-            display_name: string;
-            icon_url: string | null;
-            id: string;
-            kind: "none" | "oauth";
-            origin: "system" | "community";
-            removable: boolean;
-            sub_services: {
-                description: string;
-                display_name: string;
-                id: string;
-                scopes: string[];
-            }[];
-        };
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            error: string | null;
-            local_only: boolean;
-            op: string;
-            reachable: boolean;
-            results: {
-                detail: string | null;
-                error: string | null;
-                name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
-                payload: unknown;
-            }[];
-            mode: "fleet";
-        } | {
-            error: string | null;
-            local_only: boolean;
-            op: string;
-            reachable: boolean;
-            results: {
-                detail: string | null;
-                error: string | null;
-                name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
-                payload: unknown;
-            }[];
-            mode: "unreachable";
-        } | null;
     }>;
     readonly setMcpSecretEnv: (body: SetMcpSecretEnvBody) => Promise<{
         awaiting_respawn: {

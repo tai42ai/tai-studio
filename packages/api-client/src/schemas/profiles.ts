@@ -33,7 +33,10 @@ export type SettingsProfileSaved = z.infer<typeof settingsProfileSaved>;
 /** `DELETE /api/config/profiles/{name}` — a minimal removal ack. */
 export const settingsProfileDeleted = openapi.okResult;
 
-/** `POST /api/config/profiles/{name}/rollback` — the restore ack; `version` is the resulting active version. */
+/**
+ * `POST /api/config/profiles/{name}/rollback` — the restore ack; `version` is the resulting
+ * active version.
+ */
 export const settingsProfileRollback = openapi.profileWriteResult;
 export type SettingsProfileRollback = z.infer<typeof settingsProfileRollback>;
 
@@ -58,10 +61,10 @@ export type SettingsProfileDiff = z.infer<typeof settingsProfileDiff>;
  * target's successor; `refused` is `[]` on success by construction (the refused key
  * names only on a refusal), the populated refusal surfaces being the diff preview and
  * the refusal error report; `recycle_stopped` names the target a stopped recycle roll
- * halted at, or is `null` when the roll ran to its end; `awaiting_respawn` names the workers
- * (name + keys) still awaiting a respawn after the apply (empty when the roll converged).
- * `fanout` is the mode-wrapped fleet broadcast, parsed EXPLICITLY so a failed propagation reaches the shared fleet-report handler. A
- * drift throws `ApiSchemaError`.
+ * halted at, or is `null` when the roll ran to its end; `awaiting_respawn` names the
+ * workers (name + keys) still awaiting a respawn after the apply (empty when the roll
+ * converged). `fanout` is the mode-wrapped fleet broadcast, parsed EXPLICITLY so a failed
+ * propagation reaches the shared fleet-report handler. A drift throws `ApiSchemaError`.
  */
 // The fan-out is hand-typed: the spec publishes it as one object with optional fields.
 export const profileApplyResponse = openapi.profileApplyResponse.extend({
