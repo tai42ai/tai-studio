@@ -925,9 +925,14 @@ const AUTHED_PAGES = [
       await page.getByRole('option', { name: 'studio_demo_echo' }).click();
       await dialog.getByLabel('Cron expression').fill('0 2 * *');
       await dialog.getByRole('button', { name: 'Create schedule' }).click();
-      await dialog
-        .getByText('Use 5 fields (minute hour day-of-month month day-of-week)', { exact: false })
-        .waitFor({ state: 'visible', timeout: 8000 });
+      const cronError = dialog.getByText(
+        'Use 5 fields (minute hour day-of-month month day-of-week)',
+        { exact: false },
+      );
+      await cronError.waitFor({ state: 'visible', timeout: 8000 });
+      // The submit leaves the dialog scrolled to its footer; bring the cron field and its error
+      // back to the middle of the dialog, where the operator reads them.
+      await cronError.evaluate((el) => el.scrollIntoView({ block: 'center' }));
     },
   },
   { name: 'extensions', path: '/extensions', wait: 'text=ask_external' },
