@@ -60,6 +60,7 @@ describe('ToolAdminCard', () => {
   it('advises re-running the remove, never a reload, on a non-converged remove', async () => {
     const user = userEvent.setup();
     const removeTool = vi.fn().mockResolvedValue({
+      ok: true,
       op: 'remove_tool',
       reachable: true,
       local_only: false,
