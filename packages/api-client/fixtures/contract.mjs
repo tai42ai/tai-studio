@@ -202,6 +202,36 @@ export const MUTATION_FIXTURES = [
     schema: 'oauthCompleteResult',
   },
   {
+    name: 'discover-server.registration',
+    path: '/api/connectors/providers/discover',
+    file: 'mutations/discover-server.registration.json',
+    schema: 'discoveredServer',
+  },
+  {
+    name: 'discover-server.manual',
+    path: '/api/connectors/providers/discover',
+    file: 'mutations/discover-server.manual.json',
+    schema: 'discoveredServer',
+  },
+  {
+    name: 'add-server',
+    path: '/api/connectors/providers',
+    file: 'mutations/add-server.json',
+    schema: 'providerMutationResult',
+  },
+  {
+    name: 'remove-provider',
+    path: '/api/connectors/providers/{provider_id}',
+    file: 'mutations/remove-provider.json',
+    schema: 'removeProviderResult',
+  },
+  {
+    name: 'set-provider-client',
+    path: '/api/connectors/providers/{provider_id}/client',
+    file: 'mutations/set-provider-client.json',
+    schema: 'providerMutationResult',
+  },
+  {
     name: 'register-hook',
     path: '/api/hooks',
     file: 'mutations/register-hook.json',

@@ -160,3 +160,43 @@ export async function answerInteraction(
   });
   expect(res.status()).toBe(200);
 }
+
+/** The look-up answer the add-server frames stub for `https://mcp.example.com/mcp`. */
+export const ADD_SERVER_LOOKUP = {
+  url: 'https://mcp.example.com/mcp',
+  resource: 'https://mcp.example.com/mcp',
+  resource_name: 'Remote files',
+  issuer: 'https://login.example.com',
+  authorization_servers: ['https://login.example.com'],
+  client_issuer: null,
+  registration_supported: true,
+  automatic_client: true,
+  scopes_supported: ['files.read', 'files.write'],
+  suggested_id: 'remote_files',
+  suggested_display_name: 'Remote files',
+  redirect_uri: null,
+};
+
+/**
+ * On the Connectors page, open "Add MCP server" and drive it to its review step. The
+ * single look-up call is answered by a route stub: the stack under test has no
+ * OAuth-protected server to look up, and the frame is of the screen, not the server.
+ */
+export async function openAddServerReview(page: Page): Promise<Locator> {
+  await page.route(
+    (url) => url.pathname === '/api/connectors/providers/discover',
+    async (route) => {
+      await route.fulfill({ json: { data: ADD_SERVER_LOOKUP } });
+    },
+  );
+  await page
+    .getByRole('region', { name: 'Providers' })
+    .getByRole('button', { name: 'Add MCP server' })
+    .first()
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Add MCP server' });
+  await dialog.getByLabel('Server address').fill(ADD_SERVER_LOOKUP.url);
+  await dialog.getByRole('button', { name: 'Look up' }).click();
+  await expect(dialog.getByRole('button', { name: 'Add server' })).toBeVisible();
+  return dialog;
+}

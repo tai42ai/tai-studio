@@ -18,7 +18,13 @@ import {
   renderWithProviders,
 } from './test-utils';
 
-const goodMessage = { type: OAUTH_MESSAGE_TYPE, code: 'the-code', state: 'the-state', error: null };
+const goodMessage = {
+  type: OAUTH_MESSAGE_TYPE,
+  code: 'the-code',
+  state: 'the-state',
+  error: null,
+  iss: null,
+};
 
 afterEach(() => {
   vi.restoreAllMocks();

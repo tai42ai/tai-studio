@@ -14,6 +14,8 @@ import type {
   ApiClient,
   ConnectionView,
   ConnectorCategoryView,
+  DiscoveredServer,
+  MeProjection,
   ProviderCatalogResponse,
   ProviderView,
 } from '@tai42/api-client';
@@ -33,6 +35,12 @@ import { vi } from 'vitest';
 
 export interface RenderOptions {
   readonly client: ApiClient;
+  /**
+   * The caller's capability projection. Given, a session key is seeded and `getMe`
+   * answers it, so the write gates resolve against it; omitted, no key is seeded and
+   * every write gate stays closed.
+   */
+  readonly projection?: MeProjection;
 }
 
 export type RenderWithProvidersResult = RenderResult & {
@@ -42,7 +50,7 @@ export type RenderWithProvidersResult = RenderResult & {
 
 export function renderWithProviders(
   ui: ReactElement,
-  { client }: RenderOptions,
+  { client, projection }: RenderOptions,
 ): RenderWithProvidersResult {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const nav: NavigationContextValue = {
@@ -51,14 +59,20 @@ export function renderWithProviders(
     navigatePlugin: vi.fn(),
     resolvePluginPath: () => '/x',
   };
-  // No session key is seeded, so `CapabilityProvider` stays unauthenticated and never
-  // fetches `getMe`; the MCP section's write gates fall closed, which these tests do
-  // not assert on.
-  globalThis.sessionStorage.removeItem('tai-studio.apiKey');
+  // Without a projection no session key is seeded, so `CapabilityProvider` stays
+  // unauthenticated and never fetches `getMe`: every write gate falls closed. With one,
+  // the key is seeded and `getMe` answers the projection.
+  let resolvedClient = client;
+  if (projection === undefined) {
+    globalThis.sessionStorage.removeItem('tai-studio.apiKey');
+  } else {
+    globalThis.sessionStorage.setItem('tai-studio.apiKey', 'sk-test');
+    resolvedClient = { ...client, getMe: () => Promise.resolve(projection) };
+  }
   const utils = render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ApiProvider value={client}>
+        <ApiProvider value={resolvedClient}>
           <CapabilityProvider>
             <ThemeProvider>
               <NavigationProvider value={nav}>{ui}</NavigationProvider>
@@ -133,6 +147,8 @@ export function provider(overrides: Partial<ProviderView> = {}): ProviderView {
       { id: 'gist', display_name: 'Gists', description: '', scopes: ['gist'] },
     ],
     config_fields: [],
+    removable: false,
+    client_source: null,
     ...overrides,
   };
 }
@@ -147,6 +163,7 @@ export function connection(overrides: Partial<ConnectionView> = {}): ConnectionV
     enabled_sub_services: ['repo'],
     granted_scopes: ['repo'],
     unreachable_sub_services: [],
+    scopes_wanted: [],
     auth_health_state: 'healthy',
     created_at: '2026-07-04T00:00:00Z',
     ...overrides,
@@ -167,3 +184,51 @@ export function providerCatalog(
 ): ProviderCatalogResponse {
   return { providers, categories };
 }
+
+/** A provider added by address: no icon, removable, its client from the client store. */
+export function discoveredProvider(overrides: Partial<ProviderView> = {}): ProviderView {
+  return provider({
+    id: 'remote_files',
+    display_name: 'Remote files',
+    description: '',
+    icon_url: null,
+    origin: 'community',
+    category: 'dev',
+    sub_services: [{ id: 'default', display_name: 'Remote files', description: '', scopes: [] }],
+    removable: true,
+    client_source: 'dynamic',
+    ...overrides,
+  });
+}
+
+/** A look-up answer: the server signs in at one service and registers apps by itself. */
+export function discovered(overrides: Partial<DiscoveredServer> = {}): DiscoveredServer {
+  return {
+    url: 'https://mcp.example.com/mcp',
+    resource: 'https://mcp.example.com/mcp',
+    resource_name: 'Remote files',
+    issuer: 'https://login.example.com',
+    authorization_servers: ['https://login.example.com'],
+    client_issuer: null,
+    registration_supported: true,
+    automatic_client: true,
+    scopes_supported: ['files.read', 'files.write'],
+    suggested_id: 'remote_files',
+    suggested_display_name: 'Remote files',
+    redirect_uri: 'https://studio.example.com/api/connectors/oauth/callback',
+    ...overrides,
+  };
+}
+
+/** A `fleet` fan-out with one applied and one stranded (`departed`) worker. */
+export const NON_CONVERGED_FANOUT = {
+  mode: 'fleet',
+  op: 'reload_config',
+  reachable: true,
+  local_only: false,
+  results: [
+    { name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
+    { name: 'serve-b', outcome: 'departed', payload: null, error: null, detail: 'left' },
+  ],
+  error: null,
+};

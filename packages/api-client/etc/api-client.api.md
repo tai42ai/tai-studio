@@ -7,6 +7,24 @@
 import { z } from 'zod';
 
 // @public
+export interface AddServerArgs {
+    // (undocumented)
+    readonly category?: string;
+    // (undocumented)
+    readonly description?: string;
+    // (undocumented)
+    readonly display_name?: string;
+    // (undocumented)
+    readonly icon_url?: string;
+    // (undocumented)
+    readonly id?: string;
+    // (undocumented)
+    readonly scopes?: string[];
+    // (undocumented)
+    readonly url: string;
+}
+
+// @public
 export interface AddUrlToScopeBody {
     // (undocumented)
     readonly pattern?: string;
@@ -495,6 +513,7 @@ const connectionsList: z.ZodObject<{
         enabled_sub_services: z.ZodArray<z.ZodString>;
         granted_scopes: z.ZodArray<z.ZodString>;
         unreachable_sub_services: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        scopes_wanted: z.ZodDefault<z.ZodArray<z.ZodString>>;
         auth_health_state: z.ZodEnum<{
             healthy: "healthy";
             reconnect_required: "reconnect_required";
@@ -522,6 +541,7 @@ const connectionView: z.ZodObject<{
     enabled_sub_services: z.ZodArray<z.ZodString>;
     granted_scopes: z.ZodArray<z.ZodString>;
     unreachable_sub_services: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    scopes_wanted: z.ZodDefault<z.ZodArray<z.ZodString>>;
     auth_health_state: z.ZodEnum<{
         healthy: "healthy";
         reconnect_required: "reconnect_required";
@@ -2846,7 +2866,7 @@ export function createApiClient(config: ApiConfig): {
             id: string;
             display_name: string;
             description: string;
-            icon_url: string;
+            icon_url: string | null;
             kind: "none" | "oauth";
             origin: "system" | "community";
             category: string;
@@ -2863,6 +2883,8 @@ export function createApiClient(config: ApiConfig): {
                 required: boolean;
                 secret: boolean;
             }[];
+            removable: boolean;
+            client_source: "manual" | "env" | "dynamic" | "unset" | null;
         }[];
         categories: {
             id: string;
@@ -2880,6 +2902,7 @@ export function createApiClient(config: ApiConfig): {
             enabled_sub_services: string[];
             granted_scopes: string[];
             unreachable_sub_services: string[];
+            scopes_wanted: string[];
             auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
             created_at: string;
         }[];
@@ -2895,6 +2918,7 @@ export function createApiClient(config: ApiConfig): {
         enabled_sub_services: string[];
         granted_scopes: string[];
         unreachable_sub_services: string[];
+        scopes_wanted: string[];
         auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
         created_at: string;
     }>;
@@ -3014,7 +3038,7 @@ export function createApiClient(config: ApiConfig): {
             mode: "unreachable";
         } | null;
     }>;
-    readonly completeOAuth: (state: string, code: string, error?: string) => Promise<{
+    readonly completeOAuth: (state: string, code: string, error?: string, iss?: string) => Promise<{
         kind: "success";
         connection_id: string;
         return_url: string;
@@ -3054,6 +3078,166 @@ export function createApiClient(config: ApiConfig): {
     } | {
         kind: "cancelled";
         message: string;
+    }>;
+    readonly discoverServer: (target: DiscoverServerTarget) => Promise<{
+        url: string;
+        resource: string;
+        resource_name: string | null;
+        issuer: string;
+        authorization_servers: string[];
+        client_issuer: string | null;
+        registration_supported: boolean;
+        automatic_client: boolean;
+        scopes_supported: string[];
+        suggested_id: string;
+        suggested_display_name: string;
+        redirect_uri: string | null;
+    }>;
+    readonly addServer: (args: AddServerArgs) => Promise<{
+        provider: {
+            id: string;
+            display_name: string;
+            description: string;
+            icon_url: string | null;
+            kind: "none" | "oauth";
+            origin: "system" | "community";
+            category: string;
+            sub_services: {
+                id: string;
+                display_name: string;
+                description: string;
+                scopes: string[];
+            }[];
+            config_fields: {
+                key: string;
+                label: string;
+                target: "env" | "header";
+                required: boolean;
+                secret: boolean;
+            }[];
+            removable: boolean;
+            client_source: "manual" | "env" | "dynamic" | "unset" | null;
+        };
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        } | null;
+    }>;
+    readonly removeProvider: (id: string) => Promise<{
+        provider_id: string;
+        removed_clients: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        } | null;
+    }>;
+    readonly setProviderClient: (id: string, args: SetProviderClientArgs) => Promise<{
+        provider: {
+            id: string;
+            display_name: string;
+            description: string;
+            icon_url: string | null;
+            kind: "none" | "oauth";
+            origin: "system" | "community";
+            category: string;
+            sub_services: {
+                id: string;
+                display_name: string;
+                description: string;
+                scopes: string[];
+            }[];
+            config_fields: {
+                key: string;
+                label: string;
+                target: "env" | "header";
+                required: boolean;
+                secret: boolean;
+            }[];
+            removable: boolean;
+            client_source: "manual" | "env" | "dynamic" | "unset" | null;
+        };
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        } | null;
     }>;
     readonly setMcpSecretEnv: (body: SetMcpSecretEnvBody) => Promise<{
         status: string;
@@ -4742,6 +4926,32 @@ const disconnectResult: z.ZodObject<{
         mode: z.ZodLiteral<"unreachable">;
     }, z.core.$strip>], "mode">>;
 }, z.core.$strip>;
+
+// @public (undocumented)
+export type DiscoveredServer = z.infer<typeof discoveredServer>;
+
+// @public
+const discoveredServer: z.ZodObject<{
+    url: z.ZodString;
+    resource: z.ZodString;
+    resource_name: z.ZodNullable<z.ZodString>;
+    issuer: z.ZodString;
+    authorization_servers: z.ZodArray<z.ZodString>;
+    client_issuer: z.ZodNullable<z.ZodString>;
+    registration_supported: z.ZodBoolean;
+    automatic_client: z.ZodBoolean;
+    scopes_supported: z.ZodArray<z.ZodString>;
+    suggested_id: z.ZodString;
+    suggested_display_name: z.ZodString;
+    redirect_uri: z.ZodNullable<z.ZodString>;
+}, z.core.$strip>;
+
+// @public
+export type DiscoverServerTarget = {
+    readonly url: string;
+} | {
+    readonly providerId: string;
+};
 
 // @public (undocumented)
 export type DisplayBlock = z.infer<typeof displayBlock>;
@@ -7589,13 +7799,16 @@ const profileApplyResponse: z.ZodObject<{
 // @public (undocumented)
 export type ProviderCatalogResponse = z.infer<typeof providers>;
 
+// @public (undocumented)
+export type ProviderMutationResult = z.infer<typeof providerMutationResult>;
+
 // @public
-const providers: z.ZodObject<{
-    providers: z.ZodArray<z.ZodObject<{
+const providerMutationResult: z.ZodObject<{
+    provider: z.ZodObject<{
         id: z.ZodString;
         display_name: z.ZodString;
         description: z.ZodString;
-        icon_url: z.ZodURL;
+        icon_url: z.ZodNullable<z.ZodURL>;
         kind: z.ZodEnum<{
             none: "none";
             oauth: "oauth";
@@ -7621,6 +7834,103 @@ const providers: z.ZodObject<{
             required: z.ZodBoolean;
             secret: z.ZodBoolean;
         }, z.core.$strip>>;
+        removable: z.ZodDefault<z.ZodBoolean>;
+        client_source: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            manual: "manual";
+            env: "env";
+            dynamic: "dynamic";
+            unset: "unset";
+        }>>>;
+    }, z.core.$strip>;
+    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        mode: z.ZodLiteral<"local-only">;
+        note: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        op: z.ZodString;
+        reachable: z.ZodBoolean;
+        local_only: z.ZodBoolean;
+        results: z.ZodArray<z.ZodObject<{
+            name: z.ZodString;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                applied: "applied";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+            error: z.ZodNullable<z.ZodString>;
+            detail: z.ZodNullable<z.ZodString>;
+        }, z.core.$strip>>;
+        error: z.ZodNullable<z.ZodString>;
+        mode: z.ZodLiteral<"fleet">;
+    }, z.core.$strip>, z.ZodObject<{
+        op: z.ZodString;
+        reachable: z.ZodBoolean;
+        local_only: z.ZodBoolean;
+        results: z.ZodArray<z.ZodObject<{
+            name: z.ZodString;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                applied: "applied";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+            error: z.ZodNullable<z.ZodString>;
+            detail: z.ZodNullable<z.ZodString>;
+        }, z.core.$strip>>;
+        error: z.ZodNullable<z.ZodString>;
+        mode: z.ZodLiteral<"unreachable">;
+    }, z.core.$strip>], "mode">>;
+}, z.core.$strip>;
+
+// @public
+const providers: z.ZodObject<{
+    providers: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        display_name: z.ZodString;
+        description: z.ZodString;
+        icon_url: z.ZodNullable<z.ZodURL>;
+        kind: z.ZodEnum<{
+            none: "none";
+            oauth: "oauth";
+        }>;
+        origin: z.ZodEnum<{
+            system: "system";
+            community: "community";
+        }>;
+        category: z.ZodString;
+        sub_services: z.ZodArray<z.ZodObject<{
+            id: z.ZodString;
+            display_name: z.ZodString;
+            description: z.ZodString;
+            scopes: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>>;
+        config_fields: z.ZodArray<z.ZodObject<{
+            key: z.ZodString;
+            label: z.ZodString;
+            target: z.ZodEnum<{
+                env: "env";
+                header: "header";
+            }>;
+            required: z.ZodBoolean;
+            secret: z.ZodBoolean;
+        }, z.core.$strip>>;
+        removable: z.ZodDefault<z.ZodBoolean>;
+        client_source: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            manual: "manual";
+            env: "env";
+            dynamic: "dynamic";
+            unset: "unset";
+        }>>>;
     }, z.core.$strip>>;
     categories: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
@@ -7637,7 +7947,7 @@ const providerView: z.ZodObject<{
     id: z.ZodString;
     display_name: z.ZodString;
     description: z.ZodString;
-    icon_url: z.ZodURL;
+    icon_url: z.ZodNullable<z.ZodURL>;
     kind: z.ZodEnum<{
         none: "none";
         oauth: "oauth";
@@ -7663,6 +7973,13 @@ const providerView: z.ZodObject<{
         required: z.ZodBoolean;
         secret: z.ZodBoolean;
     }, z.core.$strip>>;
+    removable: z.ZodDefault<z.ZodBoolean>;
+    client_source: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+        manual: "manual";
+        env: "env";
+        dynamic: "dynamic";
+        unset: "unset";
+    }>>>;
 }, z.core.$strip>;
 
 // @public
@@ -7794,6 +8111,63 @@ const reloadConfigResult: z.ZodObject<{
         error: z.ZodNullable<z.ZodString>;
         mode: z.ZodLiteral<"unreachable">;
     }, z.core.$strip>], "mode">;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type RemoveProviderResult = z.infer<typeof removeProviderResult>;
+
+// @public
+const removeProviderResult: z.ZodObject<{
+    provider_id: z.ZodString;
+    removed_clients: z.ZodNumber;
+    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        mode: z.ZodLiteral<"local-only">;
+        note: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        op: z.ZodString;
+        reachable: z.ZodBoolean;
+        local_only: z.ZodBoolean;
+        results: z.ZodArray<z.ZodObject<{
+            name: z.ZodString;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                applied: "applied";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+            error: z.ZodNullable<z.ZodString>;
+            detail: z.ZodNullable<z.ZodString>;
+        }, z.core.$strip>>;
+        error: z.ZodNullable<z.ZodString>;
+        mode: z.ZodLiteral<"fleet">;
+    }, z.core.$strip>, z.ZodObject<{
+        op: z.ZodString;
+        reachable: z.ZodBoolean;
+        local_only: z.ZodBoolean;
+        results: z.ZodArray<z.ZodObject<{
+            name: z.ZodString;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                applied: "applied";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+            error: z.ZodNullable<z.ZodString>;
+            detail: z.ZodNullable<z.ZodString>;
+        }, z.core.$strip>>;
+        error: z.ZodNullable<z.ZodString>;
+        mode: z.ZodLiteral<"unreachable">;
+    }, z.core.$strip>], "mode">>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -8312,6 +8686,12 @@ declare namespace s {
         patchSubServicesResult,
         oauthCompleteResult,
         OAuthCompleteResult,
+        discoveredServer,
+        DiscoveredServer,
+        providerMutationResult,
+        ProviderMutationResult,
+        removeProviderResult,
+        RemoveProviderResult,
         conversationDoor,
         ConversationDoor,
         conversationTargetKind,
@@ -8926,6 +9306,12 @@ declare namespace schemas {
         patchSubServicesResult,
         oauthCompleteResult,
         OAuthCompleteResult,
+        discoveredServer,
+        DiscoveredServer,
+        providerMutationResult,
+        ProviderMutationResult,
+        removeProviderResult,
+        RemoveProviderResult,
         conversationDoor,
         ConversationDoor,
         conversationTargetKind,
@@ -9452,6 +9838,18 @@ interface SetMcpSecretEnvBody {
     readonly manifest_pointer: string;
     // (undocumented)
     readonly value: string;
+}
+
+// @public
+export interface SetProviderClientArgs {
+    // (undocumented)
+    readonly client_id: string;
+    // (undocumented)
+    readonly client_secret?: string | null;
+    // (undocumented)
+    readonly issuer?: string;
+    // (undocumented)
+    readonly token_endpoint_auth_method?: 'client_secret_post' | 'client_secret_basic' | 'none';
 }
 
 // @public (undocumented)

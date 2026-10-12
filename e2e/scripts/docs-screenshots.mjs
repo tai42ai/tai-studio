@@ -98,6 +98,9 @@
  *                  resolved routes, the per-item base-prefix remap input, and the
  *                  public-route acceptance checkbox, all from the minimal seeded
  *                  registry the runner boots (MARKETPLACE_URL).
+ *   - connectors-add-server — the Connectors page with the "Add MCP server" dialog at its
+ *                  review step, the single look-up answered by a route stub (the demo
+ *                  backend has no OAuth-protected server to look up); nothing is added.
  *   - conversations — the conversation monitor at its deepest level: a seeded route's
  *                  thread list beside one thread's transcript, both populated by the
  *                  real turns the runner drives through the authed api door.
@@ -520,6 +523,23 @@ function attachmentPageOf(items, extra = {}) {
     ...extra,
   };
 }
+
+// The look-up answer the `connectors-add-server` frame stubs: a server that signs in at
+// one service and registers apps by itself.
+const ADD_SERVER_LOOKUP = {
+  url: 'https://mcp.example.com/mcp',
+  resource: 'https://mcp.example.com/mcp',
+  resource_name: 'Remote files',
+  issuer: 'https://login.example.com',
+  authorization_servers: ['https://login.example.com'],
+  client_issuer: null,
+  registration_supported: true,
+  automatic_client: true,
+  scopes_supported: ['files.read', 'files.write'],
+  suggested_id: 'remote_files',
+  suggested_display_name: 'Remote files',
+  redirect_uri: null,
+};
 
 const AUTHED_PAGES = [
   // The ExplorerView count summary ("N tools") proves the catalog rendered populated.
@@ -1175,6 +1195,36 @@ const AUTHED_PAGES = [
         .waitFor({ state: 'visible', timeout: 8000 });
       await dialog
         .getByText('I accept these routes are served without authentication')
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
+  {
+    // The Connectors page with the "Add MCP server" dialog at its review step: where the
+    // server signs in, its app registration, and the prefilled name, identifier and scopes.
+    // The single look-up call is answered by a route stub — the docs-demo backend has no
+    // OAuth-protected server to look up — and nothing is added, so the frame is
+    // deterministic. Modal (background nav inert), so the plugin-nav wait is skipped.
+    name: 'connectors-add-server',
+    path: '/connectors',
+    wait: 'button:has-text("Add MCP server")',
+    awaitPluginNav: false,
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/connectors/providers/discover',
+        (route) => route.fulfill({ json: { data: ADD_SERVER_LOOKUP } }),
+      );
+    },
+    action: async (page) => {
+      await page
+        .getByRole('region', { name: 'Providers' })
+        .getByRole('button', { name: 'Add MCP server' })
+        .first()
+        .click();
+      const dialog = page.getByRole('dialog', { name: 'Add MCP server' });
+      await dialog.getByLabel('Server address').fill(ADD_SERVER_LOOKUP.url);
+      await dialog.getByRole('button', { name: 'Look up' }).click();
+      await dialog
+        .getByRole('button', { name: 'Add server' })
         .waitFor({ state: 'visible', timeout: 8000 });
     },
   },

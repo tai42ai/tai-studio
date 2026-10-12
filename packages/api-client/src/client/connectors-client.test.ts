@@ -1,7 +1,8 @@
 /**
  * Transport-level tests for the connectors client methods: `listProviders`,
  * `listConnections`, `getConnection`, `startConnect`, `disconnect`, `reconnect`,
- * `patchSubServices`, `completeOAuth` — URL (+ id encoding), HTTP method,
+ * `patchSubServices`, `completeOAuth`, and the provider door (`discoverServer`, `addServer`,
+ * `removeProvider`, `setProviderClient`) — URL (+ id encoding), HTTP method,
  * request-body shaping, the `{ data }` envelope unwrap (including the connect-start
  * and oauth-complete discriminated unions), and a LOUD error on a 4xx `{error}`
  * plus an `ApiSchemaError` on a drifting response. A fake `fetch` records each
@@ -71,6 +72,21 @@ const connection = {
   granted_scopes: ['repo'],
   auth_health_state: 'healthy',
   created_at: '2026-07-11T00:00:00Z',
+};
+
+const discovered = {
+  url: 'https://mcp.example.com/mcp',
+  resource: 'https://mcp.example.com/mcp',
+  resource_name: 'Remote files',
+  issuer: 'https://login.example.com',
+  authorization_servers: ['https://login.example.com'],
+  client_issuer: null,
+  registration_supported: true,
+  automatic_client: true,
+  scopes_supported: ['files.read', 'files.write'],
+  suggested_id: 'remote_files',
+  suggested_display_name: 'Remote files',
+  redirect_uri: 'https://studio.example.com/oauth/callback',
 };
 
 describe('connectors client transport', () => {
@@ -263,6 +279,18 @@ describe('connectors client transport', () => {
     expect(out.kind).toBe('success');
   });
 
+  it("completeOAuth sends the redirect's iss when it has one", async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { kind: 'failed', reason: 'IssuerMismatch' } }),
+    );
+    await client.completeOAuth('st', 'cd', undefined, 'https://login.example.com');
+    expect(captured[0]?.body).toEqual({
+      state: 'st',
+      code: 'cd',
+      iss: 'https://login.example.com',
+    });
+  });
+
   it('completeOAuth parses the cancelled variant and carries the error through the body', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({ data: { kind: 'cancelled', message: 'user cancelled' } }),
@@ -292,11 +320,139 @@ describe('connectors client transport', () => {
     await expect(client.listProviders()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 
-  it('throws ApiSchemaError LOUDLY on a null connector icon_url (icon_url is non-nullable)', async () => {
+  it('listProviders parses a provider added by address: a null icon, removable, client_source', async () => {
     const { client } = harness(() =>
-      jsonResponse({ data: { providers: [{ ...provider, icon_url: null }], categories: [] } }),
+      jsonResponse({
+        data: {
+          providers: [
+            { ...provider, icon_url: null, removable: true, client_source: 'manual' },
+            provider,
+          ],
+          categories: [],
+        },
+      }),
+    );
+    const out = await client.listProviders();
+    expect(out.providers[0]?.icon_url).toBeNull();
+    expect(out.providers[0]?.removable).toBe(true);
+    expect(out.providers[0]?.client_source).toBe('manual');
+    // A catalog entry that names neither field reads as not removable with no client source.
+    expect(out.providers[1]?.removable).toBe(false);
+    expect(out.providers[1]?.client_source).toBeNull();
+  });
+
+  it('throws ApiSchemaError LOUDLY on an unknown client_source', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: { providers: [{ ...provider, client_source: 'borrowed' }], categories: [] },
+      }),
     );
     await expect(client.listProviders()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('a connection carries the scopes a tool asked for, empty when the view names none', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          items: [{ ...connection, scopes_wanted: ['files.write', 'files.read'] }, connection],
+          total: 2,
+        },
+      }),
+    );
+    const out = await client.listConnections();
+    expect(out.items[0]?.scopes_wanted).toEqual(['files.write', 'files.read']);
+    expect(out.items[1]?.scopes_wanted).toEqual([]);
+  });
+
+  it('discoverServer POSTs { url } for an address and parses the look-up', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: discovered }));
+    const out = await client.discoverServer({ url: 'https://mcp.example.com/mcp' });
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/connectors/providers/discover');
+    expect(captured[0]?.body).toEqual({ url: 'https://mcp.example.com/mcp' });
+    expect(out.automatic_client).toBe(true);
+    expect(out.client_issuer).toBeNull();
+    expect(out.redirect_uri).toBe('https://studio.example.com/oauth/callback');
+  });
+
+  it('discoverServer POSTs { provider_id } for an existing provider', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: { ...discovered, client_issuer: 'https://login.example.com', redirect_uri: null },
+      }),
+    );
+    const out = await client.discoverServer({ providerId: 'remote_files' });
+    expect(captured[0]?.body).toEqual({ provider_id: 'remote_files' });
+    expect(out.client_issuer).toBe('https://login.example.com');
+    expect(out.redirect_uri).toBeNull();
+  });
+
+  it('addServer POSTs the body to the providers route and parses the new catalog entry + fanout', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: {
+          provider: { ...provider, id: 'remote_files', icon_url: null, removable: true },
+          fanout: {
+            mode: 'local-only',
+            note: 'no worker bus configured; only this worker reloaded',
+          },
+        },
+      }),
+    );
+    const out = await client.addServer({
+      url: 'https://mcp.example.com/mcp',
+      id: 'remote_files',
+      display_name: 'Remote files',
+      scopes: ['files.read'],
+    });
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/connectors/providers');
+    expect(captured[0]?.body).toEqual({
+      url: 'https://mcp.example.com/mcp',
+      id: 'remote_files',
+      display_name: 'Remote files',
+      scopes: ['files.read'],
+    });
+    expect(out.provider.id).toBe('remote_files');
+    expect(out.fanout?.mode).toBe('local-only');
+  });
+
+  it('removeProvider DELETEs the id-encoded provider route and parses the result', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { provider_id: 'remote files', removed_clients: 1, fanout: null } }),
+    );
+    const out = await client.removeProvider('remote files');
+    expect(captured[0]?.method).toBe('DELETE');
+    expect(captured[0]?.url).toBe('/api/connectors/providers/remote%20files');
+    expect(out.removed_clients).toBe(1);
+    expect(out.fanout).toBeNull();
+  });
+
+  it('setProviderClient PUTs the credentials to the provider client route', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { provider: { ...provider, client_source: 'manual' }, fanout: null } }),
+    );
+    const out = await client.setProviderClient('remote_files', {
+      client_id: 'app-1',
+      client_secret: 'not-a-real-secret',
+      issuer: 'https://login.example.com',
+    });
+    expect(captured[0]?.method).toBe('PUT');
+    expect(captured[0]?.url).toBe('/api/connectors/providers/remote_files/client');
+    expect(captured[0]?.body).toEqual({
+      client_id: 'app-1',
+      client_secret: 'not-a-real-secret',
+      issuer: 'https://login.example.com',
+    });
+    expect(out.provider.client_source).toBe('manual');
+  });
+
+  it('rejects an unsafe provider id before any request', () => {
+    const rule = /path segment must not be/;
+    const { client, captured } = harness(() => jsonResponse({ data: {} }));
+    expect(() => client.removeProvider('..')).toThrow(rule);
+    expect(() => client.setProviderClient('..', { client_id: 'x' })).toThrow(rule);
+    expect(captured).toHaveLength(0);
   });
 
   // A `.`/`..`/absolute/empty connection id would be collapsed by the browser URL
