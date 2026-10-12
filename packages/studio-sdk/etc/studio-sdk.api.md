@@ -13410,6 +13410,17 @@ const mcpStatus: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public
+export function MediaDocument(input: MediaDocumentProps): ReactNode;
+
+// @public (undocumented)
+export interface MediaDocumentProps {
+    readonly label: string;
+    readonly renderNotice: (url: string) => ReactNode;
+    // (undocumented)
+    readonly url: string;
+}
+
+// @public
 function MediaImage_2(input: MediaImageProps): ReactNode;
 export { MediaImage_2 as MediaImage }
 
@@ -13435,6 +13446,19 @@ const mediaKind: z.ZodEnum<{
     video: "video";
     audio: "audio";
 }>;
+
+// @public
+export function MediaPlayer(input: MediaPlayerProps): ReactNode;
+
+// @public (undocumented)
+export interface MediaPlayerProps {
+    // (undocumented)
+    readonly kind: 'audio' | 'video';
+    readonly label: string;
+    readonly renderNotice: (state: 'blocked' | 'failed', url: string) => ReactNode;
+    // (undocumented)
+    readonly url: string;
+}
 
 // @public (undocumented)
 type MemberActionCatalog = z.infer<typeof memberActionCatalog>;

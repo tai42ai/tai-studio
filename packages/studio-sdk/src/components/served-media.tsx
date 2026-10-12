@@ -187,3 +187,123 @@ export function MediaImage({
     </div>
   );
 }
+
+// -- document item -----------------------------------------------------------
+
+const chipStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--tai-space-2)',
+};
+
+const labelStyle: CSSProperties = {
+  wordBreak: 'break-all',
+};
+
+export interface MediaDocumentProps {
+  readonly url: string;
+  /** The download label: the item's filename or caption, or the caller's default. */
+  readonly label: string;
+  /** Render the notice shown when the url fails the src gate. */
+  readonly renderNotice: (url: string) => ReactNode;
+}
+
+/**
+ * One document: a labelled download affordance. The served route sends
+ * `Content-Disposition: attachment` for documents, so the anchor `download`-hints and
+ * opens in a new tab; `rel="noreferrer"` stops the Studio URL leaking to the media
+ * host. A url that fails {@link isRenderableMediaSrc} is the caller's notice, never a
+ * live href.
+ */
+export function MediaDocument({ url, label, renderNotice }: MediaDocumentProps): ReactNode {
+  const { baseUrl } = useApi();
+  if (!isRenderableMediaSrc(url)) return renderNotice(url);
+  return (
+    <div style={chipStyle} data-testid="media-document">
+      <Badge variant="neutral">Document</Badge>
+      <a
+        href={resolveMediaSrc(url, baseUrl)}
+        target="_blank"
+        rel="noreferrer"
+        download
+        title={label}
+        style={labelStyle}
+      >
+        {label}
+      </a>
+    </div>
+  );
+}
+
+// -- audio / video item ------------------------------------------------------
+
+const audioStyle: CSSProperties = {
+  width: '100%',
+};
+
+const videoStyle: CSSProperties = {
+  maxWidth: '100%',
+  maxHeight: '320px',
+  width: 'auto',
+  height: 'auto',
+  borderRadius: 'var(--tai-radius-md)',
+  border: '1px solid var(--tai-color-border)',
+};
+
+export interface MediaPlayerProps {
+  readonly kind: 'audio' | 'video';
+  readonly url: string;
+  /** The player's accessible label. */
+  readonly label: string;
+  /**
+   * Render the notice shown when no player is displayed: `state` is `'blocked'` when
+   * the url is not a served reference and `'failed'` when it fails to LOAD.
+   */
+  readonly renderNotice: (state: 'blocked' | 'failed', url: string) => ReactNode;
+}
+
+/**
+ * A native `<audio>`/`<video controls>` player. `referrerPolicy` is not a valid
+ * attribute on `<audio>`/`<video>`, so a remote load has no per-element referrer
+ * control; the player therefore admits ONLY the platform's own served-media reference
+ * ({@link isServedMediaUrl}: same-origin, leaking no page URL to a media host), and any
+ * other url, a bare `https:` one included, is the caller's notice. The load-failure
+ * flag keys on the url that failed so a new url at the same position gets a fresh load.
+ */
+export function MediaPlayer({ kind, url, label, renderNotice }: MediaPlayerProps): ReactNode {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const { baseUrl } = useApi();
+
+  if (!isServedMediaUrl(url)) return renderNotice('blocked', url);
+  if (failedUrl === url) return renderNotice('failed', url);
+
+  const src = resolveMediaSrc(url, baseUrl);
+  const onError = (): void => {
+    setFailedUrl(url);
+  };
+  return (
+    <div style={itemStyle}>
+      {kind === 'audio' ? (
+        // eslint-disable-next-line jsx-a11y/media-has-caption -- a media item carries no caption track
+        <audio
+          controls
+          src={src}
+          aria-label={label}
+          onError={onError}
+          style={audioStyle}
+          data-testid="media-audio"
+        />
+      ) : (
+        // eslint-disable-next-line jsx-a11y/media-has-caption -- a media item carries no caption track
+        <video
+          controls
+          src={src}
+          aria-label={label}
+          onError={onError}
+          style={videoStyle}
+          data-testid="media-video"
+        />
+      )}
+    </div>
+  );
+}

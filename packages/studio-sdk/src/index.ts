@@ -294,11 +294,17 @@ export type { HeadingLevel, MarkdownBlock, MarkdownProps } from './components/ma
 export { Markdown, parseMarkdown } from './components/markdown';
 export type { OpenTargetOptions, OpenTargetProps } from './components/open-target';
 export { openTargetProps } from './components/open-target';
-export type { MediaImageProps } from './components/served-media';
+export type {
+  MediaDocumentProps,
+  MediaImageProps,
+  MediaPlayerProps,
+} from './components/served-media';
 export {
   isRenderableMediaSrc,
   isServedMediaUrl,
+  MediaDocument,
   MediaImage,
+  MediaPlayer,
   resolveMediaSrc,
 } from './components/served-media';
 // The URL half of the link-safety pair: `isSafeHttpUrl` answers yes/no, this one
