@@ -7516,7 +7516,7 @@ export interface FailedMcpEntry {
 }
 
 // @public
-export function failedMcpsFromReport(result: FleetResult): FailedMcpEntry[];
+export function failedMcpsFromReport(result: Omit<FleetResult, 'ok'>): FailedMcpEntry[];
 
 // @public
 export type FleetFailureOutcome = Exclude<FleetOutcome, 'applied'>;
