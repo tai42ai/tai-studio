@@ -98,6 +98,7 @@ export function scopedProjection(overrides: Partial<MeProjection> = {}): MeProje
 const baseProjection: MeProjection = {
   user_id: 'u-test',
   owner_user_id: null,
+  principal: null,
   admin: false,
   public_resource_id: 'public',
   scopes: [],

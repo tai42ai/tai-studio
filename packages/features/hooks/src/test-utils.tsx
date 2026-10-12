@@ -147,6 +147,7 @@ export function apiKey(overrides: Partial<TokensPayload[number]> = {}): TokensPa
 const baseProjection: MeProjection = {
   user_id: 'u-test',
   owner_user_id: null,
+  principal: null,
   admin: false,
   public_resource_id: 'public',
   scopes: [],

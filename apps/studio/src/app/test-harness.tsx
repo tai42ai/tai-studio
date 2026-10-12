@@ -29,6 +29,7 @@ const SESSION_KEY = 'tai-studio.apiKey';
 export const FULL_PROJECTION: MeProjection = {
   user_id: 'u-admin',
   owner_user_id: null,
+  principal: null,
   admin: true,
   public_resource_id: 'public',
   scopes: ['*'],
