@@ -262,9 +262,9 @@ function ImportReportTable({ report }: { readonly report: BackupImportReport }):
   const minted = entries.flatMap(([name, section]) =>
     (section.details.new_api_keys ?? []).map((key) => ({ section: name, ...key })),
   );
-  // The `manifest` and `env` restores apply through the config pipeline, so their
-  // report carries a fleet fan-out; surface any failed propagation honestly, with the
-  // workers the restore leaves awaiting a respawn.
+  // A section whose restore broadcast (the `manifest` and `env` reloads, the templates
+  // cache eviction) carries a fleet fan-out; surface any failed propagation honestly, with
+  // the workers the restore leaves awaiting a respawn.
   const fleetReports = entries
     .map(([name, section]) => ({
       name,
