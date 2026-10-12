@@ -98,6 +98,28 @@ them. To point one CI run at a stack, use the workflow's `workflow_dispatch`
 Before any commit, run a secret scan over the tree (e.g. `detect-secrets scan`) —
 never commit a real `.env` or an API key.
 
+## Regenerating the client after a platform change
+
+`@tai42/api-client` is generated from two artifacts the platform publishes, vendored
+under `packages/api-client/contract-schema/`: the contract's JSON-schema bundle
+(`contract-schema.json`) and the skeleton's OpenAPI artifact (`openapi.json`). After a
+platform change, re-vendor both from one checkout of the platform repository and
+regenerate:
+
+```bash
+TAI42_REPO=/path/to/a/platform/checkout pnpm --filter @tai42/api-client run schema:refresh
+```
+
+`schema:refresh` is the only step that reaches outside this tree, so it runs by hand;
+the node gate runs `schema:check`, which fails when a generated file is stale. Commit
+the two vendored files and the regenerated `src/generated/` files together.
+
+A platform major is vendored only once it is published to PyPI: the
+`api-client-contract-pin` job fails when the latest published `tai42-contract` or
+`tai42-skeleton` leaves the vendored major. The re-vendor of a new contract major and
+the docs-demo fixture's `contract` range (`e2e/docs-demo/marketplace-registry.py`) move
+in one commit, after the platform release is on PyPI.
+
 ## Commits and releases
 
 Commits and PR titles follow [Conventional Commits](https://www.conventionalcommits.org)
