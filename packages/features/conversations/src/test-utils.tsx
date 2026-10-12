@@ -16,13 +16,14 @@
  * expects, and the reason a render that never touches a write control drives no
  * capability fetch (so it schedules no late state update to warn about).
  */
-import type {
-  ApiClient,
-  ConversationMessage,
-  ConversationRouteView,
-  ConversationThread,
-  MeProjection,
-  TargetConversationConfig,
+import {
+  type ApiClient,
+  type ConversationMessage,
+  type ConversationRouteView,
+  type ConversationThread,
+  type MeProjection,
+  schemas,
+  type TargetConversationConfig,
 } from '@tai42/api-client';
 import type { NavigateOptions, NavigationContextValue, RouteSearch } from '@tai42/studio-sdk';
 import {
@@ -289,8 +290,15 @@ export function makeThread(overrides: Partial<ConversationThread> = {}): Convers
   };
 }
 
-export function makeMessage(overrides: Partial<ConversationMessage> = {}): ConversationMessage {
-  return {
+/** A record as the server may send it: its defaulted fields may be left out. */
+type ConversationMessageInput = (typeof schemas.conversationMessage)['_zod']['input'];
+
+export function makeMessage(
+  overrides: Partial<ConversationMessageInput> = {},
+): ConversationMessage {
+  // Parsed through the record schema, so the fixture carries every field the server
+  // publishes (the defaulted ones at their defaults).
+  return schemas.conversationMessage.parse({
     message_id: 'm1',
     route_name: 'chat',
     door: 'channel',
@@ -307,7 +315,7 @@ export function makeMessage(overrides: Partial<ConversationMessage> = {}): Conve
     created_at: 1_800_000_000,
     updated_at: 1_800_000_001,
     ...overrides,
-  };
+  });
 }
 
 /** One page of results, shaped as the paged read doors return it. */

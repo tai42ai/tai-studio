@@ -15,6 +15,8 @@
  * in an attribute sink and is not echoed in the notice. There is no
  * `dangerouslySetInnerHTML` here.
  *
+ * A `link` item renders as a scheme-checked external link.
+ *
  * Every failure state is LOUD: a parse failure is a malformed alert, a url that fails
  * the src gate or an element that fails to LOAD is a "failed to load" alert.
  */
@@ -22,6 +24,7 @@ import type { AttachmentMediaItem } from '@tai42/api-client';
 import { schemas } from '@tai42/api-client';
 import {
   Badge,
+  ExternalLinkButton,
   isRenderableMediaSrc,
   isServedMediaUrl,
   MediaImage,
@@ -241,6 +244,15 @@ function AttachmentItem({
   }
   if (media.kind === 'document') {
     return <DocumentAttachment url={media.url} label={filename ?? caption ?? 'Attachment'} />;
+  }
+  if (media.kind === 'link') {
+    // A link: `ExternalLinkButton` scheme-checks the href, so a non-http(s) url is
+    // neutralized to non-navigable text.
+    return (
+      <div data-testid="attachment-link">
+        <ExternalLinkButton url={media.url}>{caption ?? media.url}</ExternalLinkButton>
+      </div>
+    );
   }
   return (
     <MediaPlayer

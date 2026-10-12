@@ -4,6 +4,7 @@
  * message and an agent's answer both reach the screen as escaped text, never as
  * live markup.
  */
+import type { ConversationMessage } from '@tai42/api-client';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
@@ -304,9 +305,14 @@ describe('Exchange — inbound attachments', () => {
   it('shows a malformed-attachment notice for an unparseable item', () => {
     renderWithProviders(
       <Exchange
-        record={makeMessage({
-          inbound_attachments: [{ kind: 'image', url: SERVED }, { junk: true }],
-        })}
+        record={{
+          ...makeMessage({ inbound_attachments: [{ kind: 'image', url: SERVED }] }),
+          // An item past the record schema: the renderer still validates each one.
+          inbound_attachments: [
+            { kind: 'image', url: SERVED, caption: null, filename: null },
+            { junk: true },
+          ] as unknown as ConversationMessage['inbound_attachments'],
+        }}
       />,
       { client: { baseUrl: '' } },
     );
@@ -314,6 +320,22 @@ describe('Exchange — inbound attachments', () => {
     expect(screen.getByText('Attachment 2 is malformed and was not shown.')).toBeInTheDocument();
     // The good item still renders — one malformed item never vanishes the rest.
     expect(document.querySelector('img')).not.toBeNull();
+  });
+
+  it('renders a link attachment as a scheme-checked external link', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeMessage({
+          inbound_attachments: [
+            { kind: 'link', url: 'https://example.com/notes', caption: 'Notes' },
+          ],
+        })}
+      />,
+      { client: { baseUrl: '' } },
+    );
+
+    const link = screen.getByTestId('attachment-link');
+    expect(within(link).getByText('Notes')).toBeInTheDocument();
   });
 
   it('shows the shared attachment notice for a blocked document url, with no live anchor', () => {

@@ -221,7 +221,7 @@ export function KeysTable({
                   <TD>{payload.description}</TD>
                   <TD>
                     <div style={badgeRowStyle}>
-                      {payload.scopes.map((scope) => (
+                      {(payload.scopes ?? []).map((scope) => (
                         <Badge key={scope} variant="neutral">
                           {scope}
                         </Badge>

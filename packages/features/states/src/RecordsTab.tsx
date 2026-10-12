@@ -345,7 +345,11 @@ function SubjectsBrowser({
  * save: their rows show the last applied data. "Pending saves" scrolls to the card that retries
  * or discards the save. Nothing renders when no subject is held.
  */
-function HeldSubjectsLine({ held }: { readonly held: readonly HeldPendingSave[] }): ReactNode {
+function HeldSubjectsLine({
+  held = [],
+}: {
+  readonly held?: readonly HeldPendingSave[] | undefined;
+}): ReactNode {
   const subjects = new Set(
     held.flatMap((save) => save.subjects.map((subject) => subjectIdentity(subject))),
   );

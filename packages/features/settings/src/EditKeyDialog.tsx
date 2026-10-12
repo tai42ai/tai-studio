@@ -30,7 +30,7 @@ export function EditKeyDialog({
   const queryClient = useQueryClient();
   const [description, setDescription] = useState(payload.description);
   const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(payload.scopes.filter((s) => s !== publicId)),
+    () => new Set((payload.scopes ?? []).filter((s) => s !== publicId)),
   );
   const [policyFields, setPolicyFields] = useState<PolicyFields>({});
   const [conditionTestFailed, setConditionTestFailed] = useState(false);
