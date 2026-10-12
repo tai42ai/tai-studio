@@ -50,16 +50,14 @@ function DisplayBlockView({
 }): ReactNode {
   // A `slot` names a data key whose current value the block shows in place of static text
   // (filled from the send data and/or a reaction's `display` update).
-  const slotText =
-    block.slot !== undefined && block.slot !== null ? slotValueText(slots[block.slot]) : undefined;
+  const slotText = block.slot !== null ? slotValueText(slots[block.slot]) : undefined;
 
   if (block.kind === 'image') return renderDisplayImage(block);
 
   const text = slotText ?? (typeof block.text === 'string' ? block.text : '');
   if (text === '') return null;
   const style = block.kind === 'heading' ? displayHeadingStyle : displayBodyStyle;
-  const testId =
-    block.slot !== undefined && block.slot !== null ? `form-slot-${block.slot}` : undefined;
+  const testId = block.slot !== null ? `form-slot-${block.slot}` : undefined;
   return (
     <p style={style} data-testid={testId}>
       {text}

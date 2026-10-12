@@ -39,7 +39,7 @@ export function isExecutionKeyListEmpty(query: ExecutionKeyQuery): boolean {
 function keyFingerprint(key: TokensPayload[number]): string | undefined {
   const data = key.policy_data;
   if (typeof data !== 'object' || data === null) return undefined;
-  const value = (data as Record<string, unknown>).key_fingerprint;
+  const value = data.key_fingerprint;
   return typeof value === 'string' ? value : undefined;
 }
 

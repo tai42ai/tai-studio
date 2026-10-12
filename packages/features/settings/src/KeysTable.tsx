@@ -99,7 +99,7 @@ function PrincipalCell({ payload }: { readonly payload: KeyPayload }): ReactNode
   }
   return (
     <span style={principalCellStyle} title="No principal (orphaned key — re-import the backup)">
-      —{payload.orphaned === true ? <Badge variant="danger">orphaned</Badge> : null}
+      —{payload.orphaned ? <Badge variant="danger">orphaned</Badge> : null}
     </span>
   );
 }

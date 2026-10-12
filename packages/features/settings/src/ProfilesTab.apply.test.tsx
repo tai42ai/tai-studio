@@ -69,7 +69,7 @@ function applyReport(): ReturnType<ApiClient['applySettingsProfile']> {
       { name: 'serve-2', kind: 'serve', status: 'self-deferred', generation_before: 2 },
     ],
     fresh: [{ name: 'serve-1', kind: 'serve', generation: 5 }],
-    refused: [] as { key: string; reason: string }[],
+    refused: [] as string[],
     recycle_stopped: null,
     awaiting_respawn: [],
     fanout: {
@@ -181,7 +181,7 @@ describe('ProfilesTab — apply', () => {
         // The fresh life carries a DIFFERENT name than the recycled target: it is not
         // joined onto that row, it renders on its own under Fresh lives.
         fresh: [{ name: 'serve-9', kind: 'serve', generation: 1 }],
-        refused: [] as { key: string; reason: string }[],
+        refused: [] as string[],
         recycle_stopped: null,
         awaiting_respawn: [],
         fanout: { mode: 'local-only' as const, note: 'only this worker reloaded' },
@@ -220,7 +220,7 @@ describe('ProfilesTab — apply', () => {
         hot: [],
         recycle: [],
         fresh: [],
-        refused: [{ key: 'TAI_APP_PROVIDERS', reason: 'boundary-refused: no recycle path' }],
+        refused: ['TAI_APP_PROVIDERS'],
         recycle_stopped: null,
         awaiting_respawn: [],
         fanout: { mode: 'local-only' as const, note: 'only this worker reloaded' },
@@ -239,7 +239,6 @@ describe('ProfilesTab — apply', () => {
 
     const refused = await screen.findByTestId('apply-refused');
     expect(refused).toHaveTextContent('TAI_APP_PROVIDERS');
-    expect(refused).toHaveTextContent('boundary-refused: no recycle path');
   });
 
   it('ABORTS apply when the diff carries refused keys — the button is blocked', async () => {
@@ -389,7 +388,7 @@ function rolledApply(
       { name: 'serve-1', kind: 'serve', status: 'self-deferred', generation_before: 2 },
     ],
     fresh: [{ name: 'backend-1', kind: 'backend', generation: 2 }],
-    refused: [] as { key: string; reason: string }[],
+    refused: [] as string[],
     recycle_stopped: null,
     awaiting_respawn: awaiting,
     fanout: {

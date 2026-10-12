@@ -142,9 +142,9 @@ function ApplyReport({ report }: { readonly report: ApplyResponse }): ReactNode 
         <div role="alert" style={dangerPanelStyle} data-testid="apply-refused">
           <strong>Refused</strong>
           <ul style={{ margin: 0, paddingLeft: 'var(--tai-space-4)' }}>
-            {report.refused.map((entry) => (
-              <li key={entry.key}>
-                <span className="tai-mono">{entry.key}</span> — {entry.reason}
+            {report.refused.map((key) => (
+              <li key={key}>
+                <span className="tai-mono">{key}</span>
               </li>
             ))}
           </ul>
