@@ -75,7 +75,7 @@ function requiredFieldsValid(
 
 /**
  * The optional fields, each rejected only when PRESENT with the wrong type: an
- * absent value stays absent (or takes its schema default on assembly). `media`
+ * absent value takes its schema default (`null`, or `false` for `sensitive`) on assembly. `media`
  * items stay unknown by design — each is validated per item by the renderer.
  */
 function optionalFieldsValid(obj: Record<string, unknown>): boolean {
@@ -100,12 +100,14 @@ function buildInteraction(obj: Record<string, unknown> & RequiredFrameFields): I
     created_at: obj.created_at,
     timeout_at: obj.timeout_at,
     sensitive: typeof obj.sensitive === 'boolean' ? obj.sensitive : false,
-    ...(typeof obj.server_verified === 'boolean' ? { server_verified: obj.server_verified } : {}),
-    ...(typeof obj.channel === 'string' ? { channel: obj.channel } : {}),
-    ...(typeof obj.recipient === 'string' ? { recipient: obj.recipient } : {}),
-    ...(typeof obj.origin === 'string' ? { origin: obj.origin } : {}),
-    ...(typeof obj.audience === 'string' ? { audience: obj.audience } : {}),
-    ...(Array.isArray(obj.media) ? { media: obj.media } : {}),
+    server_verified: typeof obj.server_verified === 'boolean' ? obj.server_verified : null,
+    channel: typeof obj.channel === 'string' ? obj.channel : null,
+    recipient: typeof obj.recipient === 'string' ? obj.recipient : null,
+    origin: typeof obj.origin === 'string' ? obj.origin : null,
+    audience: typeof obj.audience === 'string' ? obj.audience : null,
+    // The items stay unvalidated here: the renderer validates each one, so one malformed
+    // item is a per-item notice rather than a dropped frame.
+    media: Array.isArray(obj.media) ? (obj.media as Interaction['media']) : null,
   };
 }
 

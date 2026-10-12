@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import * as openapi from '../generated/openapi-schemas';
 import * as served from '../generated/served-schemas';
-import { stateDeclaration } from './served';
+import { stateDeclaration, stateTemplateDocument } from './served';
 
 // The state response schemas — list rows and detail, attachments, per-subject records and
 // subjects, stats and consumers. The served DOCUMENT schemas (`stateDeclaration`/
@@ -68,9 +68,14 @@ export type StateStats = z.infer<typeof stateStats>;
  * while > 0) and `shipped_default` (a platform-shipped template). Both are server-derived
  * columns; the document fields are verbatim.
  */
-export const stateTemplateListItem = openapi.stateTemplateCatalogEntry;
+// Built on the template document: the spec publishes a served template's jq programs as open
+// objects, the document types them.
+export const stateTemplateListItem = stateTemplateDocument.extend({
+  attached_to: openapi.stateTemplateCatalogEntry.shape.attached_to,
+  shipped_default: openapi.stateTemplateCatalogEntry.shape.shipped_default,
+});
 export type StateTemplateListItem = z.infer<typeof stateTemplateListItem>;
-export const stateTemplateList = openapi.stateTemplateCatalog;
+export const stateTemplateList = z.array(stateTemplateListItem);
 
 /** A read record: the state, its subject, the document + monotonic seq, and any fold. */
 export const stateRecord = openapi.stateRecord;
