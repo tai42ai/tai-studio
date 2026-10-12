@@ -156,7 +156,7 @@ export interface FailedMcpEntry {
  * name-sorts the result, tolerating a worker whose payload is absent or malformed
  * (skipped, never a throw: a partial fleet report still yields the roster it can).
  */
-export function failedMcpsFromReport(result: FleetResult): FailedMcpEntry[] {
+export function failedMcpsFromReport(result: Omit<FleetResult, 'ok'>): FailedMcpEntry[] {
   const byTitle = new Map<string, FailedMcpEntry>();
   for (const worker of result.results) {
     const payload: unknown = worker.payload;

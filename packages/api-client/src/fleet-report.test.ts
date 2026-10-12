@@ -15,7 +15,7 @@ import {
 } from './fleet-report';
 import type { FleetResult } from './schemas';
 
-function result(overrides: Partial<FleetResult>): FleetResult {
+function result(overrides: Partial<FleetResult>): Omit<FleetResult, 'ok'> {
   return {
     op: 'reload_config',
     reachable: true,
