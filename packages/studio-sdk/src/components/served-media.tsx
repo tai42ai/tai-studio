@@ -12,6 +12,7 @@
  * url is a loud blocked notice, its text React-escaped, never a live attribute.
  * There is no `dangerouslySetInnerHTML` here.
  */
+import type { ServedConstants } from '@tai42/api-client';
 import type { CSSProperties, ReactNode } from 'react';
 import { useState } from 'react';
 
@@ -20,24 +21,29 @@ import { Badge } from './badge';
 import { isSafeHttpUrl } from './primitives';
 
 /**
- * The served-media route: media is stored by reference and served from the API
- * origin at `MEDIA_ROUTE_PREFIX + <id>`, where the id is 43 urlsafe-base64 chars
- * (32 random bytes). A record carries it as a RELATIVE url of exactly that shape —
- * the platform's own media reference, resolved to the API base at render time
+ * The served-media grammar the contract publishes, read from the injected client
+ * (`useApi().constants`): the served route prefix and the stored-media id pattern. Media is
+ * stored by reference and served from the API origin at `MEDIA_ROUTE_PREFIX + <id>`; a record
+ * carries it as a RELATIVE url of exactly that shape, resolved to the API base at render time
  * ({@link resolveMediaSrc}), not assumed same-origin as the SPA page.
  */
-const MEDIA_ROUTE_PREFIX = '/api/interactions/media/';
-const MEDIA_ID = /^[A-Za-z0-9_-]{43}$/;
+export type ServedMediaGrammar = {
+  readonly [K in keyof Pick<ServedConstants, 'MEDIA_ROUTE_PREFIX' | 'MEDIA_ID_PATTERN'>]: string;
+};
 
 /**
  * Whether `url` is the platform's own served-media reference: a relative
- * `MEDIA_ROUTE_PREFIX + <id>` with a well-formed 43-char urlsafe-base64 id. A served
+ * `MEDIA_ROUTE_PREFIX + <id>` whose id matches `MEDIA_ID_PATTERN` whole. A served
  * reference is same-origin to the API base ({@link resolveMediaSrc}) and leaks no page
  * context on load, so a sink with no per-element referrer control (`<audio>`/`<video>`,
  * where `referrerPolicy` is not a valid attribute) admits ONLY this form.
  */
-export function isServedMediaUrl(url: string): boolean {
-  return url.startsWith(MEDIA_ROUTE_PREFIX) && MEDIA_ID.test(url.slice(MEDIA_ROUTE_PREFIX.length));
+export function isServedMediaUrl(url: string, grammar: ServedMediaGrammar): boolean {
+  const prefix = grammar.MEDIA_ROUTE_PREFIX;
+  return (
+    url.startsWith(prefix) &&
+    new RegExp(`^${grammar.MEDIA_ID_PATTERN}$`).test(url.slice(prefix.length))
+  );
 }
 
 /**
@@ -55,9 +61,17 @@ export function isServedMediaUrl(url: string): boolean {
  * item. The gate keys on the reference form; {@link resolveMediaSrc} joins an
  * admitted reference to the API base for the actual load.
  */
-export function isRenderableMediaSrc(url: string, allowDataImage = false): boolean {
+export function isRenderableMediaSrc(
+  url: string,
+  grammar: ServedMediaGrammar,
+  allowDataImage = false,
+): boolean {
   const isHttpsUrl = isSafeHttpUrl(url) && new URL(url).protocol === 'https:';
-  return isHttpsUrl || (allowDataImage && url.startsWith('data:image/')) || isServedMediaUrl(url);
+  return (
+    isHttpsUrl ||
+    (allowDataImage && url.startsWith('data:image/')) ||
+    isServedMediaUrl(url, grammar)
+  );
 }
 
 /**
@@ -69,8 +83,8 @@ export function isRenderableMediaSrc(url: string, allowDataImage = false): boole
  * relative, which is correct; a configured base's trailing slash is stripped so the
  * join never double-slashes.
  */
-export function resolveMediaSrc(url: string, baseUrl: string): string {
-  return isServedMediaUrl(url) ? `${baseUrl.replace(/\/+$/, '')}${url}` : url;
+export function resolveMediaSrc(url: string, baseUrl: string, grammar: ServedMediaGrammar): string {
+  return isServedMediaUrl(url, grammar) ? `${baseUrl.replace(/\/+$/, '')}${url}` : url;
 }
 
 // -- styles ------------------------------------------------------------------
@@ -150,9 +164,9 @@ export function MediaImage({
   // url rendered at this same position gets a fresh load attempt instead of inheriting
   // a stale failure notice.
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const { baseUrl } = useApi();
+  const { baseUrl, constants } = useApi();
 
-  if (!isRenderableMediaSrc(url, allowDataImage)) {
+  if (!isRenderableMediaSrc(url, constants, allowDataImage)) {
     if (renderNotice !== undefined) return renderNotice('blocked', url);
     return (
       <div role="alert" data-testid="media-item-blocked" style={blockedStyle}>
@@ -175,7 +189,7 @@ export function MediaImage({
   return (
     <div style={itemStyle}>
       <img
-        src={resolveMediaSrc(url, baseUrl)}
+        src={resolveMediaSrc(url, baseUrl, constants)}
         alt={caption ?? altFallback}
         referrerPolicy="no-referrer"
         style={imageStyle}
@@ -184,6 +198,126 @@ export function MediaImage({
         }}
       />
       {caption !== undefined ? <span style={captionStyle}>{caption}</span> : null}
+    </div>
+  );
+}
+
+// -- document item -----------------------------------------------------------
+
+const chipStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--tai-space-2)',
+};
+
+const labelStyle: CSSProperties = {
+  wordBreak: 'break-all',
+};
+
+export interface MediaDocumentProps {
+  readonly url: string;
+  /** The download label: the item's filename or caption, or the caller's default. */
+  readonly label: string;
+  /** Render the notice shown when the url fails the src gate. */
+  readonly renderNotice: (url: string) => ReactNode;
+}
+
+/**
+ * One document: a labelled download affordance. The served route sends
+ * `Content-Disposition: attachment` for documents, so the anchor `download`-hints and
+ * opens in a new tab; `rel="noreferrer"` stops the Studio URL leaking to the media
+ * host. A url that fails {@link isRenderableMediaSrc} is the caller's notice, never a
+ * live href.
+ */
+export function MediaDocument({ url, label, renderNotice }: MediaDocumentProps): ReactNode {
+  const { baseUrl, constants } = useApi();
+  if (!isRenderableMediaSrc(url, constants)) return renderNotice(url);
+  return (
+    <div style={chipStyle} data-testid="media-document">
+      <Badge variant="neutral">Document</Badge>
+      <a
+        href={resolveMediaSrc(url, baseUrl, constants)}
+        target="_blank"
+        rel="noreferrer"
+        download
+        title={label}
+        style={labelStyle}
+      >
+        {label}
+      </a>
+    </div>
+  );
+}
+
+// -- audio / video item ------------------------------------------------------
+
+const audioStyle: CSSProperties = {
+  width: '100%',
+};
+
+const videoStyle: CSSProperties = {
+  maxWidth: '100%',
+  maxHeight: '320px',
+  width: 'auto',
+  height: 'auto',
+  borderRadius: 'var(--tai-radius-md)',
+  border: '1px solid var(--tai-color-border)',
+};
+
+export interface MediaPlayerProps {
+  readonly kind: 'audio' | 'video';
+  readonly url: string;
+  /** The player's accessible label. */
+  readonly label: string;
+  /**
+   * Render the notice shown when no player is displayed: `state` is `'blocked'` when
+   * the url is not a served reference and `'failed'` when it fails to LOAD.
+   */
+  readonly renderNotice: (state: 'blocked' | 'failed', url: string) => ReactNode;
+}
+
+/**
+ * A native `<audio>`/`<video controls>` player. `referrerPolicy` is not a valid
+ * attribute on `<audio>`/`<video>`, so a remote load has no per-element referrer
+ * control; the player therefore admits ONLY the platform's own served-media reference
+ * ({@link isServedMediaUrl}: same-origin, leaking no page URL to a media host), and any
+ * other url, a bare `https:` one included, is the caller's notice. The load-failure
+ * flag keys on the url that failed so a new url at the same position gets a fresh load.
+ */
+export function MediaPlayer({ kind, url, label, renderNotice }: MediaPlayerProps): ReactNode {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const { baseUrl, constants } = useApi();
+
+  if (!isServedMediaUrl(url, constants)) return renderNotice('blocked', url);
+  if (failedUrl === url) return renderNotice('failed', url);
+
+  const src = resolveMediaSrc(url, baseUrl, constants);
+  const onError = (): void => {
+    setFailedUrl(url);
+  };
+  return (
+    <div style={itemStyle}>
+      {kind === 'audio' ? (
+        // eslint-disable-next-line jsx-a11y/media-has-caption -- a media item carries no caption track
+        <audio
+          controls
+          src={src}
+          aria-label={label}
+          onError={onError}
+          style={audioStyle}
+          data-testid="media-audio"
+        />
+      ) : (
+        // eslint-disable-next-line jsx-a11y/media-has-caption -- a media item carries no caption track
+        <video
+          controls
+          src={src}
+          aria-label={label}
+          onError={onError}
+          style={videoStyle}
+          data-testid="media-video"
+        />
+      )}
     </div>
   );
 }

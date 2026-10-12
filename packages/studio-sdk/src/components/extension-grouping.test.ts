@@ -24,9 +24,9 @@ describe('baseNameOf', () => {
 describe('groupIntoFamilies', () => {
   it('groups branch variants under their base tool name', () => {
     const extensions: Extension[] = [
-      { name: 'tool_a_b', kind: 'wrapper' },
-      { name: 'tool', kind: 'backend' },
-      { name: 'tool_a', kind: 'transformer' },
+      { name: 'tool_a_b', kind: 'wrapper', multiple: false },
+      { name: 'tool', kind: 'backend', multiple: false },
+      { name: 'tool_a', kind: 'transformer', multiple: false },
     ];
     const families = groupIntoFamilies(extensions);
     expect(families).toHaveLength(1);
@@ -36,9 +36,9 @@ describe('groupIntoFamilies', () => {
 
   it('orders families by base name and separates distinct tools', () => {
     const extensions: Extension[] = [
-      { name: 'zeta_chain', kind: 'transformer' },
-      { name: 'alpha', kind: 'backend' },
-      { name: 'alpha_batch', kind: 'transformer' },
+      { name: 'zeta_chain', kind: 'transformer', multiple: false },
+      { name: 'alpha', kind: 'backend', multiple: false },
+      { name: 'alpha_batch', kind: 'transformer', multiple: false },
     ];
     const families = groupIntoFamilies(extensions);
     expect(families.map((f) => f.base)).toEqual(['alpha', 'zeta']);
@@ -54,9 +54,9 @@ describe('groupIntoFamilies', () => {
 describe('groupByKind', () => {
   it('groups the catalog by kind, ordered by kind then name', () => {
     const extensions: Extension[] = [
-      { name: 'markb', kind: 'wrapper' },
-      { name: 'backendx', kind: 'backend' },
-      { name: 'marka', kind: 'wrapper' },
+      { name: 'markb', kind: 'wrapper', multiple: false },
+      { name: 'backendx', kind: 'backend', multiple: false },
+      { name: 'marka', kind: 'wrapper', multiple: false },
     ];
     const groups = groupByKind(extensions);
     expect(groups.map((g) => g.kind)).toEqual(['backend', 'wrapper']);
@@ -65,8 +65,8 @@ describe('groupByKind', () => {
 
   it('flags only the backend kind as non-stackable', () => {
     const extensions: Extension[] = [
-      { name: 'backendx', kind: 'backend' },
-      { name: 'marka', kind: 'wrapper' },
+      { name: 'backendx', kind: 'backend', multiple: false },
+      { name: 'marka', kind: 'wrapper', multiple: false },
     ];
     const groups = groupByKind(extensions);
     const backend = groups.find((g) => g.kind === NON_STACKABLE_KIND);

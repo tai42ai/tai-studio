@@ -3,6 +3,7 @@
  * authored-run endpoint, with the run form showing only the NON-baked `ToolInput`
  * fields (the baked spec keys are resolved server-side).
  */
+import { apiRoutes } from '@tai42/api-client';
 import {
   ArrowLeftIcon,
   Button,
@@ -59,8 +60,9 @@ export function AuthoredRunView({
   const run = useAuthoredAgentRun(target.name);
   // Projection ⊆ gate: the authored run POSTs the dynamic per-agent authored-run route,
   // which the plain-agent `projection.agents` list cannot vouch for, so gate it directly.
-  // A dynamic route is not method-expressible, so this resolves to a full-projection gate.
-  const canRun = useCanWrite(`/api/agents/authored/${target.name}/runs`, 'POST');
+  // A dynamic route is not method-expressible, so — the house static-placeholder idiom —
+  // the templated path resolves to a full-projection gate.
+  const canRun = useCanWrite(apiRoutes.post_api_agents_authored_name_runs.path, 'POST');
   const detailQuery = useQuery({
     queryKey: authoredPresetKey(target.name),
     queryFn: ({ signal }) => api.getPreset(target.name, signal),

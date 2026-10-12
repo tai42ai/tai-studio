@@ -1,5 +1,5 @@
 /** Access-policy validation, versioning and rollback sub-client. */
-import { encodeSegment } from '../http';
+import { apiRoutes, buildPath } from '../generated/api-routes';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -22,20 +22,35 @@ export function policyClient(t: Transport) {
     // author time instead of locking a key out at enforcement. A broken condition
     // is a 400 the transport throws — never a false-positive `ok`.
     validateCondition: (body: ValidateConditionBody) =>
-      req('/api/auth/validate-condition', s.validateConditionResult, { method: 'POST', body }),
+      req(apiRoutes.post_api_auth_validate_condition.path, s.validateConditionResult, {
+        method: 'POST',
+        body,
+      }),
     // The user's append-only policy version history (each row's `is_current`
     // derived from the active pointer). SECRET-ADJACENT — the body carries the raw
     // condition, so its fixtures are hand-authored.
     listPolicyVersions: (userId: string, signal?: AbortSignal) =>
-      req(`/api/auth/api-keys/${encodeSegment(userId)}/policy/versions`, s.policyVersionList, {
-        signal,
-      }),
+      req(
+        buildPath(apiRoutes.get_api_auth_api_keys_user_id_policy_versions.path, {
+          user_id: userId,
+        }),
+        s.policyVersionList,
+        {
+          signal,
+        },
+      ),
     // Re-point the enforced policy to a prior version; returns the re-pointed
     // active version. Enforcement follows on cache invalidation.
     rollbackPolicy: (userId: string, version: number) =>
-      req(`/api/auth/api-keys/${encodeSegment(userId)}/policy/rollback`, s.policyRollback, {
-        method: 'POST',
-        body: { version },
-      }),
+      req(
+        buildPath(apiRoutes.post_api_auth_api_keys_user_id_policy_rollback.path, {
+          user_id: userId,
+        }),
+        s.policyRollback,
+        {
+          method: 'POST',
+          body: { version },
+        },
+      ),
   };
 }

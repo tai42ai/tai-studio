@@ -12,13 +12,25 @@ import { clickWhenInteractable, fullProjection, renderWithProviders } from './te
 vi.setConfig({ testTimeout: 15_000 });
 
 function tokens(): TokensPayload {
-  return [{ user_id: 'alice', description: 'Alice key', scopes: ['admin'], policy_data: {} }];
+  return [
+    {
+      condition: null,
+      principal: null,
+      orphaned: false,
+      user_id: 'alice',
+      description: 'Alice key',
+      scopes: ['admin'],
+      policy_data: {},
+    },
+  ];
 }
 /** A key seeded with both a saved inline condition and policy data, so the edit
  * dialog's "Remove condition" / "Clear policy data" affordances have something to remove. */
 function seededTokens(): TokensPayload {
   return [
     {
+      principal: null,
+      orphaned: false,
       user_id: 'alice',
       description: 'Alice key',
       scopes: ['admin'],
@@ -66,6 +78,8 @@ describe('ApiKeysTab — edit key', () => {
     const user = userEvent.setup({ delay: null });
     const withPolicy: TokensPayload = [
       {
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
@@ -217,6 +231,8 @@ describe('ApiKeysTab — edit key', () => {
     // silently change the enforced `.policy.*` value (and append a phantom version).
     const stringSeed: TokensPayload = [
       {
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
@@ -248,6 +264,8 @@ describe('ApiKeysTab — edit key', () => {
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     const templateSeed: TokensPayload = [
       {
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
@@ -286,6 +304,8 @@ describe('ApiKeysTab — edit key', () => {
     // description changed) must NOT trim it into a changed body + phantom version.
     const seed: TokensPayload = [
       {
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
@@ -322,6 +342,8 @@ describe('ApiKeysTab — edit key', () => {
     // stored content and its kwargs) — re-serializing would risk a phantom version.
     const seed: TokensPayload = [
       {
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
@@ -357,6 +379,8 @@ describe('ApiKeysTab — edit key', () => {
     // whole condition (the PATCH preserves it) rather than re-send a re-serialized copy.
     const seed: TokensPayload = [
       {
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
@@ -388,6 +412,8 @@ describe('ApiKeysTab — edit key', () => {
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     const templateSeed: TokensPayload = [
       {
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
@@ -430,6 +456,9 @@ describe('ApiKeysTab — edit key', () => {
     };
     const holdsPublicScope: TokensPayload = [
       {
+        condition: null,
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin', 'public', 'open'],

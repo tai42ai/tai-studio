@@ -26,6 +26,8 @@ const PENDING_PAGE = {
         answer_format: 'text',
         created_at: '2026-08-01T00:00:00.000Z',
         timeout_at: '2026-08-09T00:00:00.000Z',
+        format_payload: {},
+        sensitive: false,
       },
       {
         interaction_id: 'i2',
@@ -34,6 +36,8 @@ const PENDING_PAGE = {
         answer_format: 'text',
         created_at: '2026-08-01T00:00:01.000Z',
         timeout_at: '2026-08-09T00:00:00.000Z',
+        format_payload: {},
+        sensitive: false,
       },
     ],
     total: 2,

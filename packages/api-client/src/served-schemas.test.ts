@@ -17,10 +17,20 @@ import { templatedText } from './templated-text';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const bundlePath = resolve(here, '../contract-schema/contract-schema.json');
-const generatedPath = resolve(here, 'generated/served-schemas.ts');
+const specPath = resolve(here, '../contract-schema/openapi.json');
+const generatedDir = resolve(here, 'generated');
 const bundle = JSON.parse(readFileSync(bundlePath, 'utf8')) as {
   contract_version: string;
   documents: Record<string, unknown>;
+  $defs: Record<string, unknown>;
+};
+const spec: unknown = JSON.parse(readFileSync(specPath, 'utf8'));
+
+/** The generated served-schemas module source for a bundle, against the vendored spec. */
+const servedSource = (fromBundle: unknown): string => {
+  const source = generate(fromBundle, spec).files['served-schemas.ts'];
+  if (source === undefined) throw new Error('the generator emitted no served-schemas.ts');
+  return source;
 };
 
 describe('generated served-document schemas parse served payloads', () => {
@@ -53,6 +63,8 @@ describe('generated served-document schemas parse served payloads', () => {
     const base = {
       route_name: 'r',
       door: 'channel',
+      channel: 'sms',
+      our_identity: '+1',
       target_kind: 'agent',
       target_name: 't',
       execution_key: 'k',
@@ -71,10 +83,35 @@ describe('generated served-document schemas parse served payloads', () => {
     ).toEqual({ running: 'cancel', deliver: 'all', settle_seconds: 5 });
   });
 
+  it('parses a poll-only api route create, with no callback URL', () => {
+    const created = schemas.conversationRouteCreate.parse({
+      route_name: 'r',
+      door: 'api',
+      target_kind: 'agent',
+      target_name: 't',
+      execution_key: 'k',
+    });
+    expect(created).toMatchObject({ door: 'api', callback_url: null });
+  });
+
+  it('refuses a route create for an unknown door', () => {
+    expect(() =>
+      schemas.conversationRouteCreate.parse({
+        route_name: 'r',
+        door: 'email',
+        target_kind: 'agent',
+        target_name: 't',
+        execution_key: 'k',
+      }),
+    ).toThrow();
+  });
+
   it('makes overlap optional on a ConversationRouteCreate body, defaulting the policy', () => {
     const created = schemas.conversationRouteCreate.parse({
       route_name: 'r',
       door: 'channel',
+      channel: 'sms',
+      our_identity: '+1',
       target_kind: 'agent',
       target_name: 't',
       execution_key: 'k',
@@ -123,28 +160,29 @@ describe('a served body is a templated text, never a bare string (the marker gua
 });
 
 describe('the freshness gate reds on a drifted bundle', () => {
-  it('the committed generated file matches a fresh generation from the vendored bundle', () => {
-    const { source } = generate(bundle);
-    expect(readFileSync(generatedPath, 'utf8')).toBe(source);
+  it('every committed generated file matches a fresh generation from the vendored artifacts', () => {
+    for (const [name, source] of Object.entries(generate(bundle, spec).files)) {
+      expect(readFileSync(resolve(generatedDir, name), 'utf8')).toBe(source);
+    }
   });
 
   it('a bundle whose served shape drifts generates a different file', () => {
-    const baseline = generate(bundle).source;
+    const baseline = servedSource(bundle);
     // Inject drift: a served document field the platform did not publish.
     const drifted = structuredClone(bundle);
-    const doc = drifted.documents.ConversationRoute as { properties: Record<string, unknown> };
+    const doc = drifted.$defs.ApiConversationRoute as { properties: Record<string, unknown> };
     doc.properties.injected_field = { type: 'string' };
-    expect(generate(drifted).source).not.toBe(baseline);
+    expect(servedSource(drifted)).not.toBe(baseline);
   });
 
   it('a body demoted to a bare string generates a different file (the anti-string drift)', () => {
-    const baseline = generate(bundle).source;
+    const baseline = servedSource(bundle);
     const drifted = structuredClone(bundle);
-    const doc = drifted.documents.ConversationRoute as { properties: Record<string, unknown> };
+    const doc = drifted.$defs.ApiConversationRoute as { properties: Record<string, unknown> };
     // The platform marker gone: start_expr as a plain string instead of a $ref to
     // TemplatedText — the exact regression the marker override prevents.
     doc.properties.start_expr = { type: 'string' };
-    const drifted_source = generate(drifted).source;
+    const drifted_source = servedSource(drifted);
     expect(drifted_source).not.toBe(baseline);
     expect(drifted_source).toContain('"start_expr": z.string()');
   });

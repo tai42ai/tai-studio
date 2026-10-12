@@ -18,7 +18,7 @@
  * honest per-worker failure state — never a faked success on a stranded worker. A
  * failed request surfaces loudly inside the dialog.
  */
-import { type FleetResult, summarizeFleetResult } from '@tai42/api-client';
+import { apiRoutes, type FleetResult, summarizeFleetResult } from '@tai42/api-client';
 import {
   Button,
   ConfirmDialog,
@@ -36,7 +36,7 @@ import { configModeKey, envConfigKey, settingsSchemaKey } from './keys';
  * The admin-only local soft-restart door. Admin-`fenced` server-side, so the control
  * gates on the caller's projection reaching this exact route+method.
  */
-const RELOAD_ROUTE = '/api/config/reload';
+const RELOAD_ROUTE = apiRoutes.post_api_config_reload.path;
 
 /**
  * The reload confirmation. Self-contained: it owns its mutation and is mounted only

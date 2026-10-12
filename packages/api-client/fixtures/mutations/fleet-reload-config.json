@@ -25,5 +25,6 @@
       "detail": "no ack within the confirmation window"
     }
   ],
-  "error": null
+  "error": null,
+  "ok": false
 }

@@ -1,5 +1,5 @@
 /** Manifest / MCP section, env-ref and config-reload sub-clients. */
-import { encodeSegment } from '../http';
+import { apiRoutes, buildPath } from '../generated/api-routes';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -31,14 +31,23 @@ export interface SetMcpSecretEnvBody {
 export function manifestClient(t: Transport) {
   const { req } = t;
   return {
-    getManifest: (signal?: AbortSignal) => req('/api/manifest', s.manifestView, { signal }),
+    getManifest: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_manifest.path, s.manifestView, { signal }),
     setMcpConfig: (mcp: unknown[]) =>
-      req('/api/mcp-config', s.reloadConfigResult, { method: 'POST', body: { mcp } }),
-    getMcpStatus: (signal?: AbortSignal) => req('/api/mcp-status', s.mcpStatus, { signal }),
-    reloadMcp: (title: string) =>
-      req(`/api/mcp-status/${encodeSegment(title)}/reload`, s.mcpReloadResult, {
+      req(apiRoutes.post_api_mcp_config.path, s.reloadConfigResult, {
         method: 'POST',
+        body: { mcp },
       }),
+    getMcpStatus: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_mcp_status.path, s.mcpStatus, { signal }),
+    reloadMcp: (title: string) =>
+      req(
+        buildPath(apiRoutes.post_api_mcp_status_title_reload.path, { title }),
+        s.mcpReloadResult,
+        {
+          method: 'POST',
+        },
+      ),
 
     // Granular manifest-section entry edits — add/replace or remove ONE entry by
     // title, leaving the rest of the section untouched (the surgical counterpart to
@@ -46,28 +55,36 @@ export function manifestClient(t: Transport) {
     // the shared apply-result (`status` + `env_keys` + fleet `fanout`). `replace` lets
     // an entry whose title already exists swap in; without it a collision is refused.
     addToolsEntries: (entries: readonly unknown[], replace = false) =>
-      req('/api/tools-config/entries', s.reloadConfigResult, {
+      req(apiRoutes.post_api_tools_config_entries.path, s.reloadConfigResult, {
         method: 'POST',
         body: { entries, replace },
       }),
     removeToolsEntry: (title: string) =>
-      req(`/api/tools-config/entries/${encodeSegment(title)}`, s.reloadConfigResult, {
-        method: 'DELETE',
-      }),
+      req(
+        buildPath(apiRoutes.delete_api_tools_config_entries_title.path, { title }),
+        s.reloadConfigResult,
+        {
+          method: 'DELETE',
+        },
+      ),
     addAgentsEntries: (entries: readonly unknown[], replace = false) =>
-      req('/api/agents-config/entries', s.reloadConfigResult, {
+      req(apiRoutes.post_api_agents_config_entries.path, s.reloadConfigResult, {
         method: 'POST',
         body: { entries, replace },
       }),
     removeAgentsEntry: (title: string) =>
-      req(`/api/agents-config/entries/${encodeSegment(title)}`, s.reloadConfigResult, {
-        method: 'DELETE',
-      }),
+      req(
+        buildPath(apiRoutes.delete_api_agents_config_entries_title.path, { title }),
+        s.reloadConfigResult,
+        {
+          method: 'DELETE',
+        },
+      ),
     // Edit the manifest `api_tools` include/exclude name lists by delta (add/remove
     // names on either list). Absent fields default to empty; the server refuses a body
     // whose four lists are all empty. Returns the shared apply-result.
     updateApiTools: (body: ApiToolsListsBody) =>
-      req('/api/api-tools', s.reloadConfigResult, {
+      req(apiRoutes.post_api_api_tools.path, s.reloadConfigResult, {
         method: 'POST',
         body: {
           include_add: body.include_add ?? [],
@@ -83,17 +100,21 @@ export function manifestClient(t: Transport) {
     // every failed server; deregister detaches one server's tools by title. Each op
     // returns the bare per-worker `fleetResult`.
     listFailedMcps: (signal?: AbortSignal) =>
-      req('/api/mcp-status/failed', s.fleetResult, { signal }),
+      req(apiRoutes.get_api_mcp_status_failed.path, s.fleetResult, { signal }),
     reloadFailedMcps: () =>
-      req('/api/mcp-status/reload-failed', s.fleetResult, {
+      req(apiRoutes.post_api_mcp_status_reload_failed.path, s.fleetResult, {
         method: 'POST',
         body: { targets: null },
       }),
     deregisterMcp: (title: string) =>
-      req(`/api/mcp-status/${encodeSegment(title)}/deregister`, s.fleetResult, {
-        method: 'POST',
-        body: { targets: null },
-      }),
+      req(
+        buildPath(apiRoutes.post_api_mcp_status_title_deregister.path, { title }),
+        s.fleetResult,
+        {
+          method: 'POST',
+          body: { targets: null },
+        },
+      ),
   };
 }
 
@@ -103,16 +124,19 @@ export function manifestSecretEnvClient(t: Transport) {
     // The SecretRefField server half: one atomic env-value + `!ENV` manifest
     // write, returning the shared apply-result shape (reload + fleet fanout).
     setMcpSecretEnv: (body: SetMcpSecretEnvBody) =>
-      req('/api/mcp-config/secret-env', s.reloadConfigResult, { method: 'POST', body }),
+      req(apiRoutes.post_api_mcp_config_secret_env.path, s.reloadConfigResult, {
+        method: 'POST',
+        body,
+      }),
     // The PRESERVED manifest (`!ENV` markers intact, no resolved secrets) — the
     // connectors page's McpServersSection reads this so round-trips never inline
     // resolved values.
     getManifestPreserved: (signal?: AbortSignal) =>
-      req('/api/manifest/preserved', s.manifestView, { signal }),
+      req(apiRoutes.get_api_manifest_preserved.path, s.manifestView, { signal }),
     // The manifest MCP section's `!ENV ${VAR[:default]}` marker refs — NAMES and
     // set/unset BOOLEANS only, never values. Drives the McpServersSection env-refs
     // checklist on the connectors page.
     getMcpEnvRefs: (signal?: AbortSignal) =>
-      req('/api/manifest/mcp-env-refs', s.mcpEnvRefs, { signal }),
+      req(apiRoutes.get_api_manifest_mcp_env_refs.path, s.mcpEnvRefs, { signal }),
   };
 }

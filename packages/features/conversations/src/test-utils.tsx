@@ -16,13 +16,15 @@
  * expects, and the reason a render that never touches a write control drives no
  * capability fetch (so it schedules no late state update to warn about).
  */
-import type {
-  ApiClient,
-  ConversationMessage,
-  ConversationRoute,
-  ConversationThread,
-  MeProjection,
-  TargetConversationConfig,
+import {
+  type ApiClient,
+  type ConversationMessage,
+  type ConversationRouteView,
+  type ConversationThread,
+  type MeProjection,
+  schemas,
+  servedConstants,
+  type TargetConversationConfig,
 } from '@tai42/api-client';
 import type { NavigateOptions, NavigationContextValue, RouteSearch } from '@tai42/studio-sdk';
 import {
@@ -58,6 +60,7 @@ export function scopedProjection(overrides: Partial<MeProjection> = {}): MeProje
 const baseProjection: MeProjection = {
   user_id: 'u-test',
   owner_user_id: null,
+  principal: null,
   admin: false,
   public_resource_id: 'public',
   scopes: [],
@@ -79,10 +82,14 @@ const baseProjection: MeProjection = {
 function withCapabilities(client: StubApiClient, projection: MeProjection | undefined): ApiClient {
   if (projection === undefined) {
     globalThis.sessionStorage.removeItem(SESSION_KEY);
-    return client as ApiClient;
+    return { constants: servedConstants, ...client } as ApiClient;
   }
   globalThis.sessionStorage.setItem(SESSION_KEY, 'sk-test');
-  return { getMe: () => Promise.resolve(projection), ...client } as ApiClient;
+  return {
+    constants: servedConstants,
+    getMe: () => Promise.resolve(projection),
+    ...client,
+  } as ApiClient;
 }
 
 export interface RenderWithProvidersResult extends RenderResult {
@@ -239,7 +246,9 @@ export function installViewportBand(band: 'compact' | 'full'): () => void {
 
 // -- fixtures ----------------------------------------------------------------
 
-export function makeRoute(overrides: Partial<ConversationRoute> = {}): ConversationRoute {
+export function makeRoute(overrides: Partial<ConversationRouteView> = {}): ConversationRouteView {
+  // A fixture spreads door-specific overrides over a channel row, so the result is asserted
+  // as the door union it stands for.
   return {
     route_name: 'chat',
     door: 'channel',
@@ -258,11 +267,10 @@ export function makeRoute(overrides: Partial<ConversationRoute> = {}): Conversat
     turns_per_hour_override: null,
     error_reply_text: null,
     execution_key_fingerprint: 'fp-1',
-    callback_secret: null,
     locale: null,
     overlap: { running: 'continue', deliver: 'one', settle_seconds: 0 },
     ...overrides,
-  };
+  } as ConversationRouteView;
 }
 
 export function makeConfig(
@@ -288,8 +296,15 @@ export function makeThread(overrides: Partial<ConversationThread> = {}): Convers
   };
 }
 
-export function makeMessage(overrides: Partial<ConversationMessage> = {}): ConversationMessage {
-  return {
+/** A record as the server may send it: its defaulted fields may be left out. */
+type ConversationMessageInput = (typeof schemas.conversationMessage)['_zod']['input'];
+
+export function makeMessage(
+  overrides: Partial<ConversationMessageInput> = {},
+): ConversationMessage {
+  // Parsed through the record schema, so the fixture carries every field the server
+  // publishes (the defaulted ones at their defaults).
+  return schemas.conversationMessage.parse({
     message_id: 'm1',
     route_name: 'chat',
     door: 'channel',
@@ -306,7 +321,7 @@ export function makeMessage(overrides: Partial<ConversationMessage> = {}): Conve
     created_at: 1_800_000_000,
     updated_at: 1_800_000_001,
     ...overrides,
-  };
+  });
 }
 
 /** One page of results, shaped as the paged read doors return it. */
@@ -323,6 +338,7 @@ export function page<T>(
     page_size: 50,
     next_page: nextPage,
     truncated,
+    unreadable: 0,
   };
 }
 
@@ -345,5 +361,5 @@ export function transcriptPage<T>(
     truncated?: boolean;
   } = {},
 ) {
-  return { ...page(items, nextPage, pageNumber, truncated), order };
+  return { ...page(items, nextPage, pageNumber, truncated), order, person_id: null };
 }

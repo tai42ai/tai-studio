@@ -5,6 +5,7 @@
  * row via {@link LazyCountCell}.
  */
 import type { StateListItem } from '@tai42/api-client';
+import { servedConstants } from '@tai42/api-client';
 import { AppLink, Badge, openTargetProps, TD, TR, useAppNavigate } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
@@ -12,7 +13,7 @@ import { stateAttachmentsKey, stateConsumersKey, stateStatsKey } from './keys';
 import { LazyCountCell } from './LazyCountCell';
 
 /** The one platform-validated subject kind; rendered as a primary badge. */
-const PERSON_KIND = 'person';
+const PERSON_KIND = servedConstants.PERSON_KIND;
 
 /** Format a row timestamp for the Updated cell: the locale instant, or `—` when unset;
  * an unparseable value shows verbatim (the full ISO rides on the cell's `title`). */

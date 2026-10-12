@@ -5,12 +5,12 @@
  * (its `route_name` shown read-only, because the name IS the route's identity and
  * URL key).
  *
- * The body is authored through the SDK's `SchemaForm` over a client-authored schema
- * (see `route-schema`): two discriminated unions mirror the contract's cross-field
- * rules, so each door only shows its own delivery fields — the platform's structural
- * 400s are unreachable by construction. Value-content 400s (and the attach-check
- * refusals a target's bind validator raises) stay server-enforced and surface via
- * `ErrorState`. Both target kinds carry the five door-contract jq fields
+ * The body is authored through the SDK's `SchemaForm` over a schema built from the
+ * contract's published `ConversationRouteCreate` document (see `route-schema`): each door
+ * only shows its own delivery fields, and the document's constraints are refused in-form
+ * with each field's own text. What only the server checks (the residual callback-URL
+ * rule, the overlap rule, the attach-check refusals a target's bind validator raises)
+ * surfaces via `ErrorState`. Both target kinds carry the five door-contract jq fields
  * (`start_expr`/`cancel_expr`/`resume_expr`/`extras_expr`/`reply_expr`), each with
  * `x-tai42-expression`; the host's ambient `ExpressionFieldContext` renders the
  * visual jq editor in their place. The form authors their inline jq; `route-schema`
@@ -23,7 +23,7 @@
  * `channel` write carries no secret and closes straight away. Submit/error house
  * style follows the hooks `RegisterHookForm`.
  */
-import type { ConversationRoute } from '@tai42/api-client';
+import type { ConversationRouteView } from '@tai42/api-client';
 import {
   Button,
   CopyField,
@@ -34,7 +34,6 @@ import {
   type SchemaFormErrors,
   Spinner,
   useApi,
-  validateAgainstSchema,
 } from '@tai42/studio-sdk';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, type SyntheticEvent, useMemo, useState } from 'react';
@@ -43,7 +42,7 @@ import { conversationRoutesKey } from './keys';
 import {
   blankRouteValue,
   formValueToBody,
-  requiredFieldErrors,
+  routeFormErrors,
   routeFormSchema,
   type RouteFormValue,
   routeToFormValue,
@@ -51,7 +50,7 @@ import {
 
 export interface RouteFormDialogProps {
   /** A route to edit; absent renders the blank create form. */
-  readonly initial?: ConversationRoute;
+  readonly initial?: ConversationRouteView;
   /** Called on Cancel, any close gesture, and after a successful save is acknowledged. */
   readonly onClose: () => void;
 }
@@ -84,10 +83,7 @@ export function RouteFormDialog({ initial, onClose }: RouteFormDialogProps): Rea
 
   const onSubmit = (event: SyntheticEvent): void => {
     event.preventDefault();
-    const found: SchemaFormErrors = {
-      ...validateAgainstSchema(schema, value),
-      ...requiredFieldErrors(value, editing),
-    };
+    const found: SchemaFormErrors = routeFormErrors(schema, value, editing);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
     mutation.mutate();

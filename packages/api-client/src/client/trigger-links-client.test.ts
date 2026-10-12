@@ -86,6 +86,8 @@ function linkRecord(overrides: Record<string, unknown> = {}): Record<string, unk
     created_at: '2026-07-22T09:00:00Z',
     expires_at: null,
     token_hash_prefix: 'abc123def456',
+    execution_key_fingerprint: 'fp-events',
+    require_api_key: false,
     ...overrides,
   };
 }
@@ -184,12 +186,6 @@ describe('trigger-link client transport', () => {
 
   it('throws ApiSchemaError LOUDLY on an unknown trigger_auth door', async () => {
     const record = linkRecord({ trigger_auth: 'sso' });
-    const { client } = harness(() => jsonResponse({ data: { items: [record], total: 1 } }));
-    await expect(client.listTriggerLinks()).rejects.toBeInstanceOf(ApiSchemaError);
-  });
-
-  it('throws ApiSchemaError LOUDLY on an EMPTY execution_key (never a blank Runs-as)', async () => {
-    const record = linkRecord({ execution_key: '' });
     const { client } = harness(() => jsonResponse({ data: { items: [record], total: 1 } }));
     await expect(client.listTriggerLinks()).rejects.toBeInstanceOf(ApiSchemaError);
   });

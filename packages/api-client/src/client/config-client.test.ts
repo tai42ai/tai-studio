@@ -106,7 +106,14 @@ describe('config client transport', () => {
   it('reloadConfig POSTs { targets: null } to /api/config/reload and parses the fleet report', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: { op: 'reload_config', reachable: true, local_only: true, results: [], error: null },
+        data: {
+          ok: true,
+          op: 'reload_config',
+          reachable: true,
+          local_only: true,
+          results: [],
+          error: null,
+        },
       }),
     );
     const out = await client.reloadConfig();

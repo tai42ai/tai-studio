@@ -34,7 +34,7 @@ export function MethodView({
             link variant renders a plain same-origin anchor for this `/api/` path,
             not a router link. */}
         <Button href={method.href} variant="secondary">
-          {method.icon !== undefined ? (
+          {method.icon !== null ? (
             <img
               src={`data:image/svg+xml;utf8,${encodeURIComponent(method.icon)}`}
               width={16}

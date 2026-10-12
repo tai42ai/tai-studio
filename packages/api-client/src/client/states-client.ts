@@ -1,5 +1,5 @@
 /** State declaration, record, template and consumer sub-client. */
-import { encodeSegment } from '../http';
+import { apiRoutes, buildPath } from '../generated/api-routes';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -60,17 +60,35 @@ export interface StatePageQuery {
   readonly cursor?: string;
 }
 
+/** The subject-addressed record routes, by what each does to the record. */
+const RECORD_ROUTES = {
+  read: apiRoutes.get_api_states_name_records_target_kind_target_name_kind_key.path,
+  put: apiRoutes.put_api_states_name_records_target_kind_target_name_kind_key.path,
+  patch: apiRoutes.patch_api_states_name_records_target_kind_target_name_kind_key.path,
+  erase: apiRoutes.delete_api_states_name_records_target_kind_target_name_kind_key.path,
+  deltas: apiRoutes.post_api_states_name_records_target_kind_target_name_kind_key_deltas.path,
+  evalJq:
+    apiRoutes.get_api_states_name_records_target_kind_target_name_kind_key_template_jq_program.path,
+  applyJq:
+    apiRoutes.post_api_states_name_records_target_kind_target_name_kind_key_template_jq_program
+      .path,
+  fold: apiRoutes.post_api_states_name_records_target_kind_target_name_kind_key_fold.path,
+  writes: apiRoutes.get_api_states_name_records_target_kind_target_name_kind_key_writes.path,
+} as const;
+
 /**
- * The subject-addressed record path: `/api/states/{name}/records/{target_kind}/
- * {target_name}/{kind}/{key}` — four path segments, each percent-encoded, so a key
- * carrying a slash or a colon never escapes its segment.
+ * The path parameters of a subject-addressed record route (`/api/states/{name}/records/
+ * {target_kind}/{target_name}/{kind}/{key}`): four path segments, each percent-encoded by
+ * `buildPath`, so a key carrying a slash or a colon never escapes its segment.
  */
-function stateRecordPath(name: string, subject: StateSubjectRef): string {
-  return (
-    `/api/states/${encodeSegment(name)}/records/` +
-    `${encodeSegment(subject.target_kind)}/${encodeSegment(subject.target_name)}/` +
-    `${encodeSegment(subject.kind)}/${encodeSegment(subject.key)}`
-  );
+function stateRecordParams(name: string, subject: StateSubjectRef) {
+  return {
+    name,
+    target_kind: subject.target_kind,
+    target_name: subject.target_name,
+    kind: subject.kind,
+    key: subject.key,
+  };
 }
 
 /**
@@ -97,22 +115,25 @@ function stateDeclarationMethods(t: Transport) {
     // management population; a single state read composes the declaration with its
     // effective schema, regimes and attachments. Every record route addresses its subject
     // as four percent-encoded path segments (see `stateRecordPath`).
-    listStates: (signal?: AbortSignal) => req('/api/states', s.stateList, { signal }),
+    listStates: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_states.path, s.stateList, { signal }),
     getState: (name: string, signal?: AbortSignal) =>
-      req(`/api/states/${encodeSegment(name)}`, s.stateDetail, { signal }),
+      req(buildPath(apiRoutes.get_api_states_name.path, { name }), s.stateDetail, { signal }),
     // A plain declaration upsert — no `replace` flag. With records present the server
     // accepts additive schema changes and refuses with a 409 any change that removes or
     // alters an existing field, or a subject-kind removal that would strand records. The
     // answer is the stored declaration plus the held pending saves it was accepted beside.
     putState: (name: string, body: StateDeclarationBody) =>
-      req(`/api/states/${encodeSegment(name)}`, s.stateDeclarationSaved, {
+      req(buildPath(apiRoutes.put_api_states_name.path, { name }), s.stateDeclarationSaved, {
         method: 'PUT',
         body,
       }),
     deleteState: (name: string) =>
-      req(`/api/states/${encodeSegment(name)}`, s.stateDeleted, { method: 'DELETE' }),
+      req(buildPath(apiRoutes.delete_api_states_name.path, { name }), s.stateDeleted, {
+        method: 'DELETE',
+      }),
     getStateStats: (name: string, signal?: AbortSignal) =>
-      req(`/api/states/${encodeSegment(name)}/stats`, s.stateStats, { signal }),
+      req(buildPath(apiRoutes.get_api_states_name_stats.path, { name }), s.stateStats, { signal }),
   };
 }
 
@@ -121,28 +142,32 @@ function stateAttachmentMethods(t: Transport) {
   const { req } = t;
   return {
     listStateAttachments: (name: string, signal?: AbortSignal) =>
-      req(`/api/states/${encodeSegment(name)}/attachments`, s.stateAttachmentList, { signal }),
+      req(
+        buildPath(apiRoutes.get_api_states_name_attachments.path, { name }),
+        s.stateAttachmentList,
+        { signal },
+      ),
     getStateAttachment: (name: string, template: string, signal?: AbortSignal) =>
       req(
-        `/api/states/${encodeSegment(name)}/attachments/${encodeSegment(template)}`,
+        buildPath(apiRoutes.get_api_states_name_attachments_template.path, { name, template }),
         s.stateAttachment,
         { signal },
       ),
     attachStateTemplate: (name: string, template: string, body: StateAttachmentBody) =>
       req(
-        `/api/states/${encodeSegment(name)}/attachments/${encodeSegment(template)}`,
+        buildPath(apiRoutes.put_api_states_name_attachments_template.path, { name, template }),
         s.stateAttached,
         { method: 'PUT', body },
       ),
     patchStateAttachment: (name: string, template: string, body: StateAttachmentBody) =>
       req(
-        `/api/states/${encodeSegment(name)}/attachments/${encodeSegment(template)}`,
+        buildPath(apiRoutes.patch_api_states_name_attachments_template.path, { name, template }),
         s.stateAttachmentUpdated,
         { method: 'PATCH', body },
       ),
     detachStateTemplate: (name: string, template: string) =>
       req(
-        `/api/states/${encodeSegment(name)}/attachments/${encodeSegment(template)}`,
+        buildPath(apiRoutes.delete_api_states_name_attachments_template.path, { name, template }),
         s.stateDetached,
         { method: 'DELETE' },
       ),
@@ -158,7 +183,7 @@ function stateRecordMethods(t: Transport) {
       params: { kind?: string } & StatePageQuery,
       signal?: AbortSignal,
     ) =>
-      req(`/api/states/${encodeSegment(name)}/subjects`, s.subjectPage, {
+      req(buildPath(apiRoutes.get_api_states_name_subjects.path, { name }), s.subjectPage, {
         signal,
         query: { kind: params.kind, limit: params.limit, cursor: params.cursor },
       }),
@@ -169,25 +194,39 @@ function stateRecordMethods(t: Transport) {
       body: { filters: Record<string, unknown> } & StatePageQuery,
       signal?: AbortSignal,
     ) =>
-      req(`/api/states/${encodeSegment(name)}/records/search`, s.recordSearchPage, {
-        method: 'POST',
-        body,
-        signal,
-      }),
+      req(
+        buildPath(apiRoutes.post_api_states_name_records_search.path, { name }),
+        s.recordSearchPage,
+        {
+          method: 'POST',
+          body,
+          signal,
+        },
+      ),
     // A subject with no document yet reads as `null` (a 200 `{data: null}`, the record
     // page's Create path) — never an error, so the schema is nullable.
     getStateRecord: (name: string, subject: StateSubjectRef, signal?: AbortSignal) =>
-      req(stateRecordPath(name, subject), s.stateRecord.nullable(), { signal }),
+      req(
+        buildPath(RECORD_ROUTES.read, stateRecordParams(name, subject)),
+        s.stateRecord.nullable(),
+        { signal },
+      ),
     putStateRecord: (name: string, subject: StateSubjectRef, data: Record<string, unknown>) =>
-      req(stateRecordPath(name, subject), s.stateRecord, { method: 'PUT', body: data }),
+      req(buildPath(RECORD_ROUTES.put, stateRecordParams(name, subject)), s.stateRecord, {
+        method: 'PUT',
+        body: data,
+      }),
     patchStateRecord: (name: string, subject: StateSubjectRef, data: Record<string, unknown>) =>
-      req(stateRecordPath(name, subject), s.stateRecord, { method: 'PATCH', body: data }),
+      req(buildPath(RECORD_ROUTES.patch, stateRecordParams(name, subject)), s.stateRecord, {
+        method: 'PATCH',
+        body: data,
+      }),
     applyStateRecord: (
       name: string,
       subject: StateSubjectRef,
       ops: readonly Record<string, unknown>[],
     ) =>
-      req(`${stateRecordPath(name, subject)}/deltas`, s.applyResult, {
+      req(buildPath(RECORD_ROUTES.deltas, stateRecordParams(name, subject)), s.applyResult, {
         method: 'POST',
         body: { ops },
       }),
@@ -209,7 +248,10 @@ function stateRecordOpMethods(t: Transport) {
       signal?: AbortSignal,
     ) =>
       req(
-        `${stateRecordPath(name, subject)}/template-jq/${encodeSegment(jqName)}`,
+        buildPath(RECORD_ROUTES.evalJq, {
+          ...stateRecordParams(name, subject),
+          program: jqName,
+        }),
         s.templateJqResult,
         { signal, query: encodeJqParams(params) },
       ),
@@ -223,12 +265,17 @@ function stateRecordOpMethods(t: Transport) {
       body?: { input?: unknown; op_id?: string },
     ) =>
       req(
-        `${stateRecordPath(name, subject)}/template-jq/${encodeSegment(jqName)}`,
+        buildPath(RECORD_ROUTES.applyJq, {
+          ...stateRecordParams(name, subject),
+          program: jqName,
+        }),
         s.templateJqApplyResult,
         { method: 'POST', body: body ?? {} },
       ),
     deleteStateRecord: (name: string, subject: StateSubjectRef) =>
-      req(stateRecordPath(name, subject), s.recordErased, { method: 'DELETE' }),
+      req(buildPath(RECORD_ROUTES.erase, stateRecordParams(name, subject)), s.recordErased, {
+        method: 'DELETE',
+      }),
     // `mode` is required server-side (`switch` drops, `merge` combines); the fold returns
     // a report, not the surviving record.
     foldStateRecord: (
@@ -237,7 +284,7 @@ function stateRecordOpMethods(t: Transport) {
       into: StateSubjectRef,
       mode: 'switch' | 'merge',
     ) =>
-      req(`${stateRecordPath(name, subject)}/fold`, s.stateFoldReport, {
+      req(buildPath(RECORD_ROUTES.fold, stateRecordParams(name, subject)), s.stateFoldReport, {
         method: 'POST',
         body: { into, mode },
       }),
@@ -247,12 +294,14 @@ function stateRecordOpMethods(t: Transport) {
       params?: StatePageQuery,
       signal?: AbortSignal,
     ) =>
-      req(`${stateRecordPath(name, subject)}/writes`, s.writesPage, {
+      req(buildPath(RECORD_ROUTES.writes, stateRecordParams(name, subject)), s.writesPage, {
         signal,
         query: { limit: params?.limit, cursor: params?.cursor },
       }),
     stateConsumers: (name: string, signal?: AbortSignal) =>
-      req(`/api/states/${encodeSegment(name)}/consumers`, s.stateConsumers, { signal }),
+      req(buildPath(apiRoutes.get_api_states_name_consumers.path, { name }), s.stateConsumers, {
+        signal,
+      }),
   };
 }
 
@@ -261,21 +310,36 @@ function stateTemplateMethods(t: Transport) {
   const { req } = t;
   return {
     listStateTemplates: (signal?: AbortSignal) =>
-      req('/api/state-templates', s.stateTemplateList, { signal }),
+      req(apiRoutes.get_api_state_templates.path, s.stateTemplateList, { signal }),
     getStateTemplate: (name: string, signal?: AbortSignal) =>
-      req(`/api/state-templates/${encodeSegment(name)}`, s.stateTemplateDocument, { signal }),
+      req(
+        buildPath(apiRoutes.get_api_state_templates_name.path, { name }),
+        s.stateTemplateDocument,
+        { signal },
+      ),
     putStateTemplate: (name: string, body: StateTemplateBody, replace?: boolean) =>
-      req(`/api/state-templates/${encodeSegment(name)}`, s.stateTemplateDocument, {
-        method: 'PUT',
-        body,
-        query: replace === true ? { replace: 'true' } : undefined,
-      }),
+      req(
+        buildPath(apiRoutes.put_api_state_templates_name.path, { name }),
+        s.stateTemplateDocument,
+        {
+          method: 'PUT',
+          body,
+          query: replace === true ? { replace: 'true' } : undefined,
+        },
+      ),
     deleteStateTemplate: (name: string) =>
-      req(`/api/state-templates/${encodeSegment(name)}`, s.stateTemplateDeleted, {
-        method: 'DELETE',
-      }),
+      req(
+        buildPath(apiRoutes.delete_api_state_templates_name.path, { name }),
+        s.stateTemplateDeleted,
+        {
+          method: 'DELETE',
+        },
+      ),
     pruneStateRetention: () =>
-      req('/api/state-retention/prune', s.stateRetentionPruned, { method: 'POST', body: {} }),
+      req(apiRoutes.post_api_state_retention_prune.path, s.stateRetentionPruned, {
+        method: 'POST',
+        body: {},
+      }),
   };
 }
 
@@ -291,19 +355,27 @@ function statePendingSaveMethods(t: Transport) {
       params: { status?: 'outstanding' | 'failed' } & StatePageQuery,
       signal?: AbortSignal,
     ) =>
-      req('/api/state-pending-saves', s.pendingSavesPage, {
+      req(apiRoutes.get_api_state_pending_saves.path, s.pendingSavesPage, {
         signal,
         query: { status: params.status, limit: params.limit, cursor: params.cursor },
       }),
     retryPendingSave: (id: string) =>
-      req(`/api/state-pending-saves/${encodeSegment(id)}/retry`, s.pendingSaveRetried, {
-        method: 'POST',
-        body: {},
-      }),
+      req(
+        buildPath(apiRoutes.post_api_state_pending_saves_id_retry.path, { id }),
+        s.pendingSaveRetried,
+        {
+          method: 'POST',
+          body: {},
+        },
+      ),
     discardPendingSave: (id: string) =>
-      req(`/api/state-pending-saves/${encodeSegment(id)}`, s.pendingSaveDiscarded, {
-        method: 'DELETE',
-      }),
+      req(
+        buildPath(apiRoutes.delete_api_state_pending_saves_id.path, { id }),
+        s.pendingSaveDiscarded,
+        {
+          method: 'DELETE',
+        },
+      ),
   };
 }
 

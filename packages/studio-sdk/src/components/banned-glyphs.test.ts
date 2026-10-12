@@ -58,7 +58,9 @@
  * that are really left:
  *
  * - A glyph assembled at RUNTIME (`String.fromCodePoint(0x2715)`, a
- *   concatenation, a glyph arriving from the server) has no literal to find.
+ *   concatenation, a glyph arriving from the server) has no literal to find. The
+ *   api-client's generated modules carry the server's published text, and are
+ *   read as that.
  * - A glyph inside a `.css` `content:` property, which is a different rule.
  * - An ALTERNATE SPELLING of a banned mark: `✕` U+2715 draws what `×` draws,
  *   and is not in the set below because it has never occurred here — see
@@ -98,6 +100,10 @@ const SKIP_DIRECTORIES = new Set([
   'blob-report',
   'test-results',
 ]);
+// The api-client's generated modules are written from the platform's published
+// documents: their text (a document's `description`) is the platform's wording, a
+// glyph arriving from the server, not markup this repository paints.
+const SKIP_PATHS = new Set(['packages/api-client/src/generated']);
 
 /**
  * The file kinds a glyph can be painted from.
@@ -223,6 +229,7 @@ function sourcesWithin(directory: string): string[] {
   for (const entry of readdirSync(directory)) {
     if (SKIP_DIRECTORIES.has(entry)) continue;
     const full = join(directory, entry);
+    if (SKIP_PATHS.has(relative(repoRoot, full))) continue;
     if (statSync(full).isDirectory()) {
       found.push(...sourcesWithin(full));
       continue;

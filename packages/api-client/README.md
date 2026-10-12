@@ -31,6 +31,35 @@ client type must add every member.
 await api.cancelInteraction('int_123'); // withdraw a pending ask unanswered
 ```
 
+## Generated from the platform
+
+The response schemas, the route table and the platform constants are generated from
+the two artifacts the platform publishes, vendored under `contract-schema/`: the
+contract's JSON-schema bundle (`contract-schema.json`) and the skeleton's OpenAPI
+artifact (`openapi.json`). `scripts/gen-schemas.mjs` writes `src/generated/`:
+
+- `served-schemas.ts` — one zod schema per served contract document and shared
+  sub-shape, plus `servedConstants`, `servedVectors` and `servedDocumentsJson`;
+- `openapi-schemas.ts` — one zod schema per OpenAPI component (a component that is a
+  contract document re-exports it) and `responseSchemas`, the schema of each
+  operation's `{"data": …}` body;
+- `api-routes.ts` — `apiRoutes` (each operation's method and path template),
+  `apiPathPrefixes` and `buildPath`, which encodes each path parameter.
+
+`schema:refresh` re-vendors both artifacts from a platform checkout (`TAI42_REPO`) by
+hand; `schema:check` runs in the gate and fails on a stale generated file. Two CI jobs
+pin the vendored majors: `api-client-contract-pin` checks the bundle's
+`contract_version` against the latest `tai42-contract` and the OpenAPI artifact's
+`info.version` against the latest `tai42-skeleton`; `docs-demo-contract-pin` checks the
+docs-demo fixture's `contract` range.
+
+The `src/schemas/*.ts` modules export the generated schemas under the client's names.
+What stays hand-written says why in the file: a shape the spec carries as an open or
+opaque value (a tool's own result, the upstream marketplace registry's bodies, a
+version body, a fan-out's modes), a client-side narrowing (the minted key, the
+`format_payload` normalization), the SSE frames, and a plugin's routes, which the core
+spec does not publish.
+
 ## License
 
 Apache-2.0. See the repository `LICENSE`.

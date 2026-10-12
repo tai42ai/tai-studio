@@ -1,10 +1,11 @@
 /** Environment-config and config-mode response schemas. */
 import { z } from 'zod';
 
-export const envConfig = z.object({
-  env: z.record(z.string(), z.string()),
-  secret_keys: z.array(z.string()),
-});
+import * as openapi from '../generated/openapi-schemas';
+
+export const envConfig = openapi.envView;
+
+// `read_only` is hand-written: a UI-side gate the server does not publish.
 /**
  * `GET /api/config/mode` — the active config backend mode: `file`, or an installed
  * provider's mode name such as `kubernetes`. The skeleton emits only `config_mode`;
@@ -12,7 +13,6 @@ export const envConfig = z.object({
  * so a normal response never drifts, while a genuinely read-only deployment can opt in
  * by emitting `read_only: true`.
  */
-export const configMode = z.object({
-  config_mode: z.string(),
+export const configMode = openapi.configModeView.extend({
   read_only: z.boolean().default(false),
 });

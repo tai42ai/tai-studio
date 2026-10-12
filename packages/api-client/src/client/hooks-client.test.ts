@@ -147,7 +147,12 @@ describe('hook listed-record contract', () => {
   it('parses a listed hook and the top-level topic → door map', async () => {
     const { client } = harness(() =>
       jsonResponse({
-        data: { items: [hookRecord()], total: 1, trigger_auth: { 'events.created': 'verifier' } },
+        data: {
+          items: [hookRecord()],
+          total: 1,
+          trigger_auth: { 'events.created': 'verifier' },
+          topic_verifiers: {},
+        },
       }),
     );
     const out = await client.listHooks();
@@ -155,10 +160,11 @@ describe('hook listed-record contract', () => {
     expect(out.trigger_auth).toEqual({ 'events.created': 'verifier' });
   });
 
-  it('defaults the door map to {} when the server omits it (older response)', async () => {
-    const { client } = harness(() => jsonResponse({ data: { items: [hookRecord()], total: 1 } }));
-    const out = await client.listHooks();
-    expect(out.trigger_auth).toEqual({});
+  it('refuses a listing without its door map', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: { items: [hookRecord()], total: 1, topic_verifiers: {} } }),
+    );
+    await expect(client.listHooks()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 
   it('throws ApiSchemaError LOUDLY on a listed hook with no execution_key', async () => {

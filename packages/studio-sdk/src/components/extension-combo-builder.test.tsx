@@ -8,10 +8,10 @@ import { ExtensionComboBuilder } from './extension-combo-builder';
 import { AlertTriangleIcon, XCircleIcon } from './icons';
 
 const CATALOG: Extension[] = [
-  { name: 'marka', kind: 'wrapper' },
-  { name: 'markb', kind: 'wrapper' },
-  { name: 'backendx', kind: 'backend' },
-  { name: 'output_schema', kind: 'wrapper' },
+  { name: 'marka', kind: 'wrapper', multiple: false },
+  { name: 'markb', kind: 'wrapper', multiple: false },
+  { name: 'backendx', kind: 'backend', multiple: false },
+  { name: 'output_schema', kind: 'wrapper', multiple: false },
 ];
 
 /** A controlled harness so the committed combos reflect each Add/Update/Remove. */
@@ -112,7 +112,7 @@ describe('ExtensionComboBuilder', () => {
     const payload = '<script>alert(1)</script>';
     const { container } = render(
       <ExtensionComboBuilder
-        available={[{ name: payload, kind: 'wrapper' }]}
+        available={[{ name: payload, kind: 'wrapper', multiple: false }]}
         value={[[payload]]}
         onChange={vi.fn()}
       />,

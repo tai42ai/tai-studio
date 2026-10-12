@@ -80,22 +80,19 @@ describe('tool_meta schemas', () => {
     }
   });
 
-  it('throws loudly when a required overlay field is absent (no silent default)', () => {
-    expect(() =>
-      schemas.toolMetaRecord.parse({ tool_name: 't', display_name: null, folder_id: null }),
-    ).toThrow();
+  it('reads the overlay fields a row leaves out at their published defaults', () => {
+    expect(schemas.toolMetaRecord.parse({ tool_name: 't' })).toEqual({
+      tool_name: 't',
+      display_name: null,
+      folder_id: null,
+      tags: [],
+      badges: [],
+      hidden: null,
+    });
   });
 
-  it('throws loudly when the overlay badges are absent (no silent default)', () => {
-    expect(() =>
-      schemas.toolMetaRecord.parse({
-        tool_name: 't',
-        display_name: null,
-        folder_id: null,
-        tags: [],
-        hidden: null,
-      }),
-    ).toThrow();
+  it('throws loudly when a row has no tool_name', () => {
+    expect(() => schemas.toolMetaRecord.parse({ display_name: null })).toThrow();
   });
 
   it('throws loudly when a folder parent_id is a non-string, non-null value', () => {
@@ -203,7 +200,7 @@ describe('tool_meta client transport', () => {
 
   it('throws ApiSchemaError LOUDLY on a drifting overlay row (no silent coerce)', async () => {
     const { client } = harness(() =>
-      jsonResponse({ data: { folders: [], meta: [{ tool_name: 'x' }] } }),
+      jsonResponse({ data: { folders: [], meta: [{ tool_name: 'x', tags: 'nope' }] } }),
     );
     await expect(client.listToolMeta()).rejects.toBeInstanceOf(ApiSchemaError);
   });

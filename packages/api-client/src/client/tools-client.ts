@@ -1,5 +1,5 @@
 /** Tool catalog, run, live-registry admin and tag sub-client. */
-import { encodeSegment } from '../http';
+import { apiRoutes, buildPath } from '../generated/api-routes';
 import * as s from '../schemas';
 import type { StateSubject } from '../schemas/states';
 import { getToolRun, listToolRuns, submitToolRun, type SubmitToolRunArgs } from '../tool-runs';
@@ -28,13 +28,17 @@ export interface ToolAdminArgs {
 export function toolsClient(t: Transport) {
   const { config, req } = t;
   return {
-    listTools: (signal?: AbortSignal) => req('/api/tools', s.toolNames, { signal }),
+    listTools: (signal?: AbortSignal) => req(apiRoutes.get_api_tools.path, s.toolNames, { signal }),
     getToolSchema: (name: string, signal?: AbortSignal) =>
-      req(`/api/tools/${encodeSegment(name)}/schema`, s.toolSchema, { signal }),
+      req(
+        buildPath(apiRoutes.get_api_tools_tool_name_schema.path, { tool_name: name }),
+        s.toolSchema,
+        { signal },
+      ),
     getAllToolSchemas: (signal?: AbortSignal) =>
-      req('/api/tools-schema', s.allToolSchemas, { signal }),
+      req(apiRoutes.get_api_tools_schema.path, s.allToolSchemas, { signal }),
     runTool: (args: RunToolArgs, signal?: AbortSignal) =>
-      req('/api/run-tool', s.runToolResult, {
+      req(apiRoutes.post_api_run_tool.path, s.runToolResult, {
         method: 'POST',
         // The backend's `/api/run-tool` door reads `{tool_name, arguments, subject}`
         // (the shape `read_tool_call` enforces and the background `/api/tool-runs`
@@ -54,12 +58,12 @@ export function toolsClient(t: Transport) {
     // per-worker `fleetResult` the shared fleet-report handler renders. Both are
     // fenced + destructive server-side, so a refusal surfaces as a loud error.
     reloadTool: (args: ToolAdminArgs) =>
-      req('/api/tools/reload', s.fleetResult, {
+      req(apiRoutes.post_api_tools_reload.path, s.fleetResult, {
         method: 'POST',
         body: { kind: args.kind, name: args.name, targets: args.targets ?? null },
       }),
     removeTool: (args: ToolAdminArgs) =>
-      req('/api/tools/remove', s.fleetResult, {
+      req(apiRoutes.post_api_tools_remove.path, s.fleetResult, {
         method: 'POST',
         body: { kind: args.kind, name: args.name, targets: args.targets ?? null },
       }),
@@ -70,6 +74,7 @@ export function toolsClient(t: Transport) {
     listToolRuns: (toolName: string, signal?: AbortSignal) =>
       listToolRuns(config, toolName, signal),
 
-    listToolTags: (signal?: AbortSignal) => req('/api/tools/tags', s.toolTags, { signal }),
+    listToolTags: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_tools_tags.path, s.toolTags, { signal }),
   };
 }

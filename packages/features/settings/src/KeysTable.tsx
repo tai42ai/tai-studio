@@ -99,7 +99,7 @@ function PrincipalCell({ payload }: { readonly payload: KeyPayload }): ReactNode
   }
   return (
     <span style={principalCellStyle} title="No principal (orphaned key — re-import the backup)">
-      —{payload.orphaned === true ? <Badge variant="danger">orphaned</Badge> : null}
+      —{payload.orphaned ? <Badge variant="danger">orphaned</Badge> : null}
     </span>
   );
 }
@@ -221,7 +221,7 @@ export function KeysTable({
                   <TD>{payload.description}</TD>
                   <TD>
                     <div style={badgeRowStyle}>
-                      {payload.scopes.map((scope) => (
+                      {(payload.scopes ?? []).map((scope) => (
                         <Badge key={scope} variant="neutral">
                           {scope}
                         </Badge>

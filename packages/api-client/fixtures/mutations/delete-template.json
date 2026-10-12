@@ -1,4 +1,8 @@
 {
   "path": "greetings/welcome.j2",
-  "deleted": true
+  "deleted": true,
+  "fanout": {
+    "mode": "local-only",
+    "note": "no worker bus configured; only this worker reloaded"
+  }
 }

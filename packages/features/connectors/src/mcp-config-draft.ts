@@ -3,7 +3,7 @@
  * (form ⇄ JSON), the combined secret-paste op, the manifest save with its
  * session-generated orphan-key sweep, and the composed hook the editor consumes.
  */
-import { ApiError } from '@tai42/api-client';
+import { ApiError, apiRoutes } from '@tai42/api-client';
 import {
   collectEnvRefs,
   parseEnvMarker,
@@ -273,7 +273,7 @@ export function useMcpConfigDraft({
 }: {
   readonly initialEntries: readonly Record<string, unknown>[];
 }): McpConfigDraft {
-  const canSave = useCanWrite('/api/mcp-config', 'POST');
+  const canSave = useCanWrite(apiRoutes.post_api_mcp_config.path, 'POST');
   // The exact env keys THIS editor generated through its own pastes — the sole set the
   // save-time orphan sweep may delete.
   const sessionGeneratedKeysRef = useRef<Set<string>>(new Set());

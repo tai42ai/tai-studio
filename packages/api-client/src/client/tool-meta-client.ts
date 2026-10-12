@@ -1,5 +1,5 @@
 /** Tool-organization overlay (folders and meta) sub-client. */
-import { encodeSegment } from '../http';
+import { apiRoutes, buildPath } from '../generated/api-routes';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -28,38 +28,63 @@ export function toolMetaClient(t: Transport) {
   return {
     // The folder tree + per-tool overlay rows in one read; the features merge the
     // rows against the live tool list and native tags client-side.
-    listToolMeta: (signal?: AbortSignal) => req('/api/tool-meta', s.toolMetaOverlay, { signal }),
+    listToolMeta: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_tool_meta.path, s.toolMetaOverlay, { signal }),
     // Merge-patch a tool's overlay row (create it if absent). `patch` carries ONLY
     // the fields to change — a present-null clears, an absent field is untouched,
     // and a present `tags` array replaces the set.
     upsertToolMeta: (toolName: string, patch: ToolMetaPatch) =>
-      req(`/api/tool-meta/tools/${encodeSegment(toolName)}`, s.toolMetaRecord, {
-        method: 'PATCH',
-        body: patch,
-      }),
+      req(
+        buildPath(apiRoutes.patch_api_tool_meta_tools_tool_name.path, { tool_name: toolName }),
+        s.toolMetaRecord,
+        {
+          method: 'PATCH',
+          body: patch,
+        },
+      ),
     deleteToolMeta: (toolName: string) =>
-      req(`/api/tool-meta/tools/${encodeSegment(toolName)}`, s.toolMetaDeleted, {
-        method: 'DELETE',
-      }),
+      req(
+        buildPath(apiRoutes.delete_api_tool_meta_tools_tool_name.path, { tool_name: toolName }),
+        s.toolMetaDeleted,
+        {
+          method: 'DELETE',
+        },
+      ),
     createFolder: (name: string, parentId: string | null = null) =>
-      req('/api/tool-meta/folders', s.folderRecord, {
+      req(apiRoutes.post_api_tool_meta_folders.path, s.folderRecord, {
         method: 'POST',
         body: { name, parent_id: parentId },
       }),
     renameFolder: (folderId: string, name: string) =>
-      req(`/api/tool-meta/folders/${encodeSegment(folderId)}/rename`, s.folderRecord, {
-        method: 'POST',
-        body: { name },
-      }),
+      req(
+        buildPath(apiRoutes.post_api_tool_meta_folders_folder_id_rename.path, {
+          folder_id: folderId,
+        }),
+        s.folderRecord,
+        {
+          method: 'POST',
+          body: { name },
+        },
+      ),
     // `null` re-parents to the root.
     moveFolder: (folderId: string, parentId: string | null) =>
-      req(`/api/tool-meta/folders/${encodeSegment(folderId)}/move`, s.folderRecord, {
-        method: 'POST',
-        body: { parent_id: parentId },
-      }),
+      req(
+        buildPath(apiRoutes.post_api_tool_meta_folders_folder_id_move.path, {
+          folder_id: folderId,
+        }),
+        s.folderRecord,
+        {
+          method: 'POST',
+          body: { parent_id: parentId },
+        },
+      ),
     deleteFolder: (folderId: string) =>
-      req(`/api/tool-meta/folders/${encodeSegment(folderId)}`, s.folderDeleted, {
-        method: 'DELETE',
-      }),
+      req(
+        buildPath(apiRoutes.delete_api_tool_meta_folders_folder_id.path, { folder_id: folderId }),
+        s.folderDeleted,
+        {
+          method: 'DELETE',
+        },
+      ),
   };
 }

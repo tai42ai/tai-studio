@@ -222,16 +222,14 @@ describe('RouteFormDialog — create', () => {
     await user.click(screen.getByRole('button', { name: 'Create route' }));
 
     expect(
-      await screen.findByText(
-        'Use a ":"-free slug: lowercase letters, digits, and hyphens only.',
-        undefined,
-        { timeout: 5000 },
-      ),
+      await screen.findByText('Use lowercase letters, digits and hyphens.', undefined, {
+        timeout: 5000,
+      }),
     ).toBeInTheDocument();
     expect(createOrReplaceConversationRoute).not.toHaveBeenCalled();
   });
 
-  it('rejects a non-https callback URL locally before any request', async () => {
+  it('rejects a callback URL carrying a user name locally before any request', async () => {
     const user = userEvent.setup({ delay: null });
     const createOrReplaceConversationRoute = vi.fn();
     renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
@@ -244,15 +242,51 @@ describe('RouteFormDialog — create', () => {
     await pickVariant(user, 'Door', 'api');
     await user.type(
       screen.getByRole('textbox', { name: /^Callback URL\b/ }),
-      'http://sink.example/cb',
+      'https://user@sink.example/cb',
     );
     await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-account');
     await user.click(screen.getByRole('button', { name: 'Create route' }));
 
     expect(
-      await screen.findByText('Must be an absolute https URL.', undefined, { timeout: 5000 }),
+      await screen.findByText(
+        'Must be an absolute https URL with no user name or password.',
+        undefined,
+        {
+          timeout: 5000,
+        },
+      ),
     ).toBeInTheDocument();
     expect(createOrReplaceConversationRoute).not.toHaveBeenCalled();
+  });
+
+  it('creates a poll-only api route with no callback URL', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
+      created: true,
+      route_name: 'account',
+      route: makeRoute({ route_name: 'account', door: 'api', channel: null, our_identity: null }),
+      callback_secret: null,
+    });
+    const onClose = vi.fn();
+    renderWithProviders(<RouteFormDialog onClose={onClose} />, {
+      client: { createOrReplaceConversationRoute },
+    });
+
+    await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'account');
+    await pickVariant(user, 'Target', 'agent');
+    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
+    await pickVariant(user, 'Door', 'api');
+    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-account');
+    await user.click(screen.getByRole('button', { name: 'Create route' }));
+
+    await waitFor(() => {
+      expect(createOrReplaceConversationRoute).toHaveBeenCalledTimes(1);
+    });
+    expect(createOrReplaceConversationRoute.mock.calls[0]?.[0]).toMatchObject({
+      route_name: 'account',
+      door: 'api',
+      callback_url: null,
+    });
   });
 
   it('reveals the api-door callback secret once, then closes on Done', async () => {

@@ -29,7 +29,7 @@
  * (`useBreakpoint().isSinglePane`) exactly one pane shows, driven by `data-pane`.
  * Selecting a tool moves focus to the detail heading; Back returns focus to the list.
  */
-import type { ToolMetaPatch } from '@tai42/api-client';
+import { type ApiPathPrefix, type ToolMetaPatch } from '@tai42/api-client';
 import {
   ArrowLeftIcon,
   Button,
@@ -67,7 +67,7 @@ import type { ToolView } from './toolView';
 import { useToolCatalog } from './useToolCatalog';
 
 /** The overlay-write door the edit affordance is gated on (merge-patch a tool's row). */
-const TOOL_META_WRITE_ROUTE = '/api/tool-meta/tools';
+const TOOL_META_WRITE_ROUTE: ApiPathPrefix = '/api/tool-meta/tools';
 
 function ToolList({
   selected,

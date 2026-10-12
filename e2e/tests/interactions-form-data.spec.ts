@@ -40,6 +40,7 @@ const FORM_INTERACTION = {
   question: 'Fill in the details',
   created_at: '2026-08-01T00:00:00.000Z',
   timeout_at: '2026-08-09T00:00:00.000Z',
+  sensitive: false,
   format_payload: {
     schema: {
       type: 'object',

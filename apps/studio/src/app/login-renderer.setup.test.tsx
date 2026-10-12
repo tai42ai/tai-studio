@@ -27,6 +27,7 @@ describe('login renderer setup mode', () => {
     server.use(
       methods({
         needs_setup: true,
+        claim_fragment_key: 'claim',
         setup_login: { kinds: ['password', 'invite'] },
         methods: [passwordForm],
       }),
@@ -60,7 +61,12 @@ describe('login renderer setup mode', () => {
     const tools = capturingTools();
     let body: unknown;
     server.use(
-      methods({ needs_setup: true, setup_login: { kinds: ['password'] }, methods: [] }),
+      methods({
+        needs_setup: true,
+        claim_fragment_key: 'claim',
+        setup_login: { kinds: ['password'] },
+        methods: [],
+      }),
       http.post('*/api/setup', async ({ request }) => {
         body = await request.json();
         return HttpResponse.json({
@@ -106,7 +112,7 @@ describe('login renderer setup mode', () => {
     const user = userEvent.setup();
     let body: unknown;
     server.use(
-      methods({ needs_setup: true, setup_login: null, methods: [] }),
+      methods({ needs_setup: true, claim_fragment_key: 'claim', setup_login: null, methods: [] }),
       http.post('*/api/setup', async ({ request }) => {
         body = await request.json();
         return HttpResponse.json({
@@ -138,7 +144,12 @@ describe('login renderer setup mode', () => {
     const user = userEvent.setup();
     let body: unknown;
     server.use(
-      methods({ needs_setup: true, setup_login: { kinds: ['password', 'invite'] }, methods: [] }),
+      methods({
+        needs_setup: true,
+        claim_fragment_key: 'claim',
+        setup_login: { kinds: ['password', 'invite'] },
+        methods: [],
+      }),
       http.post('*/api/setup', async ({ request }) => {
         body = await request.json();
         return HttpResponse.json({
@@ -179,7 +190,7 @@ describe('login renderer setup mode', () => {
     async function attempt(status: number): Promise<ReturnType<typeof renderStudio>> {
       server.resetHandlers();
       server.use(
-        methods({ needs_setup: true, setup_login: null, methods: [] }),
+        methods({ needs_setup: true, claim_fragment_key: 'claim', setup_login: null, methods: [] }),
         http.post('*/api/setup', () => HttpResponse.json({ error: 'no' }, { status })),
         okPlugins,
       );
@@ -231,7 +242,9 @@ describe('login renderer setup mode', () => {
 
   it('setup "Change token" collapses the owner form and keeps the token, restoring the token form', async () => {
     const user = userEvent.setup();
-    server.use(methods({ needs_setup: true, setup_login: null, methods: [] }));
+    server.use(
+      methods({ needs_setup: true, claim_fragment_key: 'claim', setup_login: null, methods: [] }),
+    );
     renderStudio({ initialPath: '/login' });
 
     const token = await screen.findByLabelText('Setup token', { selector: 'input' });
@@ -257,7 +270,7 @@ describe('login renderer setup mode', () => {
     const user = userEvent.setup();
     const tools = capturingTools();
     server.use(
-      methods({ needs_setup: true, setup_login: null, methods: [] }),
+      methods({ needs_setup: true, claim_fragment_key: 'claim', setup_login: null, methods: [] }),
       okPlugins,
       tools.handler,
       okToolTags,

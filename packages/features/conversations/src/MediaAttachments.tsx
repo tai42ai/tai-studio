@@ -15,6 +15,8 @@
  * in an attribute sink and is not echoed in the notice. There is no
  * `dangerouslySetInnerHTML` here.
  *
+ * A `link` item renders as a scheme-checked external link.
+ *
  * Every failure state is LOUD: a parse failure is a malformed alert, a url that fails
  * the src gate or an element that fails to LOAD is a "failed to load" alert.
  */
@@ -22,14 +24,12 @@ import type { AttachmentMediaItem } from '@tai42/api-client';
 import { schemas } from '@tai42/api-client';
 import {
   Badge,
-  isRenderableMediaSrc,
-  isServedMediaUrl,
+  ExternalLinkButton,
+  MediaDocument,
   MediaImage,
-  resolveMediaSrc,
-  useApi,
+  MediaPlayer,
 } from '@tai42/studio-sdk';
 import type { CSSProperties, ReactNode } from 'react';
-import { useState } from 'react';
 
 // -- styles ------------------------------------------------------------------
 
@@ -37,35 +37,6 @@ const galleryStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--tai-space-3)',
-};
-
-const itemStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-2)',
-};
-
-const chipStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 'var(--tai-space-2)',
-};
-
-const labelStyle: CSSProperties = {
-  wordBreak: 'break-all',
-};
-
-const audioStyle: CSSProperties = {
-  width: '100%',
-};
-
-const videoStyle: CSSProperties = {
-  maxWidth: '100%',
-  maxHeight: '320px',
-  width: 'auto',
-  height: 'auto',
-  borderRadius: 'var(--tai-radius-md)',
-  border: '1px solid var(--tai-color-border)',
 };
 
 const noticeStyle: CSSProperties = {
@@ -100,102 +71,9 @@ function AttachmentNotice({
   );
 }
 
-// -- document ----------------------------------------------------------------
-
-/**
- * A document attachment: a labelled download affordance. The served route sends
- * `Content-Disposition: attachment` for documents, so the anchor `download`-hints and
- * opens in a new tab; `rel="noreferrer"` stops the Studio URL leaking to the media
- * host. A url that fails the src gate is a loud notice, never a live href.
- */
-function DocumentAttachment({
-  url,
-  label,
-}: {
-  readonly url: string;
-  readonly label: string;
-}): ReactNode {
-  const { baseUrl } = useApi();
-  if (!isRenderableMediaSrc(url)) {
-    return <AttachmentNotice testId="attachment-error" badge="Attachment" message={LOAD_FAILURE} />;
-  }
-  return (
-    <div style={chipStyle} data-testid="attachment-document">
-      <Badge variant="neutral">Document</Badge>
-      <a
-        href={resolveMediaSrc(url, baseUrl)}
-        target="_blank"
-        rel="noreferrer"
-        download
-        title={label}
-        style={labelStyle}
-      >
-        {label}
-      </a>
-    </div>
-  );
-}
-
-// -- audio / video -----------------------------------------------------------
-
-/**
- * A native `<audio>`/`<video controls>` player. `referrerPolicy` is not a valid
- * attribute on `<audio>`/`<video>`, so a remote load has no per-element referrer
- * control; the player therefore admits ONLY the platform's own served-media reference
- * (same-origin, leaking no page URL to a media host), and any other url — a bare
- * `https:` one included — is a loud notice. The load-failure flag keys on the url that
- * failed (not a bare boolean) so a new url at the same position gets a fresh load
- * attempt rather than inheriting a stale failure notice.
- */
-function MediaPlayer({
-  kind,
-  url,
-  label,
-}: {
-  readonly kind: 'audio' | 'video';
-  readonly url: string;
-  readonly label: string;
-}): ReactNode {
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const { baseUrl } = useApi();
-
-  if (!isServedMediaUrl(url) || failedUrl === url) {
-    return <AttachmentNotice testId="attachment-error" badge="Attachment" message={LOAD_FAILURE} />;
-  }
-
-  const src = resolveMediaSrc(url, baseUrl);
-  const onError = (): void => {
-    setFailedUrl(url);
-  };
-
-  if (kind === 'audio') {
-    return (
-      <div style={itemStyle}>
-        {/* eslint-disable-next-line jsx-a11y/media-has-caption -- an inbound attachment carries no caption track */}
-        <audio
-          controls
-          src={src}
-          aria-label={label}
-          onError={onError}
-          style={audioStyle}
-          data-testid="attachment-audio"
-        />
-      </div>
-    );
-  }
-  return (
-    <div style={itemStyle}>
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- an inbound attachment carries no caption track */}
-      <video
-        controls
-        src={src}
-        aria-label={label}
-        onError={onError}
-        style={videoStyle}
-        data-testid="attachment-video"
-      />
-    </div>
-  );
+/** The one notice for a url a sink refuses or that fails to load; the url is never echoed. */
+function loadFailureNotice(): ReactNode {
+  return <AttachmentNotice testId="attachment-error" badge="Attachment" message={LOAD_FAILURE} />;
 }
 
 // -- one item ----------------------------------------------------------------
@@ -233,20 +111,34 @@ function AttachmentItem({
         url={media.url}
         caption={caption}
         altFallback={filename ?? 'Attached image'}
-        renderNotice={() => (
-          <AttachmentNotice testId="attachment-error" badge="Attachment" message={LOAD_FAILURE} />
-        )}
+        renderNotice={loadFailureNotice}
       />
     );
   }
   if (media.kind === 'document') {
-    return <DocumentAttachment url={media.url} label={filename ?? caption ?? 'Attachment'} />;
+    return (
+      <MediaDocument
+        url={media.url}
+        label={filename ?? caption ?? 'Attachment'}
+        renderNotice={loadFailureNotice}
+      />
+    );
+  }
+  if (media.kind === 'link') {
+    // A link: `ExternalLinkButton` scheme-checks the href, so a non-http(s) url is
+    // neutralized to non-navigable text.
+    return (
+      <div data-testid="attachment-link">
+        <ExternalLinkButton url={media.url}>{caption ?? media.url}</ExternalLinkButton>
+      </div>
+    );
   }
   return (
     <MediaPlayer
       kind={media.kind}
       url={media.url}
       label={filename ?? (media.kind === 'audio' ? 'Audio attachment' : 'Video attachment')}
+      renderNotice={loadFailureNotice}
     />
   );
 }

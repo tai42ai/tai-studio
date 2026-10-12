@@ -13,7 +13,7 @@
  * Every server-supplied value renders as escaped React text; no config field is ever
  * interpreted as markup.
  */
-import type { TargetConversationConfig } from '@tai42/api-client';
+import { apiRoutes, type TargetConversationConfig } from '@tai42/api-client';
 import {
   Button,
   Card,
@@ -61,8 +61,14 @@ export function ConfigsTable(): ReactNode {
   // full-projection gate: a scoped projection can never method-express a templated
   // route, so its write affordances stay withdrawn (projection ⊆ gate). The read table
   // below is unaffected; only the write controls gate.
-  const canWrite = useCanWrite('/api/conversation-configs/{target_kind}/{target_name}', 'PUT');
-  const canDelete = useCanWrite('/api/conversation-configs/{target_kind}/{target_name}', 'DELETE');
+  const canWrite = useCanWrite(
+    apiRoutes.put_api_conversation_configs_target_kind_target_name.path,
+    'PUT',
+  );
+  const canDelete = useCanWrite(
+    apiRoutes.delete_api_conversation_configs_target_kind_target_name.path,
+    'DELETE',
+  );
 
   // `creating` opens the blank form; `editing` opens it prefilled from a row;
   // `pendingDelete` names the row awaiting a destructive-delete confirm.

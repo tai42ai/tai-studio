@@ -124,6 +124,7 @@ describe('backend client transport', () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
+          ok: true,
           op: 'reload_config',
           reachable: true,
           local_only: false,
@@ -152,6 +153,7 @@ describe('backend client transport', () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
+          ok: true,
           op: 'reload_config',
           reachable: true,
           local_only: false,

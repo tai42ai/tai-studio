@@ -1,5 +1,6 @@
 /** Run metrics, listing, trace and export sub-client. */
-import { apiDownload, encodeSegment, type RequestOptions } from '../http';
+import { apiRoutes, buildPath } from '../generated/api-routes';
+import { apiDownload, type RequestOptions } from '../http';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -58,22 +59,37 @@ export function observabilityClient(t: Transport) {
     // The monitoring-backend dashboard rollups (`GET /api/observability/metrics`),
     // a JSON aggregate distinct from any raw process-metrics text endpoint.
     getObservabilityMetrics: (params: MetricsQuery = {}, signal?: AbortSignal) =>
-      req('/api/observability/metrics', s.dashboardMetrics, {
+      req(apiRoutes.get_api_observability_metrics.path, s.dashboardMetrics, {
         query: { from: params.from, to: params.to, granularity: params.granularity },
         signal,
       }),
     listRuns: (params: RunsQuery = {}, signal?: AbortSignal) =>
-      req('/api/observability/runs', s.runsPage, { query: runsQueryToParams(params), signal }),
-    // What the monitoring backend serves: page ceiling, sorts, sort/filter combinations, metrics.
-    getObservabilityCapabilities: (signal?: AbortSignal) =>
-      req('/api/observability/capabilities', s.observabilityCapabilities, { signal }),
-    getRunTrace: (traceId: string, signal?: AbortSignal) =>
-      req(`/api/observability/runs/${encodeSegment(traceId)}/trace`, s.runTrace, { signal }),
-    // The run's span tree without span inputs/outputs.
-    getRunTraceOutline: (traceId: string, signal?: AbortSignal) =>
-      req(`/api/observability/runs/${encodeSegment(traceId)}/trace/outline`, s.runTraceOutline, {
+      req(apiRoutes.get_api_observability_runs.path, s.runsPage, {
+        query: runsQueryToParams(params),
         signal,
       }),
+    // What the monitoring backend serves: page ceiling, sorts, sort/filter combinations, metrics.
+    getObservabilityCapabilities: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_observability_capabilities.path, s.observabilityCapabilities, {
+        signal,
+      }),
+    getRunTrace: (traceId: string, signal?: AbortSignal) =>
+      req(
+        buildPath(apiRoutes.get_api_observability_runs_trace_id_trace.path, { trace_id: traceId }),
+        s.runTrace,
+        { signal },
+      ),
+    // The run's span tree without span inputs/outputs.
+    getRunTraceOutline: (traceId: string, signal?: AbortSignal) =>
+      req(
+        buildPath(apiRoutes.get_api_observability_runs_trace_id_trace_outline.path, {
+          trace_id: traceId,
+        }),
+        s.runTraceOutline,
+        {
+          signal,
+        },
+      ),
     // One span field with every record reference resolved; `pointer` is an RFC 6901
     // JSON pointer into the field's value (omitted or empty = the whole value).
     getResolvedSpanValue: (
@@ -84,7 +100,10 @@ export function observabilityClient(t: Transport) {
       signal?: AbortSignal,
     ) =>
       req(
-        `/api/observability/runs/${encodeSegment(traceId)}/spans/${encodeSegment(spanId)}/resolved`,
+        buildPath(apiRoutes.get_api_observability_runs_trace_id_spans_span_id_resolved.path, {
+          trace_id: traceId,
+          span_id: spanId,
+        }),
         s.resolvedSpanValue,
         { query: { field, pointer: options.pointer === '' ? undefined : options.pointer }, signal },
       ),
@@ -93,15 +112,21 @@ export function observabilityClient(t: Transport) {
       options: { readonly resolve?: boolean } = {},
       signal?: AbortSignal,
     ): Promise<Blob> =>
-      apiDownload(config, `/api/observability/runs/${encodeSegment(traceId)}/trace/export`, {
-        query: { resolve: options.resolve ? 'true' : undefined },
-        signal,
-      }),
+      apiDownload(
+        config,
+        buildPath(apiRoutes.get_api_observability_runs_trace_id_trace_export.path, {
+          trace_id: traceId,
+        }),
+        {
+          query: { resolve: options.resolve ? 'true' : undefined },
+          signal,
+        },
+      ),
     exportRuns: (
       params: RunsQuery & { format: 'csv' | 'json' },
       signal?: AbortSignal,
     ): Promise<Blob> =>
-      apiDownload(config, '/api/observability/runs/export', {
+      apiDownload(config, apiRoutes.get_api_observability_runs_export.path, {
         query: { ...runsQueryToParams(params), format: params.format },
         signal,
       }),

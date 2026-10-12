@@ -1,7 +1,7 @@
 /** Member, invite, directory and member-action schemas for the generic Members view. */
-import { z } from 'zod';
+import type { z } from 'zod';
 
-import { jsonSchema } from './shared';
+import * as openapi from '../generated/openapi-schemas';
 
 /**
  * Where a declared member action renders: a page-level button, a member-row menu
@@ -9,7 +9,7 @@ import { jsonSchema } from './shared';
  * into one of these three places; Studio only joins by `scope`, never reads the
  * provider's meaning behind it.
  */
-export const memberActionScope = z.enum(['page', 'member_row', 'invite_row']);
+export const memberActionScope = openapi.memberActionDescriptor.shape.scope;
 export type MemberActionScope = z.infer<typeof memberActionScope>;
 
 /**
@@ -20,11 +20,7 @@ export type MemberActionScope = z.infer<typeof memberActionScope>;
  * provider. `role` is `null` when the principal's policy was not written from a role
  * template.
  */
-export const memberPrincipalState = z.object({
-  user_id: z.string(),
-  disabled: z.boolean(),
-  role: z.string().nullable(),
-});
+export const memberPrincipalState = openapi.memberPrincipalState;
 export type MemberPrincipalState = z.infer<typeof memberPrincipalState>;
 
 /**
@@ -42,16 +38,7 @@ export type MemberPrincipalState = z.infer<typeof memberPrincipalState>;
  * it — Studio joins and echoes both, never parses them. `created_at` is an ISO-8601
  * instant.
  */
-export const memberRow = z.object({
-  id: z.string(),
-  email: z.string(),
-  role: z.string().nullable(),
-  created_at: z.string(),
-  principals: z.array(memberPrincipalState),
-  disabled: z.boolean(),
-  handle: z.string(),
-  action_keys: z.array(z.string()),
-});
+export const memberRow = openapi.memberRow;
 export type MemberRow = z.infer<typeof memberRow>;
 
 /**
@@ -63,15 +50,7 @@ export type MemberRow = z.infer<typeof memberRow>;
  * `action_keys` are the opaque routing tokens (see {@link memberRow}). `created_at`
  * and `expires_at` are ISO-8601 instants.
  */
-export const inviteRow = z.object({
-  id: z.string(),
-  email: z.string(),
-  role: z.string().nullable(),
-  created_at: z.string(),
-  expires_at: z.string(),
-  handle: z.string(),
-  action_keys: z.array(z.string()),
-});
+export const inviteRow = openapi.inviteRow;
 export type InviteRow = z.infer<typeof inviteRow>;
 
 /**
@@ -80,10 +59,7 @@ export type InviteRow = z.infer<typeof inviteRow>;
  * the backend into one view so a generic Members screen renders without naming any
  * provider.
  */
-export const memberDirectory = z.object({
-  members: z.array(memberRow),
-  invites: z.array(inviteRow),
-});
+export const memberDirectory = openapi.memberDirectory;
 export type MemberDirectory = z.infer<typeof memberDirectory>;
 
 /**
@@ -95,14 +71,7 @@ export type MemberDirectory = z.infer<typeof memberDirectory>;
  * form and a read-only result view from them generically, with no provider field
  * name known to Studio.
  */
-export const memberActionDescriptor = z.object({
-  key: z.string(),
-  label: z.string(),
-  scope: memberActionScope,
-  destructive: z.boolean(),
-  input_schema: jsonSchema,
-  result_schema: jsonSchema,
-});
+export const memberActionDescriptor = openapi.memberActionDescriptor;
 export type MemberActionDescriptor = z.infer<typeof memberActionDescriptor>;
 
 /**
@@ -110,9 +79,7 @@ export type MemberActionDescriptor = z.infer<typeof memberActionDescriptor>;
  * /api/auth/member-actions`). ADMIN-ONLY (`secret`) — a non-admin projection never
  * reaches the route, exactly as the members listing.
  */
-export const memberActionCatalog = z.object({
-  actions: z.array(memberActionDescriptor),
-});
+export const memberActionCatalog = openapi.memberActionCatalog;
 export type MemberActionCatalog = z.infer<typeof memberActionCatalog>;
 
 /**
@@ -120,7 +87,5 @@ export type MemberActionCatalog = z.infer<typeof memberActionCatalog>;
  * result-model dump, carried opaquely. `result` is rendered through the action's
  * `result_schema`; Studio reads no field of it by name.
  */
-export const invokeMemberActionResult = z.object({
-  result: jsonSchema,
-});
+export const invokeMemberActionResult = openapi.invokeMemberActionResult;
 export type InvokeMemberActionResult = z.infer<typeof invokeMemberActionResult>;

@@ -1,28 +1,20 @@
 /** State declaration, record, template and consumer response schemas. */
 import { z } from 'zod';
 
-import { conversationTargetKind } from './conversations';
+import * as openapi from '../generated/openapi-schemas';
+import * as served from '../generated/served-schemas';
 import { stateDeclaration, stateTemplateDocument } from './served';
 
-// The hand-written state response DTOs — list rows and detail (built on the generated
-// `stateDeclaration`), attachments, per-subject records and subjects, stats and consumers.
-// The served DOCUMENT schemas (`stateDeclaration`/`stateTemplateDocument` and the template
-// sub-shapes) are generated from the contract bundle and re-exported at the top of this
-// file. The composed `effective_schema` and write `regimes` stay permissive JSON records
-// (the auto-form and JsonTree interpret them at runtime) and are server-computed, so they
-// are modelled optional and a response that omits them still parses.
+// The state response schemas — list rows and detail, attachments, per-subject records and
+// subjects, stats and consumers. The served DOCUMENT schemas (`stateDeclaration`/
+// `stateTemplateDocument` and the template sub-shapes) are re-exported from `./served`.
 
 /** One addressed subject: the conversation-target scope plus the (kind, key) within it. */
-export const stateSubject = z.object({
-  target_kind: conversationTargetKind,
-  target_name: z.string(),
-  kind: z.string(),
-  key: z.string(),
-});
+export const stateSubject = openapi.stateSubject;
 export type StateSubject = z.infer<typeof stateSubject>;
 
-/** One absolute write-regime rule composed over the attachments: `{path, regime}`, permissive. */
-export const stateRegime = z.record(z.string(), z.unknown());
+/** One absolute write-regime rule composed over the attachments: `{path, regime}`. */
+export const stateRegime = served.stateRegimeRule;
 
 /**
  * One row of `GET /api/states` — a served declaration (`list_states` dumps every
@@ -30,48 +22,35 @@ export const stateRegime = z.record(z.string(), z.unknown());
  * `null`). The list carries no record count; the `Records` column reads
  * `getStateStats` lazily per row.
  */
-export const stateListItem = stateDeclaration.extend({
-  updated_at: z.string().nullable().default(null),
-});
+export const stateListItem = stateDeclaration;
 export type StateListItem = z.infer<typeof stateListItem>;
-export const stateList = z.array(stateListItem);
+export const stateList = openapi.stateDeclarationList;
 
 /**
  * One save held by a failed pending save: `save_id` names it, `held_by` the failed save holding it
  * (equal to `save_id` for the failed save itself), `subjects` the subjects it writes. A scan or
  * a re-declare that read past it names it in its `held` list.
  */
-export const heldPendingSave = z.object({
-  save_id: z.string(),
-  held_by: z.string(),
-  subjects: z.array(stateSubject).default([]),
-});
+export const heldPendingSave = openapi.heldPendingSave;
 export type HeldPendingSave = z.infer<typeof heldPendingSave>;
 
 /** One template attachment on a state: where the fragment lands + its param/declaration values. */
-export const stateAttachment = z.object({
-  template: z.string(),
-  path: z.array(z.string()),
-  parameters: z.record(z.string(), z.unknown()).default({}),
-  declarations: z.record(z.string(), z.unknown()).default({}),
-});
+export const stateAttachment = openapi.stateAttachmentView;
 export type StateAttachment = z.infer<typeof stateAttachment>;
-export const stateAttachmentList = z.array(stateAttachment);
+export const stateAttachmentList = openapi.stateAttachmentList;
 
 /** `GET /api/states/{name}` — the declaration (with effective schema + regimes) plus attachments. */
-export const stateDetail = stateDeclaration.extend({
-  attachments: z.array(stateAttachment).default([]),
-});
+// Built on the declaration document: the spec publishes the served view's `schema` and
+// `regimes` as open objects, the document types them.
+export const stateDetail = stateDeclaration.extend({ attachments: z.array(stateAttachment) });
 export type StateDetail = z.infer<typeof stateDetail>;
 
 /**
  * `PUT /api/states/{name}` — a create or re-declare's answer: the stored declaration's fields
- * plus `held`, the held pending saves an accepted re-declare names (empty when none). The
+ * plus `held`, the held pending saves an accepted re-declare names (absent when none). The
  * answer carries no attachments; a caller that needs them reads `getState`.
  */
-export const stateDeclarationSaved = stateDeclaration.extend({
-  held: z.array(heldPendingSave).default([]),
-});
+export const stateDeclarationSaved = openapi.stateDeclarationPutResponse;
 export type StateDeclarationSaved = z.infer<typeof stateDeclarationSaved>;
 
 /**
@@ -80,13 +59,7 @@ export type StateDeclarationSaved = z.infer<typeof stateDeclarationSaved>;
  * and `consumers` (the count of listable consumers). The Records tab shows `records`;
  * the states list reads it lazily for its Records column.
  */
-export const stateStats = z.object({
-  records: z.number(),
-  per_field: z.record(z.string(), z.number()).default({}),
-  per_kind: z.record(z.string(), z.number()).default({}),
-  consumers: z.number().default(0),
-  held: z.array(heldPendingSave).default([]),
-});
+export const stateStats = openapi.stateStats;
 export type StateStats = z.infer<typeof stateStats>;
 
 /**
@@ -95,31 +68,21 @@ export type StateStats = z.infer<typeof stateStats>;
  * while > 0) and `shipped_default` (a platform-shipped template). Both are server-derived
  * columns; the document fields are verbatim.
  */
+// Built on the template document: the spec publishes a served template's jq programs as open
+// objects, the document types them.
 export const stateTemplateListItem = stateTemplateDocument.extend({
-  attached_to: z.number().default(0),
-  shipped_default: z.boolean().default(false),
+  attached_to: openapi.stateTemplateCatalogEntry.shape.attached_to,
+  shipped_default: openapi.stateTemplateCatalogEntry.shape.shipped_default,
 });
 export type StateTemplateListItem = z.infer<typeof stateTemplateListItem>;
 export const stateTemplateList = z.array(stateTemplateListItem);
 
 /** A read record: the state, its subject, the document + monotonic seq, and any fold. */
-export const stateRecord = z.object({
-  state: z.string(),
-  subject: stateSubject,
-  data: z.record(z.string(), z.unknown()).default({}),
-  seq: z.number(),
-  canonical_subject: stateSubject,
-  folded_from: z.array(stateSubject).default([]),
-});
+export const stateRecord = openapi.stateRecord;
 export type StateRecord = z.infer<typeof stateRecord>;
 
 /** The outcome of an `apply` (a delta batch): whether it applied + the resulting doc. */
-export const applyResult = z.object({
-  applied: z.boolean(),
-  data: z.record(z.string(), z.unknown()).nullable().default(null),
-  seq: z.number().nullable().default(null),
-  skipped: z.array(z.record(z.string(), z.unknown())).default([]),
-});
+export const applyResult = openapi.applyResult;
 export type ApplyResult = z.infer<typeof applyResult>;
 
 /**
@@ -128,11 +91,7 @@ export type ApplyResult = z.infer<typeof applyResult>;
  * on an `update`-purpose name is refused with 422, so the result's purpose is always
  * `input`.
  */
-export const templateJqResult = z.object({
-  name: z.string(),
-  purpose: z.literal('input'),
-  value: z.unknown(),
-});
+export const templateJqResult = openapi.templateJqResult;
 export type TemplateJqResult = z.infer<typeof templateJqResult>;
 
 /**
@@ -140,13 +99,7 @@ export type TemplateJqResult = z.infer<typeof templateJqResult>;
  * batch through the same `apply` chokepoint as a delta, so `applied`/`data`/`seq`/`skipped`
  * carry that outcome.
  */
-export const templateJqApplyResult = z.object({
-  name: z.string(),
-  applied: z.boolean(),
-  data: z.record(z.string(), z.unknown()).nullable().default(null),
-  seq: z.number().nullable().default(null),
-  skipped: z.array(z.record(z.string(), z.unknown())).default([]),
-});
+export const templateJqApplyResult = openapi.templateJqApplyResult;
 export type TemplateJqApplyResult = z.infer<typeof templateJqApplyResult>;
 
 /**
@@ -154,10 +107,7 @@ export type TemplateJqApplyResult = z.infer<typeof templateJqApplyResult>;
  * `updated_at` — epoch seconds (the store's `extract(epoch FROM updated_at)`), served
  * raw (no `mode="json"` dump), and `NOT NULL` on every record, so a plain number.
  */
-export const subjectRow = z.object({
-  subject: stateSubject,
-  updated_at: z.number(),
-});
+export const subjectRow = openapi.stateSubjectEntry;
 export type SubjectRow = z.infer<typeof subjectRow>;
 
 /**
@@ -165,11 +115,7 @@ export type SubjectRow = z.infer<typeof subjectRow>;
  * `kind`): the matched `subjects` plus the `next_cursor` a "Load more" carries back
  * (`null` at the end).
  */
-export const subjectPage = z.object({
-  subjects: z.array(subjectRow),
-  next_cursor: z.string().nullable().default(null),
-  held: z.array(heldPendingSave).default([]),
-});
+export const subjectPage = openapi.stateSubjectsPage;
 export type SubjectPage = z.infer<typeof subjectPage>;
 
 /**
@@ -177,49 +123,23 @@ export type SubjectPage = z.infer<typeof subjectPage>;
  * document contains the filters (a JSONB containment match). Each hit's `subject` opens
  * the record page; `next_cursor` pages the rest.
  */
-export const recordSearchPage = z.object({
-  matches: z.array(subjectRow),
-  next_cursor: z.string().nullable().default(null),
-  held: z.array(heldPendingSave).default([]),
-});
+export const recordSearchPage = openapi.stateSearchPage;
 export type RecordSearchPage = z.infer<typeof recordSearchPage>;
 
 /** A WriteEntry's origin completed by the platform chokepoint (mirrors CompletedOrigin). */
-export const completedOrigin = z.object({
-  consumer: z.string().nullable().default(null),
-  // Opaque consumer-supplied provenance JSON the platform stores as is.
-  meta: z.record(z.string(), z.unknown()).nullable().default(null),
-  run_id: z.string().nullable().default(null),
-  op_id: z.string().nullable().default(null),
-  door: z.string(),
-  actor: z.string().nullable().default(null),
-  turn_id: z.string().nullable().default(null),
-  inbound_id: z.string().nullable().default(null),
-});
+export const completedOrigin = openapi.completedOrigin;
 export type CompletedOrigin = z.infer<typeof completedOrigin>;
 
 /** One row of a subject's audit trail (mirrors WriteEntry). `paths` are absolute. */
-export const writeEntry = z.object({
-  seq: z.number(),
-  at: z.string(),
-  origin: completedOrigin,
-  paths: z.array(z.array(z.union([z.string(), z.number()]))).default([]),
-});
+export const writeEntry = openapi.writeEntry;
 export type WriteEntry = z.infer<typeof writeEntry>;
 
 /** `GET /api/states/{name}/records/.../writes` — a keyset page of the audit trail. */
-export const writesPage = z.object({
-  items: z.array(writeEntry),
-  next_cursor: z.string().nullable().default(null),
-});
+export const writesPage = openapi.writesPage;
 export type WritesPage = z.infer<typeof writesPage>;
 
 /** Where the Studio opens a consumer (mirrors ConsumerLink): a token+search OR plugin path. */
-export const consumerLink = z.object({
-  token: z.string().nullable().default(null),
-  plugin_path: z.string().nullable().default(null),
-  search: z.record(z.string(), z.unknown()).nullable().default(null),
-});
+export const consumerLink = openapi.consumerLink;
 export type ConsumerLink = z.infer<typeof consumerLink>;
 
 /**
@@ -228,111 +148,66 @@ export type ConsumerLink = z.infer<typeof consumerLink>;
  * family that cannot be listed on this deployment (e.g. no scheduling backend), surfaced
  * as a muted line — never swallowed.
  */
-export const consumerRow = z.object({
-  kind: z.string(),
-  name: z.string().nullable().default(null),
-  detail: z.string().nullable().default(null),
-  link: consumerLink.nullable().default(null),
-  unavailable: z.string().nullable().default(null),
-});
+export const consumerRow = openapi.consumerRow;
 export type ConsumerRow = z.infer<typeof consumerRow>;
 
 /** `GET /api/states/{name}/consumers` — the union of every registered lister's rows. */
-export const stateConsumers = z.array(consumerRow);
+export const stateConsumers = openapi.stateConsumerList;
 export type StateConsumers = z.infer<typeof stateConsumers>;
 
 /** `DELETE /api/states/{name}` — the removed state. */
-export const stateDeleted = z.object({ name: z.string(), deleted: z.literal(true) });
+export const stateDeleted = openapi.stateDeleteResult;
 
 /** `PUT /api/states/{name}/attachments/{template}` — the template now attached to the state. */
-export const stateAttached = z.object({
-  attached: z.literal(true),
-  state: z.string(),
-  template: z.string(),
-  held: z.array(heldPendingSave).default([]),
-});
+export const stateAttached = openapi.attachAck;
 export type StateAttached = z.infer<typeof stateAttached>;
 
 /** `PATCH /api/states/{name}/attachments/{template}` — the attachment whose declarations were rewritten. */
-export const stateAttachmentUpdated = z.object({
-  updated: z.literal(true),
-  state: z.string(),
-  template: z.string(),
-  held: z.array(heldPendingSave).default([]),
-});
+export const stateAttachmentUpdated = openapi.attachUpdateAck;
 export type StateAttachmentUpdated = z.infer<typeof stateAttachmentUpdated>;
 
 /** `DELETE /api/states/{name}/attachments/{template}` — the template detached from the state. */
-export const stateDetached = z.object({
-  detached: z.literal(true),
-  state: z.string(),
-  template: z.string(),
-});
+export const stateDetached = openapi.detachAck;
 export type StateDetached = z.infer<typeof stateDetached>;
 
 /**
  * `POST /api/states/{name}/records/.../fold` — the fold report: the `mode`, the
  * `{kind, key}` of the folded `from` and surviving `into` subjects, whether the fold
- * was `already` in place, and how many records were `flattened` into the survivor.
+ * was `already` in place, how many records were `flattened` into the survivor, and
+ * (a `merge` fold only) the survivor's newly-filled `merged_members`.
  */
-export const stateFoldReport = z.object({
-  mode: z.enum(['switch', 'merge']),
-  from: z.object({ kind: z.string(), key: z.string() }),
-  into: z.object({ kind: z.string(), key: z.string() }),
-  already: z.boolean(),
-  flattened: z.number().default(0),
-});
+export const stateFoldReport = openapi.foldReport;
 export type StateFoldReport = z.infer<typeof stateFoldReport>;
 
 /** `DELETE /api/state-templates/{name}` — the removed template document. */
-export const stateTemplateDeleted = z.object({ name: z.string(), deleted: z.literal(true) });
+export const stateTemplateDeleted = openapi.stateDeleteResult;
 
 /** `DELETE /api/states/{name}/records/...` — the erased record marker. */
-export const recordErased = z.object({ erased: z.literal(true) });
+export const recordErased = openapi.eraseAck;
 
 /**
  * `POST /api/state-retention/prune` — the retention sweep's per-state deleted counts
  * (`{}` when nothing expired); the UI sums the values for its total.
  */
-export const stateRetentionPruned = z.object({
-  pruned: z.record(z.string(), z.number()).default({}),
-  held: z.array(heldPendingSave).default([]),
-});
+export const stateRetentionPruned = openapi.pruneResult;
 export type StateRetentionPruned = z.infer<typeof stateRetentionPruned>;
 
 /** A pending save's lifecycle: records waiting, calls queued, a call running, or failed (held). */
-export const pendingSaveStatus = z.enum(['pending', 'calls', 'running', 'failed']);
+export const pendingSaveStatus = openapi.statePendingSave.shape.status;
 export type PendingSaveStatus = z.infer<typeof pendingSaveStatus>;
 
 /**
  * One outstanding pending state save (`GET /api/state-pending-saves`): what it writes and calls,
  * never the record data or call arguments. `failed_phase` says which part failed.
  */
-export const pendingSave = z.object({
-  id: z.string(),
-  status: pendingSaveStatus,
-  run_id: z.string().nullable(),
-  states: z.array(z.string()),
-  subjects: z.array(z.object({ state: z.string(), subject: stateSubject })),
-  calls: z.array(z.object({ kind: z.string(), target: z.string() })),
-  attempts: z.number(),
-  last_error: z.string().nullable(),
-  failed_phase: z.enum(['records', 'calls']).nullable(),
-  created_at: z.string(),
-  failed_at: z.string().nullable(),
-});
+export const pendingSave = openapi.statePendingSave;
 export type PendingSave = z.infer<typeof pendingSave>;
 
 /**
  * A page of pending saves, newest first, with the totals of every `outstanding` and every
  * `failed` save; `next_cursor` continues the page (`null` at the end).
  */
-export const pendingSavesPage = z.object({
-  items: z.array(pendingSave),
-  next_cursor: z.string().nullable().default(null),
-  outstanding: z.number(),
-  failed: z.number(),
-});
+export const pendingSavesPage = openapi.statePendingSavesPage;
 export type PendingSavesPage = z.infer<typeof pendingSavesPage>;
 
 /**
@@ -340,12 +215,8 @@ export type PendingSavesPage = z.infer<typeof pendingSavesPage>;
  * `applied` (it landed whole), `pending`/`calls`/`running` (queued again), or `failed` again
  * with its `last_error`.
  */
-export const pendingSaveRetried = z.object({
-  id: z.string(),
-  status: z.enum(['applied', 'pending', 'calls', 'running', 'failed']),
-  last_error: z.string().nullable(),
-});
+export const pendingSaveRetried = openapi.statePendingSaveRetried;
 export type PendingSaveRetried = z.infer<typeof pendingSaveRetried>;
 
 /** `DELETE /api/state-pending-saves/{id}` — the discarded save's id. */
-export const pendingSaveDiscarded = z.object({ discarded: z.string() });
+export const pendingSaveDiscarded = openapi.statePendingSaveDiscarded;

@@ -1,15 +1,16 @@
 /** Agent listing and streaming-run sub-client. */
 import { agentList, streamAgentRun, streamAuthoredAgentRun } from '../agents';
+import { apiRoutes } from '../generated/api-routes';
 import type { Transport } from './transport';
 
 export function agentsClient(t: Transport) {
   const { config, req } = t;
   return {
-    listAgents: (signal?: AbortSignal) => req('/api/agents', agentList, { signal }),
+    listAgents: (signal?: AbortSignal) => req(apiRoutes.get_api_agents.path, agentList, { signal }),
     // The authorable subset (agents whose `spec_runnable` is true) — the compose
     // UI's base-agent picker. An empty `items` list ⇒ no authoring is possible.
     listSpecRunnableAgents: (signal?: AbortSignal) =>
-      req('/api/agents/spec-runnable', agentList, { signal }),
+      req(apiRoutes.get_api_agents_spec_runnable.path, agentList, { signal }),
     // The streaming run: opens POST /api/agents/{name}/runs and yields parsed
     // agent events. The auto-form's built value is the POST body.
     streamAgentRun: (name: string, input: unknown, signal?: AbortSignal) =>

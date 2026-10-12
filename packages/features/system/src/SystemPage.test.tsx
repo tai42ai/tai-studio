@@ -89,6 +89,7 @@ function scopedProjection(overrides: Partial<MeProjection> = {}): MeProjection {
 const BASE_PROJECTION: MeProjection = {
   user_id: 'u-test',
   owner_user_id: null,
+  principal: null,
   admin: false,
   public_resource_id: 'public',
   scopes: [],
@@ -155,6 +156,7 @@ function fleet(...names: string[]): { workers: FleetWorker[] } {
  * trivially-converged case the assertion-only tests use. */
 function converged(...names: string[]): FleetResult {
   return {
+    ok: true,
     op: 'reload_config',
     reachable: true,
     local_only: false,
@@ -567,6 +569,7 @@ describe('SystemPage', () => {
       getBackendInfo: vi.fn().mockResolvedValue(PRESENT_BACKEND),
       listFleetWorkers: vi.fn().mockResolvedValue(fleet('w1', 'w2')),
       reloadFleetConfig: vi.fn().mockResolvedValue({
+        ok: true,
         op: 'reload_config',
         reachable: true,
         local_only: false,

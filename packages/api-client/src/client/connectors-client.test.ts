@@ -110,18 +110,23 @@ describe('connectors client transport', () => {
     });
   });
 
-  it('listConnections parses { items, total } and defaults an omitted unhealthy count to undefined', async () => {
+  it('listConnections parses { items, total, unhealthy }', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { items: [connection], total: 1 } }),
+      jsonResponse({ data: { items: [connection], total: 1, unhealthy: 0 } }),
     );
     const out = await client.listConnections();
     expect(captured[0]?.url).toBe('/api/connectors/connections');
     expect(out.total).toBe(1);
     expect(out.items[0]?.alias).toBe('work');
     // The list projection is probe-free, so a listed connection defaults to no
-    // unreachable sub-services; a pre-reshape worker omits `unhealthy` entirely.
+    // unreachable sub-services.
     expect(out.items[0]?.unreachable_sub_services).toEqual([]);
-    expect(out.unhealthy).toBeUndefined();
+    expect(out.unhealthy).toBe(0);
+  });
+
+  it('refuses a connections listing without its unhealthy count', async () => {
+    const { client } = harness(() => jsonResponse({ data: { items: [connection], total: 1 } }));
+    await expect(client.listConnections()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 
   it('listConnections carries the unhealthy attention count when the worker sends it', async () => {
@@ -356,6 +361,7 @@ describe('connectors client transport', () => {
         data: {
           items: [{ ...connection, scopes_wanted: ['files.write', 'files.read'] }, connection],
           total: 2,
+          unhealthy: 0,
         },
       }),
     );

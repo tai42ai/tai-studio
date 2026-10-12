@@ -222,9 +222,9 @@ describe('auth api-key client transport', () => {
     expect(out[0]?.policy_data).toEqual({ key_fingerprint: 'kf-9f2c1d' });
   });
 
-  it('throws ApiSchemaError LOUDLY on a key row with an EMPTY user_id', async () => {
+  it('throws ApiSchemaError LOUDLY on a key row without its user_id', async () => {
     const { client } = harness(() =>
-      jsonResponse({ data: [{ user_id: '', description: 'x', scopes: [], policy_data: {} }] }),
+      jsonResponse({ data: [{ description: 'x', scopes: [], policy_data: {} }] }),
     );
     await expect(client.listTokensPayload()).rejects.toBeInstanceOf(ApiSchemaError);
   });

@@ -45,7 +45,17 @@ function role(name: string) {
 vi.setConfig({ testTimeout: 15_000 });
 
 function tokens(): TokensPayload {
-  return [{ user_id: 'alice', description: 'Alice key', scopes: ['admin'], policy_data: {} }];
+  return [
+    {
+      condition: null,
+      principal: null,
+      orphaned: false,
+      user_id: 'alice',
+      description: 'Alice key',
+      scopes: ['admin'],
+      policy_data: {},
+    },
+  ];
 }
 /** A key seeded with both a saved inline condition and policy data, so the
  * edit-dialog "Remove condition" / "Clear policy data" affordances have something
@@ -53,6 +63,8 @@ function tokens(): TokensPayload {
 function seededTokens(): TokensPayload {
   return [
     {
+      principal: null,
+      orphaned: false,
       user_id: 'alice',
       description: 'Alice key',
       scopes: ['admin'],
