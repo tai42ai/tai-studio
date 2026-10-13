@@ -331,10 +331,19 @@ test('a route on the synthetic channel shows the panel the reference plugin cont
   });
   expect(created.status()).toBe(200);
 
-  await page.goto(`/conversations?route=${routeName}`);
-  const region = page.getByRole('region', { name: 'Reference route panel' });
-  await expect(region).toBeVisible();
-  await expect(region.getByTestId('reference-route-panel')).toContainText(
-    `Contributed by reference_plugin for the route ${routeName} at ${identity}.`,
-  );
+  try {
+    await page.goto(`/conversations?route=${routeName}`);
+    const region = page.getByRole('region', { name: 'Reference route panel' });
+    await expect(region).toBeVisible();
+    await expect(region.getByTestId('reference-route-panel')).toContainText(
+      `Contributed by reference_plugin for the route ${routeName} at ${identity}.`,
+    );
+  } finally {
+    // The route targets a shared demo tool, so it is removed through the door that created
+    // it: every later spec sees the stack's routes as this one found them.
+    const removed = await page.request.delete(`/api/conversations/${routeName}`, {
+      headers: { 'x-api-key': API_KEY },
+    });
+    expect(removed.status()).toBe(200);
+  }
 });
