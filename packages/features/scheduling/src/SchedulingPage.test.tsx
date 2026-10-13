@@ -14,7 +14,13 @@ import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { SchedulingPage } from './SchedulingPage';
-import { clickWhenInteractable, makeClient, renderWithProviders, schedule } from './test-utils';
+import {
+  clickWhenInteractable,
+  makeClient,
+  renderWithProviders,
+  schedulableTags,
+  schedule,
+} from './test-utils';
 
 /** The datetime tool is unavailable in most tests; a 501 keeps its note out of the way. */
 function serverTime501(): () => Promise<never> {
@@ -23,7 +29,7 @@ function serverTime501(): () => Promise<never> {
 
 /**
  * Open the shared `ToolPicker` (a Radix combobox). Its trigger is `disabled` until
- * `listTools` resolves, so the open is gated on it being ENABLED — the real ready
+ * `listToolTags` resolves, so the open is gated on it being ENABLED — the real ready
  * signal — rather than on incidental timer slack.
  */
 async function openToolPicker(user: UserEvent, dialog: HTMLElement): Promise<void> {
@@ -47,8 +53,13 @@ describe('SchedulingPage — table', () => {
         schedule({
           name: 'hourly-sync',
           enabled: false,
-          schedule: { __type: 'interval', every: 3600 },
-          kwargs: { backend_tool_name: 'sync_schedule_task' },
+          cadence: { kind: 'interval', every: 3600, relative: false },
+          tool: 'sync',
+        }),
+        schedule({
+          name: 'drifting',
+          cadence: { kind: 'interval', every: 60, relative: true },
+          tool: 'sync',
         }),
       ]),
       getServerDateTime: serverTime501(),
@@ -60,7 +71,7 @@ describe('SchedulingPage — table', () => {
     });
     // The page header is the SDK PageHeader; its h1 name stays verbatim.
     expect(screen.getByRole('heading', { level: 1, name: 'Scheduling' })).toBeInTheDocument();
-    expect(screen.getByText('run_report_schedule_task')).toBeInTheDocument();
+    expect(screen.getByText('run_report')).toBeInTheDocument();
     // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
     // widens the document instead of scrolling inside its own box.
     for (const table of document.querySelectorAll('table')) {
@@ -68,7 +79,8 @@ describe('SchedulingPage — table', () => {
     }
     expect(screen.getByText('Cron: 0 2 * * *')).toBeInTheDocument();
     expect(screen.getByText('Every 3600s')).toBeInTheDocument();
-    expect(screen.getByText('Enabled')).toBeInTheDocument();
+    expect(screen.getByText('Every 60s (relative)')).toBeInTheDocument();
+    expect(screen.getAllByText('Enabled')).toHaveLength(2);
     expect(screen.getByText('Disabled')).toBeInTheDocument();
   });
 
@@ -78,7 +90,7 @@ describe('SchedulingPage — table', () => {
       listSchedules: vi
         .fn()
         .mockResolvedValue([
-          schedule({ name: xss, kwargs: { backend_tool_name: xss, note: xss } }),
+          schedule({ name: xss, tool: xss, error: { message: xss, at_iso: null } }),
         ]),
       getServerDateTime: serverTime501(),
     });
@@ -88,8 +100,32 @@ describe('SchedulingPage — table', () => {
       expect(screen.getAllByText(xss).length).toBeGreaterThan(0);
     });
     expect(container.querySelector('script')).toBeNull();
-    // The name and the tool (a kwargs value) both surface as literal text.
+    // The name and the tool both surface as literal text.
     expect(screen.getAllByText(xss).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('marks a row carrying a backend error with an Error badge whose tooltip names it', async () => {
+    const client = makeClient({
+      listSchedules: vi.fn().mockResolvedValue([
+        schedule({ name: 'healthy' }),
+        schedule({
+          name: 'stuck',
+          error: { message: 'probe failed', at_iso: '2026-10-12T09:00:00+00:00' },
+        }),
+      ]),
+      getServerDateTime: serverTime501(),
+    });
+    renderWithProviders(<SchedulingPage search={{}} />, { client });
+
+    const trigger = await screen.findByTestId('schedule-error-badge');
+    expect(screen.getAllByTestId('schedule-error-badge')).toHaveLength(1);
+    expect(trigger.closest('tr')).toHaveTextContent('stuck');
+    expect(within(trigger).getByText('Error')).toHaveAttribute('data-variant', 'warning');
+    // Keyboard reachable: focusing the badge opens the error's message and time.
+    trigger.focus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'probe failed — 2026-10-12T09:00:00+00:00',
+    );
   });
 
   it('shows the server clock when the datetime tool is available', async () => {
@@ -157,7 +193,7 @@ describe(
       const client = makeClient({
         listSchedules: vi.fn().mockResolvedValue([]),
         getServerDateTime: serverTime501(),
-        listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
+        listToolTags: vi.fn().mockResolvedValue(schedulableTags('run_report')),
         addSchedule,
       });
       renderWithProviders(<SchedulingPage search={{}} />, { client });
@@ -181,14 +217,7 @@ describe(
       const client = makeClient({
         listSchedules: vi.fn().mockResolvedValue([]),
         getServerDateTime: serverTime501(),
-        listTools: vi
-          .fn()
-          .mockResolvedValue([
-            'run_report',
-            'run_report_schedule_task',
-            'sync',
-            'sync_schedule_task',
-          ]),
+        listToolTags: vi.fn().mockResolvedValue(schedulableTags('run_report', 'sync')),
         addSchedule,
       });
       renderWithProviders(<SchedulingPage search={{}} />, { client });
@@ -212,23 +241,28 @@ describe(
 
       await waitFor(() => {
         expect(addSchedule).toHaveBeenCalledWith({
-          tool_name: 'run_report_schedule_task',
+          tool_name: 'run_report',
           tool_kwargs: { limit: 10 },
-          schedule_kwargs: {
-            backend_schedule: '0 2 * * *',
-            backend_schedule_name: 'nightly-report',
+          cadence: {
+            kind: 'crontab',
+            minute: '0',
+            hour: '2',
+            day_of_month: '*',
+            month_of_year: '*',
+            day_of_week: '*',
           },
+          schedule_name: 'nightly-report',
         });
       });
     });
 
-    it('submits an interval schedule with a numeric backend_schedule', async () => {
+    it('submits an interval schedule with an interval cadence', async () => {
       const user = userEvent.setup({ delay: null });
       const addSchedule = vi.fn().mockResolvedValue({});
       const client = makeClient({
         listSchedules: vi.fn().mockResolvedValue([]),
         getServerDateTime: serverTime501(),
-        listTools: vi.fn().mockResolvedValue(['sync', 'sync_schedule_task']),
+        listToolTags: vi.fn().mockResolvedValue(schedulableTags('sync')),
         addSchedule,
       });
       renderWithProviders(<SchedulingPage search={{}} />, { client });
@@ -248,12 +282,10 @@ describe(
 
       await waitFor(() => {
         expect(addSchedule).toHaveBeenCalledWith({
-          tool_name: 'sync_schedule_task',
+          tool_name: 'sync',
           tool_kwargs: {},
-          schedule_kwargs: {
-            backend_schedule: 3600,
-            backend_schedule_name: 'hourly-sync',
-          },
+          cadence: { kind: 'interval', every: 3600 },
+          schedule_name: 'hourly-sync',
         });
       });
     });

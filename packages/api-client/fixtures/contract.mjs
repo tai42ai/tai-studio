@@ -599,7 +599,9 @@ export const EXCLUDED_FROM_CAPTURE = [
   '/api/hooks', // hook tool_kwargs can carry secrets — excluded outright
   '/api/auth', // scopes / tokens / api-keys — secret-bearing, excluded outright
   '/api/backup', // backup sections/export — secret-bearing, excluded outright
-  '/api/schedules', // schedule tool kwargs can carry secrets — excluded outright
+  // a run-once create answers the fired tool's raw result, and a listed row's `error.message` is
+  // backend exception text — either can carry secrets, so excluded outright
+  '/api/schedules',
   '/api/presets', // preset fixed_kwargs can embed credentials — excluded outright
   '/api/observability', // run inputs/outputs can carry secrets — excluded outright
   '/api/tool-runs', // background run records embed tool arguments/output — secret-bearing

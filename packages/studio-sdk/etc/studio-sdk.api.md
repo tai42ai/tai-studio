@@ -738,13 +738,27 @@ readonly exportRuns: (params: RunsQuery & {
 format: "csv" | "json";
 }, signal?: AbortSignal) => Promise<Blob>;
 readonly listSchedules: (signal?: AbortSignal) => Promise<{
-[x: string]: unknown;
+cadence: {
+day_of_month: string;
+day_of_week: string;
+hour: string;
+kind: "crontab";
+minute: string;
+month_of_year: string;
+} | {
+every: number;
+kind: "interval";
+relative: boolean;
+};
+enabled: boolean;
+error: {
+at_iso: string | null;
+message: string;
+} | null;
 name: string;
-enabled?: boolean | undefined;
-schedule?: unknown;
-target?: unknown;
-args?: unknown[] | undefined;
-kwargs?: Record<string, unknown> | undefined;
+next_run_at_iso: string | null;
+next_run_at_ts: number | null;
+tool: string;
 }[]>;
 readonly getServerDateTime: (signal?: AbortSignal) => Promise<{
 [x: string]: unknown;
@@ -752,17 +766,7 @@ utc: unknown;
 local?: unknown;
 system?: unknown;
 }>;
-readonly addSchedule: (body: {
-tool_name: string;
-tool_kwargs: Record<string, unknown>;
-schedule_kwargs: Record<string, unknown>;
-execution_key?: string | null;
-state_binding?: StateBinding | null;
-start_expr?: TemplatedText | null;
-cancel_expr?: TemplatedText | null;
-resume_expr?: TemplatedText | null;
-extras_expr?: TemplatedText | null;
-}) => Promise<unknown>;
+readonly addSchedule: (body: ScheduleCreate) => Promise<unknown>;
 readonly deleteSchedule: (name: string) => Promise<unknown>;
 readonly listBackupSections: (signal?: AbortSignal) => Promise<{
 name: string;
@@ -7696,13 +7700,27 @@ function createApiClient(config: ApiConfig): {
         format: "csv" | "json";
     }, signal?: AbortSignal) => Promise<Blob>;
     readonly listSchedules: (signal?: AbortSignal) => Promise<{
-        [x: string]: unknown;
+        cadence: {
+            day_of_month: string;
+            day_of_week: string;
+            hour: string;
+            kind: "crontab";
+            minute: string;
+            month_of_year: string;
+        } | {
+            every: number;
+            kind: "interval";
+            relative: boolean;
+        };
+        enabled: boolean;
+        error: {
+            at_iso: string | null;
+            message: string;
+        } | null;
         name: string;
-        enabled?: boolean | undefined;
-        schedule?: unknown;
-        target?: unknown;
-        args?: unknown[] | undefined;
-        kwargs?: Record<string, unknown> | undefined;
+        next_run_at_iso: string | null;
+        next_run_at_ts: number | null;
+        tool: string;
     }[]>;
     readonly getServerDateTime: (signal?: AbortSignal) => Promise<{
         [x: string]: unknown;
@@ -7710,17 +7728,7 @@ function createApiClient(config: ApiConfig): {
         local?: unknown;
         system?: unknown;
     }>;
-    readonly addSchedule: (body: {
-        tool_name: string;
-        tool_kwargs: Record<string, unknown>;
-        schedule_kwargs: Record<string, unknown>;
-        execution_key?: string | null;
-        state_binding?: StateBinding | null;
-        start_expr?: TemplatedText | null;
-        cancel_expr?: TemplatedText | null;
-        resume_expr?: TemplatedText | null;
-        extras_expr?: TemplatedText | null;
-    }) => Promise<unknown>;
+    readonly addSchedule: (body: ScheduleCreate) => Promise<unknown>;
     readonly deleteSchedule: (name: string) => Promise<unknown>;
     readonly listBackupSections: (signal?: AbortSignal) => Promise<{
         name: string;
@@ -17680,9 +17688,7 @@ declare namespace s {
         RoleAuditEvent,
         roleVersions,
         RoleVersions,
-        scheduleItem,
         scheduleList,
-        ScheduleItem,
         serverDateTime,
         TemplatedText,
         requiredTemplatedText,
@@ -18019,27 +18025,29 @@ const scheduleCreate: z.ZodObject<{
 }, z.core.$strict>;
 
 // @public (undocumented)
-type ScheduleItem = z.infer<typeof scheduleItem>;
-
-// @public (undocumented)
-const scheduleItem: z.ZodObject<{
-    name: z.ZodString;
-    enabled: z.ZodOptional<z.ZodBoolean>;
-    schedule: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
-    target: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
-    args: z.ZodOptional<z.ZodArray<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>>;
-    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>>;
-}, z.core.$loose>;
-
-// @public (undocumented)
 const scheduleList: z.ZodArray<z.ZodObject<{
+    cadence: z.ZodDiscriminatedUnion<[z.ZodObject<{
+        every: z.ZodNumber;
+        kind: z.ZodDefault<z.ZodLiteral<"interval">>;
+        relative: z.ZodDefault<z.ZodBoolean>;
+    }, z.core.$strict>, z.ZodObject<{
+        day_of_month: z.ZodDefault<z.ZodString>;
+        day_of_week: z.ZodDefault<z.ZodString>;
+        hour: z.ZodDefault<z.ZodString>;
+        kind: z.ZodDefault<z.ZodLiteral<"crontab">>;
+        minute: z.ZodDefault<z.ZodString>;
+        month_of_year: z.ZodDefault<z.ZodString>;
+    }, z.core.$strict>], "kind">;
+    enabled: z.ZodBoolean;
+    error: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        at_iso: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        message: z.ZodString;
+    }, z.core.$strict>>>;
     name: z.ZodString;
-    enabled: z.ZodOptional<z.ZodBoolean>;
-    schedule: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
-    target: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
-    args: z.ZodOptional<z.ZodArray<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>>;
-    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>>;
-}, z.core.$loose>>;
+    next_run_at_iso: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    next_run_at_ts: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    tool: z.ZodString;
+}, z.core.$strict>>;
 
 // @public (undocumented)
 type ScheduleListRow = z.infer<typeof scheduleListRow>;

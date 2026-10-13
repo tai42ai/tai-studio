@@ -257,7 +257,6 @@ export type {
   RunTrace,
   RunTraceOutline,
   ScheduleCreate,
-  ScheduleItem,
   ScheduleListRow,
   ScheduleRecord,
   ServedConstants,

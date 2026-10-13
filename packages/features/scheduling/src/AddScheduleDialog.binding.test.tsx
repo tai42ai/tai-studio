@@ -8,11 +8,11 @@ import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AddScheduleDialog } from './AddScheduleDialog';
-import { makeClient, renderWithProviders } from './test-utils';
+import { makeClient, renderWithProviders, schedulableTags } from './test-utils';
 
 /**
  * Open the shared `ToolPicker` (a Radix combobox portalled to body). The trigger is
- * `disabled` until `listTools` resolves, so the open is gated on it being ENABLED —
+ * `disabled` until `listToolTags` resolves, so the open is gated on it being ENABLED —
  * the real ready signal — rather than on incidental timer slack, or a synchronous
  * click lands on the still-disabled trigger and nothing opens.
  */
@@ -44,7 +44,7 @@ describe('AddScheduleDialog — state binding source resolution', () => {
       description: null,
     });
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
+      listToolTags: vi.fn().mockResolvedValue(schedulableTags('run_report')),
       listStates: vi.fn().mockResolvedValue([]),
       listStateTemplates: vi.fn().mockResolvedValue([]),
       getToolSchema,
@@ -94,7 +94,7 @@ describe('AddScheduleDialog — state binding advisory + serialization', () => {
       const user = userEvent.setup({ delay: null });
       const addSchedule = vi.fn().mockResolvedValue({});
       const client = makeClient({
-        listTools: vi.fn().mockResolvedValue(['tally-preset', 'tally-preset_schedule_task']),
+        listToolTags: vi.fn().mockResolvedValue(schedulableTags('tally-preset')),
         listStates: vi.fn().mockResolvedValue([{ name: 'counters' }]),
         listStateTemplates: vi.fn().mockResolvedValue([]),
         listPresets: vi.fn().mockResolvedValue([{ name: 'tally-preset' }]),

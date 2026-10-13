@@ -102,9 +102,9 @@ def _render_combo(combo: frozenset[CanonElement]) -> str:
 def test_tool_extension_attachments_superset() -> None:
     """Rule 1 — every tool-extension combo the e2e boot attaches, docs-demo attaches.
 
-    The schedule dialog's tool picker offers a base tool only when its
-    ``_schedule_task`` vehicle is registered, and that vehicle exists only when
-    the backend's ``schedule_task`` extension is attached to the tool.
+    The schedule dialog's tool picker offers a tool only when the server serves it as
+    ``schedulable``, which holds only when the backend's ``schedule_task`` extension is
+    attached to the tool.
     """
     boot_map = _attachment_map(BOOT)
     docs_map = _attachment_map(DOCS)
