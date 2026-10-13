@@ -1,23 +1,12 @@
 /** Schedule listing and server-clock response schemas. */
 import { z } from 'zod';
 
+import * as openapi from '../generated/openapi-schemas';
 import { jsonValue } from './shared';
 
-// The skeleton returns opaque backend-tool results; the table reads a few known
-// fields and passes the rest through untouched.
-
-export const scheduleItem = z
-  .object({
-    name: z.string(),
-    enabled: z.boolean().optional(),
-    schedule: jsonValue.optional(),
-    target: jsonValue.optional(),
-    args: z.array(jsonValue).optional(),
-    kwargs: z.record(z.string(), jsonValue).optional(),
-  })
-  .loose();
-export const scheduleList = z.array(scheduleItem);
-export type ScheduleItem = z.infer<typeof scheduleItem>;
+// The listing is the generated `ScheduleListRow` array the server publishes (name, tool,
+// typed cadence, enabled, next run, an optional backend error — never tool arguments).
+export const scheduleList = openapi.scheduleListResponse;
 
 export const serverDateTime = z
   .object({

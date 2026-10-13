@@ -1,13 +1,13 @@
 /**
  * Transport-level tests for the schedules client methods: `listSchedules`,
  * `getServerDateTime`, `addSchedule`, `deleteSchedule` — URL (+ name encoding),
- * HTTP method, request-body shaping, the `{ data }` envelope unwrap, the
- * passthrough of unknown backend fields, and the loud 501 mapping the doors emit
- * when no scheduler backend is installed. A fake `fetch` records each request.
+ * HTTP method, request-body shaping, the `{ data }` envelope unwrap, the typed
+ * `ScheduleListRow` listing (a row of another shape is a loud schema error), and the
+ * loud 501 mapping the doors emit when no scheduler backend is installed. A fake `fetch` records each request.
  */
 import { describe, expect, it, vi } from 'vitest';
 
-import { type ApiConfig, ApiError } from '../index';
+import { type ApiConfig, ApiError, ApiSchemaError } from '../index';
 import { createApiClient } from './index';
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -44,18 +44,28 @@ function harness(responder: () => Response) {
 }
 
 describe('schedules client transport', () => {
-  it('listSchedules GETs /api/schedules and passes unknown backend fields through', async () => {
-    const { client, captured } = harness(() =>
-      jsonResponse({
-        data: [{ name: 'nightly', enabled: true, schedule: '0 0 * * *', backend_extra: 42 }],
-      }),
-    );
+  const row = {
+    name: 'nightly',
+    tool: 'backup',
+    cadence: { kind: 'interval', every: 60, relative: false },
+    enabled: true,
+    next_run_at_ts: null,
+    next_run_at_iso: null,
+    error: null,
+  };
+
+  it('listSchedules GETs /api/schedules and parses the typed rows', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: [row] }));
     const out = await client.listSchedules();
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/schedules');
-    expect(out[0]?.name).toBe('nightly');
-    // The passthrough schema keeps unknown fields the table forwards untouched.
-    expect((out[0] as Record<string, unknown>).backend_extra).toBe(42);
+    expect(out).toEqual([row]);
+  });
+
+  it('listSchedules refuses a row carrying stored kwargs (a loud schema error)', async () => {
+    const { client } = harness(() => jsonResponse({ data: [{ ...row, kwargs: { secret: 'x' } }] }));
+    const err = await client.listSchedules().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiSchemaError);
   });
 
   it('getServerDateTime GETs the server-datetime route and parses utc', async () => {
@@ -67,21 +77,23 @@ describe('schedules client transport', () => {
     expect(out.utc).toBe('2026-07-11T00:00:00Z');
   });
 
-  it('addSchedule POSTs the tool/schedule kwargs body and passes the opaque result through', async () => {
+  it('addSchedule POSTs the ScheduleCreate body and passes the opaque result through', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({ data: { name: 'nightly', created: true } }),
     );
     const out = await client.addSchedule({
       tool_name: 'backup',
       tool_kwargs: { sections: ['presets'] },
-      schedule_kwargs: { cron: '0 0 * * *' },
+      cadence: { kind: 'crontab', minute: '0', hour: '0' },
+      schedule_name: 'nightly',
     });
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/schedules');
     expect(captured[0]?.body).toEqual({
       tool_name: 'backup',
       tool_kwargs: { sections: ['presets'] },
-      schedule_kwargs: { cron: '0 0 * * *' },
+      cadence: { kind: 'crontab', minute: '0', hour: '0' },
+      schedule_name: 'nightly',
     });
     expect(out).toEqual({ name: 'nightly', created: true });
   });
@@ -101,7 +113,7 @@ describe('schedules client transport', () => {
       jsonResponse({ error: 'scheduling is not supported', code: 'scheduling-not-supported' }, 501),
     );
     const err = await client
-      .addSchedule({ tool_name: 'x', tool_kwargs: {}, schedule_kwargs: {} })
+      .addSchedule({ tool_name: 'x', tool_kwargs: {} })
       .catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).status).toBe(501);

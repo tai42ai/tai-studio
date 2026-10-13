@@ -1,14 +1,27 @@
 [
   {
     "name": "nightly-report",
+    "tool": "run_report",
+    "cadence": {
+      "kind": "crontab",
+      "minute": "0",
+      "hour": "2",
+      "day_of_month": "*",
+      "month_of_year": "*",
+      "day_of_week": "*"
+    },
     "enabled": true,
-    "schedule": { "__type": "crontab", "minute": "0", "hour": "2" },
-    "kwargs": { "backend_tool_name": "run_report_schedule_task" }
+    "next_run_at_ts": null,
+    "next_run_at_iso": null,
+    "error": null
   },
   {
     "name": "hourly-sync",
+    "tool": "sync",
+    "cadence": { "kind": "interval", "every": 3600, "relative": false },
     "enabled": false,
-    "schedule": { "__type": "interval", "every": 3600 },
-    "kwargs": { "backend_tool_name": "sync_schedule_task" }
+    "next_run_at_ts": null,
+    "next_run_at_iso": null,
+    "error": { "message": "probe failed", "at_iso": "2026-10-12T09:00:00+00:00" }
   }
 ]
