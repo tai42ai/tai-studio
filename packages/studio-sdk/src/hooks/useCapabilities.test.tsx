@@ -103,17 +103,17 @@ describe('coversAnyRoute — concrete routes', () => {
   });
 });
 
-describe('coversAnyRoute — dynamic patterns', () => {
+describe('coversAnyRoute — dynamic patterns, by the served open prefix', () => {
   const p = projection({
-    route_patterns: [{ pattern: '^/app/slug/.*$', scope_id: 'app', open_prefix: null }],
+    route_patterns: [{ pattern: '^/app/slug/.*$', scope_id: 'app', open_prefix: '/app/slug/' }],
   });
 
-  it('covers a prefix the open-wildcard literal starts with', () => {
+  it('covers a prefix the open prefix starts with', () => {
     expect(coversAnyRoute(p, ['/app/slug'])).toBe(true);
     expect(coversAnyRoute(p, ['/app'])).toBe(true);
   });
 
-  it('covers a deeper prefix that lives under the pattern (prefix starts with literal)', () => {
+  it('covers a deeper prefix that lives under the open prefix', () => {
     expect(coversAnyRoute(p, ['/app/slug/deep'])).toBe(true);
   });
 
@@ -121,25 +121,19 @@ describe('coversAnyRoute — dynamic patterns', () => {
     expect(coversAnyRoute(p, ['/other'])).toBe(false);
   });
 
-  it('conservatively declines a complex (alternation) pattern — under-showing is safe', () => {
-    const complex = projection({
-      route_patterns: [{ pattern: '^/app/(a|b)$', scope_id: 'app', open_prefix: null }],
+  it('a null open prefix covers nothing, whatever the pattern text reads', () => {
+    const declined = projection({
+      route_patterns: [{ pattern: '^/app/slug/.*$', scope_id: 'app', open_prefix: null }],
     });
-    expect(coversAnyRoute(complex, ['/app'])).toBe(false);
+    expect(coversAnyRoute(declined, ['/app'])).toBe(false);
+    expect(coversAnyRoute(declined, ['/app/slug'])).toBe(false);
   });
 
-  it('conservatively declines a non-anchored pattern', () => {
-    const loose = projection({
-      route_patterns: [{ pattern: '/app/.*', scope_id: 'app', open_prefix: null }],
+  it('decides from the served field alone, never from the pattern text', () => {
+    const served = projection({
+      route_patterns: [{ pattern: '^/app/(a|b)$', scope_id: 'app', open_prefix: '/app/' }],
     });
-    expect(coversAnyRoute(loose, ['/app'])).toBe(false);
-  });
-
-  it('conservatively declines a bare literal with no open wildcard tail', () => {
-    const exact = projection({
-      route_patterns: [{ pattern: '^/app/slug$', scope_id: 'app', open_prefix: null }],
-    });
-    expect(coversAnyRoute(exact, ['/app/slug'])).toBe(false);
+    expect(coversAnyRoute(served, ['/app'])).toBe(true);
   });
 });
 

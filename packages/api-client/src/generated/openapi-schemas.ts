@@ -271,7 +271,7 @@ export type ConsumerLink = z.infer<typeof consumerLink>;
 export const consumerRow = z.object({ "detail": z.string().nullable().default(null), "kind": z.string(), "link": consumerLink.nullable().default(null), "name": z.string().nullable().default(null), "unavailable": z.string().nullable().default(null) }).strict();
 export type ConsumerRow = z.infer<typeof consumerRow>;
 
-export const contributions = z.object({ "nav_entries": z.array(z.string()).default([]), "pages": z.array(z.string()).default([]), "settings_tabs": z.array(z.string()).default([]), "tool_panels": z.record(z.string(), z.string()).default({}) }).strict();
+export const contributions = z.object({ "nav_entries": z.array(z.string()).default([]), "pages": z.array(z.string()).default([]), "route_panels": z.array(z.string()).default([]), "settings_tabs": z.array(z.string()).default([]), "tool_panels": z.record(z.string(), z.string()).default({}) }).strict();
 export type Contributions = z.infer<typeof contributions>;
 
 export const conversationAnswer = z.object({ "answer": z.string().nullable().default(null), "message_id": z.string().min(1), "parts": z.array(answerPart).nullable().default(null), "status": z.enum(["answered","error","silent","merged","superseded"]), "successor_id": z.string().nullable().default(null), "thread_id": z.string().min(1) });
@@ -1072,10 +1072,10 @@ export type StringList = z.infer<typeof stringList>;
 export const stringListResponse = z.array(z.string());
 export type StringListResponse = z.infer<typeof stringListResponse>;
 
-export const studioPluginManifest = z.object({ "api_version": z.number().int(), "contributions": contributions, "entry": z.string(), "integrity": z.record(z.string(), z.string()), "name": z.string(), "version": z.string() }).strict();
-export type StudioPluginManifest = z.infer<typeof studioPluginManifest>;
+export const studioPluginListingEntry = z.object({ "api_version": z.number().int(), "contributions": contributions, "entry": z.string(), "integrity": z.record(z.string(), z.string()), "mounts": z.record(z.string(), z.string()), "name": z.string(), "version": z.string() }).strict();
+export type StudioPluginListingEntry = z.infer<typeof studioPluginListingEntry>;
 
-export const studioPluginListing = z.array(studioPluginManifest);
+export const studioPluginListing = z.array(studioPluginListingEntry);
 export type StudioPluginListing = z.infer<typeof studioPluginListing>;
 
 export const subMcpListingEntry = z.object({ "access_pattern": z.string(), "mount_url": z.string(), "tools": z.array(z.string()), "transport": z.string() });

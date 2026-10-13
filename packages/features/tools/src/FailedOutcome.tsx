@@ -4,7 +4,8 @@
  *
  * The sync run-tool door delivers a failed terminal as `{ error, outcome }` (read off the
  * `ApiError`'s parsed body by {@link failedOutcomeOf}); a background run's record carries the
- * same `outcome` beside its `error`. A plain raise carries no outcome and shows the message alone.
+ * same `outcome` beside its `error`. A plain raise carries no outcome — absent from the door's
+ * body, the published default `null` on the record — and shows the message alone.
  */
 import { ApiError } from '@tai42/api-client';
 import { ErrorState } from '@tai42/studio-sdk';
@@ -25,13 +26,14 @@ export function FailedOutcome({
   outcome,
 }: {
   readonly message: string;
-  /** The run's own outcome, present only when the run reached a failed terminal. */
+  /** The run's own outcome when the run reached a failed terminal; `undefined` or `null` when
+   *  it carried none. */
   readonly outcome?: unknown;
 }): ReactNode {
   return (
     <>
       <ErrorState message={message} />
-      {outcome !== undefined ? (
+      {outcome !== undefined && outcome !== null ? (
         <section className="tai-stack" data-testid="tool-run-outcome">
           <h3 className="tai-card-title">Outcome</h3>
           <ResultViewer result={outcome} />

@@ -2,9 +2,9 @@
   "name": "reference_plugin",
   "version": "0.1.0",
   "api_version": 1,
-  "entry": "reference-plugin-CXJBAusN.js",
+  "entry": "reference-plugin-ChqcK95k.js",
   "integrity": {
-    "reference-plugin-CXJBAusN.js": "sha384-lnXEjqo5SnzlkUkPTY8l3f4bk/9FWQuR3vS+H30UFriaQgw/7egphbPkkAKEt5VW",
+    "reference-plugin-ChqcK95k.js": "sha384-D6qR68x0851eXGFYiC+xkDbP1MjEfz9GbZVbLBXCHnnik5wuEZjr1gZ1kXctUiI+",
     "reference-plugin-DSwDHUoz.css": "sha384-Mud0KJQiWnrAsfSqCmJvqz4Ul6inFqfXMzfqUJFAPdWGmhNEBnZBcAFMx9zYS95z"
   },
   "contributions": {
@@ -19,6 +19,9 @@
     ],
     "nav_entries": [
       "demo"
+    ],
+    "route_panels": [
+      "synthetic"
     ]
   }
 }

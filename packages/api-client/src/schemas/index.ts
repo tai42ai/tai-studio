@@ -37,4 +37,3 @@ export * from './templates';
 export * from './tool-meta';
 export * from './tools';
 export * from './trigger-links';
-export * from './web-entry';

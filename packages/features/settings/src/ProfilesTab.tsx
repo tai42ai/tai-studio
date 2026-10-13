@@ -98,11 +98,9 @@ export function ProfilesTab({ readOnly }: ProfilesTabProps): ReactNode {
 
   const ownedSecret: ReadonlyMap<string, boolean> =
     schemaQuery.data !== undefined ? ownedSecretMap(schemaQuery.data) : new Map();
-  // Reserved `@`-prefixed profiles (e.g. `@previous`) are driven only by the dedicated
-  // Revert button — never surfaced as a manageable row.
-  const profiles = [...listQuery.data]
-    .filter((profile) => !profile.name.startsWith('@'))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  // The server lists only user profiles; a reserved one (`@previous`) is driven by the
+  // dedicated Revert button.
+  const profiles = [...listQuery.data].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div style={stackStyle}>

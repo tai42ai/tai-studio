@@ -5,12 +5,13 @@
  *   and the agent's checkpoint memory of it — so a later message on the same address
  *   starts fresh. Uses the route the thread is open under; the `thread_id` rides the
  *   query value the client encodes once.
- * - ERASE PERSON (only a LINKED person's aggregated thread): the GDPR right-to-erasure
- *   action, with a WIDE blast radius — it erases the person ENTIRELY, forgetting their
- *   aggregated thread and checkpoint, their person row, and every address→person link,
- *   across EVERY route they ever wrote under. It surfaces only when the open thread is
- *   a person-aggregated one (its id carries the reserved person namespace), because
- *   that id is the only place a person appears in this monitor.
+ * - ERASE PERSON (only a thread whose transcript names a person): the GDPR
+ *   right-to-erasure action, with a WIDE blast radius — it erases the person ENTIRELY,
+ *   forgetting their aggregated thread and checkpoint, their person row, and every
+ *   address→person link, across EVERY route they ever wrote under. The person is the
+ *   transcript's served `person_id`, read off the same cached pages the transcript pane
+ *   shows; a transcript that reads 404 (every record pruned) names no one, so the action
+ *   is not offered there — erasure stays reachable through its API door and the CLI.
  *
  * Both are guarded by the house `ConfirmDialog` with plainly truthful copy, and both
  * leave the (now-forgotten) thread on success — the transcript it named no longer
@@ -26,23 +27,27 @@ import {
   useAppNavigate,
   useCanWrite,
 } from '@tai42/studio-sdk';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, useState } from 'react';
 
-import { personIdOfThread } from './persons';
+import { transcriptQueryOptions } from './Transcript';
 
 export function ThreadActions({
   route,
   threadId,
+  q,
 }: {
   readonly route: string;
   readonly threadId: string;
+  /** The transcript filter the pane reads with, so this read shares its cache entry. */
+  readonly q: string | undefined;
 }): ReactNode {
   const api = useApi();
   const navigate = useAppNavigate();
   const queryClient = useQueryClient();
 
-  const personId = personIdOfThread(threadId);
+  const transcript = useInfiniteQuery(transcriptQueryOptions(api, route, threadId, q));
+  const personId = transcript.data?.pages[0]?.person_id ?? null;
 
   // Both destructive actions ride DYNAMIC (templated) DELETE doors — the thread delete on
   // `/api/conversations/{route_name}/thread`, the person erasure on
@@ -102,7 +107,7 @@ export function ThreadActions({
     setConfirming(which);
   };
 
-  // Erase-person is reachable only on a person-aggregated thread AND when its door is
+  // Erase-person is reachable only when the transcript names a person AND its door is
   // granted; the whole card holds nothing else, so it never renders empty.
   const showErasePerson = personId !== null && canErasePerson;
   if (!canDeleteThread && !showErasePerson) return null;

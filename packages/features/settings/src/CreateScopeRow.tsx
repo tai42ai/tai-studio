@@ -1,5 +1,7 @@
 /**
- * The inline row for naming a new scope, validated before it becomes a pending zone.
+ * The inline row for naming a new scope before it becomes a pending zone. The server
+ * rules a scope name; the row refuses only what it knows locally — a blank name, the
+ * served public marker, a name already present — and a server refusal shows on submit.
  */
 import { Button, Field, TextInput } from '@tai42/studio-sdk';
 import { type CSSProperties, type ReactNode, useState } from 'react';
@@ -11,8 +13,6 @@ const inlineFormStyle: CSSProperties = {
   alignItems: 'flex-end',
   marginTop: 'var(--tai-space-3)',
 };
-
-const SCOPE_ID_RE = /^[a-zA-Z0-9_\- ]+$/;
 
 export function CreateScopeRow({
   existingIds,
@@ -31,10 +31,6 @@ export function CreateScopeRow({
     const trimmed = value.trim();
     if (trimmed.length === 0) {
       setError('Enter a scope name.');
-      return;
-    }
-    if (!SCOPE_ID_RE.test(trimmed)) {
-      setError('Scope names may contain only letters, numbers, spaces, hyphens and underscores.');
       return;
     }
     if (trimmed === publicId) {

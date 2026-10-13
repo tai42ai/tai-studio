@@ -18,8 +18,8 @@ import { ApplyExtensionsPanel } from './apply-extensions';
 import { renderWithProviders } from './test-utils';
 
 const CATALOG: Extension[] = [
-  { name: 'marka', kind: 'wrapper', multiple: false },
-  { name: 'markb', kind: 'wrapper', multiple: false },
+  { name: 'marka', kind: 'wrapper', multiple: true },
+  { name: 'markb', kind: 'wrapper', multiple: true },
   { name: 'backendx', kind: 'backend', multiple: false },
 ];
 
@@ -177,7 +177,7 @@ describe('ApplyExtensionsPanel — config-bearing combos', () => {
     };
     const catalog: Extension[] = [
       ...CATALOG,
-      { name: 'output_schema', kind: 'wrapper', multiple: false },
+      { name: 'output_schema', kind: 'wrapper', multiple: true },
     ];
     const savePresetVersion = vi.fn().mockResolvedValue({
       version: 3,

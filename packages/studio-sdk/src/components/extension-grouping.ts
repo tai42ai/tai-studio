@@ -4,25 +4,18 @@
  * `ExtensionPicker`. Kept free of React so the grouping logic is unit-tested
  * directly.
  *
- * The `/api/extensions` catalog is a flat list of `{ name, kind }` entries. Two
+ * The `/api/extensions` catalog is a flat list of `{ name, kind, multiple }` entries. Two
  * independent groupings live here:
  *  - `groupIntoFamilies` groups a tool's composed branch VARIANTS (which share a
  *    base tool name and append underscore suffixes — `tool`, `tool_a`, `tool_a_b`)
  *    back into one FAMILY keyed by that base name (the catalog view);
- *  - `groupByKind` groups the catalog by extension KIND (the picker view), where
- *    the `backend` kind is the single non-stackable one.
+ *  - `groupByKind` groups the catalog by extension KIND (the picker view), each
+ *    group carrying the served `multiple` flag of its kind.
  * `kindVariant` maps each serialized `kind` value to a design-system Badge variant.
  */
 import type { Extension } from '@tai42/api-client';
 
 import type { BadgeProps } from './badge';
-
-/**
- * The single non-stackable extension kind: at most one `backend` extension may
- * appear in a combo (the `backend` kind is declared non-stackable, `multiple=False`).
- * The `ExtensionPicker` enforces single-select for this kind.
- */
-export const NON_STACKABLE_KIND = 'backend';
 
 /** One base tool and every extension entry that branches from it. */
 export interface ExtensionFamily {
@@ -36,8 +29,9 @@ export interface ExtensionFamily {
 export interface ExtensionKindGroup {
   /** The serialized kind value (`wrapper` / `transformer` / `backend`). */
   readonly kind: string;
-  /** Whether this kind is non-stackable (single-select in the picker). */
-  readonly nonStackable: boolean;
+  /** Whether a combo may carry several extensions of this kind; `false` is single-select
+   *  in the picker. Served per kind by the catalog. */
+  readonly multiple: boolean;
   /** The kind's entries, ordered by name. */
   readonly members: readonly Extension[];
 }
@@ -79,23 +73,29 @@ export function groupIntoFamilies(extensions: readonly Extension[]): ExtensionFa
 /**
  * Group a flat extension list by `kind`, for the picker. Groups are ordered by
  * kind and each group's members by name, so the render order is stable regardless
- * of the server's list order. The `backend` group is flagged non-stackable.
+ * of the server's list order. Each group carries its kind's served `multiple`; a kind
+ * whose entries disagree is a catalog fault and throws.
  */
 export function groupByKind(extensions: readonly Extension[]): ExtensionKindGroup[] {
-  const byKind = new Map<string, Extension[]>();
+  const byKind = new Map<string, { multiple: boolean; members: Extension[] }>();
   for (const extension of extensions) {
-    const members = byKind.get(extension.kind);
-    if (members) {
-      members.push(extension);
-    } else {
-      byKind.set(extension.kind, [extension]);
+    const group = byKind.get(extension.kind);
+    if (group === undefined) {
+      byKind.set(extension.kind, { multiple: extension.multiple, members: [extension] });
+      continue;
     }
+    if (group.multiple !== extension.multiple) {
+      throw new Error(
+        `extension kind ${extension.kind} is served as both single- and multi-select`,
+      );
+    }
+    group.members.push(extension);
   }
   return [...byKind.entries()]
-    .map(([kind, members]) => ({
+    .map(([kind, group]) => ({
       kind,
-      nonStackable: kind === NON_STACKABLE_KIND,
-      members: [...members].sort((a, b) => a.name.localeCompare(b.name)),
+      multiple: group.multiple,
+      members: [...group.members].sort((a, b) => a.name.localeCompare(b.name)),
     }))
     .sort((a, b) => a.kind.localeCompare(b.kind));
 }

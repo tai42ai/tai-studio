@@ -41,6 +41,7 @@ import './components/components.css';
 
 // -- Plugin API --------------------------------------------------------------
 export type {
+  ChannelConversationRoute,
   NavEntryContribution,
   NavEntrySection,
   PageContribution,
@@ -51,8 +52,11 @@ export type {
   PluginPageProps,
   RegisteredNavEntry,
   RegisteredPage,
+  RegisteredRoutePanel,
   RegisteredSettingsTab,
   RequiredCapabilities,
+  RoutePanelContribution,
+  RoutePanelProps,
   SettingsTabContribution,
   SettingsTabProps,
   ToolPanelContribution,
@@ -60,6 +64,8 @@ export type {
 } from './plugin/types';
 export type { VersionGateResult } from './plugin/version';
 export { checkPluginApiVersion, STUDIO_PLUGIN_API_VERSION } from './plugin/version';
+/** What `useApi().runTool` resolves with: the run-tool door's answer, read by its `kind`. */
+export type { RunAnswer } from '@tai42/api-client';
 
 // -- Hooks -------------------------------------------------------------------
 export type { ApiClient } from './hooks/useApi';
@@ -322,7 +328,6 @@ export {
   groupByKind,
   groupIntoFamilies,
   kindVariant,
-  NON_STACKABLE_KIND,
 } from './components/extension-grouping';
 export type { ExtensionPickerProps } from './components/extension-picker';
 export { ExtensionPicker } from './components/extension-picker';

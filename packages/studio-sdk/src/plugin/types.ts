@@ -2,7 +2,7 @@
  * The Studio-plugin authoring contract. A platform plugin ships an ESM bundle
  * that exports a `register(context)` entry ({@link PluginEntry}); the host calls
  * it with a {@link PluginContext} through which the plugin contributes tool
- * panels, pages, settings tabs, and sidebar nav entries.
+ * panels, pages, settings tabs, sidebar nav entries and conversation route panels.
  *
  * Two styling paths are sanctioned, and only these two:
  *  1. SDK components plus inline styles that read the design-system tokens
@@ -20,6 +20,7 @@
  *     its own. Bundled third-party base CSS is exempt from rule (c) but rules
  *     (a) and (b) still bind it.
  */
+import type { ConversationRouteView } from '@tai42/api-client';
 import type { ComponentType } from 'react';
 
 /**
@@ -219,12 +220,43 @@ export interface RegisteredSettingsTab extends SettingsTabContribution {
   readonly pluginId: string;
 }
 
+/** A conversation route row as `GET /api/conversations` lists it, on the `channel` door. */
+export type ChannelConversationRoute = Extract<ConversationRouteView, { readonly door: 'channel' }>;
+
+/** Props a contributed route panel receives. */
+export interface RoutePanelProps {
+  readonly pluginId: string;
+  /** The route row the panel decorates; its `channel` is the contribution's channel. */
+  readonly route: ChannelConversationRoute;
+}
+
+/**
+ * A panel the conversations drill-in renders above the thread list of every route on
+ * one channel. One panel per channel deployment-wide.
+ */
+export interface RoutePanelContribution {
+  /** The channel name whose routes this panel decorates (`ConversationRouteView.channel`). */
+  readonly channel: string;
+  /** Names the panel region (its aria-label and the error card label). */
+  readonly title: string;
+  readonly component: ComponentType<RoutePanelProps>;
+  /** Capability gate (see {@link RequiredCapabilities}); absent ⇒ full-only. */
+  readonly requiredCapabilities?: RequiredCapabilities;
+}
+
+/** A route panel as stored in the registry, stamped with the plugin that registered it. */
+export interface RegisteredRoutePanel extends RoutePanelContribution {
+  readonly pluginId: string;
+}
+
 /** Everything a single plugin bundle has registered at import time. */
 export interface PluginContributions {
   readonly toolPanels: ReadonlyMap<string, ToolPanelContribution>;
   readonly pages: readonly RegisteredPage[];
   readonly settingsTabs: readonly RegisteredSettingsTab[];
   readonly navEntries: readonly RegisteredNavEntry[];
+  /** Route panels keyed by the channel they decorate. */
+  readonly routePanels: ReadonlyMap<string, RegisteredRoutePanel>;
 }
 
 /**
@@ -250,6 +282,18 @@ export interface PluginContext {
    * registers (a nav entry with no page is a dead link and is rejected loudly).
    */
   registerNavEntry(contribution: NavEntryContribution): void;
+  /**
+   * Register a panel for the routes of one channel. The plugin's manifest must list the
+   * same channels under `contributions.route_panels`, or the plugin fails to load.
+   */
+  registerRoutePanel(contribution: RoutePanelContribution): void;
+  /**
+   * The resolved absolute base of one of this plugin's route items, e.g. `/api/channels/web`,
+   * or `null` when the item has no mount on this deployment (an optional router not listed, a
+   * channel not loaded). Never throws; a feature that needs the base shows its own unavailable
+   * state for `null`. Call it during `register` and keep the value.
+   */
+  routeBase(itemName: string): string | null;
 }
 
 /**

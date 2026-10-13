@@ -6,10 +6,9 @@
  * live in the SDK). It is PRESENTATIONAL: the caller fetches `available` and owns
  * the selected `value`; this component fetches nothing.
  *
- * The catalog is GROUPED by `kind`. The `backend` kind is the single NON-STACKABLE
- * one (`multiple=False`), so it is SINGLE-SELECT — checking a backend
- * extension replaces any other backend already in the combo; every other kind is
- * freely multi-select. Selection order is preserved (the combo is ordered — the
+ * The catalog is GROUPED by `kind`. A kind the catalog serves as not `multiple` is
+ * SINGLE-SELECT — checking one of its extensions replaces any other of that kind
+ * already in the combo; a `multiple` kind is freely multi-select. Selection order is preserved (the combo is ordered — the
  * stacking order that produces the branch tool name), so a newly-checked extension
  * appends to the end and unchecking removes in place.
  *
@@ -60,20 +59,20 @@ export function ExtensionPicker({
   }
 
   /**
-   * Toggle a single extension. For a NON-STACKABLE kind (`backend`), checking one
-   * first strips any other selected member of that kind before appending, so the
-   * combo carries at most one backend; unchecking just removes it. Order is
-   * preserved: a newly-checked name lands at the end.
+   * Toggle a single extension. For a kind the catalog serves as not `multiple`,
+   * checking one first strips any other selected member of that kind before
+   * appending, so the combo carries at most one of it; unchecking just removes it.
+   * Order is preserved: a newly-checked name lands at the end.
    */
-  const toggle = (extension: Extension, nonStackable: boolean, checked: boolean): void => {
+  const toggle = (extension: Extension, multiple: boolean, checked: boolean): void => {
     if (!checked) {
       onChange(value.filter((name) => name !== extension.name));
       return;
     }
     if (selected.has(extension.name)) return;
-    const siblingNames = nonStackable
-      ? new Set(available.filter((e) => e.kind === extension.kind).map((e) => e.name))
-      : undefined;
+    const siblingNames = multiple
+      ? undefined
+      : new Set(available.filter((e) => e.kind === extension.kind).map((e) => e.name));
     const kept =
       siblingNames === undefined ? [...value] : value.filter((name) => !siblingNames.has(name));
     onChange([...kept, extension.name]);
@@ -87,7 +86,7 @@ export function ExtensionPicker({
               and the single-select qualifier rides beside it as secondary text. */}
           <div className="tai-row">
             <Badge variant={kindVariant(group.kind)}>{group.kind}</Badge>
-            {group.nonStackable ? <span className="tai-muted">(single-select)</span> : null}
+            {group.multiple ? null : <span className="tai-muted">(single-select)</span>}
           </div>
           <div className="tai-row">
             {group.members.map((extension) => (
@@ -97,7 +96,7 @@ export function ExtensionPicker({
                 checked={selected.has(extension.name)}
                 disabled={disabled}
                 onCheckedChange={(checked) => {
-                  toggle(extension, group.nonStackable, checked);
+                  toggle(extension, group.multiple, checked);
                 }}
               />
             ))}

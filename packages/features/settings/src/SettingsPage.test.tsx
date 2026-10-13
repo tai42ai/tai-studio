@@ -10,6 +10,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SettingsPage } from './SettingsPage';
 import { fullProjection, renderWithProviders, scopedProjection } from './test-utils';
 
+/** No route mounts and no declared route panels: the host inputs of a plugin that contributes none. */
+const NO_HOST_INPUTS = { mounts: {}, declaredRoutePanels: [] };
+
 interface StubMethods {
   readonly getConfigMode: ApiClient['getConfigMode'];
   readonly getSettingsSchema?: ApiClient['getSettingsSchema'];
@@ -119,15 +122,19 @@ describe('SettingsPage plugin tabs', () => {
   const CORE_LABELS = ['Settings', 'Environment', 'Profiles', 'API keys', 'Backup', 'Roles'];
 
   it('renders a contributed tab after the core tabs once the load pass is ready', async () => {
-    await loadPlugin('acme', (ctx) => {
-      ctx.registerSettingsTab({
-        id: 'general',
-        title: 'Acme Settings',
-        component: ({ pluginId }: SettingsTabProps): ReactElement => (
-          <div data-testid="acme-tab-body">acme content for {pluginId}</div>
-        ),
-      });
-    });
+    await loadPlugin(
+      'acme',
+      (ctx) => {
+        ctx.registerSettingsTab({
+          id: 'general',
+          title: 'Acme Settings',
+          component: ({ pluginId }: SettingsTabProps): ReactElement => (
+            <div data-testid="acme-tab-body">acme content for {pluginId}</div>
+          ),
+        });
+      },
+      NO_HOST_INPUTS,
+    );
     setPluginHostState(hostState('ready'));
 
     renderWithProviders(<SettingsPage search={{}} />, {
@@ -142,9 +149,13 @@ describe('SettingsPage plugin tabs', () => {
   });
 
   it('renders only the core tabs while the load pass is still loading', async () => {
-    await loadPlugin('acme', (ctx) => {
-      ctx.registerSettingsTab({ id: 'general', title: 'Acme Settings', component: () => null });
-    });
+    await loadPlugin(
+      'acme',
+      (ctx) => {
+        ctx.registerSettingsTab({ id: 'general', title: 'Acme Settings', component: () => null });
+      },
+      NO_HOST_INPUTS,
+    );
     setPluginHostState(hostState('loading'));
 
     renderWithProviders(<SettingsPage search={{}} />, {
@@ -158,20 +169,28 @@ describe('SettingsPage plugin tabs', () => {
   });
 
   it('keeps two plugins that share a tab id from colliding (namespaced values)', async () => {
-    await loadPlugin('acme', (ctx) => {
-      ctx.registerSettingsTab({
-        id: 'general',
-        title: 'General',
-        component: (): ReactElement => <div data-testid="acme-general">acme general</div>,
-      });
-    });
-    await loadPlugin('globex', (ctx) => {
-      ctx.registerSettingsTab({
-        id: 'general',
-        title: 'General',
-        component: (): ReactElement => <div data-testid="globex-general">globex general</div>,
-      });
-    });
+    await loadPlugin(
+      'acme',
+      (ctx) => {
+        ctx.registerSettingsTab({
+          id: 'general',
+          title: 'General',
+          component: (): ReactElement => <div data-testid="acme-general">acme general</div>,
+        });
+      },
+      NO_HOST_INPUTS,
+    );
+    await loadPlugin(
+      'globex',
+      (ctx) => {
+        ctx.registerSettingsTab({
+          id: 'general',
+          title: 'General',
+          component: (): ReactElement => <div data-testid="globex-general">globex general</div>,
+        });
+      },
+      NO_HOST_INPUTS,
+    );
     setPluginHostState(hostState('ready'));
 
     const user = userEvent.setup();
@@ -206,13 +225,21 @@ describe('SettingsPage plugin tabs', () => {
     // Registered out of sorted order and across plugins so a dropped, title-only,
     // or pluginId-only sort would each yield a different sequence. The correct
     // (pluginId, title) order is acme:Alpha, acme:Zulu, beta:Mid.
-    await loadPlugin('beta', (ctx) => {
-      ctx.registerSettingsTab({ id: 'b1', title: 'Mid', component: () => null });
-    });
-    await loadPlugin('acme', (ctx) => {
-      ctx.registerSettingsTab({ id: 'a1', title: 'Zulu', component: () => null });
-      ctx.registerSettingsTab({ id: 'a2', title: 'Alpha', component: () => null });
-    });
+    await loadPlugin(
+      'beta',
+      (ctx) => {
+        ctx.registerSettingsTab({ id: 'b1', title: 'Mid', component: () => null });
+      },
+      NO_HOST_INPUTS,
+    );
+    await loadPlugin(
+      'acme',
+      (ctx) => {
+        ctx.registerSettingsTab({ id: 'a1', title: 'Zulu', component: () => null });
+        ctx.registerSettingsTab({ id: 'a2', title: 'Alpha', component: () => null });
+      },
+      NO_HOST_INPUTS,
+    );
     setPluginHostState(hostState('ready'));
 
     renderWithProviders(<SettingsPage search={{}} />, {
@@ -226,21 +253,25 @@ describe('SettingsPage plugin tabs', () => {
   });
 
   it('gates plugin tabs on requiredCapabilities for a scoped session', async () => {
-    await loadPlugin('acme', (ctx) => {
-      ctx.registerSettingsTab({
-        id: 'covered',
-        title: 'Covered',
-        component: () => null,
-        requiredCapabilities: { routes: ['/api/special'] },
-      });
-      ctx.registerSettingsTab({
-        id: 'denied',
-        title: 'Denied',
-        component: () => null,
-        requiredCapabilities: { routes: ['/api/secret'] },
-      });
-      ctx.registerSettingsTab({ id: 'absent', title: 'Absent', component: () => null });
-    });
+    await loadPlugin(
+      'acme',
+      (ctx) => {
+        ctx.registerSettingsTab({
+          id: 'covered',
+          title: 'Covered',
+          component: () => null,
+          requiredCapabilities: { routes: ['/api/special'] },
+        });
+        ctx.registerSettingsTab({
+          id: 'denied',
+          title: 'Denied',
+          component: () => null,
+          requiredCapabilities: { routes: ['/api/secret'] },
+        });
+        ctx.registerSettingsTab({ id: 'absent', title: 'Absent', component: () => null });
+      },
+      NO_HOST_INPUTS,
+    );
     setPluginHostState(hostState('ready'));
 
     renderWithProviders(<SettingsPage search={{}} />, {
@@ -262,15 +293,19 @@ describe('SettingsPage plugin tabs', () => {
   });
 
   it('shows a full session every plugin tab, requirement or not', async () => {
-    await loadPlugin('acme', (ctx) => {
-      ctx.registerSettingsTab({ id: 'absent', title: 'Absent', component: () => null });
-      ctx.registerSettingsTab({
-        id: 'gated',
-        title: 'Gated',
-        component: () => null,
-        requiredCapabilities: { routes: ['/api/special'] },
-      });
-    });
+    await loadPlugin(
+      'acme',
+      (ctx) => {
+        ctx.registerSettingsTab({ id: 'absent', title: 'Absent', component: () => null });
+        ctx.registerSettingsTab({
+          id: 'gated',
+          title: 'Gated',
+          component: () => null,
+          requiredCapabilities: { routes: ['/api/special'] },
+        });
+      },
+      NO_HOST_INPUTS,
+    );
     setPluginHostState(hostState('ready'));
 
     renderWithProviders(<SettingsPage search={{}} />, {
@@ -284,15 +319,19 @@ describe('SettingsPage plugin tabs', () => {
   });
 
   it('contains a throwing plugin tab in its own error boundary without breaking the others', async () => {
-    await loadPlugin('acme', (ctx) => {
-      ctx.registerSettingsTab({
-        id: 'boom',
-        title: 'Boom',
-        component: (): ReactElement => {
-          throw new Error('plugin tab exploded');
-        },
-      });
-    });
+    await loadPlugin(
+      'acme',
+      (ctx) => {
+        ctx.registerSettingsTab({
+          id: 'boom',
+          title: 'Boom',
+          component: (): ReactElement => {
+            throw new Error('plugin tab exploded');
+          },
+        });
+      },
+      NO_HOST_INPUTS,
+    );
     setPluginHostState(hostState('ready'));
 
     // React logs a handled boundary error to console.error; silence that one line.

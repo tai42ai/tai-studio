@@ -242,17 +242,6 @@ describe('ScopesMapper create-scope', () => {
     );
   }
 
-  it('rejects an invalid scope name (charset)', async () => {
-    const user = userEvent.setup();
-    renderMapper();
-    await screen.findByText('/a');
-
-    await user.type(screen.getByLabelText('New scope name'), 'bad/name');
-    await user.click(screen.getByRole('button', { name: 'Add scope' }));
-
-    expect(await screen.findByText(/only letters, numbers/)).toBeInTheDocument();
-  });
-
   it('rejects the served public marker as a scope name, naming it', async () => {
     const user = userEvent.setup();
     renderWithProviders(<ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} publicId="open" />, {

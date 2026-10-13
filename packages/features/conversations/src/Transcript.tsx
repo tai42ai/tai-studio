@@ -19,8 +19,8 @@
  * Polling stops while the tab is in the background (TanStack's default), so a
  * parked Studio tab never holds the reader open.
  */
-import { Card, useApi } from '@tai42/studio-sdk';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { type ApiClient, Card, useApi } from '@tai42/studio-sdk';
+import { infiniteQueryOptions, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, type RefObject, useRef } from 'react';
 
 import { RELATIVE_TICK_MS, useNow } from './clock';
@@ -47,6 +47,37 @@ export const TAIL_INTERVAL_MS = 5000;
 /** The deepest window a tail tick re-reads — and so the most requests one can fire. */
 export const TRANSCRIPT_MAX_PAGES = 5;
 
+/**
+ * The tailing transcript read of one thread: newest page first, paged backwards, bounded.
+ * Every reader of the thread's transcript builds its query from here, so they share one
+ * cache entry (the thread actions read the served `person_id` off the same pages).
+ */
+export function transcriptQueryOptions(
+  api: ApiClient,
+  route: string,
+  threadId: string,
+  q: string | undefined,
+) {
+  return infiniteQueryOptions({
+    queryKey: conversationTranscriptKey(route, threadId, TRANSCRIPT_PAGE_SIZE, q),
+    queryFn: ({ pageParam, signal }) =>
+      api.readConversationTranscript(
+        {
+          routeName: route,
+          threadId,
+          page: pageParam,
+          pageSize: TRANSCRIPT_PAGE_SIZE,
+          order: 'desc',
+          q,
+        },
+        signal,
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (last) => last.next_page ?? undefined,
+    ...boundedRefresh(TRANSCRIPT_MAX_PAGES, TAIL_INTERVAL_MS),
+  });
+}
+
 /** What a transcript too far back to keep tailing says, on screen and out loud. */
 const PAUSED_NOTICE = `New messages stop arriving past ${String(TRANSCRIPT_MAX_PAGES)} pages of history.`;
 
@@ -65,25 +96,9 @@ export function Transcript({
   const api = useApi();
   const now = useNow(RELATIVE_TICK_MS);
   const queryClient = useQueryClient();
-  const queryKey = conversationTranscriptKey(route, threadId, TRANSCRIPT_PAGE_SIZE, q);
-  const query = useInfiniteQuery({
-    queryKey,
-    queryFn: ({ pageParam, signal }) =>
-      api.readConversationTranscript(
-        {
-          routeName: route,
-          threadId,
-          page: pageParam,
-          pageSize: TRANSCRIPT_PAGE_SIZE,
-          order: 'desc',
-          q,
-        },
-        signal,
-      ),
-    initialPageParam: 1,
-    getNextPageParam: (last) => last.next_page ?? undefined,
-    ...boundedRefresh(TRANSCRIPT_MAX_PAGES, TAIL_INTERVAL_MS),
-  });
+  const options = transcriptQueryOptions(api, route, threadId, q);
+  const { queryKey } = options;
+  const query = useInfiniteQuery(options);
 
   // The two controls that do not survive being used, and where focus goes when
   // each of them is gone: the thread heading, this pane's own top.

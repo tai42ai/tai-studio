@@ -5,10 +5,18 @@
  *  - an active run is polled to success and renders the typed result;
  *  - polling STOPS the moment the run is terminal (no further GETs);
  *  - the failed and lost states render their distinct surfaces;
- *  - a parked run renders its park answer (the caller-ask list, or the user-only note);
+ *  - a parked run renders its park answer by kind (the caller-ask list, or the user-only
+ *    note), and a parked record whose stored answer the api-client refused shows the
+ *    unreadable panel;
  *  - selecting a recent run shows that run's detail.
  */
-import type { ToolRunListItem, ToolRunRecord } from '@tai42/api-client';
+import {
+  ApiSchemaError,
+  type ToolRunListItem,
+  toolRunListItem,
+  type ToolRunRecord,
+  toolRunRecord,
+} from '@tai42/api-client';
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,13 +25,30 @@ import { BackgroundRuns } from './BackgroundRuns';
 import { POLL_INTERVAL_MS } from './backgroundRunsCommon';
 import { decorBorderedControls, renderWithProviders, type StubApiClient } from './test-utils';
 
-function listItem(over: Partial<ToolRunListItem> = {}): ToolRunListItem {
-  return { run_id: 'r1', tool_name: 'echo', status: 'succeeded', started_at: 't1', ...over };
+/** A list row as the client reads it: built through the published row schema. */
+function listItem(over: Record<string, unknown> = {}): ToolRunListItem {
+  return toolRunListItem.parse({
+    run_id: 'r1',
+    tool_name: 'echo',
+    status: 'succeeded',
+    started_at: 't1',
+    ...over,
+  });
 }
 
-function record(over: Partial<ToolRunRecord> = {}): ToolRunRecord {
-  return { run_id: 'r1', tool_name: 'echo', status: 'succeeded', started_at: 't1', ...over };
+/** A record of the given status as the client reads it: built through the record schema, the
+ *  fields a status carries riding `over`. */
+function record(over: Record<string, unknown> = {}): ToolRunRecord {
+  return toolRunRecord.parse({
+    run_id: 'r1',
+    tool_name: 'echo',
+    status: 'succeeded',
+    started_at: 't1',
+    ...over,
+  });
 }
+
+const SUSPENDED = { interaction_id: 'u1', interaction_ids: ['u1'], caller_interaction_ids: [] };
 
 describe('BackgroundRuns — recent list', () => {
   it('renders an empty state when the tool has no background runs', async () => {
@@ -148,6 +173,29 @@ describe('BackgroundRuns — active run detail', () => {
     expect(within(detail).queryByTestId('tool-run-outcome')).toBeNull();
   });
 
+  it('renders a parsed failed record without an outcome as its message alone', async () => {
+    // Through the record schema, as the client reads it: an absent outcome reads as the
+    // published default (null), never as an outcome to show.
+    const parsed = toolRunRecord.parse({
+      run_id: 'r1',
+      tool_name: 'echo',
+      status: 'failed',
+      started_at: 't1',
+      finished_at: 't1b',
+      error: 'kaboom',
+    });
+    const client: StubApiClient = {
+      listToolRuns: vi.fn().mockResolvedValue([listItem({ status: 'failed' })]),
+      getToolRun: vi.fn().mockResolvedValue(parsed),
+    };
+    renderWithProviders(<BackgroundRuns toolName="echo" activeRunId="r1" />, { client });
+
+    const detail = await screen.findByTestId('tool-run-detail');
+    expect(within(detail).getByRole('alert')).toHaveTextContent('kaboom');
+    expect(within(detail).queryByTestId('tool-run-outcome')).toBeNull();
+    expect(within(detail).queryByRole('heading', { name: 'Outcome' })).toBeNull();
+  });
+
   it('renders the distinct lost explanation', async () => {
     const client: StubApiClient = {
       listToolRuns: vi.fn().mockResolvedValue([listItem({ status: 'lost' })]),
@@ -172,7 +220,9 @@ describe('BackgroundRuns — active run detail', () => {
           status: 'parked',
           finished_at: 't1b',
           result: {
+            kind: 'asks',
             asks: [{ id: 'ask-1', status: 'asking', to: 'caller', question: 'Approve the run?' }],
+            suspended: SUSPENDED,
           },
         }),
       ),
@@ -193,7 +243,7 @@ describe('BackgroundRuns — active run detail', () => {
         record({
           status: 'parked',
           finished_at: 't1b',
-          result: { interaction_id: 'u1', interaction_ids: ['u1'], caller_interaction_ids: [] },
+          result: { kind: 'parked', suspended: SUSPENDED },
         }),
       ),
     };
@@ -205,6 +255,47 @@ describe('BackgroundRuns — active run detail', () => {
       'This run parked with no open asks.',
     );
     expect(within(detail).queryByTestId('asks-list')).not.toBeInTheDocument();
+  });
+
+  it('shows the unreadable panel for a parked record whose stored answer was refused', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listToolRuns: vi.fn().mockResolvedValue([listItem({ status: 'parked' })]),
+      getToolRun: vi.fn().mockRejectedValue(
+        new ApiSchemaError('/api/tool-runs/r1', [
+          {
+            code: 'invalid_union',
+            path: ['result', 'kind'],
+            message: 'Invalid discriminator value',
+          },
+        ]),
+      ),
+    };
+    renderWithProviders(<BackgroundRuns toolName="echo" activeRunId="r1" />, { client });
+
+    const panel = await screen.findByTestId('tool-run-answer-unreadable');
+    expect(panel).toHaveTextContent(
+      "This parked run's stored answer is in an older format and cannot be shown. The record expires on its own.",
+    );
+    await user.click(within(panel).getByText('Details'));
+    expect(within(panel).getByText('result.kind: Invalid discriminator value')).toBeVisible();
+  });
+
+  it('shows any other refused record read as the loud error state', async () => {
+    const client: StubApiClient = {
+      listToolRuns: vi.fn().mockResolvedValue([listItem()]),
+      getToolRun: vi
+        .fn()
+        .mockRejectedValue(
+          new ApiSchemaError('/api/tool-runs/r1', [
+            { code: 'invalid_type', path: ['started_at'], message: 'Required' },
+          ]),
+        ),
+    };
+    renderWithProviders(<BackgroundRuns toolName="echo" activeRunId="r1" />, { client });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/did not match its expected schema/);
+    expect(screen.queryByTestId('tool-run-answer-unreadable')).toBeNull();
   });
 
   it('selects a recent run and shows its detail on click', async () => {

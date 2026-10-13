@@ -10,15 +10,24 @@
  * `ResultViewer` the sync path uses (oversized handling included). A `lost` run
  * (the server restarted mid-run) renders its own explanation — the result is
  * unrecoverable. A `parked` run (its tool async-parked) carries the park answer as
- * its `result`, read through the SAME `readRunResult` the sync path uses: a caller-ask
- * park shows the `AsksList`, a user-only park the "no open asks" note.
+ * its `result`, parsed by the api-client into the run answer's two park kinds: a
+ * caller-ask park (`asks`) shows the `AsksList`, a user-only park (`parked`) the "no
+ * open asks" note. A parked record whose stored answer is neither is refused on the read
+ * (an `ApiSchemaError` on `result`), and the card shows the unreadable panel in place of
+ * the record.
  *
  * The recent-runs list is a quiet, borderless `.tai-nav-item` list: a status chip
  * (label + colour, plus a live spinner while running), the run id in mono, and the
  * start time. The selected row carries `aria-pressed` and the accent tint so the
  * detail above it and the row it came from read as one selection.
  */
-import { isTerminalRunStatus, type ToolRunListItem, type ToolRunRecord } from '@tai42/api-client';
+import {
+  ApiSchemaError,
+  isTerminalRunStatus,
+  type ToolRunListItem,
+  type ToolRunParkAnswer,
+  type ToolRunRecord,
+} from '@tai42/api-client';
 import {
   Badge,
   EmptyState,
@@ -41,7 +50,7 @@ import {
 } from './backgroundRunsCommon';
 import { FailedOutcome } from './FailedOutcome';
 import { ResultViewer } from './ResultViewer';
-import { readRunResult } from './run-asks';
+import { UNREADABLE_PARKED_ANSWER, UnreadableAnswer } from './UnreadableAnswer';
 
 /** One status chip; the running state pairs the chip with a live spinner. */
 function StatusChip({ status }: { readonly status: ToolRunRecord['status'] }): ReactNode {
@@ -68,15 +77,24 @@ function LostNotice(): ReactNode {
   );
 }
 
-/** A `parked` run's park answer: the caller-ask list, or the user-only "no open asks"
- * note. Reads the record's `result` through the SAME reader the sync run panel uses, so
- * the two doors show a park identically; `AsksList` renders the note for an empty ask set. */
-function ParkedRun({ result }: { readonly result: unknown }): ReactNode {
-  const view = readRunResult(result);
-  if (view.kind === 'asks') {
-    return <AsksList asks={view.asks} />;
+/** A `parked` run's park answer by its kind: the caller-ask list, or the user-only "no
+ * open asks" note — the same two surfaces the sync run panel shows for a park;
+ * `AsksList` renders the note for an empty ask set. */
+function ParkedRun({ answer }: { readonly answer: ToolRunParkAnswer }): ReactNode {
+  if (answer.kind === 'asks') {
+    return <AsksList asks={answer.asks} />;
   }
   return <ParkedNote testId="tool-run-parked-note" />;
+}
+
+/** Whether a record read was refused on its park answer: the only `result` the record
+ *  schema checks is a parked record's. */
+function refusedParkAnswer(error: unknown): error is ApiSchemaError {
+  if (!(error instanceof ApiSchemaError) || !Array.isArray(error.issues)) return false;
+  const first: unknown = error.issues[0];
+  if (typeof first !== 'object' || first === null) return false;
+  const path = (first as { path?: unknown }).path;
+  return Array.isArray(path) && path[0] === 'result';
 }
 
 /** Poll and render one run's live record (status + terminal result/error). */
@@ -97,6 +115,15 @@ function RunDetail({ runId }: { readonly runId: string }): ReactNode {
     return <Skeleton height={80} />;
   }
   if (query.isError) {
+    if (refusedParkAnswer(query.error)) {
+      return (
+        <UnreadableAnswer
+          message={UNREADABLE_PARKED_ANSWER}
+          error={query.error}
+          testId="tool-run-answer-unreadable"
+        />
+      );
+    }
     return <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />;
   }
 
@@ -120,7 +147,7 @@ function RunDetail({ runId }: { readonly runId: string }): ReactNode {
         <FailedOutcome message={record.error ?? 'The tool run failed.'} outcome={record.outcome} />
       ) : null}
       {record.status === 'lost' ? <LostNotice /> : null}
-      {record.status === 'parked' ? <ParkedRun result={record.result} /> : null}
+      {record.status === 'parked' ? <ParkedRun answer={record.result} /> : null}
     </section>
   );
 }

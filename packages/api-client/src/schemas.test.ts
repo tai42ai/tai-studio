@@ -915,42 +915,7 @@ describe('requiredTemplatedText schema — a non-empty source is mandatory', () 
   });
 });
 
-describe('run-tool result schemas — caller asks, park receipt, visit outcome', () => {
-  it('accepts a caller-ask envelope with the entry display fields', () => {
-    const parsed = schemas.callerAsksEnvelope.parse({
-      asks: [
-        {
-          id: 'i1',
-          status: 'asking',
-          question: 'Approve?',
-          payload: { amount: 3 },
-          asked_by: ['run-a'],
-        },
-      ],
-    });
-    expect(parsed.asks[0]?.id).toBe('i1');
-    expect(parsed.asks[0]?.payload).toEqual({ amount: 3 });
-  });
-
-  it('accepts an empty caller-ask envelope', () => {
-    expect(schemas.callerAsksEnvelope.parse({ asks: [] }).asks).toEqual([]);
-  });
-
-  it('rejects an ask entry with an unknown status', () => {
-    expect(
-      schemas.callerAsksEnvelope.safeParse({ asks: [{ id: 'i1', status: 'bogus' }] }).success,
-    ).toBe(false);
-  });
-
-  it('accepts a user-only suspension receipt', () => {
-    const parsed = schemas.suspendedRunReceipt.parse({
-      interaction_id: 'u1',
-      interaction_ids: ['u1'],
-    });
-    // caller_interaction_ids defaults to an empty list when the receipt omits it.
-    expect(parsed.caller_interaction_ids).toEqual([]);
-  });
-
+describe('the visit outcome a resume_parked / cancel_parked tool returns', () => {
   it('accepts a visit outcome, defaulting cancelled/asks and tolerating an absent result', () => {
     const parsed = schemas.visitOutcome.parse({ action: 'resumed', kind: 'parked' });
     expect(parsed.cancelled).toEqual([]);

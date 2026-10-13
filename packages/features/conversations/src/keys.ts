@@ -25,14 +25,6 @@ export function conversationThreadsKey(
   return ['conversations', 'threads', routeName, pageSize, status ?? null, address ?? null];
 }
 
-/** Key for one web route's entry-gate state (flag + live codes), keyed by the
- * route's `our_identity`. */
-export function webEntryGateKey(
-  identity: string,
-): readonly ['conversations', 'entry-gate', string] {
-  return ['conversations', 'entry-gate', identity];
-}
-
 /** Prefix over EVERY read of one thread's transcript (any page size, any `q`
  * filter). A write into the thread invalidates them all through this prefix. */
 export function conversationTranscriptPrefix(

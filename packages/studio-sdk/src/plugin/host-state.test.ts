@@ -11,6 +11,9 @@ import {
 } from './host-state';
 import { __resetContributions, getContributions, loadPlugin } from './registry';
 
+/** No route mounts and no declared route panels: the host inputs of a plugin that contributes none. */
+const NO_HOST_INPUTS = { mounts: {}, declaredRoutePanels: [] };
+
 afterEach(() => {
   __resetPluginHostState();
   __resetContributions();
@@ -87,9 +90,13 @@ describe('plugin host-state store', () => {
 describe('usePluginContributions', () => {
   it('re-renders when the load pass reaches ready and exposes the committed tabs', async () => {
     // Seed the registry through the real load path before the pass reports ready.
-    await loadPlugin('acme', (ctx) => {
-      ctx.registerSettingsTab(tab('general'));
-    });
+    await loadPlugin(
+      'acme',
+      (ctx) => {
+        ctx.registerSettingsTab(tab('general'));
+      },
+      NO_HOST_INPUTS,
+    );
 
     const { result } = renderHook(() => usePluginContributions());
 

@@ -10,10 +10,9 @@ import {
   coversAnyRoute,
   ErrorBoundary,
   isFullProjection,
-  type RequiredCapabilities,
   type TabItem,
 } from '@tai42/studio-sdk';
-import type { usePluginContributions } from '@tai42/studio-sdk/host';
+import { contributionCovered, type usePluginContributions } from '@tai42/studio-sdk/host';
 import type { ReactNode } from 'react';
 
 import { ApiKeysTab } from './ApiKeysTab';
@@ -54,21 +53,6 @@ export const ROLES_READ_ROUTE = apiRoutes.get_api_auth_roles.path;
 export function coreTabVisible(state: CapabilityState, prefixes: readonly string[]): boolean {
   if (state.status !== 'ready') return false;
   return isFullProjection(state.projection) || coversAnyRoute(state.projection, prefixes);
-}
-
-/**
- * Whether a plugin settings tab is visible under a projection — the same anyOf
- * evaluator the shell applies to every plugin contribution. A full projection shows
- * every tab; an ABSENT capability renders only for a full projection (safe-by-default);
- * a declared requirement renders when the projection reaches at least one of its routes.
- */
-export function settingsTabCovered(
-  projection: MeProjection,
-  required: RequiredCapabilities | undefined,
-): boolean {
-  if (isFullProjection(projection)) return true;
-  if (required === undefined) return false;
-  return coversAnyRoute(projection, required.routes);
 }
 
 /**
@@ -124,7 +108,9 @@ export function buildSettingsTabs(input: {
   // bar is exactly the core tabs (no churn). The projection is `ready` at the call site.
   if (input.pluginStatus === 'ready') {
     const pluginTabs = [...input.contributions.settingsTabs]
-      .filter((registered) => settingsTabCovered(input.projection, registered.requiredCapabilities))
+      .filter((registered) =>
+        contributionCovered(input.projection, registered.requiredCapabilities),
+      )
       .sort((a, b) => a.pluginId.localeCompare(b.pluginId) || a.title.localeCompare(b.title))
       .map((registered): TabItem => {
         const TabComponent = registered.component;

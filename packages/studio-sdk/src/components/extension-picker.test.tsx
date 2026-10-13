@@ -7,8 +7,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { ExtensionPicker } from './extension-picker';
 
 const CATALOG: Extension[] = [
-  { name: 'marka', kind: 'wrapper', multiple: false },
-  { name: 'markb', kind: 'wrapper', multiple: false },
+  { name: 'marka', kind: 'wrapper', multiple: true },
+  { name: 'markb', kind: 'wrapper', multiple: true },
   { name: 'backendx', kind: 'backend', multiple: false },
   { name: 'backendy', kind: 'backend', multiple: false },
 ];
@@ -91,11 +91,37 @@ describe('ExtensionPicker', () => {
     expect(screen.getByText('(single-select)')).toBeInTheDocument();
   });
 
+  it('single-selects whichever kind the server serves as not multiple', async () => {
+    const user = userEvent.setup();
+    const served: Extension[] = [
+      { name: 'routea', kind: 'router', multiple: false },
+      { name: 'routeb', kind: 'router', multiple: false },
+      { name: 'backendx', kind: 'backend', multiple: true },
+      { name: 'backendy', kind: 'backend', multiple: true },
+    ];
+    function Served() {
+      const [value, setValue] = useState<string[]>([]);
+      return (
+        <>
+          <ExtensionPicker available={served} value={value} onChange={setValue} />
+          <output data-testid="combo">{JSON.stringify(value)}</output>
+        </>
+      );
+    }
+    render(<Served />);
+    await user.click(screen.getByRole('checkbox', { name: 'routea' }));
+    await user.click(screen.getByRole('checkbox', { name: 'routeb' }));
+    await user.click(screen.getByRole('checkbox', { name: 'backendx' }));
+    await user.click(screen.getByRole('checkbox', { name: 'backendy' }));
+    expect(screen.getByTestId('combo')).toHaveTextContent('["routeb","backendx","backendy"]');
+    expect(screen.getAllByText('(single-select)')).toHaveLength(1);
+  });
+
   it('renders an extension name containing <script> as escaped TEXT (XSS pin)', () => {
     const payload = '<script>alert(1)</script>';
     const { container } = render(
       <ExtensionPicker
-        available={[{ name: payload, kind: 'wrapper', multiple: false }]}
+        available={[{ name: payload, kind: 'wrapper', multiple: true }]}
         value={[payload]}
         onChange={vi.fn()}
       />,

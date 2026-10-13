@@ -1,73 +1,74 @@
 /**
- * Unit tests for the run-result normaliser: how a synchronous run's result, a user-only
- * park receipt, and a `resume_parked` / `cancel_parked` visit outcome map to the panel's
- * three views.
+ * Unit tests for the run-answer reader: a synchronous run's served answer maps to the
+ * panel's views by its `kind`, and a refused answer (an `ApiSchemaError`) yields its first
+ * issue for the unreadable panel's details.
  */
+import { ApiSchemaError, runAnswer } from '@tai42/api-client';
 import { describe, expect, it } from 'vitest';
 
-import { readRunResult } from './run-asks';
+import { readRunResult, unreadableIssue } from './run-asks';
+
+const suspended = { interaction_id: 'u1', interaction_ids: ['u1'], caller_interaction_ids: [] };
 
 describe('readRunResult', () => {
-  it('reads a caller-ask envelope as the asks view', () => {
-    const view = readRunResult({
-      asks: [{ id: 'i1', status: 'asking', question: 'Approve?', asked_by: ['run-a'] }],
+  it('reads a result answer as the tool value', () => {
+    expect(readRunResult({ kind: 'result', result: { greeting: 'hi' } })).toEqual({
+      kind: 'result',
+      result: { greeting: 'hi' },
     });
+  });
+
+  it('reads a tool value shaped like a park as the tool value, never as asks', () => {
+    const value = { kind: 'asks', asks: [{ id: 'i1' }] };
+    expect(readRunResult({ kind: 'result', result: value })).toEqual({
+      kind: 'result',
+      result: value,
+    });
+  });
+
+  it('reads an asks answer as the asks view', () => {
+    const view = readRunResult(
+      runAnswer.parse({
+        kind: 'asks',
+        asks: [{ id: 'i1', status: 'asking', question: 'Approve?', asked_by: ['run-a'] }],
+        suspended,
+      }),
+    );
     expect(view.kind).toBe('asks');
     if (view.kind !== 'asks') throw new Error('expected asks view');
-    expect(view.asks).toHaveLength(1);
     expect(view.asks[0]?.question).toBe('Approve?');
   });
 
-  it('reads an empty caller-ask envelope as an empty asks view', () => {
-    expect(readRunResult({ asks: [] })).toEqual({ kind: 'asks', asks: [] });
-  });
-
-  it('reads a user-only suspension receipt as the parked view', () => {
-    const view = readRunResult({
-      interaction_id: 'u1',
-      interaction_ids: ['u1'],
-      caller_interaction_ids: [],
-    });
-    expect(view).toEqual({ kind: 'parked' });
-  });
-
-  it("reads a visit outcome's new caller asks by its kind", () => {
-    const view = readRunResult({
-      action: 'resumed',
-      cancelled: [],
-      kind: 'asks',
-      asks: [{ id: 'i2', status: 'asking', question: 'And now?' }],
-    });
-    expect(view.kind).toBe('asks');
-    if (view.kind !== 'asks') throw new Error('expected asks view');
-    expect(view.asks[0]?.id).toBe('i2');
-  });
-
-  it('reads a visit outcome final result', () => {
-    expect(
-      readRunResult({ action: 'resumed', cancelled: [], kind: 'result', result: { ok: 1 } }),
-    ).toEqual({ kind: 'result', result: { ok: 1 } });
-  });
-
-  it('reads a visit outcome re-park as the parked view', () => {
-    expect(readRunResult({ action: 'resumed', cancelled: [], kind: 'parked' })).toEqual({
+  it('reads a parked answer as the parked view', () => {
+    expect(readRunResult(runAnswer.parse({ kind: 'parked', suspended }))).toEqual({
       kind: 'parked',
     });
   });
 
-  it('reads a nothing-ran visit outcome as an empty result', () => {
-    expect(readRunResult({ action: 'none', cancelled: ['x'], kind: 'none' })).toEqual({
-      kind: 'result',
-      result: null,
-    });
+  it('reads a none answer as an empty result', () => {
+    expect(readRunResult({ kind: 'none' })).toEqual({ kind: 'result', result: null });
+  });
+});
+
+describe('unreadableIssue', () => {
+  it('names the first issue as path: message', () => {
+    const error = new ApiSchemaError('/api/run-tool', [
+      { code: 'invalid_type', path: ['result', 'asks', 0], message: 'Required' },
+      { code: 'custom', path: ['other'], message: 'second' },
+    ]);
+    expect(unreadableIssue(error)).toBe('result.asks.0: Required');
   });
 
-  it('reads any other value as the tool result', () => {
-    expect(readRunResult({ greeting: 'hi' })).toEqual({
-      kind: 'result',
-      result: { greeting: 'hi' },
-    });
-    expect(readRunResult('plain')).toEqual({ kind: 'result', result: 'plain' });
-    expect(readRunResult(42)).toEqual({ kind: 'result', result: 42 });
+  it('names a root issue by its message alone', () => {
+    const error = new ApiSchemaError('/api/run-tool', [
+      { code: 'invalid_union', path: [], message: 'No matching discriminator' },
+    ]);
+    expect(unreadableIssue(error)).toBe('No matching discriminator');
+  });
+
+  it('carries a transport refusal text whole', () => {
+    expect(
+      unreadableIssue(new ApiSchemaError('/api/run-tool', 'response was not valid JSON')),
+    ).toBe('response was not valid JSON');
   });
 });

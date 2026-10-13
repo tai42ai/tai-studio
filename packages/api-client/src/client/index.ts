@@ -34,7 +34,6 @@ import { toolMetaClient } from './tool-meta-client';
 import { toolsClient } from './tools-client';
 import { makeTransport } from './transport';
 import { triggerLinksClient } from './trigger-links-client';
-import { webEntryGateClient } from './web-entry-gate-client';
 
 export type {
   AddUrlToScopeBody,
@@ -79,7 +78,6 @@ export type { StorageUploadBody } from './storage-client';
 export type { ToolMetaPatch } from './tool-meta-client';
 export type { RunToolArgs, ToolAdminArgs } from './tools-client';
 export type { TriggerLinkCreateBody } from './trigger-links-client';
-export type { WebEntryCodeMintBody } from './web-entry-gate-client';
 
 export function createApiClient(config: ApiConfig) {
   const t = makeTransport(config);
@@ -90,6 +88,10 @@ export function createApiClient(config: ApiConfig) {
      * `MEDIA_ROUTE_PREFIX`, `MEDIA_ID_PATTERN`).
      */
     constants: servedConstants,
+    /** The host's authenticated request for a plugin's own routes: the same auth header,
+     *  401 handling, error classes and `{ data }` unwrap as every core call. Core routes
+     *  use the named methods. */
+    request: t.req,
     ...toolsClient(t),
     ...presetsClient(t),
     ...statesClient(t),
@@ -108,7 +110,6 @@ export function createApiClient(config: ApiConfig) {
     ...interactionsClient(t),
     ...channelsClient(t),
     ...conversationsClient(t),
-    ...webEntryGateClient(t),
     ...notificationsClient(t),
     ...agentsClient(t),
     ...hooksClient(t),

@@ -33,23 +33,6 @@ export type ParkedStatus = z.infer<typeof parkedStatus>;
 export const parkedCallerAsk = openapi.parkedEntry;
 export type ParkedCallerAsk = z.infer<typeof parkedCallerAsk>;
 
-/** A synchronous run whose tool parked CALLER asks returns this envelope in place of a result:
- * the full caller-ask entries under `asks`. An empty `asks` means the run parked with no open
- * caller ask (only user asks remain). */
-export const callerAsksEnvelope = z.object({
-  asks: z.array(parkedCallerAsk),
-});
-export type CallerAsksEnvelope = z.infer<typeof callerAsksEnvelope>;
-
-/** The park receipt a synchronous run returns when its tool parked only USER asks: the
- * suspension sentinel's ids, with no caller ask for the panel to act on. */
-export const suspendedRunReceipt = z.object({
-  interaction_id: z.string(),
-  interaction_ids: z.array(z.string()),
-  caller_interaction_ids: z.array(z.string()).default([]),
-});
-export type SuspendedRunReceipt = z.infer<typeof suspendedRunReceipt>;
-
 // Hand-written: a `resume_parked` / `cancel_parked` tool's own result, opaque to the spec.
 /** What one resume / take / cancel of a parked interaction did, as `resume_parked` /
  * `cancel_parked` return it through run-tool. `kind` picks the payload: `result` (a final
