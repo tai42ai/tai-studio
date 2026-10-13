@@ -60,7 +60,7 @@ async function seedBindingFixture(api: APIRequestContext): Promise<void> {
             reads: [],
             writes: [['total']],
             jq: {
-              content: '[{ op: "set", path: ["total"], value: (.record.total + .input.total) }]',
+              content: '[{ op: "set", path: ["total"], value: (.total + $input.total) }]',
             },
           },
         },
@@ -174,7 +174,7 @@ test.describe('state binding on a door form (composed path)', () => {
       expect(attach.subject_expr).toEqual({ content: '.subject_id' });
       expect(attach.updates[0]?.template_jq).toBe('bump');
       // The generated adapter is the canonical, parseable shape the editor emits.
-      expect(attach.updates[0]?.adapter).toEqual({ content: '{ total: (.output.total) }' });
+      expect(attach.updates[0]?.adapter).toEqual({ content: '{ total: (.total) }' });
     } finally {
       await api.delete(`/api/presets/${PRESET}`).catch(() => undefined);
       await api.dispose();
@@ -207,7 +207,7 @@ test.describe('state binding on a door form (composed path)', () => {
       await fillSubject(page, '.subject_id');
       // Add the named `bump` update and ACCEPT its shown default adapter — the mapping
       // row is never touched, so the stored adapter must equal the compiled default the
-      // form displays (`{ total: (.output) }`), not an empty adapter the platform refuses.
+      // form displays (`{ total: (.) }`), not an empty adapter the platform refuses.
       await page.getByRole('button', { name: 'Add update' }).click();
       await expect(page.getByTestId('adapter-row-total')).toBeVisible();
 
@@ -239,7 +239,7 @@ test.describe('state binding on a door form (composed path)', () => {
       expect(update?.template_jq).toBe('bump');
       // The accepted-as-shown default is stored (WYSIWYG); an empty adapter would have
       // failed the platform's save-time compile check and left no persisted binding.
-      expect(update?.adapter).toEqual({ content: '{ total: (.output) }' });
+      expect(update?.adapter).toEqual({ content: '{ total: (.) }' });
     } finally {
       await api.delete(`/api/presets/${PRESET_DEFAULT}`).catch(() => undefined);
       await api.dispose();

@@ -8,9 +8,10 @@ import { describe, expect, it } from 'vitest';
 
 import { AreaChart, type AreaPoint, type BarItem, BarList } from './charts';
 
-/** The proportional fill span within a bar row, as its inline-width string. */
+/** The proportional fill span within a bar row (the one span nested in the bar
+ * track), as its inline-width string. */
 function fillWidth(row: Element | undefined): string {
-  const fill = row?.querySelector('span[style*="width"]');
+  const fill = row?.querySelector('span > span');
   if (!(fill instanceof HTMLElement)) throw new Error('bar fill not found');
   return fill.style.width;
 }

@@ -1,7 +1,8 @@
 /**
- * Scheduling page. Lists the backend's schedules (`listSchedules`) in a table —
- * Name, Schedule, Status, Tool — with an add dialog, a per-row delete-with-confirm
- * flow, and a refresh action. The server clock (`getServerDateTime`) is shown so
+ * Scheduling page. Lists the backend's schedules (`listSchedules`, typed
+ * `ScheduleListRow` rows) in a table — Name, Schedule, Status, Tool — with an add
+ * dialog, a per-row delete-with-confirm flow, and a refresh action. A row carrying the
+ * backend's last scheduling failure shows a warning `Error` badge whose tooltip names it. The server clock (`getServerDateTime`) is shown so
  * operators can reason about cron timing.
  *
  * Two independent honesty states:
@@ -13,10 +14,10 @@
  * Every other failure surfaces loudly through `ErrorState`.
  *
  * SAFETY: a schedule can originate from an untrusted imported backup and carry
- * arbitrary tool names / kwargs, so every cell renders server strings as ESCAPED
- * text through the DS components (React escapes them) — never an HTML sink.
+ * arbitrary names / tool names / error text, so every cell renders server strings as
+ * ESCAPED text through the DS components (React escapes them) — never an HTML sink.
  */
-import { ApiError, type ScheduleItem } from '@tai42/api-client';
+import { ApiError, type ScheduleListRow } from '@tai42/api-client';
 import {
   AppLink,
   Badge,
@@ -36,6 +37,7 @@ import {
   TD,
   TH,
   THead,
+  Tooltip,
   TR,
   useApi,
 } from '@tai42/studio-sdk';
@@ -53,39 +55,37 @@ function display(value: unknown): string {
   return JSON.stringify(value);
 }
 
-/** The tool a schedule runs: `kwargs.backend_tool_name` if present, else the entry's target. */
-function toolIdentity(item: ScheduleItem): string {
-  const backendName = item.kwargs?.backend_tool_name;
-  if (typeof backendName === 'string' && backendName !== '') return backendName;
-  const target = item.target;
-  if (typeof target === 'string' && target !== '') return target;
-  if (target !== undefined && target !== null) return JSON.stringify(target);
-  return '—';
+/** A compact human summary of a schedule's typed cadence. */
+function scheduleSummary(cadence: ScheduleListRow['cadence']): string {
+  if (cadence.kind === 'interval') {
+    return `Every ${String(cadence.every)}s${cadence.relative ? ' (relative)' : ''}`;
+  }
+  return `Cron: ${cadence.minute} ${cadence.hour} ${cadence.day_of_month} ${cadence.month_of_year} ${cadence.day_of_week}`;
 }
 
-/** A compact human summary of a schedule's cron/interval spec (opaque backend shape). */
-function scheduleSummary(schedule: ScheduleItem['schedule']): string {
-  if (schedule === undefined || schedule === null) return '—';
-  if (typeof schedule === 'string') return schedule;
-  if (typeof schedule === 'object' && !Array.isArray(schedule)) {
-    const spec = schedule as Record<string, unknown>;
-    if (spec.__type === 'interval' && spec.every !== undefined) {
-      return `Every ${display(spec.every)}s`;
-    }
-    if (spec.__type === 'crontab') {
-      const cell = (value: unknown): string =>
-        value === undefined || value === null ? '*' : display(value);
-      const parts = [
-        cell(spec.minute),
-        cell(spec.hour),
-        cell(spec.dayOfMonth ?? spec.day_of_month),
-        cell(spec.monthOfYear ?? spec.month_of_year),
-        cell(spec.dayOfWeek ?? spec.day_of_week),
-      ];
-      return `Cron: ${parts.join(' ')}`;
-    }
-  }
-  return JSON.stringify(schedule);
+/** The trigger a status badge's tooltip hangs off: a bare button, so it opens on focus too. */
+const badgeTriggerStyle = {
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  marginLeft: 'var(--tai-space-2)',
+  cursor: 'help',
+} as const;
+
+/** The warning badge of a row carrying the backend's last scheduling failure. */
+function ScheduleErrorBadge({
+  error,
+}: {
+  error: NonNullable<ScheduleListRow['error']>;
+}): ReactNode {
+  const content = error.at_iso !== null ? `${error.message} — ${error.at_iso}` : error.message;
+  return (
+    <Tooltip content={content}>
+      <button type="button" style={badgeTriggerStyle} data-testid="schedule-error-badge">
+        <Badge variant="warning">Error</Badge>
+      </button>
+    </Tooltip>
+  );
 }
 
 /** The utc reading of the server clock as a display string, however the tool shaped it. */
@@ -166,7 +166,7 @@ function DeleteScheduleDialog({ name, onClose }: { name: string; onClose: () => 
   );
 }
 
-function ScheduleTable({ schedules }: { schedules: readonly ScheduleItem[] }): ReactNode {
+function ScheduleTable({ schedules }: { schedules: readonly ScheduleListRow[] }): ReactNode {
   const [deleting, setDeleting] = useState<string | null>(null);
 
   return (
@@ -186,13 +186,14 @@ function ScheduleTable({ schedules }: { schedules: readonly ScheduleItem[] }): R
             {schedules.map((item) => (
               <TR key={item.name}>
                 <TD className="tai-table-id">{item.name}</TD>
-                <TD className="tai-mono">{scheduleSummary(item.schedule)}</TD>
+                <TD className="tai-mono">{scheduleSummary(item.cadence)}</TD>
                 <TD>
                   <Badge variant={item.enabled ? 'success' : 'neutral'}>
                     {item.enabled ? 'Enabled' : 'Disabled'}
                   </Badge>
+                  {item.error !== null ? <ScheduleErrorBadge error={item.error} /> : null}
                 </TD>
-                <TD className="tai-mono">{toolIdentity(item)}</TD>
+                <TD className="tai-mono">{item.tool}</TD>
                 <TD>
                   <Button
                     variant="ghost"

@@ -95,7 +95,7 @@ async function seedBindingFixture(api: APIRequestContext): Promise<void> {
             reads: [],
             writes: [['total']],
             jq: {
-              content: '[{ op: "set", path: ["total"], value: (.record.total + .input.total) }]',
+              content: '[{ op: "set", path: ["total"], value: (.total + $input.total) }]',
             },
           },
         },

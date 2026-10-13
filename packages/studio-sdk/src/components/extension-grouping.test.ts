@@ -1,13 +1,7 @@
 import type { Extension } from '@tai42/api-client';
 import { describe, expect, it } from 'vitest';
 
-import {
-  baseNameOf,
-  groupByKind,
-  groupIntoFamilies,
-  kindVariant,
-  NON_STACKABLE_KIND,
-} from './extension-grouping';
+import { baseNameOf, groupByKind, groupIntoFamilies, kindVariant } from './extension-grouping';
 
 describe('baseNameOf', () => {
   it('returns the whole name when there is no underscore', () => {
@@ -24,9 +18,9 @@ describe('baseNameOf', () => {
 describe('groupIntoFamilies', () => {
   it('groups branch variants under their base tool name', () => {
     const extensions: Extension[] = [
-      { name: 'tool_a_b', kind: 'wrapper' },
-      { name: 'tool', kind: 'backend' },
-      { name: 'tool_a', kind: 'transformer' },
+      { name: 'tool_a_b', kind: 'wrapper', multiple: true },
+      { name: 'tool', kind: 'backend', multiple: false },
+      { name: 'tool_a', kind: 'transformer', multiple: true },
     ];
     const families = groupIntoFamilies(extensions);
     expect(families).toHaveLength(1);
@@ -36,9 +30,9 @@ describe('groupIntoFamilies', () => {
 
   it('orders families by base name and separates distinct tools', () => {
     const extensions: Extension[] = [
-      { name: 'zeta_chain', kind: 'transformer' },
-      { name: 'alpha', kind: 'backend' },
-      { name: 'alpha_batch', kind: 'transformer' },
+      { name: 'zeta_chain', kind: 'transformer', multiple: true },
+      { name: 'alpha', kind: 'backend', multiple: false },
+      { name: 'alpha_batch', kind: 'transformer', multiple: true },
     ];
     const families = groupIntoFamilies(extensions);
     expect(families.map((f) => f.base)).toEqual(['alpha', 'zeta']);
@@ -54,25 +48,37 @@ describe('groupIntoFamilies', () => {
 describe('groupByKind', () => {
   it('groups the catalog by kind, ordered by kind then name', () => {
     const extensions: Extension[] = [
-      { name: 'markb', kind: 'wrapper' },
-      { name: 'backendx', kind: 'backend' },
-      { name: 'marka', kind: 'wrapper' },
+      { name: 'markb', kind: 'wrapper', multiple: true },
+      { name: 'backendx', kind: 'backend', multiple: false },
+      { name: 'marka', kind: 'wrapper', multiple: true },
     ];
     const groups = groupByKind(extensions);
     expect(groups.map((g) => g.kind)).toEqual(['backend', 'wrapper']);
     expect(groups[1]?.members.map((m) => m.name)).toEqual(['marka', 'markb']);
   });
 
-  it('flags only the backend kind as non-stackable', () => {
+  it("carries each kind's served multiple flag", () => {
     const extensions: Extension[] = [
-      { name: 'backendx', kind: 'backend' },
-      { name: 'marka', kind: 'wrapper' },
+      { name: 'backendx', kind: 'backend', multiple: false },
+      { name: 'marka', kind: 'wrapper', multiple: true },
+      { name: 'routea', kind: 'router', multiple: false },
     ];
     const groups = groupByKind(extensions);
-    const backend = groups.find((g) => g.kind === NON_STACKABLE_KIND);
-    const wrapper = groups.find((g) => g.kind === 'wrapper');
-    expect(backend?.nonStackable).toBe(true);
-    expect(wrapper?.nonStackable).toBe(false);
+    expect(groups.map((g) => [g.kind, g.multiple])).toEqual([
+      ['backend', false],
+      ['router', false],
+      ['wrapper', true],
+    ]);
+  });
+
+  it('refuses a kind the catalog serves as both single- and multi-select', () => {
+    const extensions: Extension[] = [
+      { name: 'marka', kind: 'wrapper', multiple: true },
+      { name: 'markb', kind: 'wrapper', multiple: false },
+    ];
+    expect(() => groupByKind(extensions)).toThrow(
+      'extension kind wrapper is served as both single- and multi-select',
+    );
   });
 
   it('returns an empty array for an empty catalog', () => {

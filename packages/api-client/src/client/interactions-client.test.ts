@@ -77,9 +77,14 @@ describe('interactions client transport', () => {
     expect(out).toEqual({ interaction_id: 'q 1', status: 'answered' });
   });
 
-  it('reactInteraction POSTs { event, values } to the id-encoded react route and parses the update', async () => {
+  it('reactInteraction POSTs { event, values } to the id-encoded react route and returns the reply update', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { values: { seats: 3 }, display: { total: '$30' } } }),
+      jsonResponse({
+        data: {
+          interaction_id: 'q 1',
+          update: { values: { seats: 3 }, display: { total: '$30' } },
+        },
+      }),
     );
     const out = await client.reactInteraction(
       'q 1',

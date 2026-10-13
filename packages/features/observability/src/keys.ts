@@ -10,3 +10,8 @@ export const metricsKey = (params: MetricsQuery) => ['observability', 'metrics',
 export const runsKey = (params: RunsQuery) => ['observability', 'runs', params] as const;
 
 export const traceKey = (traceId: string) => ['observability', 'trace', traceId] as const;
+
+export const capabilitiesKey = ['observability', 'capabilities'] as const;
+
+export const resolvedKey = (traceId: string, spanId: string, field: 'input' | 'output') =>
+  ['observability', 'resolved', traceId, spanId, field] as const;

@@ -1,5 +1,5 @@
 /** Marketplace search, install, update and advisory sub-client. */
-import { encodeSegment } from '../http';
+import { apiRoutes, buildPath } from '../generated/api-routes';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -70,7 +70,7 @@ export function marketplaceClient(t: Transport) {
     // install/uninstall/update mutate the RUNNING app (pip install + manifest
     // patch + reload) and return synchronous receipts.
     searchMarketplace: (query: MarketplaceSearchQuery = {}, signal?: AbortSignal) =>
-      req('/api/marketplace/search', s.marketplaceSearchPage, {
+      req(apiRoutes.get_api_marketplace_search.path, s.marketplaceSearchPage, {
         query: {
           q: query.q,
           kind: query.kind,
@@ -87,36 +87,47 @@ export function marketplaceClient(t: Transport) {
       }),
     getMarketplacePlugin: (namespace: string, name: string, signal?: AbortSignal) =>
       req(
-        `/api/marketplace/plugins/${encodeSegment(namespace)}/${encodeSegment(name)}`,
+        buildPath(apiRoutes.get_api_marketplace_plugins_ns_name.path, { ns: namespace, name }),
         s.marketplacePluginDetail,
         { signal },
       ),
     listMarketplaceCategories: (signal?: AbortSignal) =>
-      req('/api/marketplace/categories', s.marketplaceCategories, { signal }),
+      req(apiRoutes.get_api_marketplace_categories.path, s.marketplaceCategories, { signal }),
     listMarketplaceKinds: (signal?: AbortSignal) =>
-      req('/api/marketplace/kinds', s.marketplaceKinds, { signal }),
+      req(apiRoutes.get_api_marketplace_kinds.path, s.marketplaceKinds, { signal }),
     listInstalledMarketplacePlugins: (signal?: AbortSignal) =>
-      req('/api/marketplace/installed', s.marketplaceInstalled, { signal }),
+      req(apiRoutes.get_api_marketplace_installed.path, s.marketplaceInstalled, { signal }),
     // Preview resolves the spec and computes routes/collisions/public rows with
     // NO side effects, so the install dialog can show absolute paths, block on a
     // collision, and surface the public routes before the operator commits.
     previewMarketplaceInstall: (body: MarketplaceInstallPreviewBody, signal?: AbortSignal) =>
-      req('/api/marketplace/install/preview', s.marketplaceInstallPreview, {
+      req(apiRoutes.post_api_marketplace_install_preview.path, s.marketplaceInstallPreview, {
         method: 'POST',
         body,
         signal,
       }),
     installMarketplacePlugin: (body: MarketplaceInstallBody) =>
-      req('/api/marketplace/install', s.marketplaceInstallResult, { method: 'POST', body }),
+      req(apiRoutes.post_api_marketplace_install.path, s.marketplaceInstallResult, {
+        method: 'POST',
+        body,
+      }),
     uninstallMarketplacePlugin: (body: MarketplaceUninstallBody) =>
-      req('/api/marketplace/uninstall', s.marketplaceUninstallResult, { method: 'POST', body }),
+      req(apiRoutes.post_api_marketplace_uninstall.path, s.marketplaceUninstallResult, {
+        method: 'POST',
+        body,
+      }),
     updateMarketplacePlugin: (body: MarketplaceInstallBody) =>
-      req('/api/marketplace/update', s.marketplaceInstallResult, { method: 'POST', body }),
+      req(apiRoutes.post_api_marketplace_update.path, s.marketplaceInstallResult, {
+        method: 'POST',
+        body,
+      }),
     // Upgrade EVERY installed plugin to its newest compatible version in one
     // pass; the response is the per-plugin outcome readout.
     upgradeAllMarketplacePlugins: () =>
-      req('/api/marketplace/upgrade-all', s.marketplaceUpgradeAllResult, { method: 'POST' }),
+      req(apiRoutes.post_api_marketplace_upgrade_all.path, s.marketplaceUpgradeAllResult, {
+        method: 'POST',
+      }),
     getMarketplaceAdvisories: (signal?: AbortSignal) =>
-      req('/api/marketplace/advisories', s.marketplaceAdvisories, { signal }),
+      req(apiRoutes.get_api_marketplace_advisories.path, s.marketplaceAdvisories, { signal }),
   };
 }

@@ -4,6 +4,7 @@
  * message and an agent's answer both reach the screen as escaped text, never as
  * live markup.
  */
+import type { ConversationMessage } from '@tai42/api-client';
 import { fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
@@ -242,7 +243,7 @@ describe('Exchange — inbound attachments', () => {
       { client: { baseUrl: '' } },
     );
 
-    const chip = screen.getByTestId('attachment-document');
+    const chip = screen.getByTestId('media-document');
     const link = within(chip).getByRole('link', { name: 'report.pdf' });
     expect(link).toHaveAttribute('href', SERVED);
     expect(link).toHaveAttribute('target', '_blank');
@@ -262,10 +263,10 @@ describe('Exchange — inbound attachments', () => {
       { client: { baseUrl: '' } },
     );
 
-    const audio = screen.getByTestId('attachment-audio');
+    const audio = screen.getByTestId('media-audio');
     expect(audio.tagName).toBe('AUDIO');
     expect(audio).toHaveAttribute('aria-label', 'Audio attachment');
-    const video = screen.getByTestId('attachment-video');
+    const video = screen.getByTestId('media-video');
     expect(video.tagName).toBe('VIDEO');
     expect(video).toHaveAttribute('aria-label', 'Video attachment');
   });
@@ -304,9 +305,14 @@ describe('Exchange — inbound attachments', () => {
   it('shows a malformed-attachment notice for an unparseable item', () => {
     renderWithProviders(
       <Exchange
-        record={makeMessage({
-          inbound_attachments: [{ kind: 'image', url: SERVED }, { junk: true }],
-        })}
+        record={{
+          ...makeMessage({ inbound_attachments: [{ kind: 'image', url: SERVED }] }),
+          // An item past the record schema: the renderer still validates each one.
+          inbound_attachments: [
+            { kind: 'image', url: SERVED, caption: null, filename: null },
+            { junk: true },
+          ] as unknown as ConversationMessage['inbound_attachments'],
+        }}
       />,
       { client: { baseUrl: '' } },
     );
@@ -314,6 +320,22 @@ describe('Exchange — inbound attachments', () => {
     expect(screen.getByText('Attachment 2 is malformed and was not shown.')).toBeInTheDocument();
     // The good item still renders — one malformed item never vanishes the rest.
     expect(document.querySelector('img')).not.toBeNull();
+  });
+
+  it('renders a link attachment as a scheme-checked external link', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeMessage({
+          inbound_attachments: [
+            { kind: 'link', url: 'https://example.com/notes', caption: 'Notes' },
+          ],
+        })}
+      />,
+      { client: { baseUrl: '' } },
+    );
+
+    const link = screen.getByTestId('attachment-link');
+    expect(within(link).getByText('Notes')).toBeInTheDocument();
   });
 
   it('shows the shared attachment notice for a blocked document url, with no live anchor', () => {
@@ -331,14 +353,14 @@ describe('Exchange — inbound attachments', () => {
     expect(notice).toHaveAttribute('role', 'alert');
     expect(within(notice).getByText('Attachment')).toBeInTheDocument();
     expect(within(notice).getByText('Attachment failed to load.')).toBeInTheDocument();
-    expect(screen.queryByTestId('attachment-document')).toBeNull();
+    expect(screen.queryByTestId('media-document')).toBeNull();
     expect(screen.queryByRole('link')).toBeNull();
     expect(screen.queryByText(BLOCKED)).toBeNull();
   });
 
   it.each([
-    ['audio', 'attachment-audio'],
-    ['video', 'attachment-video'],
+    ['audio', 'media-audio'],
+    ['video', 'media-video'],
   ] as const)(
     'shows the shared attachment notice for a blocked %s url, with no player element',
     (kind, testId) => {
@@ -357,8 +379,8 @@ describe('Exchange — inbound attachments', () => {
   );
 
   it.each([
-    ['audio', 'attachment-audio'],
-    ['video', 'attachment-video'],
+    ['audio', 'media-audio'],
+    ['video', 'media-video'],
   ] as const)(
     'shows the shared attachment notice for a bare https %s url, with no player element',
     (kind, testId) => {
@@ -379,8 +401,8 @@ describe('Exchange — inbound attachments', () => {
   );
 
   it.each([
-    ['audio', 'attachment-audio'],
-    ['video', 'attachment-video'],
+    ['audio', 'media-audio'],
+    ['video', 'media-video'],
   ] as const)(
     'replaces the %s player with the notice on a load error, then retries a fresh url at the same position',
     (kind, testId) => {

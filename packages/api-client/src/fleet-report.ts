@@ -38,6 +38,16 @@ export interface FleetWorkerFailure {
  */
 export type FleetReportStatus = 'converged' | 'degraded' | 'unreachable';
 
+/**
+ * One worker whose reload named recycle-class keys awaiting a respawn: their value
+ * changed since the worker bound it (at boot, or when the plugin that declares them was
+ * loaded), and they take effect only when it is respawned.
+ */
+export interface FleetWorkerAwaitingRespawn {
+  readonly name: string;
+  readonly keys: readonly string[];
+}
+
 export interface FleetReportSummary {
   readonly status: FleetReportStatus;
   /** The single-worker `local-only` note, when the broadcast reached no sibling. */
@@ -46,6 +56,20 @@ export interface FleetReportSummary {
   readonly failures: readonly FleetWorkerFailure[];
   /** The bus-unreachable transport error — non-null only when `unreachable`. */
   readonly error: string | null;
+  /** The workers whose reload named recycle-class keys awaiting a respawn. */
+  readonly awaiting: readonly FleetWorkerAwaitingRespawn[];
+}
+
+/**
+ * The recycle-class keys a worker's reload payload names under `awaiting_respawn`.
+ * The per-worker payload is opaque on the wire, so it is read defensively: a payload
+ * that is not a reload result names nothing.
+ */
+function awaitingKeys(payload: unknown): string[] {
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return [];
+  const keys = (payload as Record<string, unknown>).awaiting_respawn;
+  if (!Array.isArray(keys)) return [];
+  return keys.filter((key): key is string => typeof key === 'string');
 }
 
 /** True when a summary describes a propagation the operator must be shown. */
@@ -56,11 +80,23 @@ export function isFleetReportFailure(summary: FleetReportSummary | null): boolea
 /**
  * Interpret a bare {@link FleetResult} (the fleet-reload / single-MCP-reload body).
  * An unreachable bus is `unreachable`; a reachable report with any non-`applied`
- * worker is `degraded` (those workers named); otherwise `converged`.
+ * worker is `degraded` (those workers named); otherwise `converged`. Every worker whose
+ * reload payload names `awaiting_respawn` keys is listed under `awaiting`, whatever the
+ * status.
  */
-export function summarizeFleetResult(result: FleetResult): FleetReportSummary {
+export function summarizeFleetResult(result: Omit<FleetResult, 'ok'>): FleetReportSummary {
+  const awaiting: FleetWorkerAwaitingRespawn[] = result.results
+    .map((entry) => ({ name: entry.name, keys: awaitingKeys(entry.payload) }))
+    .filter((entry) => entry.keys.length > 0);
+  return summarizeWith(result, awaiting);
+}
+
+function summarizeWith(
+  result: Omit<FleetResult, 'ok'>,
+  awaiting: readonly FleetWorkerAwaitingRespawn[],
+): FleetReportSummary {
   if (!result.reachable) {
-    return { status: 'unreachable', note: null, failures: [], error: result.error };
+    return { status: 'unreachable', note: null, failures: [], error: result.error, awaiting };
   }
   const failures: FleetWorkerFailure[] = result.results
     .filter((entry) => entry.outcome !== 'applied')
@@ -74,6 +110,7 @@ export function summarizeFleetResult(result: FleetResult): FleetReportSummary {
     note: null,
     failures,
     error: null,
+    awaiting,
   };
 }
 
@@ -81,16 +118,20 @@ export function summarizeFleetResult(result: FleetResult): FleetReportSummary {
  * Interpret a mutation's mode-wrapped {@link FleetReportFanout}. `null`/`undefined`
  * (the response path mutated no manifest) yields `null` — there is nothing to report.
  * A `local-only` fan-out is `converged` with its note; `fleet`/`unreachable` carry a
- * bare {@link FleetResult} and defer to {@link summarizeFleetResult}.
+ * bare {@link FleetResult} judged as {@link summarizeFleetResult} judges its failures.
+ * `awaiting` is the mutation's own verdict (its response's `awaiting_respawn`, or `[]`
+ * for a mutation that states none): the operation knows whether its recycle roll
+ * carried a worker's moved env, so its per-worker rows are never re-read for it.
  */
 export function summarizeFleetFanout(
   fanout: FleetReportFanout | null | undefined,
+  awaiting: readonly FleetWorkerAwaitingRespawn[],
 ): FleetReportSummary | null {
   if (fanout === null || fanout === undefined) return null;
   if (fanout.mode === 'local-only') {
-    return { status: 'converged', note: fanout.note, failures: [], error: null };
+    return { status: 'converged', note: fanout.note, failures: [], error: null, awaiting };
   }
-  return summarizeFleetResult(fanout);
+  return summarizeWith(fanout, awaiting);
 }
 
 /** One MCP server skipped by the viability check — its title, a coarse status, and the
@@ -115,7 +156,7 @@ export interface FailedMcpEntry {
  * name-sorts the result, tolerating a worker whose payload is absent or malformed
  * (skipped, never a throw: a partial fleet report still yields the roster it can).
  */
-export function failedMcpsFromReport(result: FleetResult): FailedMcpEntry[] {
+export function failedMcpsFromReport(result: Omit<FleetResult, 'ok'>): FailedMcpEntry[] {
   const byTitle = new Map<string, FailedMcpEntry>();
   for (const worker of result.results) {
     const payload: unknown = worker.payload;

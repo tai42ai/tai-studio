@@ -18,6 +18,7 @@ function buttonMethod(): ReturnType<typeof http.get> {
     HttpResponse.json({
       data: {
         needs_setup: false,
+        claim_fragment_key: 'claim',
         methods: [
           {
             shape: 'button',

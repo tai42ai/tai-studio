@@ -6,12 +6,12 @@
  * (`MetricsQuery` for the dashboard, `RunsQuery` for the runs table) and merge
  * partial edits back into a full search object for `navigate`.
  *
- * They also model the ONE combination the monitoring read contract cannot serve
- * — a metric sort alongside a level/cost/token/latency filter — so a shared or
+ * They also read the sort × filter combinations the monitoring backend serves from
+ * its served capabilities (`getObservabilityCapabilities`), so a shared or
  * hand-edited URL is repaired to a legal query before it reaches the backend, and
- * the widgets that would create the combo interactively are guarded on both sides.
+ * the widgets that would create an unserved combination are guarded on both sides.
  */
-import type { MetricsQuery, RunsQuery } from '@tai42/api-client';
+import type { MetricsQuery, ObservabilityCapabilities, RunsQuery } from '@tai42/api-client';
 import type { DateRangeValue, PageProps } from '@tai42/studio-sdk';
 
 /** The full observability route search state (tab + drill-in trace + filters). */
@@ -71,53 +71,45 @@ export function mergeSearch(
   return next;
 }
 
-// -- metric-sort × filter incompatibility ------------------------------------
+// -- served sort × filter combinations ----------------------------------------
 
-/**
- * Sort keys the reader ranks GLOBALLY through the metrics "traces" view. That
- * view has no level/cost/token/latency column, so combining one of these with any
- * such filter is a guaranteed `MonitoringReadNotSupportedError` (501) — not a
- * capability gap in the backend. `createdAt` sorts natively on `timestamp` and
- * combines with everything, so it is deliberately absent here.
- */
-export const METRIC_SORT_FIELDS: readonly SortKey[] = ['cost', 'latencyMs', 'totalTokens'];
-
-/**
- * The filter keys a metric sort cannot carry (`status` maps to the reader's
- * `level` column). Time range, tags, and sort direction are always legal.
- */
-export const METRIC_INCOMPATIBLE_FILTER_KEYS: readonly (keyof ObservabilitySearch)[] = [
-  'status',
-  'minCost',
-  'maxCost',
-  'minTokens',
-  'maxTokens',
-  'minLatencyMs',
-  'maxLatencyMs',
-];
-
-/** True when the active sort is a globally-ranked metric sort. */
-export function isMetricSort(sort: SortKey | undefined): boolean {
-  return sort !== undefined && METRIC_SORT_FIELDS.includes(sort);
+/** True when the backend serves `key` as a run-list sort. */
+export function isSortServed(cap: ObservabilityCapabilities, key: SortKey): boolean {
+  return cap.sortKeys.includes(key);
 }
 
-/** True when any filter a metric sort cannot carry is set. */
-export function hasMetricIncompatibleFilter(search: ObservabilitySearch): boolean {
-  return METRIC_INCOMPATIBLE_FILTER_KEYS.some((key) => {
-    return search[key] !== undefined;
-  });
+/** The run-list filter params the backend cannot combine with `sort` (none without a sort). */
+export function incompatibleFilters(
+  cap: ObservabilityCapabilities,
+  sort: SortKey | undefined,
+): readonly string[] {
+  if (sort === undefined) return [];
+  return cap.incompatibleFilters[sort] ?? [];
+}
+
+/** True when a filter the backend cannot combine with `sort` is set in the search. */
+export function hasIncompatibleFilter(
+  search: ObservabilitySearch,
+  cap: ObservabilityCapabilities,
+  sort: SortKey | undefined,
+): boolean {
+  const values = search as Record<string, unknown>;
+  return incompatibleFilters(cap, sort).some((param) => values[param] !== undefined);
 }
 
 /**
- * Repair a metric-sort×filter combo that arrived through the URL (a shared or
- * hand-edited link the widget guard never mediated). The filter set is the more
- * specific expression of intent, so the conflict is repaired by DROPPING the
- * metric sort and its direction — falling back to native timestamp order —
- * rather than silently discarding the operator's filters. A legal search is
- * returned unchanged (same reference), so callers can detect a repair by identity.
+ * Repair a sort × filter combination the backend cannot serve that arrived through
+ * the URL (a shared or hand-edited link the widget guard never mediated). The
+ * filter set is the more specific expression of intent, so the conflict is
+ * repaired by DROPPING the sort and its direction — falling back to the default
+ * order — rather than silently discarding the operator's filters. A legal search
+ * is returned unchanged (same reference), so callers can detect a repair by identity.
  */
-export function sanitizeSearch(search: ObservabilitySearch): ObservabilitySearch {
-  if (isMetricSort(search.sort) && hasMetricIncompatibleFilter(search)) {
+export function sanitizeSearch(
+  search: ObservabilitySearch,
+  cap: ObservabilityCapabilities,
+): ObservabilitySearch {
+  if (hasIncompatibleFilter(search, cap, search.sort)) {
     const { sort: _sort, dir: _dir, ...rest } = search;
     return rest;
   }

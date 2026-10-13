@@ -38,13 +38,17 @@ function harness(responder: () => Response) {
   return { client: createApiClient(config), captured };
 }
 
-const manifest = (contributions: Record<string, unknown>) => ({
+const manifest = (
+  contributions: Record<string, unknown>,
+  mounts: Record<string, string> = {},
+): Record<string, unknown> => ({
   name: 'reference_plugin',
   version: '0.1.0',
   api_version: 1,
   entry: 'index.js',
   integrity: { 'index.js': 'sha384-abc' },
   contributions,
+  mounts,
 });
 
 describe('studio-plugin registry client transport', () => {
@@ -90,6 +94,30 @@ describe('studio-plugin registry client transport', () => {
         data: [manifest({ tool_panels: {}, pages: [], settings_tabs: [], nav_entries: [1] })],
       }),
     );
+    await expect(client.listStudioPlugins()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('keeps each plugin route mounts and its declared route panels', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: [manifest({ route_panels: ['synthetic'] }, { synthetic: '/api/synthetic-alt' })],
+      }),
+    );
+    const [parsed] = await client.listStudioPlugins();
+    expect(parsed?.mounts).toEqual({ synthetic: '/api/synthetic-alt' });
+    expect(parsed?.contributions.route_panels).toEqual(['synthetic']);
+  });
+
+  it('defaults route_panels to [] when a manifest omits it', async () => {
+    const { client } = harness(() => jsonResponse({ data: [manifest({})] }));
+    const [parsed] = await client.listStudioPlugins();
+    expect(parsed?.contributions.route_panels).toEqual([]);
+  });
+
+  it('throws ApiSchemaError LOUDLY on a listing entry without mounts', async () => {
+    const entry = manifest({});
+    delete entry.mounts;
+    const { client } = harness(() => jsonResponse({ data: [entry] }));
     await expect(client.listStudioPlugins()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 });

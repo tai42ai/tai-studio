@@ -1,6 +1,8 @@
 /** Interaction listing/answer and the SSE stream sub-clients. */
 import { ApiError, ApiUnauthorizedError } from '../errors';
-import { encodeSegment, extractError } from '../http';
+import { apiRoutes, buildPath } from '../generated/api-routes';
+import { API_KEY_HEADER } from '../headers';
+import { extractError } from '../http';
 import * as s from '../schemas';
 import { readSseFrames, sseOpenToken } from '../sse';
 import type { Transport } from './transport';
@@ -13,24 +15,40 @@ export function interactionsClient(t: Transport) {
     // so `total` is the caller's own count, and every terminal frame it later receives
     // refers to a question within that `total`.
     listInteractions: (page: number, pageSize: number, signal?: AbortSignal) =>
-      req('/api/interactions', s.interactionsPage, { signal, query: { page, pageSize } }),
-    answerInteraction: (interactionId: string, answer: unknown) =>
-      req(`/api/interactions/${encodeSegment(interactionId)}/answer`, s.interactionAnswered, {
-        method: 'POST',
-        body: { answer },
+      req(apiRoutes.get_api_interactions.path, s.interactionsPage, {
+        signal,
+        query: { page, pageSize },
       }),
+    answerInteraction: (interactionId: string, answer: unknown) =>
+      req(
+        buildPath(apiRoutes.post_api_interactions_interaction_id_answer.path, {
+          interaction_id: interactionId,
+        }),
+        s.interactionAnswered,
+        {
+          method: 'POST',
+          body: { answer },
+        },
+      ),
     // React to a still-open form while it is being filled: the in-app, authenticated
     // sibling of the answer door (`POST /api/interactions/{id}/react`). It carries the
     // event that fired (a field changed / a page advanced / the form submitted) and the
-    // partial `values` filled so far, and returns a form update to apply. It is STATELESS
+    // partial `values` filled so far, and returns the form update to apply (the reply's
+    // `update`). It is STATELESS
     // on the server — it records no answer and resolves no interaction — so it never
     // substitutes for the answer door. A handler error/timeout surfaces as the shared
     // `apiRequest` status handling (loud), never a stale value.
     reactInteraction: (interactionId: string, event: s.ReactionEvent, values: unknown) =>
-      req(`/api/interactions/${encodeSegment(interactionId)}/react`, s.formUpdate, {
-        method: 'POST',
-        body: { event, values },
-      }),
+      req(
+        buildPath(apiRoutes.post_api_interactions_interaction_id_react.path, {
+          interaction_id: interactionId,
+        }),
+        s.interactionReaction,
+        {
+          method: 'POST',
+          body: { event, values },
+        },
+      ).then((reply) => reply.update),
     // Withdraw a pending ask WITHOUT answering it (a bodyless POST): the question is
     // resolved as cancelled and the flow that asked never resumes. Terminal like an
     // answer, so the loud failure mappings mirror it — a 409 (already answered, so no
@@ -38,9 +56,15 @@ export function interactionsClient(t: Transport) {
     // and a 403 (not this caller's audience) as `ApiError` — all via the shared
     // `apiRequest` status handling.
     cancelInteraction: (interactionId: string) =>
-      req(`/api/interactions/${encodeSegment(interactionId)}/cancel`, s.interactionCancelled, {
-        method: 'POST',
-      }),
+      req(
+        buildPath(apiRoutes.post_api_interactions_interaction_id_cancel.path, {
+          interaction_id: interactionId,
+        }),
+        s.interactionCancelled,
+        {
+          method: 'POST',
+        },
+      ),
   };
 }
 
@@ -65,11 +89,11 @@ export function interactionsStreamClient(t: Transport) {
       const doFetch = config.fetch ?? globalThis.fetch;
       const token = config.getToken();
       const headers: Record<string, string> = { accept: 'text/event-stream' };
-      if (token) headers['x-api-key'] = token;
+      if (token) headers[API_KEY_HEADER] = token;
       if (lastEventId) headers['last-event-id'] = lastEventId;
       // Distinct-URL per open — see the canonical constraint on `sseOpenToken`.
       const resume = lastEventId ? `&last_event_id=${encodeURIComponent(lastEventId)}` : '';
-      const url = `${config.baseUrl ?? ''}/api/interactions/stream?_=${sseOpenToken()}${resume}`;
+      const url = `${config.baseUrl ?? ''}${apiRoutes.get_api_interactions_stream.path}?_=${sseOpenToken()}${resume}`;
       const response = await doFetch(url, {
         headers,
         signal,

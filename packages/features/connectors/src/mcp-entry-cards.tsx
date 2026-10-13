@@ -11,6 +11,8 @@ import {
   Badge,
   Button,
   Card,
+  formatEnvMarker,
+  parseEnvMarker,
   RecordEntryRendererContext,
   SchemaForm,
   SecretRefField,
@@ -18,7 +20,7 @@ import {
 import type { ReactNode } from 'react';
 
 import { asRecord, stringArray } from './mcp-config-parse';
-import { formatEnvMarker, isEnvEntry, parseEnvMarker } from './mcp-env-markers';
+import { isEnvEntry } from './mcp-env-markers';
 import { ToolListEditor } from './mcp-tool-list-editor';
 
 /**
@@ -45,7 +47,7 @@ function McpSecretField({
   readonly secretStoreBlockedReason: string | undefined;
   readonly onPasteSecret: (manifestPointer: string, keyHint: string, secret: string) => void;
 }): ReactNode {
-  const referencedKey = parseEnvMarker(recordEntry.value);
+  const referenced = parseEnvMarker(recordEntry.value);
   const pasteDisabledReason =
     secretStoreBlockedReason ??
     (dirty
@@ -55,7 +57,7 @@ function McpSecretField({
         : undefined);
   return (
     <SecretRefField
-      value={referencedKey === null ? undefined : { source: 'key', key: referencedKey }}
+      value={referenced === null ? undefined : { source: 'key', key: referenced.key }}
       availableKeys={availableSecretKeys}
       keyPickingAvailable={keyPickingAvailable}
       pasteDisabledReason={pasteDisabledReason}
@@ -63,7 +65,7 @@ function McpSecretField({
       idPrefix={`mcp-secret-${String(index)}-${recordEntry.keyName}`}
       onChange={(ref) => {
         if (ref.source === 'key') {
-          recordEntry.onChange(formatEnvMarker(ref.key));
+          recordEntry.onChange(formatEnvMarker(ref.key, referenced?.default));
           return;
         }
         onPasteSecret(

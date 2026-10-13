@@ -21,13 +21,12 @@ function percent(value: number): string {
   return `${String(Number(value.toFixed(3)))}%`;
 }
 
-/** The fill token for a span's bar: error and slowest dominate, then type, then default. */
+/** The fill token for a span's bar: error and slowest dominate, then kind, then default. */
 function barColor(node: SpanNode, slowestId: string | null): string {
   if (isErrorSpan(node.span)) return 'var(--tai-color-err-fill)';
   if (node.span.id === slowestId) return 'var(--tai-color-warn-fill)';
-  const type = (node.span.type ?? '').toUpperCase();
-  if (type === 'GENERATION' || type === 'LLM') return 'var(--tai-color-accent)';
-  if (type === 'TOOL') return 'var(--tai-color-primary)';
+  if (node.span.kind === 'LLM') return 'var(--tai-color-accent)';
+  if (node.span.kind === 'TOOL') return 'var(--tai-color-primary)';
   return 'var(--tai-color-border-strong)';
 }
 
@@ -118,7 +117,7 @@ function SpanBarRow({
       aria-current={selected ? 'true' : undefined}
       onClick={onSelect}
       onKeyDown={onKeyDown}
-      title={`${name}${node.span.type !== null ? ` · ${node.span.type}` : ''}${
+      title={`${name}${node.span.kind !== null ? ` · ${node.span.kind}` : ''}${
         node.durationMs !== null ? ` · ${formatLatencyMs(node.durationMs)}` : ''
       }${error ? ' · error' : ''}`}
       style={{

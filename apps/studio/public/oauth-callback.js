@@ -1,6 +1,7 @@
 // OAuth callback relay. Runs on the originating deployment origin, at the end of
-// a sign-in. It hands the raw provider result (code, state, and any error) back to
-// the application so the app can perform the authed exchange itself.
+// a sign-in. It hands the raw provider result (code, state, any error, and the
+// redirect's issuer `iss`) back to the application so the app can perform the authed
+// exchange itself; the platform checks the issuer.
 //
 // TWO delivery channels, mirroring the two sign-in paths:
 //
@@ -32,6 +33,7 @@
     state: 'tai_oauth_state',
     code: 'tai_oauth_code',
     error: 'tai_oauth_error',
+    iss: 'tai_oauth_iss',
   };
 
   var params = new URLSearchParams(window.location.search);
@@ -40,6 +42,7 @@
     code: params.get('code'),
     state: params.get('state'),
     error: params.get('error'),
+    iss: params.get('iss'),
   };
 
   function fail(text) {
@@ -95,6 +98,7 @@
       target.searchParams.set(RESUME_PARAMS.state, message.state);
       if (message.code !== null) target.searchParams.set(RESUME_PARAMS.code, message.code);
       if (message.error !== null) target.searchParams.set(RESUME_PARAMS.error, message.error);
+      if (message.iss !== null) target.searchParams.set(RESUME_PARAMS.iss, message.iss);
       window.location.replace(target.pathname + target.search + target.hash);
       return;
     }

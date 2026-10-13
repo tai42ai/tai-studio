@@ -18,9 +18,9 @@ import { ApplyExtensionsPanel } from './apply-extensions';
 import { renderWithProviders } from './test-utils';
 
 const CATALOG: Extension[] = [
-  { name: 'marka', kind: 'wrapper' },
-  { name: 'markb', kind: 'wrapper' },
-  { name: 'backendx', kind: 'backend' },
+  { name: 'marka', kind: 'wrapper', multiple: true },
+  { name: 'markb', kind: 'wrapper', multiple: true },
+  { name: 'backendx', kind: 'backend', multiple: false },
 ];
 
 const parisPreset: PresetRecord = {
@@ -175,7 +175,10 @@ describe('ApplyExtensionsPanel — config-bearing combos', () => {
       ...parisPreset,
       extensions: [[{ name: 'output_schema', config: { schema: configSchema } }], ['marka']],
     };
-    const catalog: Extension[] = [...CATALOG, { name: 'output_schema', kind: 'wrapper' }];
+    const catalog: Extension[] = [
+      ...CATALOG,
+      { name: 'output_schema', kind: 'wrapper', multiple: true },
+    ];
     const savePresetVersion = vi.fn().mockResolvedValue({
       version: 3,
       body: { base_tool: 'weather', description: '', fixed_kwargs: {}, extensions: [] },

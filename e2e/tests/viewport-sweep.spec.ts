@@ -23,7 +23,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
-import { seedCredential } from './helpers';
+import { openAddServerReview, seedCredential } from './helpers';
 
 needs();
 
@@ -88,6 +88,15 @@ for (const scheme of ['light', 'dark'] as const) {
           await horizontalOverflow(page),
           `${route} overflows horizontally at 1280 px (${scheme})`,
         ).toBeLessThanOrEqual(0);
+        if (route === '/connectors') {
+          // The "Add MCP server" dialog at its review step: its long address, issuer
+          // and scope list wrap inside the panel, never pushing the page sideways.
+          await openAddServerReview(page);
+          expect(
+            await horizontalOverflow(page),
+            `${route} with the add-server review step overflows at 1280 px (${scheme})`,
+          ).toBeLessThanOrEqual(0);
+        }
       }
     });
   });
@@ -137,6 +146,26 @@ for (const width of LADDER) {
         await expect(sidebar).toBeHidden();
         await expect(topbar).toBeVisible();
         await expect(hamburger).toBeVisible();
+        // The bar's theme switch keeps its three options on one row inside the bar:
+        // a wrapped switch is taller than the bar and spills over the page below it.
+        const bar = await topbar.boundingBox();
+        const themeSwitch = await topbar.getByRole('radiogroup', { name: 'Theme' }).boundingBox();
+        expect(bar, 'the top bar has no layout box').not.toBeNull();
+        expect(themeSwitch, 'the theme switch has no layout box').not.toBeNull();
+        if (bar !== null && themeSwitch !== null) {
+          expect(themeSwitch.y, 'the theme switch rises above the top bar').toBeGreaterThanOrEqual(
+            bar.y,
+          );
+          expect(
+            themeSwitch.y + themeSwitch.height,
+            'the theme switch spills below the top bar',
+          ).toBeLessThanOrEqual(bar.y + bar.height);
+        }
+        const optionTops = await topbar
+          .getByRole('radio')
+          .evaluateAll((options) => options.map((o) => Math.round(o.getBoundingClientRect().top)));
+        expect(optionTops, 'the theme options wrap onto a second row').toHaveLength(3);
+        expect(new Set(optionTops).size, 'the theme options wrap onto a second row').toBe(1);
       } else {
         await expect(sidebar).toBeVisible();
         await expect(topbar).toBeHidden();

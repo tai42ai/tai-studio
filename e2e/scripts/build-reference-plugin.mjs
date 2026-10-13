@@ -124,6 +124,7 @@ async function main() {
       pages: ['demo'],
       settings_tabs: ['demo'],
       nav_entries: ['demo'],
+      route_panels: ['synthetic'],
     },
   };
 

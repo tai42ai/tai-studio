@@ -3,15 +3,21 @@
  * (form ⇄ JSON), the combined secret-paste op, the manifest save with its
  * session-generated orphan-key sweep, and the composed hook the editor consumes.
  */
-import { ApiError } from '@tai42/api-client';
-import { useApi, useCanWrite, useRegisterDirty } from '@tai42/studio-sdk';
+import { ApiError, apiRoutes } from '@tai42/api-client';
+import {
+  collectEnvRefs,
+  parseEnvMarker,
+  useApi,
+  useCanWrite,
+  useRegisterDirty,
+} from '@tai42/studio-sdk';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { RefObject } from 'react';
 import { useRef, useState } from 'react';
 
 import { envConfigKey, manifestKey, mcpStatusKey, preservedManifestKey } from './keys';
 import { parseEntries } from './mcp-config-parse';
-import { collectEnvRefs, parseEnvMarker, resolveManifestPointer } from './mcp-env-markers';
+import { resolveManifestPointer } from './mcp-env-markers';
 
 export type ConfigView = 'form' | 'json';
 
@@ -67,9 +73,8 @@ export function useSecretPasteMutation(
             ? error.retryAfterSeconds
             : DEFAULT_RETRY_SECONDS) * 1000,
       });
-      const generatedKey = parseEnvMarker(
-        resolveManifestPointer(preserved, variables.manifest_pointer),
-      );
+      const generatedKey =
+        parseEnvMarker(resolveManifestPointer(preserved, variables.manifest_pointer))?.key ?? null;
       if (generatedKey === null) {
         throw new Error(
           'The secret was stored, but the manifest read back does not carry its reference. ' +
@@ -115,7 +120,7 @@ export function useMcpSaveMutation() {
     mutationFn: async ({ mcp, orphanedKeys }: { mcp: unknown[]; orphanedKeys: string[] }) => {
       // The delete rides the env editor's blank-value path.
       const result = await api.setMcpConfig(mcp);
-      for (const key of orphanedKeys) await api.setEnvConfig({ [key]: '' });
+      for (const key of orphanedKeys) await api.setEnvConfig({ env: { [key]: '' } });
       return result;
     },
     onSuccess: async (_result, { orphanedKeys }) => {
@@ -268,7 +273,7 @@ export function useMcpConfigDraft({
 }: {
   readonly initialEntries: readonly Record<string, unknown>[];
 }): McpConfigDraft {
-  const canSave = useCanWrite('/api/mcp-config', 'POST');
+  const canSave = useCanWrite(apiRoutes.post_api_mcp_config.path, 'POST');
   // The exact env keys THIS editor generated through its own pastes — the sole set the
   // save-time orphan sweep may delete.
   const sessionGeneratedKeysRef = useRef<Set<string>>(new Set());

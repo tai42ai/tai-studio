@@ -1,0 +1,21 @@
+{
+  "provider": {
+    "id": "mcp_example_com",
+    "display_name": "Remote files",
+    "description": "",
+    "icon_url": null,
+    "kind": "oauth",
+    "origin": "community",
+    "category": "other",
+    "sub_services": [
+      { "id": "default", "display_name": "Remote files", "description": "", "scopes": [] }
+    ],
+    "config_fields": [],
+    "removable": true,
+    "client_source": "unset"
+  },
+  "fanout": {
+    "mode": "local-only",
+    "note": "no worker bus configured; only this worker reloaded"
+  }
+}

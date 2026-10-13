@@ -9,6 +9,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { PENDING_SAVES_CARD_ID } from './PendingSavesCard';
 import { RecordsTab } from './RecordsTab';
 import { renderWithProviders, type StubApiClient } from './test-utils';
 
@@ -30,8 +31,10 @@ const subjectRow = { subject, updated_at: 1767225600 };
 function client(over: Partial<StubApiClient> = {}): StubApiClient {
   return {
     listConversationRoutes: vi.fn().mockResolvedValue({ items: [], total: 0 }),
-    listStateSubjects: vi.fn().mockResolvedValue({ subjects: [subjectRow], next_cursor: null }),
-    searchStateRecords: vi.fn().mockResolvedValue({ matches: [], next_cursor: null }),
+    listStateSubjects: vi
+      .fn()
+      .mockResolvedValue({ subjects: [subjectRow], next_cursor: null, held: [] }),
+    searchStateRecords: vi.fn().mockResolvedValue({ matches: [], next_cursor: null, held: [] }),
     ...over,
   };
 }
@@ -80,6 +83,7 @@ describe('RecordsTab', () => {
         searchStateRecords: vi.fn().mockResolvedValue({
           matches: [subjectRow],
           next_cursor: null,
+          held: [],
         }),
       }),
     });
@@ -100,10 +104,11 @@ describe('RecordsTab', () => {
     const second = { target_kind: 'agent', target_name: 'assistant', kind: 'person', key: 'p-2' };
     const listStateSubjects = vi
       .fn()
-      .mockResolvedValueOnce({ subjects: [subjectRow], next_cursor: 'c2' })
+      .mockResolvedValueOnce({ subjects: [subjectRow], next_cursor: 'c2', held: [] })
       .mockResolvedValueOnce({
         subjects: [{ subject: second, updated_at: 1767312000 }],
         next_cursor: null,
+        held: [],
       });
     renderWithProviders(<RecordsTab state={state} />, { client: client({ listStateSubjects }) });
     await screen.findByText('Subjects');
@@ -163,7 +168,9 @@ describe('RecordsTab', () => {
 
   it('a search box that is not a JSON object shows the parse error and never queries', async () => {
     const user = userEvent.setup({ delay: null });
-    const searchStateRecords = vi.fn().mockResolvedValue({ matches: [], next_cursor: null });
+    const searchStateRecords = vi
+      .fn()
+      .mockResolvedValue({ matches: [], next_cursor: null, held: [] });
     renderWithProviders(<RecordsTab state={state} />, { client: client({ searchStateRecords }) });
     // A bare scalar is not a containment object.
     await user.type(await screen.findByLabelText('Filters (JSON)'), 'warm');
@@ -209,5 +216,60 @@ describe('RecordsTab', () => {
     await user.type(await screen.findByLabelText('Filters (JSON)'), '{{"a":"x"}');
     await user.click(screen.getByRole('button', { name: 'Search' }));
     expect(await screen.findByTestId('feature-disabled')).toBeInTheDocument();
+  });
+  it('names the held subjects once each and scrolls to the pending saves card', async () => {
+    const user = userEvent.setup({ delay: null });
+    const other = { ...subject, key: 'p-2' };
+    const held = [
+      { save_id: '7', held_by: '7', subjects: [subject, other] },
+      { save_id: '8', held_by: '7', subjects: [subject] },
+    ];
+    const card = document.createElement('div');
+    card.id = PENDING_SAVES_CARD_ID;
+    const scrollIntoView = vi.fn();
+    card.scrollIntoView = scrollIntoView;
+    document.body.appendChild(card);
+    try {
+      renderWithProviders(<RecordsTab state={state} />, {
+        client: client({
+          listStateSubjects: vi
+            .fn()
+            .mockResolvedValue({ subjects: [subjectRow], next_cursor: null, held }),
+        }),
+      });
+      const line = await screen.findByTestId('held-subjects-line');
+      expect(line).toHaveTextContent(
+        '2 subject(s) on this state are held by a failed pending save and show their last applied data. Retry or discard it under Pending saves.',
+      );
+      await user.click(within(line).getByRole('button', { name: 'Pending saves' }));
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' });
+    } finally {
+      card.remove();
+    }
+  });
+
+  it('shows no held line when no subject is held', async () => {
+    renderWithProviders(<RecordsTab state={state} />, { client: client() });
+    await screen.findByText('p-1');
+    expect(screen.queryByTestId('held-subjects-line')).toBeNull();
+  });
+
+  it('the content search names the held subjects among its hits', async () => {
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<RecordsTab state={state} />, {
+      client: client({
+        searchStateRecords: vi.fn().mockResolvedValue({
+          matches: [subjectRow],
+          next_cursor: null,
+          held: [{ save_id: '7', held_by: '7', subjects: [subject] }],
+        }),
+      }),
+    });
+    await user.type(await screen.findByLabelText('Filters (JSON)'), '{{"a":"x"}');
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+    const searchCard = (await screen.findByText('Search records')).closest('div') as HTMLElement;
+    expect(await within(searchCard).findByTestId('held-subjects-line')).toHaveTextContent(
+      /^1 subject\(s\) on this state are held/,
+    );
   });
 });

@@ -37,7 +37,6 @@ import {
   dispatchDrop,
   dropFromDragEvent,
   invalidateMapperKeys,
-  PUBLIC_MARKER,
 } from './scope-mapping';
 import type { ChipData } from './ScopeItemChip';
 
@@ -126,9 +125,12 @@ function useMapperActions(setters: {
 export function ScopesMapper({
   scopes,
   readOnly,
+  publicId,
 }: {
   readonly scopes: Record<string, string>;
   readonly readOnly: boolean;
+  /** The deployment's public marker, served on the caller's projection — never a scope. */
+  readonly publicId: string;
 }): ReactNode {
   const api = useApi();
 
@@ -188,10 +190,10 @@ export function ScopesMapper({
     );
   }
 
-  const slugs = new Set(Object.keys(subMcpQuery.data));
-  const chips = deriveMapperChips(scopes, routesQuery.data, publicQuery.data, slugs);
+  const mounts = subMcpQuery.data;
+  const chips = deriveMapperChips(scopes, routesQuery.data, publicQuery.data, mounts, publicId);
   const allScopeIds = new Set([...chips.realScopeIds, ...pendingScopes]);
-  allScopeIds.delete(PUBLIC_MARKER);
+  allScopeIds.delete(publicId);
 
   const interactive = !readOnly && !actions.anyPending;
 
@@ -217,6 +219,7 @@ export function ScopesMapper({
       {readOnly ? null : (
         <CreateScopeRow
           existingIds={allScopeIds}
+          publicId={publicId}
           onCreate={(scopeId) => {
             setPendingScopes((current) => [...current, scopeId]);
           }}
@@ -237,7 +240,7 @@ export function ScopesMapper({
         >
           <MapperZones
             chips={chips}
-            slugs={slugs}
+            mounts={mounts}
             pendingScopes={pendingScopes}
             interactive={interactive}
             readOnly={readOnly}

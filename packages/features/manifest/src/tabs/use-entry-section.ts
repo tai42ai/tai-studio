@@ -10,10 +10,11 @@ import { useState } from 'react';
 import { manifestKey } from '../keys';
 
 /** The apply-result slice these editors render — the fleet fan-out the shared report
- *  handler interprets. The client methods return a wider result (`status`/`env_keys`
- *  too); this names only what the surface reads. */
+ *  handler interprets and the operation's `awaiting_respawn` verdict. The client methods
+ *  return a wider result (`status`/`env_keys` too); this names only what the surface reads. */
 export interface ApplyFanout {
   readonly fanout: Parameters<typeof summarizeFleetFanout>[0];
+  readonly awaiting_respawn: Parameters<typeof summarizeFleetFanout>[1];
 }
 
 /** Parse the add-entries buffer into a list of entries, each an object carrying a

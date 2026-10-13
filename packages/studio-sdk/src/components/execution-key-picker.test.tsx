@@ -22,6 +22,9 @@ function apiKey(overrides: Partial<TokensPayload[number]> = {}): TokensPayload[n
     description: 'events service key',
     scopes: [],
     policy_data: { key_fingerprint: 'fp-events' },
+    condition: null,
+    principal: null,
+    orphaned: false,
     ...overrides,
   };
 }

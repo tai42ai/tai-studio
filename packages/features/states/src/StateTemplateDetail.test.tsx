@@ -1,4 +1,4 @@
-import { ApiError, type StateTemplateDocument } from '@tai42/api-client';
+import { ApiError, schemas, type StateTemplateDocument } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -11,14 +11,20 @@ function doc(overrides: Partial<StateTemplateDocument> = {}): StateTemplateDocum
     kind: 'state-template',
     name: 'tally',
     description: 'A running tally.',
-    parameters: { ceiling: 100 },
+    parameters: {
+      ceiling: { schema: { type: 'number' }, default: 100 },
+      floor: { schema: { type: 'number' } },
+    },
     schema: { type: 'object', properties: { tally: { type: 'number' } } },
-    regimes: [{ path: ['tally'], policy: 'single' }],
+    regimes: [
+      { path: ['tally'], regime: 'single' },
+      { path: [], regime: 'free' },
+    ],
     declarations: {
       schema: { type: 'object', properties: { tally: { type: 'number' } } },
       check: { content: '.tally >= 0' },
     },
-    trace: {},
+    trace: { enabled: false },
     template_jq: {
       current: {
         description: 'the head',
@@ -49,10 +55,47 @@ describe('StateTemplateDetail', () => {
     await screen.findByTestId('state-template-detail');
     expect(screen.getByText('Fields')).toBeInTheDocument();
     expect(screen.getByText('Write policies')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Regime' })).toBeInTheDocument();
     expect(screen.getByText('single')).toBeInTheDocument();
+    expect(screen.getByText('(root)')).toBeInTheDocument();
     expect(screen.getByText('Check')).toBeInTheDocument();
     expect(screen.getByText('Parameters')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Schema' })).toBeInTheDocument();
     expect(screen.getByText('ceiling')).toBeInTheDocument();
+    expect(screen.getByText('100')).toBeInTheDocument();
+    // A parameter with no default reads "—", never a null.
+    const floorRow = screen.getByText('floor').closest('tr');
+    expect(floorRow).not.toBeNull();
+    expect(floorRow?.textContent).toContain('—');
+    expect(floorRow?.textContent).not.toContain('null');
+    expect(screen.getByTestId('template-trace')).toHaveTextContent('Trace writes: Off');
+  });
+
+  it('joins a nested regime path and shows traced writes', async () => {
+    const client: StubApiClient = {
+      getStateTemplate: vi.fn().mockResolvedValue(
+        doc({
+          regimes: [{ path: ['a', '*', 'b'], regime: 'composing' }],
+          trace: { enabled: true },
+        }),
+      ),
+    };
+    renderWithProviders(<StateTemplateDetail name="tally" />, { client });
+    await screen.findByTestId('state-template-detail');
+    expect(screen.getByText('a / * / b')).toBeInTheDocument();
+    expect(screen.getByText('composing')).toBeInTheDocument();
+    expect(screen.getByTestId('template-trace')).toHaveTextContent('Trace writes: On');
+  });
+
+  it('parses a served document so a parameter without a default stays without one', () => {
+    const served = schemas.stateTemplateDocument.parse({
+      name: 'tally',
+      schema: { type: 'object' },
+      parameters: { floor: { schema: { type: 'number' } }, nil: { schema: {}, default: null } },
+    });
+    expect(Object.keys(served.parameters.floor ?? {})).not.toContain('default');
+    expect(Object.keys(served.parameters.nil ?? {})).toContain('default');
+    expect(served.trace).toBeUndefined();
   });
 
   it('renders a stored-reference fragment schema as a read-only reference', async () => {

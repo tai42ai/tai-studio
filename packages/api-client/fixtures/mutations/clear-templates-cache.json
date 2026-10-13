@@ -1,3 +1,7 @@
 {
-  "cleared": true
+  "cleared": true,
+  "fanout": {
+    "mode": "local-only",
+    "note": "no worker bus configured; only this worker reloaded"
+  }
 }

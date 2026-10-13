@@ -60,6 +60,7 @@ routers_modules:
   - tai42_skeleton.routers.states # /api/states* + /api/state-templates* (States screens)
   - tai42_skeleton.routers.sub_mcp
   - tai42_skeleton.routers.config
+  - tai42_skeleton.routers.backup # /api/backup/*         (Settings Backup tab)
   - tai42_skeleton.routers.templates
   - tai42_skeleton.routers.storage # /api/storage          (Templates page storage-provider gate)
   - tai42_skeleton.routers.manifest

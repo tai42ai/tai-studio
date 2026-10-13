@@ -25,7 +25,38 @@
           "secret": true
         }
       ]
+    },
+    {
+      "id": "tools_example_net",
+      "display_name": "tools.example.net",
+      "description": "",
+      "icon_url": null,
+      "kind": "oauth",
+      "origin": "community",
+      "category": "other",
+      "sub_services": [
+        {
+          "id": "default",
+          "display_name": "tools.example.net",
+          "description": "",
+          "scopes": []
+        }
+      ],
+      "config_fields": [],
+      "removable": true,
+      "client_source": "manual"
     }
   ],
-  "categories": [{ "id": "developer", "display_name": "Developer tools", "sort_order": 1 }]
+  "categories": [
+    {
+      "id": "developer",
+      "display_name": "Developer tools",
+      "sort_order": 1
+    },
+    {
+      "id": "other",
+      "display_name": "Other",
+      "sort_order": 99
+    }
+  ]
 }

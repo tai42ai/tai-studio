@@ -1,10 +1,10 @@
 /**
- * The inline row for naming a new scope, validated before it becomes a pending zone.
+ * The inline row for naming a new scope before it becomes a pending zone. The server
+ * rules a scope name; the row refuses only what it knows locally — a blank name, the
+ * served public marker, a name already present — and a server refusal shows on submit.
  */
 import { Button, Field, TextInput } from '@tai42/studio-sdk';
 import { type CSSProperties, type ReactNode, useState } from 'react';
-
-import { PUBLIC_MARKER } from './scope-mapping';
 
 const inlineFormStyle: CSSProperties = {
   display: 'flex',
@@ -14,13 +14,14 @@ const inlineFormStyle: CSSProperties = {
   marginTop: 'var(--tai-space-3)',
 };
 
-const SCOPE_ID_RE = /^[a-zA-Z0-9_\- ]+$/;
-
 export function CreateScopeRow({
   existingIds,
+  publicId,
   onCreate,
 }: {
   readonly existingIds: ReadonlySet<string>;
+  /** The deployment's served public marker — never a scope name. */
+  readonly publicId: string;
   readonly onCreate: (scopeId: string) => void;
 }): ReactNode {
   const [value, setValue] = useState('');
@@ -32,12 +33,8 @@ export function CreateScopeRow({
       setError('Enter a scope name.');
       return;
     }
-    if (!SCOPE_ID_RE.test(trimmed)) {
-      setError('Scope names may contain only letters, numbers, spaces, hyphens and underscores.');
-      return;
-    }
-    if (trimmed === PUBLIC_MARKER) {
-      setError('“public” is the reserved public marker, not a scope. Use the Public zone.');
+    if (trimmed === publicId) {
+      setError(`“${publicId}” is the reserved public marker, not a scope. Use the Public zone.`);
       return;
     }
     if (existingIds.has(trimmed)) {

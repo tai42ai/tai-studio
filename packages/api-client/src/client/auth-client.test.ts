@@ -126,6 +126,7 @@ describe('auth route-catalog client transport', () => {
             tags: ['tools'],
             summary: 'List the registered tools.',
             action: 'read',
+            declared_public: false,
           },
           {
             path: '/api/backup/export',
@@ -134,6 +135,7 @@ describe('auth route-catalog client transport', () => {
             tags: ['backup'],
             summary: 'Export a backup.',
             action: 'fenced',
+            declared_public: false,
           },
         ],
       }),
@@ -220,9 +222,9 @@ describe('auth api-key client transport', () => {
     expect(out[0]?.policy_data).toEqual({ key_fingerprint: 'kf-9f2c1d' });
   });
 
-  it('throws ApiSchemaError LOUDLY on a key row with an EMPTY user_id', async () => {
+  it('throws ApiSchemaError LOUDLY on a key row without its user_id', async () => {
     const { client } = harness(() =>
-      jsonResponse({ data: [{ user_id: '', description: 'x', scopes: [], policy_data: {} }] }),
+      jsonResponse({ data: [{ description: 'x', scopes: [], policy_data: {} }] }),
     );
     await expect(client.listTokensPayload()).rejects.toBeInstanceOf(ApiSchemaError);
   });
@@ -475,7 +477,7 @@ describe('auth members client transport', () => {
               email: 'alice@example.test',
               role: 'editor',
               created_at: '2026-07-21T00:00:00Z',
-              principals: [{ user_id: 'u-alice', disabled: false }],
+              principals: [{ user_id: 'u-alice', disabled: false, role: 'editor' }],
               disabled: false,
               handle: 'prov:alice',
               action_keys: ['act-1'],
@@ -500,6 +502,7 @@ describe('auth members client transport', () => {
     expect(captured[0]?.url).toBe('/api/auth/members');
     // The per-principal state and the opaque routing tokens ride through the join.
     expect(out.members[0]?.principals[0]?.disabled).toBe(false);
+    expect(out.members[0]?.principals[0]?.role).toBe('editor');
     expect(out.members[0]?.action_keys).toEqual(['act-1']);
     expect(out.invites[0]?.handle).toBe('prov:bob');
   });

@@ -15,7 +15,7 @@ import {
 } from './fleet-report';
 import type { FleetResult } from './schemas';
 
-function result(overrides: Partial<FleetResult>): FleetResult {
+function result(overrides: Partial<FleetResult>): Omit<FleetResult, 'ok'> {
   return {
     op: 'reload_config',
     reachable: true,
@@ -117,48 +117,57 @@ describe('summarizeFleetResult', () => {
 
 describe('summarizeFleetFanout', () => {
   it('returns null for an absent fan-out (no manifest change)', () => {
-    expect(summarizeFleetFanout(null)).toBeNull();
-    expect(summarizeFleetFanout(undefined)).toBeNull();
+    expect(summarizeFleetFanout(null, [])).toBeNull();
+    expect(summarizeFleetFanout(undefined, [])).toBeNull();
     expect(isFleetReportFailure(null)).toBe(false);
   });
 
   it('treats a local-only fan-out as converged, carrying its note', () => {
-    const summary = summarizeFleetFanout({ mode: 'local-only', note: 'only this worker reloaded' });
+    const summary = summarizeFleetFanout(
+      { mode: 'local-only', note: 'only this worker reloaded' },
+      [],
+    );
     expect(summary?.status).toBe('converged');
     expect(summary?.note).toBe('only this worker reloaded');
   });
 
   it('defers a fleet fan-out to the per-worker report (degraded surfaces)', () => {
-    const summary = summarizeFleetFanout({
-      mode: 'fleet',
-      op: 'reload_config',
-      reachable: true,
-      local_only: false,
-      results: [
-        { name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
-        {
-          name: 'serve-b',
-          outcome: 'missing',
-          payload: null,
-          error: null,
-          detail: 'never joined',
-        },
-      ],
-      error: null,
-    });
+    const summary = summarizeFleetFanout(
+      {
+        mode: 'fleet',
+        op: 'reload_config',
+        reachable: true,
+        local_only: false,
+        results: [
+          { name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
+          {
+            name: 'serve-b',
+            outcome: 'missing',
+            payload: null,
+            error: null,
+            detail: 'never joined',
+          },
+        ],
+        error: null,
+      },
+      [],
+    );
     expect(summary?.status).toBe('degraded');
     expect(summary?.failures[0]?.outcome).toBe('missing');
   });
 
   it('defers an unreachable fan-out to the bus-unreachable state', () => {
-    const summary = summarizeFleetFanout({
-      mode: 'unreachable',
-      op: 'reload_config',
-      reachable: false,
-      local_only: false,
-      results: [],
-      error: 'bus down',
-    });
+    const summary = summarizeFleetFanout(
+      {
+        mode: 'unreachable',
+        op: 'reload_config',
+        reachable: false,
+        local_only: false,
+        results: [],
+        error: 'bus down',
+      },
+      [],
+    );
     expect(summary?.status).toBe('unreachable');
     expect(summary?.error).toBe('bus down');
   });
@@ -292,5 +301,101 @@ describe('failedMcpsFromReport', () => {
       }),
     );
     expect(out).toEqual([{ title: 'weather', status: 'unavailable' }]);
+  });
+});
+
+describe('the workers awaiting a respawn', () => {
+  it('lists each worker whose reload payload names awaiting_respawn keys', () => {
+    const summary = summarizeFleetResult(
+      result({
+        results: [
+          {
+            name: 'serve-a',
+            outcome: 'applied',
+            payload: { status: 'ok', env_keys: 3, awaiting_respawn: ['BACKEND_MANIFEST_KEY'] },
+            error: null,
+            detail: null,
+          },
+          {
+            name: 'backend-a',
+            outcome: 'applied',
+            payload: { status: 'ok', env_keys: 3, awaiting_respawn: [] },
+            error: null,
+            detail: null,
+          },
+          { name: 'serve-b', outcome: 'missing', payload: null, error: null, detail: 'no ack' },
+        ],
+      }),
+    );
+    expect(summary.status).toBe('degraded');
+    expect(summary.awaiting).toEqual([{ name: 'serve-a', keys: ['BACKEND_MANIFEST_KEY'] }]);
+  });
+
+  it('reads a payload that is not a reload result as naming nothing', () => {
+    const summary = summarizeFleetResult(
+      result({
+        results: [
+          { name: 'serve-a', outcome: 'applied', payload: [1, 2], error: null, detail: null },
+          {
+            name: 'serve-b',
+            outcome: 'applied',
+            payload: { awaiting_respawn: 'X' },
+            error: null,
+            detail: null,
+          },
+          {
+            name: 'serve-c',
+            outcome: 'applied',
+            payload: { awaiting_respawn: ['K', 7] },
+            error: null,
+            detail: null,
+          },
+        ],
+      }),
+    );
+    expect(summary.status).toBe('converged');
+    expect(summary.awaiting).toEqual([{ name: 'serve-c', keys: ['K'] }]);
+  });
+
+  it('names nothing for a lone-worker or an unreachable broadcast', () => {
+    expect(
+      summarizeFleetFanout({ mode: 'local-only', note: 'only this worker reloaded' }, [])?.awaiting,
+    ).toEqual([]);
+    expect(summarizeFleetResult(result({ reachable: false, error: 'down' })).awaiting).toEqual([]);
+  });
+});
+
+describe('a mutation summary carries the operation verdict', () => {
+  const rowsListing = {
+    mode: 'fleet' as const,
+    op: 'reload_config',
+    reachable: true,
+    local_only: false,
+    results: [
+      {
+        name: 'backend-1',
+        outcome: 'applied' as const,
+        payload: { status: 'ok', env_keys: 3, awaiting_respawn: ['BACKEND_MANIFEST_KEY'] },
+        error: null,
+        detail: null,
+      },
+    ],
+    error: null,
+  };
+
+  it('takes awaiting from the response verdict, never from the rows', () => {
+    expect(summarizeFleetFanout(rowsListing, [])?.awaiting).toEqual([]);
+    expect(
+      summarizeFleetFanout(rowsListing, [{ name: 'serve-2', keys: ['BACKEND_MANIFEST_KEY'] }])
+        ?.awaiting,
+    ).toEqual([{ name: 'serve-2', keys: ['BACKEND_MANIFEST_KEY'] }]);
+  });
+
+  it('carries the verdict on a lone-worker save too', () => {
+    expect(
+      summarizeFleetFanout({ mode: 'local-only', note: 'lone worker' }, [
+        { name: 'serve-1', keys: ['K'] },
+      ])?.awaiting,
+    ).toEqual([{ name: 'serve-1', keys: ['K'] }]);
   });
 });

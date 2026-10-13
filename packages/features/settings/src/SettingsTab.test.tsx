@@ -79,6 +79,8 @@ function saved(): ReturnType<ApiClient['setEnvConfig']> {
   return Promise.resolve({
     status: 'reloaded',
     env_keys: 1,
+    awaiting_respawn: [],
+    recycle: null,
     fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
   });
 }
@@ -135,7 +137,7 @@ describe('SettingsTab', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
-      expect(setEnvConfig).toHaveBeenCalledWith({ TAI_PORT: '123', TAI_DEBUG: 'true' });
+      expect(setEnvConfig).toHaveBeenCalledWith({ env: { TAI_PORT: '123', TAI_DEBUG: 'true' } });
     });
   });
 

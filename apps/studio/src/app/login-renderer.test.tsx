@@ -24,7 +24,7 @@ describe('login renderer', () => {
     const tools = capturingTools();
     let body: unknown;
     server.use(
-      methods({ needs_setup: false, methods: [passwordForm] }),
+      methods({ needs_setup: false, claim_fragment_key: 'claim', methods: [passwordForm] }),
       http.post('*/api/login/password', async ({ request }) => {
         body = await request.json();
         return HttpResponse.json({ data: { token: 'tai-sess-x', user_id: 'u1' } });
@@ -55,6 +55,7 @@ describe('login renderer', () => {
     server.use(
       methods({
         needs_setup: false,
+        claim_fragment_key: 'claim',
         methods: [
           {
             shape: 'button',
@@ -81,6 +82,7 @@ describe('login renderer', () => {
     server.use(
       methods({
         needs_setup: false,
+        claim_fragment_key: 'claim',
         methods: [
           { shape: 'button', id: 'evil', label: 'Off-origin', href: 'https://evil.test/api/x' },
         ],
@@ -117,6 +119,7 @@ describe('login renderer', () => {
     server.use(
       methods({
         needs_setup: false,
+        claim_fragment_key: 'claim',
         methods: [
           {
             shape: 'button',
@@ -147,7 +150,9 @@ describe('login renderer', () => {
   });
 
   it('needs_setup:false renders the sign-in forms and no setup entry', async () => {
-    server.use(methods({ needs_setup: false, methods: [passwordForm] }));
+    server.use(
+      methods({ needs_setup: false, claim_fragment_key: 'claim', methods: [passwordForm] }),
+    );
     renderStudio({ initialPath: '/login' });
 
     await screen.findByRole('heading', { name: 'Sign in' });
@@ -168,7 +173,7 @@ describe('login renderer', () => {
     const tools = capturingTools();
     let body: unknown;
     server.use(
-      methods({ needs_setup: false, methods: [inviteForm] }),
+      methods({ needs_setup: false, claim_fragment_key: 'claim', methods: [inviteForm] }),
       http.post('*/api/login/accept-invite', async ({ request }) => {
         body = await request.json();
         return HttpResponse.json({ data: { token: 'tai-sess-inv', user_id: 'invitee' } });
@@ -199,7 +204,13 @@ describe('login renderer', () => {
       fields: [{ name: 'password', label: 'Password', secret: true }],
       submit_path: '/api/login/accept-invite',
     };
-    server.use(methods({ needs_setup: false, methods: [passwordForm, inviteForm] }));
+    server.use(
+      methods({
+        needs_setup: false,
+        claim_fragment_key: 'claim',
+        methods: [passwordForm, inviteForm],
+      }),
+    );
     renderStudio({ initialPath: '/login' });
 
     await screen.findByRole('heading', { name: 'Sign in' });
@@ -209,7 +220,7 @@ describe('login renderer', () => {
   it('a login-submit 401 renders inline and never redirect-loops', async () => {
     const user = userEvent.setup();
     server.use(
-      methods({ needs_setup: false, methods: [passwordForm] }),
+      methods({ needs_setup: false, claim_fragment_key: 'claim', methods: [passwordForm] }),
       http.post('*/api/login/password', () =>
         HttpResponse.json({ error: 'bad creds' }, { status: 401 }),
       ),
@@ -230,7 +241,7 @@ describe('login renderer', () => {
   it('passes a 429 rate-limit message through to the inline error surface', async () => {
     const user = userEvent.setup();
     server.use(
-      methods({ needs_setup: false, methods: [passwordForm] }),
+      methods({ needs_setup: false, claim_fragment_key: 'claim', methods: [passwordForm] }),
       http.post('*/api/login/password', () =>
         HttpResponse.json(
           { error: 'Too many attempts — try again in 15 minutes' },
@@ -253,7 +264,7 @@ describe('login renderer', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const user = userEvent.setup();
     server.use(
-      methods({ needs_setup: false, methods: [passwordForm] }),
+      methods({ needs_setup: false, claim_fragment_key: 'claim', methods: [passwordForm] }),
       http.post('*/api/login/password', () =>
         HttpResponse.json({ error: 'boom' }, { status: 500 }),
       ),

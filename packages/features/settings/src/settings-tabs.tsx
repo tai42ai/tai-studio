@@ -4,16 +4,15 @@
  * of the page shell so the visibility gating and the ordering are testable and the
  * page component stays thin.
  */
-import type { MeProjection } from '@tai42/api-client';
+import { type ApiPathPrefix, apiRoutes, type MeProjection } from '@tai42/api-client';
 import {
   type CapabilityState,
   coversAnyRoute,
   ErrorBoundary,
   isFullProjection,
-  type RequiredCapabilities,
   type TabItem,
 } from '@tai42/studio-sdk';
-import type { usePluginContributions } from '@tai42/studio-sdk/host';
+import { contributionCovered, type usePluginContributions } from '@tai42/studio-sdk/host';
 import type { ReactNode } from 'react';
 
 import { ApiKeysTab } from './ApiKeysTab';
@@ -31,16 +30,19 @@ type PluginContributions = ReturnType<typeof usePluginContributions>;
  * `GET /api/config/mode` never sees either tab, so their admin-only reads never
  * 403-wall the surface.
  */
-export const CONFIG_READ_ROUTES = ['/api/config/settings-schema', '/api/config/env'] as const;
-export const BACKUP_READ_ROUTE = '/api/backup';
+export const CONFIG_READ_ROUTES = [
+  apiRoutes.get_api_config_settings_schema.path,
+  apiRoutes.get_api_config_env.path,
+] as const;
+export const BACKUP_READ_ROUTE: ApiPathPrefix = '/api/backup';
 /**
  * The Profiles tab reads only the `action=read` profiles LIST route — its OWN gate,
  * deliberately NOT folded into `CONFIG_READ_ROUTES`, so a scoped editor who can list
  * profiles but not read env/settings-schema sees the Profiles tab alone.
  */
-export const PROFILES_READ_ROUTES = ['/api/config/profiles'] as const;
+export const PROFILES_READ_ROUTES = [apiRoutes.get_api_config_profiles.path] as const;
 /** The Roles tab reads `GET /api/auth/roles` — an admin-only `secret` route. */
-export const ROLES_READ_ROUTE = '/api/auth/roles';
+export const ROLES_READ_ROUTE = apiRoutes.get_api_auth_roles.path;
 
 /**
  * Whether a core tab whose reads live under `prefixes` is visible to this caller. A
@@ -51,21 +53,6 @@ export const ROLES_READ_ROUTE = '/api/auth/roles';
 export function coreTabVisible(state: CapabilityState, prefixes: readonly string[]): boolean {
   if (state.status !== 'ready') return false;
   return isFullProjection(state.projection) || coversAnyRoute(state.projection, prefixes);
-}
-
-/**
- * Whether a plugin settings tab is visible under a projection — the same anyOf
- * evaluator the shell applies to every plugin contribution. A full projection shows
- * every tab; an ABSENT capability renders only for a full projection (safe-by-default);
- * a declared requirement renders when the projection reaches at least one of its routes.
- */
-export function settingsTabCovered(
-  projection: MeProjection,
-  required: RequiredCapabilities | undefined,
-): boolean {
-  if (isFullProjection(projection)) return true;
-  if (required === undefined) return false;
-  return coversAnyRoute(projection, required.routes);
 }
 
 /**
@@ -105,7 +92,11 @@ export function buildSettingsTabs(input: {
       content: <ProfilesTab readOnly={readOnly} />,
     });
   }
-  tabs.push({ value: 'api-keys', label: 'API keys', content: <ApiKeysTab readOnly={readOnly} /> });
+  tabs.push({
+    value: 'api-keys',
+    label: 'API keys',
+    content: <ApiKeysTab readOnly={readOnly} publicId={input.projection.public_resource_id} />,
+  });
   if (input.backupVisible) {
     tabs.push({ value: 'backup', label: 'Backup', content: <BackupTab readOnly={readOnly} /> });
   }
@@ -117,7 +108,9 @@ export function buildSettingsTabs(input: {
   // bar is exactly the core tabs (no churn). The projection is `ready` at the call site.
   if (input.pluginStatus === 'ready') {
     const pluginTabs = [...input.contributions.settingsTabs]
-      .filter((registered) => settingsTabCovered(input.projection, registered.requiredCapabilities))
+      .filter((registered) =>
+        contributionCovered(input.projection, registered.requiredCapabilities),
+      )
       .sort((a, b) => a.pluginId.localeCompare(b.pluginId) || a.title.localeCompare(b.title))
       .map((registered): TabItem => {
         const TabComponent = registered.component;

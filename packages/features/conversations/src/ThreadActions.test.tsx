@@ -1,6 +1,7 @@
 /**
  * The destructive per-thread actions: the delete-thread door on every thread, the
- * GDPR erase-person door only on a linked person's aggregated thread, the confirm
+ * GDPR erase-person door only when the thread's transcript names a person (its served
+ * `person_id`; a transcript that reads 404 names none), the confirm
  * gating (a cancel calls nothing), the error path (a failure keeps the confirm open),
  * the reset-on-open (a reopened confirm carries no stale error), and the leave-to-list
  * navigation on success.
@@ -10,23 +11,36 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { PERSON_THREAD_PREFIX } from './persons';
 import {
   fullProjection,
   renderWithProviders,
   scopedProjection,
   type StubApiClient,
+  transcriptPage,
 } from './test-utils';
 import { ThreadActions } from './ThreadActions';
 
-const ROUTE = 'support';
-const THREAD = 'support/+15551234567';
-const PERSON_THREAD = `${PERSON_THREAD_PREFIX}p-123`;
+const ROUTE = 'relay';
+const THREAD = 'relay/+15551234567';
+const PERSON_THREAD = 'bridge:@person:p-123';
 
-/** Render the actions under a full (admin) projection, so both destructive doors show. */
+/** A transcript read whose first page names `personId` (or no person). */
+function transcriptOf(personId: string | null): StubApiClient['readConversationTranscript'] {
+  return vi.fn().mockResolvedValue(transcriptPage([], { personId }));
+}
+
+/** The transcript read the person thread's actions resolve its person through. */
+const personTranscript = transcriptOf('p-123');
+
+/** Render the actions under a full (admin) projection, so both destructive doors show. The
+ *  ordinary thread's transcript names no person; the person thread's names `p-123`. */
 function renderActions(threadId: string, client: StubApiClient = {}) {
-  return renderWithProviders(<ThreadActions route={ROUTE} threadId={threadId} />, {
-    client,
+  return renderWithProviders(<ThreadActions route={ROUTE} threadId={threadId} q={undefined} />, {
+    client: {
+      readConversationTranscript:
+        threadId === PERSON_THREAD ? personTranscript : transcriptOf(null),
+      ...client,
+    },
     projection: fullProjection(),
   });
 }
@@ -128,7 +142,7 @@ describe('ThreadActions — person thread', () => {
     expect(
       await screen.findByRole('button', { name: `Delete thread ${PERSON_THREAD}` }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Erase person p-123' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Erase person p-123' })).toBeInTheDocument();
   });
 
   it('erases the person behind a confirm stating the full blast radius', async () => {
@@ -167,6 +181,25 @@ describe('ThreadActions — person thread', () => {
   });
 });
 
+describe('ThreadActions — the served person', () => {
+  it('offers erase-person for whatever person the transcript serves, whatever the thread id', async () => {
+    renderActions(THREAD, { readConversationTranscript: transcriptOf('p-777') });
+    expect(await screen.findByRole('button', { name: 'Erase person p-777' })).toBeInTheDocument();
+  });
+
+  it('hides erase-person on a person thread whose transcript reads 404', async () => {
+    renderActions(PERSON_THREAD, {
+      readConversationTranscript: vi.fn().mockRejectedValue(new ApiError('not found', 404)),
+    });
+    expect(
+      await screen.findByRole('button', { name: `Delete thread ${PERSON_THREAD}` }),
+    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /Erase person/ })).toBeNull();
+    });
+  });
+});
+
 describe('ThreadActions — write gating (projection ⊆ gate)', () => {
   // The card holds only the two destructive doors, so under a scoped projection it
   // renders nothing at all. Both doors are DYNAMIC (templated) DELETE routes, so a
@@ -179,8 +212,8 @@ describe('ThreadActions — write gating (projection ⊆ gate)', () => {
     // Passing `projection` seeds the session key that makes `CapabilityProvider` fetch;
     // the client's own `getMe` (this spy) then overrides the harness default.
     const getMe = vi.fn().mockResolvedValue(scopedProjection());
-    renderWithProviders(<ThreadActions route={ROUTE} threadId={threadId} />, {
-      client: { getMe },
+    renderWithProviders(<ThreadActions route={ROUTE} threadId={threadId} q={undefined} />, {
+      client: { getMe, readConversationTranscript: personTranscript },
       projection: scopedProjection(),
     });
     await waitFor(() => {

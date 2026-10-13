@@ -49,26 +49,26 @@ export function VerifiedCallbackPending(): ReactNode {
 /**
  * Secondary attribution badges on a card: `recipient` (the channel delivery
  * address, labeled "to"), `audience` (the addressed user_id, labeled "for"), and
- * `origin` (the asking tool run's id, labeled "run"). Each rides the frame only
- * when set — an absent field renders nothing, and with none present the block is
- * omitted entirely so a plain inbox card is unchanged.
+ * `origin` (the asking tool run's id, labeled "run"). Each is `null` when unset — an
+ * unset field renders nothing, and with none set the block is omitted entirely so a
+ * plain inbox card is unchanged.
  */
 function Attribution({ interaction }: { readonly interaction: StreamInteraction }): ReactNode {
   const { recipient, audience, origin } = interaction;
-  if (recipient === undefined && audience === undefined && origin === undefined) return null;
+  if (recipient === null && audience === null && origin === null) return null;
   return (
     <div data-testid="interaction-attribution" style={attributionStyle}>
-      {recipient !== undefined ? (
+      {recipient !== null ? (
         <span data-testid="interaction-recipient">
           <Badge variant="neutral">to {recipient}</Badge>
         </span>
       ) : null}
-      {audience !== undefined ? (
+      {audience !== null ? (
         <span data-testid="interaction-audience">
           <Badge variant="neutral">for {audience}</Badge>
         </span>
       ) : null}
-      {origin !== undefined ? (
+      {origin !== null ? (
         <span data-testid="interaction-origin">
           <Badge variant="neutral">run {origin}</Badge>
         </span>
@@ -114,7 +114,7 @@ export function InteractionCard({
         {Array.isArray(interaction.media) && interaction.media.length > 0 ? (
           <MediaGallery media={interaction.media} />
         ) : null}
-        {interaction.channel !== undefined ? (
+        {interaction.channel !== null ? (
           <div data-testid="interaction-channel">
             <Badge variant="neutral">via {interaction.channel}</Badge>
           </div>

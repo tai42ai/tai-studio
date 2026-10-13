@@ -1,5 +1,6 @@
 /** Composition root: assembles the per-resource sub-clients into the client. */
 import type { ApiConfig } from '../http';
+import { servedConstants } from '../schemas';
 import { agentsClient } from './agents-client';
 import { authClient } from './auth-client';
 import { backendClient } from './backend-client';
@@ -33,7 +34,6 @@ import { toolMetaClient } from './tool-meta-client';
 import { toolsClient } from './tools-client';
 import { makeTransport } from './transport';
 import { triggerLinksClient } from './trigger-links-client';
-import { webEntryGateClient } from './web-entry-gate-client';
 
 export type {
   AddUrlToScopeBody,
@@ -43,7 +43,12 @@ export type {
   RoleCreateBody,
   RoleUpdateBody,
 } from './auth-client';
-export type { StartConnectArgs } from './connectors-client';
+export type {
+  AddServerArgs,
+  DiscoverServerTarget,
+  SetProviderClientArgs,
+  StartConnectArgs,
+} from './connectors-client';
 export type {
   ConversationMessageSearchQuery,
   ConversationThreadFilters,
@@ -73,12 +78,20 @@ export type { StorageUploadBody } from './storage-client';
 export type { ToolMetaPatch } from './tool-meta-client';
 export type { RunToolArgs, ToolAdminArgs } from './tools-client';
 export type { TriggerLinkCreateBody } from './trigger-links-client';
-export type { WebEntryCodeMintBody } from './web-entry-gate-client';
 
 export function createApiClient(config: ApiConfig) {
   const t = makeTransport(config);
   return {
     baseUrl: config.baseUrl ?? '',
+    /**
+     * The platform constants the contract serves, read instead of re-spelled (`PERSON_KIND`,
+     * `MEDIA_ROUTE_PREFIX`, `MEDIA_ID_PATTERN`).
+     */
+    constants: servedConstants,
+    /** The host's authenticated request for a plugin's own routes: the same auth header,
+     *  401 handling, error classes and `{ data }` unwrap as every core call. Core routes
+     *  use the named methods. */
+    request: t.req,
     ...toolsClient(t),
     ...presetsClient(t),
     ...statesClient(t),
@@ -97,7 +110,6 @@ export function createApiClient(config: ApiConfig) {
     ...interactionsClient(t),
     ...channelsClient(t),
     ...conversationsClient(t),
-    ...webEntryGateClient(t),
     ...notificationsClient(t),
     ...agentsClient(t),
     ...hooksClient(t),

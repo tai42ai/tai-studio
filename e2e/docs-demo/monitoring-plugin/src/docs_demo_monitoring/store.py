@@ -22,6 +22,8 @@ class TraceStore:
 
     def __init__(self) -> None:
         self._traces: dict[str, MonitoringTrace] = {}
+        # The reported cost of an observation, kept beside it (the observation carries tokens only).
+        self._costs: dict[tuple[str, str], float] = {}
 
     def insert(self, trace: MonitoringTrace) -> None:
         """Store a fully-built trace, replacing any prior trace with the same id."""
@@ -66,3 +68,11 @@ class TraceStore:
         first); a missing trace is a caller bug and raises ``KeyError``.
         """
         self._traces[trace_id].observations.append(observation)
+
+    def record_cost(self, trace_id: str, observation_id: str, cost: float) -> None:
+        """Keep the reported cost of one observation."""
+        self._costs[(trace_id, observation_id)] = cost
+
+    def cost_of(self, trace_id: str, observation_id: str) -> float | None:
+        """The reported cost of one observation, or ``None`` when none was reported."""
+        return self._costs.get((trace_id, observation_id))

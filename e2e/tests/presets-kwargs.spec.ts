@@ -83,9 +83,9 @@ test.describe('fixed-kwargs editor on the preset doors (composed path)', () => {
     const preset = `digest-${String(Date.now())}`;
     try {
       // Seed an EXISTING env key the reference row can pick (the editor never writes one).
-      expect((await api.post('/api/config/env', { data: { [ENV_KEY]: 's3cr3t' } })).ok()).toBe(
-        true,
-      );
+      expect(
+        (await api.post('/api/config/env', { data: { env: { [ENV_KEY]: 's3cr3t' } } })).ok(),
+      ).toBe(true);
       const envBody = (await (await api.get('/api/config/env')).json()) as {
         data: { env: Record<string, string>; secret_keys: string[] };
       };

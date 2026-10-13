@@ -16,7 +16,17 @@ import {
 const MINT_ROUTE = { path: '/api/auth/api-keys', methods: ['POST'] };
 
 function tokens(): TokensPayload {
-  return [{ user_id: 'alice', description: 'Alice key', scopes: ['admin'], policy_data: {} }];
+  return [
+    {
+      condition: null,
+      principal: null,
+      orphaned: false,
+      user_id: 'alice',
+      description: 'Alice key',
+      scopes: ['admin'],
+      policy_data: {},
+    },
+  ];
 }
 function scopes(): Record<string, string> {
   return {
@@ -63,7 +73,7 @@ function renderTab(
 
 describe('ApiKeysTab', () => {
   it('lists keys with their scopes', async () => {
-    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub() });
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, { client: baseStub() });
 
     expect(await screen.findByText('alice')).toBeInTheDocument();
     expect(screen.getByText('Alice key')).toBeInTheDocument();
@@ -79,7 +89,9 @@ describe('ApiKeysTab', () => {
   it('surfaces a 404 on revoke loudly (unknown user_id)', async () => {
     const user = userEvent.setup({ delay: null });
     const revokeApiKey = vi.fn().mockRejectedValue(new ApiError('unknown user_id', 404));
-    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ revokeApiKey }) });
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+      client: baseStub({ revokeApiKey }),
+    });
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Revoke key alice' }));
@@ -89,7 +101,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('wears the ghost style on the per-row Revoke, not filled danger', async () => {
-    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({}) });
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, { client: baseStub({}) });
 
     await screen.findByText('alice');
     // Revoking a key is a routine row action: low-emphasis in the table; the danger
@@ -102,7 +114,9 @@ describe('ApiKeysTab', () => {
   it('revokes a key after confirming', async () => {
     const user = userEvent.setup({ delay: null });
     const revokeApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', revoked: true });
-    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ revokeApiKey }) });
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+      client: baseStub({ revokeApiKey }),
+    });
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Revoke key alice' }));
@@ -114,7 +128,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('keeps History reachable in readOnly mode while hiding Edit, Revoke and Create', async () => {
-    renderTab(<ApiKeysTab readOnly />, { client: baseStub() });
+    renderTab(<ApiKeysTab readOnly publicId="public" />, { client: baseStub() });
 
     await screen.findByText('alice');
     // History is a read surface — still available…
@@ -127,7 +141,7 @@ describe('ApiKeysTab', () => {
 
   it('disables Create with a note when the deployment cannot mint keys', async () => {
     const createApiKey = vi.fn();
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({
         createApiKey,
         getAuthCapabilities: vi.fn(() =>
@@ -151,7 +165,7 @@ describe('ApiKeysTab', () => {
   it('keeps Create enabled and the create flow intact when minting is available', async () => {
     const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-mintable-1');
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({
         createApiKey,
         getAuthCapabilities: vi.fn(() => Promise.resolve({ mintable: true, providers: [] })),
@@ -167,7 +181,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('surfaces a capabilities-fetch failure loudly (never a silent enable/disable guess)', async () => {
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({
         getAuthCapabilities: vi.fn(() =>
           Promise.reject(new ApiError('capabilities unavailable', 500)),
@@ -184,7 +198,9 @@ describe('ApiKeysTab', () => {
     const getAuthCapabilities = vi.fn(() =>
       Promise.reject(new ApiError('capabilities unavailable', 500)),
     );
-    renderTab(<ApiKeysTab readOnly />, { client: baseStub({ getAuthCapabilities }) });
+    renderTab(<ApiKeysTab readOnly publicId="public" />, {
+      client: baseStub({ getAuthCapabilities }),
+    });
 
     // A read-only viewer never consumes mint capabilities, so a failing (or here
     // never-fetched) capabilities endpoint must not gate the list they can view.
@@ -198,6 +214,8 @@ describe('ApiKeysTab', () => {
   it('renders the principal column with a kind badge and display name, dashing a principal-less row', async () => {
     const mixed: TokensPayload = [
       {
+        condition: null,
+        orphaned: false,
         user_id: 'svc',
         description: 'Delegated key',
         scopes: ['read'],
@@ -205,6 +223,7 @@ describe('ApiKeysTab', () => {
         principal: { user_id: 'usr-owner', kind: 'service', display_name: 'Acme Bot' },
       },
       {
+        condition: null,
         user_id: 'plain',
         description: 'Restored key',
         scopes: ['read'],
@@ -213,7 +232,7 @@ describe('ApiKeysTab', () => {
         orphaned: true,
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ listTokensPayload: vi.fn(() => Promise.resolve(mixed)) }),
     });
 
@@ -229,7 +248,7 @@ describe('ApiKeysTab', () => {
   it('hides the mint button for an owned-key caller even with "*" scopes', async () => {
     // The owned-cannot-mint rule is a per-request handler check invisible to the
     // route table, so a "*"-scoped owned key carries the mint route yet 403s on mint.
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub(),
       projection: scopedProjection({
         owner_user_id: 'alice',
@@ -246,7 +265,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('hides the mint button for a non-owned caller whose projection lacks the mint route', async () => {
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub(),
       projection: scopedProjection({ owner_user_id: null, routes: [] }),
     });
@@ -260,7 +279,7 @@ describe('ApiKeysTab', () => {
 
   it('shows the mint button to a viewer (non-owned, mint route present) with capped scopes', async () => {
     const user = userEvent.setup({ delay: null });
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub(),
       projection: scopedProjection({ owner_user_id: null, routes: [MINT_ROUTE], scopes: ['read'] }),
     });
@@ -281,7 +300,7 @@ describe('ApiKeysTab', () => {
     const user = userEvent.setup({ delay: null });
     // A `"*"` in the projection's scopes is the universal wildcard — it must expand
     // to every scope for minting, not intersect the concrete map to nothing.
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub(),
       projection: scopedProjection({ owner_user_id: null, routes: [MINT_ROUTE], scopes: ['*'] }),
     });
@@ -295,7 +314,7 @@ describe('ApiKeysTab', () => {
 
   it('shows the mint button with the full scope map for a full projection', async () => {
     const user = userEvent.setup({ delay: null });
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub(),
       projection: fullProjection(),
     });
@@ -310,7 +329,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('shows the mint button for a gate-off synthetic projection (admin, empty routes)', async () => {
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub(),
       projection: fullProjection({ routes: [] }),
     });
@@ -325,7 +344,7 @@ describe('ApiKeysTab', () => {
     // `/api/auth/api-keys` + `/api/auth/scopes`) but is DENIED `/api/auth/routes` and
     // `/api/auth/public-routes`, the admin reads the mapper mounts. The mapper must be
     // absent — the keys table stays reachable and no ErrorState walls the tab.
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub(),
       projection: scopedProjection({
         routes: [
@@ -345,7 +364,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('shows the access-control mapper for a full projection', async () => {
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub(),
       projection: fullProjection(),
     });
@@ -359,13 +378,16 @@ describe('ApiKeysTab', () => {
   it('escapes server-supplied user_id and scope strings', async () => {
     const injected: TokensPayload = [
       {
+        condition: null,
+        principal: null,
+        orphaned: false,
         user_id: '<script>alert(1)</script>',
         description: '<img src=x onerror=alert(2)>',
         scopes: ['<b>scope</b>'],
         policy_data: {},
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ listTokensPayload: vi.fn(() => Promise.resolve(injected)) }),
     });
 
@@ -379,7 +401,7 @@ describe('ApiKeysTab', () => {
     // `tokens.css`: the decorative border sits below 3:1 and may never be a
     // control's only boundary. Derived over the whole rendered tab, so a control
     // added later is judged by the same rule rather than by this list.
-    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub() });
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, { client: baseStub() });
 
     await screen.findByRole('button', { name: 'About claim links' });
     expect(decorBorderedControls(document.body)).toEqual([]);

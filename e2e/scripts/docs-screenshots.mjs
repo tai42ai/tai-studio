@@ -27,11 +27,30 @@
  *                  `studio_demo_echo`'s plugin panel because core routes do not
  *                  wait on plugin load — the custom panel races the route mount —
  *                  whereas the auto-form always renders, keeping this reproducible.
+ *   - run-answer-unreadable — the sync run panel's unreadable-answer panel (its Details
+ *                  open), via a forced `POST /api/run-tool` body the live server never
+ *                  answers (a bare value with no `kind`).
+ *   - run-answer-parked-unreadable — the background card of a parked run whose stored
+ *                  answer is in an older format (its Details open), via forced
+ *                  `GET /api/tool-runs` / `GET /api/tool-runs/{id}` payloads.
  *   - extensions — the extension catalog (`ask_external`).
  *   - settings   — the config workbench from `GET /api/config/*` (settings schema).
  *   - profiles   — the Settings page's Profiles tab: the seeded `production` profile
  *                  row (name + description) from `GET /api/config/profiles`. The action
  *                  switches to the tab and waits on that row.
+ *   - settings-access — the API keys tab's "Access control" card (the scopes mapper):
+ *                  the scope zones, the Unassigned bucket of unmapped routes, and the Public
+ *                  zone with its note, captured as the whole card.
+ *   - profile-apply-recycle-stopped — the profile apply report for a recycle roll that
+ *                  stopped (a forced apply response): the recycle rows, the stop panel, and
+ *                  the workers the server names as still awaiting a restart.
+ *   - backup-restore-recycle-stopped — the Backup tab's import report for an env-section
+ *                  restore whose recycle roll stopped (a forced import response): the section
+ *                  row, the workers the server names as still awaiting a restart, and the
+ *                  recycle rows with the stop panel, captured as the whole Import card.
+ *   - settings-env-recycle — the Environment tab after a save that rolled a worker
+ *                  recycle (a forced save response: the docs-demo stack runs bare): the
+ *                  recycle rows, captured as the whole Environment variables card.
  *   - agents     — the registered `tools_agent` from `GET /api/agents`.
  *   - presets    — the Presets list (`GET /api/presets`): the two seeded
  *                  `studio_demo_echo` presets, the master pane rendered full-width (no
@@ -41,12 +60,37 @@
  *                  store (`GET /api/states*`, `/api/state-templates`): the seeded `notes`
  *                  state's list row, its Declaration / Templates / Records / Consumers
  *                  tabs, and one subject's record page (document + `api` Writes audit).
+ *   - state-template-typed — the state-template screen for the seeded `display` template: its
+ *                  fields, Write policies, Parameters (name, schema, default) and the Trace writes line.
+ *   - states-pending-saves — the States page's Pending saves card on its All outstanding tab:
+ *                  the newer save held behind a failed save (Retry / Discard), newest first, via a
+ *                  forced `GET /api/state-pending-saves` payload (the demo backend runs no flow
+ *                  whose save can fail).
+ *   - states-records-held — the Records tab with the line above the subjects table that counts
+ *                  the subjects held by a failed pending save and links to the Pending saves card,
+ *                  via the live subjects page with a forced `held` entry (the same failed save the
+ *                  pending-saves frame shows).
  *   - dashboard  — the observability Dashboard (`GET /api/observability/metrics`):
  *                  the seeded docs-demo monitoring backend gives it a real trend
  *                  chart AND a by-model breakdown.
  *   - dashboard-by-model-unavailable — the same Dashboard with the by-model card in
  *                  its degraded state, via a forced `byModelAvailable:false` payload
  *                  the live backend never returns.
+ *   - tracing-sort-guard — the Tracing tab under a cost sort with the filters that sort
+ *                  cannot carry disabled, via a forced `GET /api/observability/capabilities`
+ *                  payload: the Langfuse reader's real served declaration (the api-client
+ *                  fixture). The live demo backend declares no sort × filter exclusion, so it
+ *                  never disables a filter; the runs list, the sort and the rows stay live.
+ *   - trace-llm-parts — the newest seeded trace's model-call span: its input and output
+ *                  messages in the parts view (the user prompt, the assistant text and the
+ *                  "finish: stop" footer).
+ *   - trace-references-recorded / -resolved — the newest seeded trace's `summarise` step,
+ *                  whose input holds one reference to the model call's answer: the value
+ *                  as recorded (the reference with its span id and pointer in the tree),
+ *                  then resolved through the real resolved route.
+ *   - trace-reference-missing — the same trace's `follow_up` step, whose reference names
+ *                  a record the backend does not hold: the resolved route answers 502 and
+ *                  the missing-value panel renders.
  *   - manifest   — the manifest JSON tree (non-empty `user_tools`).
  *   - templates  — the seeded templates list + the rendered detail (deep-linked).
  *   - system     — the health badge (the health router is loaded before the SPA
@@ -70,6 +114,9 @@
  *                  resolved routes, the per-item base-prefix remap input, and the
  *                  public-route acceptance checkbox, all from the minimal seeded
  *                  registry the runner boots (MARKETPLACE_URL).
+ *   - connectors-add-server — the Connectors page with the "Add MCP server" dialog at its
+ *                  review step, the single look-up answered by a route stub (the demo
+ *                  backend has no OAuth-protected server to look up); nothing is added.
  *   - conversations — the conversation monitor at its deepest level: a seeded route's
  *                  thread list beside one thread's transcript, both populated by the
  *                  real turns the runner drives through the authed api door.
@@ -82,6 +129,12 @@
  *   - schedule-contract — the add-schedule dialog framing its door-contract section (the
  *                  execution-key picker + the four jq fields), backed by the RQ scheduling
  *                  backend the docs-demo boot installs.
+ *   - scheduling-rows — the Scheduling page's schedules table with an interval row, a cron
+ *                  row and a row carrying a backend error (its warning Error badge), via a
+ *                  forced `GET /api/schedules` payload (the demo backend records no scheduling
+ *                  failure and seeds no schedule).
+ *   - schedule-cron-error — the add-schedule dialog with a cron expression of the wrong
+ *                  length, showing the field error (nothing is submitted).
  *   - hooks-trigger-link / -execution-key — the mint→QR dialog, and the register
  *                  form's execution-key picker.
  *   - login      — the credential screen, captured signed out.
@@ -104,7 +157,9 @@
  * not here.
  */
 import { chromium } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { crc32, deflateSync } from 'node:zlib';
 
 const STUDIO_URL = process.env.STUDIO_URL ?? 'http://127.0.0.1:8765';
@@ -191,7 +246,7 @@ async function pickFirstExecutionKey(page, scope) {
 async function authorPresetKwargs(page) {
   await page.request.post(`${STUDIO_URL}/api/config/env`, {
     headers: { 'x-api-key': DEMO_KEY, 'content-type': 'application/json' },
-    data: { SERVICE_API_TOKEN: 's3cr3t' },
+    data: { env: { SERVICE_API_TOKEN: 's3cr3t' } },
   });
   await page.getByRole('button', { name: 'Create preset' }).click();
   const dialog = page.getByRole('dialog');
@@ -277,6 +332,188 @@ const BY_MODEL_UNAVAILABLE_METRICS = {
   granularity: 'day',
 };
 
+// A forced served-capabilities payload for the sort-guard state: the Langfuse reader's
+// real served declaration (its metric sorts cannot carry the status / cost / token /
+// latency / version filters), read from the api-client fixture that holds that reader's
+// `capabilities_view` output. The live demo backend combines every sort with every
+// filter, so it never declares an exclusion.
+const LANGFUSE_CAPABILITIES = JSON.parse(
+  readFileSync(
+    fileURLToPath(
+      new URL(
+        '../../packages/api-client/fixtures/redacted/observability-capabilities.json',
+        import.meta.url,
+      ),
+    ),
+    'utf8',
+  ),
+);
+
+// The newest seeded docs-demo trace: its model call records its prompt and answer in the
+// GenAI parts shape, its `summarise` step references that answer, and its `follow_up` step
+// references a record no trace holds.
+const SEEDED_TRACE_ID = 'docs-demo-024';
+const SEEDED_TRACE_PATH = `/observability?tab=tracing&trace=${SEEDED_TRACE_ID}`;
+const seededSpanRow = (suffix) =>
+  `[data-testid="waterfall-row"][data-span-id="${SEEDED_TRACE_ID}-${suffix}"]`;
+// The newest seeded trace's prompt, the model call's input message.
+const SEEDED_PROMPT = 'Summarise the incident timeline for the service outage.';
+// The pointer of the `summarise` step's reference into the model call's answer.
+const SEEDED_REFERENCE_POINTER = '/0/parts/0/content';
+
+/** Select the seeded trace's span `suffix` and wait until its detail pane shows every one of `texts`. */
+async function openSeededSpan(page, suffix, ...texts) {
+  await page.locator(seededSpanRow(suffix)).click();
+  for (const text of texts) {
+    await page
+      .getByTestId('span-detail')
+      .getByText(text)
+      .first()
+      .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+  }
+}
+
+/** Choose the span detail's "Resolved" view and wait until it shows `text`. */
+async function showResolved(page, text) {
+  const detail = page.getByTestId('span-detail');
+  await detail.getByRole('radio', { name: 'Resolved' }).click();
+  await detail.getByText(text).first().waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+}
+
+// The pending-saves payload is FORCED through a route override: a save fails only when its
+// apply is refused after the run committed (a re-declare between the two, or a deferred call
+// that fails), and the demo backend runs no flow that defers a call or stages across a
+// re-declare. Two saves on one `notes` subject: the older one failed its records phase, the
+// newer one waits behind it. Each answer is the door's real page shape (decoded by the
+// studio's strict `pendingSavesPage` schema), answered per `status` filter the way the door
+// filters: `failed` lists the failed save, `outstanding` (or none) both. The ages are
+// relative to the capture, so the Age column reads the same on every run.
+const PENDING_SAVES_SUBJECT = {
+  target_kind: 'tool',
+  target_name: 'studio_demo_echo',
+  kind: 'thread',
+  key: 't-002',
+};
+function pendingSavesPage(status) {
+  const ago = (minutes) => new Date(Date.now() - minutes * 60_000).toISOString();
+  const failed = {
+    id: '41',
+    status: 'failed',
+    run_id: '7c2e9a1f-4b6d-4e0a-9f3b-5c8d1e2a7b40',
+    states: ['notes'],
+    subjects: [{ state: 'notes', subject: PENDING_SAVES_SUBJECT }],
+    calls: [{ kind: 'tool', target: 'studio_demo_echo' }],
+    attempts: 1,
+    last_error:
+      "ValueValidationError: state 'notes' subject tool/studio_demo_echo/thread/t-002: record invalid under the state schema at $.items[0].id: 7 is not of type 'string'",
+    failed_phase: 'records',
+    created_at: ago(12),
+    failed_at: ago(12),
+  };
+  const held = {
+    id: '42',
+    status: 'pending',
+    run_id: '0b8d3f6a-2c1e-4a7b-8e9f-0a1b2c3d4e5f',
+    states: ['notes'],
+    subjects: [{ state: 'notes', subject: PENDING_SAVES_SUBJECT }],
+    calls: [],
+    attempts: 0,
+    last_error: null,
+    failed_phase: null,
+    created_at: ago(4),
+    failed_at: null,
+  };
+  const items = status === 'failed' ? [failed] : [held, failed];
+  return { items, next_cursor: null, outstanding: 2, failed: 1 };
+}
+
+// The Records tab's held line reads the `held` entries the subjects page carries. The live
+// page is fetched and answered with the two saves of the pending-saves payload above added:
+// the failed save (held by itself) and the outstanding save held behind it, both on the
+// listed subject `t-002`.
+const HELD_ON_SUBJECTS_PAGE = [
+  { save_id: '41', held_by: '41', subjects: [PENDING_SAVES_SUBJECT] },
+  { save_id: '42', held_by: '41', subjects: [PENDING_SAVES_SUBJECT] },
+];
+
+// The Members People table's "Mixed roles" badge reads a person whose logins hold different
+// roles. The demo's accounts provider holds one login per person, so the live directory is
+// fetched and answered with one forced member row added: two logins, one `viewer` and one
+// `admin`, so the row carries no single role. It reuses a live member row's action keys, so its
+// actions render as every other row's do.
+function withMixedRolesMember(directory) {
+  const template =
+    directory.members.find((row) => row.action_keys.length > 0) ?? directory.members[0];
+  if (template === undefined)
+    throw new Error('members scene: the live directory has no member row');
+  return {
+    ...directory,
+    members: [
+      ...directory.members,
+      {
+        ...template,
+        id: 'demo-mixed-roles',
+        email: 'dorothy.vaughan@demo.tai',
+        role: null,
+        principals: [
+          { user_id: 'usr-demo-login-1', disabled: false, role: 'viewer' },
+          { user_id: 'usr-demo-login-2', disabled: false, role: 'admin' },
+        ],
+        disabled: false,
+      },
+    ],
+  };
+}
+
+// The forced schedules listing the `scheduling-rows` frame renders: one interval, one cron and one
+// row carrying a backend scheduling failure, as typed `ScheduleListRow` rows with fixed values.
+const SCHEDULE_ROWS = [
+  {
+    name: 'hourly-sync',
+    tool: 'studio_demo_echo',
+    cadence: { kind: 'interval', every: 3600, relative: false },
+    enabled: true,
+    next_run_at_ts: null,
+    next_run_at_iso: null,
+    error: null,
+  },
+  {
+    name: 'nightly-refresh',
+    tool: 'studio_demo_echo',
+    cadence: {
+      kind: 'crontab',
+      minute: '0',
+      hour: '2',
+      day_of_month: '*',
+      month_of_year: '*',
+      day_of_week: '*',
+    },
+    enabled: true,
+    next_run_at_ts: null,
+    next_run_at_iso: null,
+    error: null,
+  },
+  {
+    name: 'weekly-digest',
+    tool: 'studio_demo_echo',
+    cadence: {
+      kind: 'crontab',
+      minute: '30',
+      hour: '6',
+      day_of_month: '*',
+      month_of_year: '*',
+      day_of_week: '1',
+    },
+    enabled: true,
+    next_run_at_ts: null,
+    next_run_at_iso: null,
+    error: {
+      message: 'the worker could not re-arm the schedule',
+      at_iso: '2026-01-05T06:30:00+00:00',
+    },
+  },
+];
+
 // The inbound-attachments transcript is FORCED through a route override: the live demo
 // backend mints no byte-backed inbound attachments, so the transcript record, its thread
 // and its served-media bitmap are all stubbed to render the attachment states
@@ -357,6 +594,156 @@ function attachmentPageOf(items, extra = {}) {
     ...extra,
   };
 }
+
+// The look-up answer the `connectors-add-server` frame stubs: a server that signs in at
+// one service and registers apps by itself.
+const ADD_SERVER_LOOKUP = {
+  url: 'https://mcp.example.com/mcp',
+  resource: 'https://mcp.example.com/mcp',
+  resource_name: 'Remote files',
+  issuer: 'https://login.example.com',
+  authorization_servers: ['https://login.example.com'],
+  client_issuer: null,
+  registration_supported: true,
+  automatic_client: true,
+  scopes_supported: ['files.read', 'files.write'],
+  suggested_id: 'remote_files',
+  suggested_display_name: 'Remote files',
+  redirect_uri: null,
+};
+
+/** The stored environment the `settings-env-recycle` scene's tab reads (forced, so the
+ * shot frames rows rather than the demo stack's empty store). */
+const ENV_SAVE_STORED = {
+  env: {
+    LOG_LEVEL: 'info',
+    TAI_BUS_HEARTBEAT_TTL: '7',
+    TAI_TOOL_RUNS_SHUTDOWN_DRAIN_SECONDS: '90',
+  },
+  secret_keys: [],
+};
+
+/** The forced response of an Environment-tab save that rolled a worker recycle (the
+ * `settings-env-recycle` scene): two backend workers recycled onto fresh lives and the
+ * writer's own deferred self-exit. Names only, as the server sends. */
+const ENV_SAVE_RECYCLE_ROLL = {
+  status: 'ok',
+  env_keys: 4,
+  awaiting_respawn: [],
+  fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
+  recycle: {
+    recycle: [
+      {
+        name: 'backend-1',
+        kind: 'backend',
+        status: 'recycled',
+        generation_before: 3,
+        detail: null,
+      },
+      {
+        name: 'backend-2',
+        kind: 'backend',
+        status: 'recycled',
+        generation_before: 1,
+        detail: null,
+      },
+      {
+        name: 'serve-1',
+        kind: 'serve',
+        status: 'self-deferred',
+        generation_before: 2,
+        detail: null,
+      },
+    ],
+    fresh: [
+      { name: 'backend-1', kind: 'backend', generation: 4 },
+      { name: 'backend-2', kind: 'backend', generation: 2 },
+    ],
+    recycle_stopped: null,
+  },
+};
+
+/** The backup document the `backup-restore-recycle-stopped` scene uploads: one `env`
+ * section (names only matter; the forced import response stands in for the restore). */
+const BACKUP_RESTORE_DOCUMENT = {
+  version: 1,
+  created_at: '2026-01-01T00:00:00Z',
+  sections: { env: { TAI_BUS_HEARTBEAT_TTL: '20' } },
+};
+
+/** The forced response of that restore (the docs-demo stack runs bare, where a
+ * recycle-class restore is refused): one backend recycled, the roll stopped at the next,
+ * and the server's verdict naming the workers still awaiting a restart. */
+const BACKUP_RESTORE_STOPPED = {
+  ok: true,
+  sections: {
+    env: {
+      created: 0,
+      updated: 1,
+      skipped: 0,
+      errors: [],
+      details: {},
+      fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
+      recycle: {
+        recycle: [
+          {
+            name: 'backend-1',
+            kind: 'backend',
+            status: 'recycled',
+            generation_before: 3,
+            detail: null,
+          },
+          {
+            name: 'backend-2',
+            kind: 'backend',
+            status: 'timed-out',
+            generation_before: 1,
+            detail: 'its old life was still present after 90s',
+          },
+        ],
+        fresh: [{ name: 'backend-1', kind: 'backend', generation: 4 }],
+        recycle_stopped: {
+          kind: 'backend',
+          name: 'backend-2',
+          detail: 'its old life was still present after 90s',
+        },
+      },
+      awaiting_respawn: [
+        { name: 'backend-2', keys: ['TAI_BUS_HEARTBEAT_TTL'] },
+        { name: 'serve-1', keys: ['TAI_BUS_HEARTBEAT_TTL'] },
+      ],
+    },
+  },
+};
+
+/** The forced response of a profile apply whose recycle roll stopped (the
+ * `profile-apply-recycle-stopped` scene): one backend recycled, the roll stopped at the
+ * next, and the server's verdict naming the workers still awaiting a restart. */
+const PROFILE_APPLY_STOPPED = {
+  hot: ['LOG_LEVEL'],
+  recycle: [
+    { name: 'backend-1', kind: 'backend', status: 'recycled', generation_before: 3, detail: null },
+    {
+      name: 'backend-2',
+      kind: 'backend',
+      status: 'timed-out',
+      generation_before: 1,
+      detail: 'its old life was still present after 90s',
+    },
+  ],
+  fresh: [{ name: 'backend-1', kind: 'backend', generation: 4 }],
+  refused: [],
+  recycle_stopped: {
+    kind: 'backend',
+    name: 'backend-2',
+    detail: 'its old life was still present after 90s',
+  },
+  awaiting_respawn: [
+    { name: 'backend-2', keys: ['TAI_BUS_HEARTBEAT_TTL'] },
+    { name: 'serve-1', keys: ['TAI_BUS_HEARTBEAT_TTL'] },
+  ],
+  fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
+};
 
 const AUTHED_PAGES = [
   // The ExplorerView count summary ("N tools") proves the catalog rendered populated.
@@ -440,6 +827,71 @@ const AUTHED_PAGES = [
     },
   },
   {
+    // The sync run panel's unreadable-answer panel: the run-tool body is forced to a bare
+    // value with no `kind` (a body the live server never answers), so the api-client
+    // refuses it and the panel shows the fixed sentence; Details is opened to show the
+    // first issue. The error card appears only after the action runs the tool, past the
+    // pre-action error guard; the wait below is the panel's own test id.
+    name: 'run-answer-unreadable',
+    path: '/tools?tool=studio_demo_form',
+    wait: 'button:has-text("Run in background")',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/run-tool',
+        (route) => route.fulfill({ json: { data: { greeting: 'Hello, Ada' } } }),
+      );
+    },
+    action: async (page) => {
+      await page.getByLabel('name', { exact: true }).fill('Ada');
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
+      const panel = page.getByTestId('run-answer-unreadable');
+      await panel.waitFor({ state: 'visible', timeout: 8000 });
+      await panel.getByText('Details').click();
+      await panel.scrollIntoViewIfNeeded();
+    },
+  },
+  {
+    // The background card of a parked run whose stored answer is in an older format: the
+    // recent-runs list and the run's record are forced (the live store holds no such
+    // record), the record's `result` a park body without a run-answer `kind`, so the
+    // record read is refused and the card shows the fixed sentence; Details is opened.
+    name: 'run-answer-parked-unreadable',
+    path: '/tools?tool=studio_demo_form',
+    wait: 'button:has-text("Run in background")',
+    setup: async (page) => {
+      const run = {
+        run_id: 'run-parked-older',
+        tool_name: 'studio_demo_form',
+        status: 'parked',
+        started_at: '2026-01-01T09:00:00+00:00',
+        finished_at: '2026-01-01T09:00:02+00:00',
+      };
+      await page.route(
+        (url) => url.pathname === '/api/tool-runs',
+        (route) => route.fulfill({ json: { data: [run] } }),
+      );
+      await page.route(
+        (url) => url.pathname === `/api/tool-runs/${run.run_id}`,
+        (route) =>
+          route.fulfill({
+            json: {
+              data: {
+                ...run,
+                result: { interaction_id: 'ask-1', interaction_ids: ['ask-1'] },
+              },
+            },
+          }),
+      );
+    },
+    action: async (page) => {
+      await page.getByRole('button', { name: /run-parked-older/ }).click();
+      const panel = page.getByTestId('tool-run-answer-unreadable');
+      await panel.waitFor({ state: 'visible', timeout: 8000 });
+      await panel.getByText('Details').click();
+      await panel.scrollIntoViewIfNeeded();
+    },
+  },
+  {
     // The conversation-route CREATE dialog for an AGENT target, framing the door-contract
     // section: the five inline jq fields (Start / Reply / Cancel / Resume / Extras) an
     // asking route carries, plus the execution key. The action opens the dialog, picks an
@@ -504,6 +956,56 @@ const AUTHED_PAGES = [
       await page.getByRole('option').first().click();
     },
   },
+  {
+    // The schedules table with one row of each kind the page renders: an interval, a cron and a
+    // row carrying the backend's last scheduling failure. The listing is FORCED (the demo backend
+    // seeds no schedule and records no failure); the rows are fixed, so the frame is
+    // deterministic. The table's card is framed, leaving out the live server clock.
+    name: 'scheduling-rows',
+    path: '/scheduling',
+    wait: 'text=Every 3600s',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/schedules',
+        (route) =>
+          route.request().method() === 'GET'
+            ? route.fulfill({ json: { data: SCHEDULE_ROWS } })
+            : route.fallback(),
+      );
+    },
+    action: async (page) => {
+      await page
+        .locator('[data-testid="schedule-error-badge"]')
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+    frame: (page) => page.locator('.tai-card:has(table)'),
+  },
+  {
+    // The add-schedule dialog with a four-field cron expression submitted: the cron field shows
+    // its length error and nothing is sent, so no schedule is created.
+    name: 'schedule-cron-error',
+    path: '/scheduling',
+    wait: 'button:has-text("Add schedule")',
+    // The dialog is modal (background nav inert), so the plugin-nav wait is meaningless.
+    awaitPluginNav: false,
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Add schedule' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Add schedule' });
+      await dialog.getByLabel('Name').fill('nightly-refresh');
+      await dialog.getByRole('combobox', { name: 'Tool' }).click();
+      await page.getByRole('option', { name: 'studio_demo_echo' }).click();
+      await dialog.getByLabel('Cron expression').fill('0 2 * *');
+      await dialog.getByRole('button', { name: 'Create schedule' }).click();
+      const cronError = dialog.getByText(
+        'Use 5 fields (minute hour day-of-month month day-of-week)',
+        { exact: false },
+      );
+      await cronError.waitFor({ state: 'visible', timeout: 8000 });
+      // The submit leaves the dialog scrolled to its footer; bring the cron field and its error
+      // back to the middle of the dialog, where the operator reads them.
+      await cronError.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    },
+  },
   { name: 'extensions', path: '/extensions', wait: 'text=ask_external' },
   { name: 'settings', path: '/settings', wait: 'text=LoggingSettings' },
   {
@@ -523,6 +1025,128 @@ const AUTHED_PAGES = [
         .locator('[data-testid="profile-row-production"]')
         .waitFor({ state: 'visible', timeout: 8000 });
     },
+  },
+  {
+    // The profile apply report for a recycle roll that stopped: the shared recycle rows
+    // (one recycled backend, the backend the roll stopped at with its reason), the stop
+    // panel, and the server's verdict — the workers still awaiting a restart — in the fleet
+    // report's restart panel. The diff is the live seeded `production` profile's; the apply's
+    // response is the forced payload below (the docs-demo stack runs bare, where a
+    // recycle-class apply is refused). The dialog is captured whole.
+    name: 'profile-apply-recycle-stopped',
+    path: '/settings',
+    wait: 'text=LoggingSettings',
+    // The open dialog is modal, so the sidebar behind it leaves the accessibility tree.
+    awaitPluginNav: false,
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/config/profiles/production/apply',
+        (route) => route.fulfill({ json: { data: PROFILE_APPLY_STOPPED } }),
+      );
+    },
+    action: async (page) => {
+      await page.getByRole('tab', { name: 'Profiles' }).click();
+      await page.getByRole('button', { name: 'Apply profile production' }).click();
+      const apply = page.getByRole('button', { name: 'Apply profile', exact: true });
+      await apply.waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+      await page
+        .locator('button:enabled', { hasText: /^Apply profile$/ })
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+      await apply.click();
+      await page
+        .locator('[data-testid="recycle-stopped"]')
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+    },
+    frame: (page) => page.getByRole('dialog'),
+  },
+  {
+    // The API keys tab's "Access control" card: the scopes mapper with its scope zones,
+    // the Unassigned bucket (every unmapped route the server lists) and the Public zone
+    // with its note. The card is far taller than the viewport, so `frame` captures the
+    // whole card rather than a viewport slice. The action waits on the Public zone's
+    // note, the last thing the card renders once its three reads have settled.
+    // Deterministic: every zone comes from the boot's route table and seeded mappings,
+    // so NO `nondeterministic` flag.
+    name: 'settings-access',
+    path: '/settings',
+    wait: 'text=LoggingSettings',
+    action: async (page) => {
+      await page.getByRole('tab', { name: 'API keys' }).click();
+      await page
+        .getByText('Public routes are served without API-key authentication')
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+    },
+    frame: (page) =>
+      page
+        .locator('.tai-card')
+        .filter({ has: page.getByRole('heading', { name: 'Access control', level: 3 }) }),
+  },
+  {
+    // The Environment tab after a save that rolled a worker recycle: the shared recycle
+    // rows (a recycled backend joined onto its fresh life, the writer's own self-deferred
+    // line). The docs-demo stack runs bare, where a recycle-class save is refused, so the
+    // save's response is the forced roll payload below, and the stored env the tab reads is
+    // forced too (the demo store is empty). The action opens the tab, saves,
+    // and waits for the "Worker recycle" region; the Environment variables card is
+    // captured whole. Deterministic — the rows come entirely from the forced payload.
+    name: 'settings-env-recycle',
+    path: '/settings',
+    wait: 'text=LoggingSettings',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/config/env',
+        async (route) => {
+          if (route.request().method() !== 'POST') {
+            await route.fulfill({ json: { data: ENV_SAVE_STORED } });
+            return;
+          }
+          await route.fulfill({ json: { data: ENV_SAVE_RECYCLE_ROLL } });
+        },
+      );
+    },
+    action: async (page) => {
+      await page.getByRole('tab', { name: 'Environment' }).click();
+      await page.getByRole('button', { name: 'Save' }).click();
+      await page
+        .getByRole('region', { name: 'Worker recycle' })
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+    },
+    frame: (page) =>
+      page
+        .locator('.tai-card')
+        .filter({ has: page.getByRole('heading', { name: 'Environment variables', level: 3 }) }),
+  },
+  {
+    // The Backup tab's import report after an env-section restore whose recycle roll
+    // stopped: the section row, the restart list the server's verdict names, and the
+    // recycle rows with the stop panel. The import response is the forced payload above
+    // (the docs-demo stack runs bare, where a recycle-class restore is refused); the
+    // uploaded document is the synthetic one beside it. The Import card is captured whole.
+    name: 'backup-restore-recycle-stopped',
+    path: '/settings',
+    wait: 'text=LoggingSettings',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/backup/import',
+        (route) => route.fulfill({ json: { data: BACKUP_RESTORE_STOPPED } }),
+      );
+    },
+    action: async (page) => {
+      await page.getByRole('tab', { name: 'Backup' }).click();
+      await page.getByLabel('Backup file').setInputFiles({
+        name: 'backup.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify(BACKUP_RESTORE_DOCUMENT)),
+      });
+      await page.getByRole('button', { name: 'Import selected' }).click();
+      await page
+        .locator('[data-testid="recycle-stopped"]')
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+    },
+    frame: (page) =>
+      page
+        .locator('.tai-card')
+        .filter({ has: page.getByRole('heading', { name: 'Import', level: 3 }) }),
   },
   // The registered demo agent renders one row per agent (`data-testid`).
   { name: 'agents', path: '/agents', wait: '[data-testid="agent-row"]' },
@@ -572,12 +1196,14 @@ const AUTHED_PAGES = [
     },
   },
   // --- States screens (the platform state store) -------------------------------
-  // The six frames the docs "## States" section shows, all under the seeded `notes`
+  // The nine frames the docs "## States" section shows, all under the seeded `notes`
   // state (the `docs-screenshots.sh` state-store seeding declares it, attaches a template, writes two subject
-  // records and registers a consumer hook). Each waits on a stable, populated element —
-  // a table row, a tab's populated control, or the record page's own document/audit —
-  // never a bare timeout. The content is deterministic (no server timestamp is in
-  // frame), so NONE carry the `nondeterministic` flag.
+  // records and registers a consumer hook, and uploads the typed `display` template; the pending saves
+  // and the held saves are forced payloads).
+  // Each waits on a stable, populated element — a table row, a tab's populated control, or the record
+  // page's own document/audit — never a bare timeout. The pending saves' ages are relative to the
+  // capture. Both Records frames show the subjects' Updated timestamps, written by the seed at boot;
+  // the held-line frame carries the `nondeterministic` flag.
   {
     // The states master list: the declared `notes` row with its subject-kind badges and
     // record/consumer counts.
@@ -599,6 +1225,20 @@ const AUTHED_PAGES = [
     name: 'states-templates',
     path: '/states?state=notes&tab=templates',
     wait: 'text=preferences',
+  },
+  {
+    // The state-template screen of the seeded unattached `display` template, whose typed
+    // sections all render: the fields, Write policies, Parameters and the Trace writes line.
+    // Waits on the Parameters heading and the trace line; the template card is captured whole.
+    name: 'state-template-typed',
+    path: '/states?template=display',
+    wait: '[data-testid="template-trace"]',
+    action: async (page) => {
+      await page
+        .getByRole('heading', { name: 'Parameters', level: 3 })
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+    frame: (page) => page.locator('[data-testid="state-template-detail"]'),
   },
   {
     // The Records tab: the subject lookup form above the state's subjects. The subjects
@@ -629,6 +1269,64 @@ const AUTHED_PAGES = [
         .first()
         .waitFor({ state: 'visible', timeout: 8000 });
     },
+  },
+  {
+    // The Pending saves card with a failed save and the outstanding save held behind it,
+    // from the forced pending-saves payload above (the live `notes` list stays beneath it).
+    // The card opens on its Failed tab; the action switches to All outstanding so both rows
+    // are framed, and waits for the newer save's row. The card is captured whole.
+    name: 'states-pending-saves',
+    path: '/states',
+    wait: '[data-testid="pending-saves-summary"]',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/state-pending-saves',
+        (route) =>
+          route.fulfill({
+            json: {
+              data: pendingSavesPage(new URL(route.request().url()).searchParams.get('status')),
+            },
+          }),
+      );
+    },
+    action: async (page) => {
+      await page.getByRole('tab', { name: 'All outstanding' }).click();
+      await page
+        .locator('#state-pending-saves')
+        .getByRole('cell', { name: '42', exact: true })
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+    frame: (page) => page.locator('#state-pending-saves'),
+  },
+  {
+    // The Records tab with the held line above the subjects table, from the live subjects page
+    // with the forced `held` entries above. Waits on the line, which renders only for a held
+    // subject, then on the listed subject it names. The Subjects card is captured whole, so the
+    // line and the table it glosses are framed together.
+    name: 'states-records-held',
+    path: '/states?state=notes&tab=records',
+    nondeterministic: true,
+    wait: '[data-testid="held-subjects-line"]',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/states/notes/subjects',
+        async (route) => {
+          const response = await route.fetch();
+          const body = await response.json();
+          await route.fulfill({
+            response,
+            json: { ...body, data: { ...body.data, held: HELD_ON_SUBJECTS_PAGE } },
+          });
+        },
+      );
+    },
+    action: async (page) => {
+      await page.getByText('t-002').first().waitFor({ state: 'visible', timeout: 8000 });
+    },
+    frame: (page) =>
+      page
+        .locator('.tai-card')
+        .filter({ has: page.getByRole('heading', { name: 'Subjects', level: 3 }) }),
   },
   {
     name: 'dashboard',
@@ -664,6 +1362,75 @@ const AUTHED_PAGES = [
       await page
         .getByText('Per-model breakdown is unavailable for this range.')
         .evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    },
+  },
+  {
+    name: 'tracing-sort-guard',
+    path: '/observability?tab=tracing&sort=cost&dir=desc',
+    // A seeded run row: the runs list is the live demo backend's, under the live cost sort.
+    wait: '[data-testid^="run-row-docs-demo-"]',
+    // Force the served capabilities to a declaration the live demo backend never makes
+    // (the Langfuse reader's real one), so the filters a cost sort cannot carry render
+    // disabled. Matched on the pathname, registered before navigation.
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/observability/capabilities',
+        (route) => route.fulfill({ json: { data: LANGFUSE_CAPABILITIES } }),
+      );
+    },
+    // The guard is the shot: refuse to capture unless the excluded filters are disabled.
+    action: async (page) => {
+      for (const label of ['Min cost', 'Max latency (ms)']) {
+        await page
+          .getByLabel(label)
+          .and(page.locator(':disabled'))
+          .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT })
+          .catch((error) => {
+            throw new Error(
+              `tracing-sort-guard: the "${label}" filter is not disabled under the cost sort — refusing to ship a wrong screenshot`,
+              { cause: error },
+            );
+          });
+      }
+    },
+  },
+  {
+    name: 'trace-llm-parts',
+    path: SEEDED_TRACE_PATH,
+    wait: seededSpanRow('gen'),
+    action: async (page) => {
+      await openSeededSpan(page, 'gen', SEEDED_PROMPT, 'finish: stop');
+    },
+  },
+  {
+    name: 'trace-references-recorded',
+    path: SEEDED_TRACE_PATH,
+    wait: seededSpanRow('summarise'),
+    action: async (page) => {
+      await openSeededSpan(
+        page,
+        'summarise',
+        'Recorded with 1 reference to other steps.',
+        SEEDED_REFERENCE_POINTER,
+      );
+    },
+  },
+  {
+    name: 'trace-references-resolved',
+    path: SEEDED_TRACE_PATH,
+    wait: seededSpanRow('summarise'),
+    action: async (page) => {
+      await openSeededSpan(page, 'summarise', 'Recorded with 1 reference to other steps.');
+      await showResolved(page, 'Full value assembled from 1 reference.');
+    },
+  },
+  {
+    name: 'trace-reference-missing',
+    path: SEEDED_TRACE_PATH,
+    wait: seededSpanRow('follow-up'),
+    action: async (page) => {
+      await openSeededSpan(page, 'follow-up', 'Recorded with 1 reference to other steps.');
+      await showResolved(page, 'A referenced value is missing from the monitoring backend');
     },
   },
   // A non-empty `user_tools` renders the manifest JSON tree with that key.
@@ -722,12 +1489,29 @@ const AUTHED_PAGES = [
     // the Pending invitations table, each row's actions joined from the declared
     // `GET /api/auth/member-actions` catalog. The runner seeds a realistic membership (an
     // admin owner + an active editor and viewer + a pending invite) before capture, so both
-    // tables are populated. Waits on the seeded owner's People row, and the action requires
-    // the seeded pending invite row so both sections are framed populated.
+    // tables are populated; the forced row above adds a person whose logins hold different
+    // roles. Waits on the seeded owner's People row, and the action requires the seeded
+    // pending invite row and the forced row's "Mixed roles" badge so every state is framed.
     name: 'members',
     path: '/members',
     wait: 'text=ada.lovelace@demo.tai',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/auth/members',
+        async (route) => {
+          const response = await route.fetch();
+          const body = await response.json();
+          await route.fulfill({
+            response,
+            json: { ...body, data: withMixedRolesMember(body.data) },
+          });
+        },
+      );
+    },
     action: async (page) => {
+      await page
+        .locator('[data-testid="mixed-roles-badge"]')
+        .waitFor({ state: 'visible', timeout: 8000 });
       await page
         .locator('[data-testid="invite-row"]')
         .first()
@@ -830,6 +1614,36 @@ const AUTHED_PAGES = [
         .waitFor({ state: 'visible', timeout: 8000 });
       await dialog
         .getByText('I accept these routes are served without authentication')
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
+  {
+    // The Connectors page with the "Add MCP server" dialog at its review step: where the
+    // server signs in, its app registration, and the prefilled name, identifier and scopes.
+    // The single look-up call is answered by a route stub — the docs-demo backend has no
+    // OAuth-protected server to look up — and nothing is added, so the frame is
+    // deterministic. Modal (background nav inert), so the plugin-nav wait is skipped.
+    name: 'connectors-add-server',
+    path: '/connectors',
+    wait: 'button:has-text("Add MCP server")',
+    awaitPluginNav: false,
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/connectors/providers/discover',
+        (route) => route.fulfill({ json: { data: ADD_SERVER_LOOKUP } }),
+      );
+    },
+    action: async (page) => {
+      await page
+        .getByRole('region', { name: 'Providers' })
+        .getByRole('button', { name: 'Add MCP server' })
+        .first()
+        .click();
+      const dialog = page.getByRole('dialog', { name: 'Add MCP server' });
+      await dialog.getByLabel('Server address').fill(ADD_SERVER_LOOKUP.url);
+      await dialog.getByRole('button', { name: 'Look up' }).click();
+      await dialog
+        .getByRole('button', { name: 'Add server' })
         .waitFor({ state: 'visible', timeout: 8000 });
     },
   },
@@ -1007,6 +1821,14 @@ const AUTHED_PAGES = [
       // key dialog's QR, not the create form.
       await page.getByLabel('User ID').fill(`svc-demo-${Date.now()}`);
       await page.getByLabel('Description').fill('Demo service key');
+      // Grant the boot's one route-mapped scope (`studio`). A key with no scope and no
+      // condition is no policy at all, so the claim-link door refuses it as "not a valid
+      // API key"; the minted key must carry a real grant for the QR step to render.
+      await page
+        .getByRole('dialog', { name: 'Create API key' })
+        .getByRole('group', { name: 'Scopes' })
+        .getByRole('checkbox', { name: 'studio', exact: true })
+        .click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       await page.getByRole('button', { name: 'Create claim link (QR)' }).click();
       await page
@@ -1243,7 +2065,10 @@ async function shoot(page, entry, theme, { awaitPluginNav }) {
   // rather than clipped at the pane's fitView min-zoom (see frameCanvasContent).
   if (entry.canvas) await frameCanvasContent(page);
   const file = `${OUT_DIR}/${entry.name}-${theme}.png`;
-  await page.screenshot({ path: file, fullPage: false });
+  // `frame`, when present, names the one element the shot captures whole (it may run
+  // past the viewport); otherwise the shot is the fixed viewport.
+  if (entry.frame) await entry.frame(page).screenshot({ path: file });
+  else await page.screenshot({ path: file, fullPage: false });
   console.log(`  ✓ ${file}`);
 }
 

@@ -4,7 +4,8 @@
 #
 #   1. a throwaway loopback Redis (docker compose)
 #   2. the built Studio SPA and the reference plugin's front-end bundle
-#   3. the reference Studio plugin, installed into the tai42-skeleton env
+#   3. the reference Studio plugin and the seeded docs-demo monitoring backend,
+#      installed into the tai42-skeleton env
 #   4. a tai42-skeleton with ACCESS CONTROL ON, the two-tier route mappings, the
 #      setup-token door, studio_dist_path pointing at the SPA dist, and — when
 #      STUDIO_SEED_AUTH=1 (the default) — a seeded owner principal plus its
@@ -48,7 +49,7 @@
 #   EXTRA_PLUGINS    space-separated uv-pip install specs installed into the
 #                    skeleton venv IN ADDITION to the reference plugin (paths must
 #                    not contain spaces); the docs-screenshot runner uses it to add
-#                    the agents/storage/toolbox/monitoring plugins
+#                    the agents/storage/toolbox/accounts plugins
 set -euo pipefail
 
 # --- Paths ------------------------------------------------------------------
@@ -149,6 +150,14 @@ fi
 log "installing reference-plugin into the skeleton env"
 uv pip install --python "${VENV_PY}" --quiet "${E2E_DIR}/reference-plugin"
 
+# The seeded neutral monitoring backend both manifests name (`monitoring_module:
+# docs_demo_monitoring`): a real MonitoringWriter/MonitoringReader over an in-memory
+# store seeded at build. The observability suite's live legs read its served
+# capabilities, its seeded runs, and its recorded references through the real resolved
+# route; the docs-screenshot runner shoots the same data.
+log "installing the docs-demo monitoring backend into the skeleton env"
+uv pip install --python "${VENV_PY}" --quiet "${E2E_DIR}/docs-demo/monitoring-plugin"
+
 # The GitHub webhook-verifier plugin; its import registers a "github" verifier on the
 # app's `webhook_verifiers` facet. Import-only, no env config.
 WEBHOOK_VERIFIER_DIR="${MONOREPO_DIR}/plugins/webhook-verifier-github"
@@ -174,7 +183,7 @@ fi
 
 # Extra plugin packages installed into the skeleton venv (space-separated uv-pip
 # install specs; paths must not contain spaces). The docs-screenshot runner uses
-# this to add the agents/storage/toolbox/monitoring plugins the docs-demo manifest
+# this to add the agents/storage/toolbox/accounts plugins the docs-demo manifest
 # loads. Unset for the lean e2e boot (no extra installs). `set -f` disables
 # pathname expansion for the split so a pip extras spec like
 # `/abs/plugins/toolbox[prometheus]` is passed literally (the `[...]` is a glob
@@ -238,7 +247,7 @@ PY
 # resource the wildcard key is authorized for. These are deployment wiring, not
 # identity, so they are seeded whether or not the owner + key are.
 log "seeding the route mappings (Postgres)"
-pg_exec -c "INSERT INTO access_control_routes (url, scope_id) VALUES ('studio_authed','studio'),('public_spa','public'),('public_assets','public') ON CONFLICT (url) DO UPDATE SET scope_id = EXCLUDED.scope_id;" >/dev/null
+pg_exec -c "INSERT INTO access_control_routes (url, scope_id) VALUES ('/studio_authed','studio'),('/public_spa','public'),('/public_assets','public') ON CONFLICT (url) DO UPDATE SET scope_id = EXCLUDED.scope_id;" >/dev/null
 
 # Seeded identity — the owner principal + its key, written directly to the stores in
 # EXACTLY the shape POST /api/setup and the mint produce, because Playwright needs a
@@ -289,7 +298,7 @@ fi
 # verifier's declared-public tier publics them from the route registration — the
 # studio_authed catch-all may cover them; the declared-public tier short-circuits
 # above the route table, so no template/row is needed here.
-export ACCESS_CONTROL_PATH_PATTERNS='{"/api/(?!plugins/[^/]+/studio/).*":"studio_authed","/(?!api(?:/|$)).*":"public_spa","/api/plugins/[^/]+/studio/.*":"public_assets"}'
+export ACCESS_CONTROL_PATH_PATTERNS='{"/api/(?!plugins/[^/]+/studio/).*":"/studio_authed","/(?!api(?:/|$)).*":"/public_spa","/api/plugins/[^/]+/studio/.*":"/public_assets"}'
 
 # --- 5. Skeleton env + launch -----------------------------------------------
 export ACCESS_CONTROL_ENABLE=true

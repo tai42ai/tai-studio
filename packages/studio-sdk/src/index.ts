@@ -41,6 +41,7 @@ import './components/components.css';
 
 // -- Plugin API --------------------------------------------------------------
 export type {
+  ChannelConversationRoute,
   NavEntryContribution,
   NavEntrySection,
   PageContribution,
@@ -51,8 +52,11 @@ export type {
   PluginPageProps,
   RegisteredNavEntry,
   RegisteredPage,
+  RegisteredRoutePanel,
   RegisteredSettingsTab,
   RequiredCapabilities,
+  RoutePanelContribution,
+  RoutePanelProps,
   SettingsTabContribution,
   SettingsTabProps,
   ToolPanelContribution,
@@ -60,6 +64,8 @@ export type {
 } from './plugin/types';
 export type { VersionGateResult } from './plugin/version';
 export { checkPluginApiVersion, STUDIO_PLUGIN_API_VERSION } from './plugin/version';
+/** What `useApi().runTool` resolves with: the run-tool door's answer, read by its `kind`. */
+export type { RunAnswer } from '@tai42/api-client';
 
 // -- Hooks -------------------------------------------------------------------
 export type { ApiClient } from './hooks/useApi';
@@ -133,6 +139,8 @@ export {
 
 // -- Utilities ---------------------------------------------------------------
 export { downloadBlob } from './download';
+export type { EnvRef } from './env-markers';
+export { collectEnvRefs, ENV_MARKER_PREFIX, formatEnvMarker, parseEnvMarker } from './env-markers';
 export { errorMessage } from './errors';
 
 // -- Disabled-feature idiom (one helper + component, every consumer) ----------
@@ -292,11 +300,18 @@ export type { HeadingLevel, MarkdownBlock, MarkdownProps } from './components/ma
 export { Markdown, parseMarkdown } from './components/markdown';
 export type { OpenTargetOptions, OpenTargetProps } from './components/open-target';
 export { openTargetProps } from './components/open-target';
-export type { MediaImageProps } from './components/served-media';
+export type {
+  MediaDocumentProps,
+  MediaImageProps,
+  MediaPlayerProps,
+  ServedMediaGrammar,
+} from './components/served-media';
 export {
   isRenderableMediaSrc,
   isServedMediaUrl,
+  MediaDocument,
   MediaImage,
+  MediaPlayer,
   resolveMediaSrc,
 } from './components/served-media';
 // The URL half of the link-safety pair: `isSafeHttpUrl` answers yes/no, this one
@@ -313,7 +328,6 @@ export {
   groupByKind,
   groupIntoFamilies,
   kindVariant,
-  NON_STACKABLE_KIND,
 } from './components/extension-grouping';
 export type { ExtensionPickerProps } from './components/extension-picker';
 export { ExtensionPicker } from './components/extension-picker';

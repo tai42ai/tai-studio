@@ -5,7 +5,7 @@
 import { Field, NumberInput, RadioGroup, TextInput } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
-import { MODE_OPTIONS, type ScheduleMode } from './schedule-form';
+import { CRON_FIELDS_MESSAGE, MODE_OPTIONS, type ScheduleMode } from './schedule-form';
 
 export function ScheduleSpecFields({
   mode,
@@ -17,6 +17,7 @@ export function ScheduleSpecFields({
   submitted,
   intervalInvalid,
   cronMissing,
+  cronInvalid,
 }: {
   readonly mode: ScheduleMode;
   readonly setMode: (mode: ScheduleMode) => void;
@@ -27,6 +28,7 @@ export function ScheduleSpecFields({
   readonly submitted: boolean;
   readonly intervalInvalid: boolean;
   readonly cronMissing: boolean;
+  readonly cronInvalid: boolean;
 }): ReactNode {
   return (
     <>
@@ -59,7 +61,13 @@ export function ScheduleSpecFields({
         <Field
           label="Cron expression"
           description="A cron expression, e.g. 0 2 * * * (min hour day-of-month month day-of-week)."
-          error={submitted && cronMissing ? 'A cron expression is required.' : undefined}
+          error={
+            submitted && cronMissing
+              ? 'A cron expression is required.'
+              : submitted && cronInvalid
+                ? CRON_FIELDS_MESSAGE
+                : undefined
+          }
         >
           <TextInput
             value={cron}

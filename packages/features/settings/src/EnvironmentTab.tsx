@@ -2,22 +2,26 @@
  * The Environment tab (raw view — the escape hatch): editable key/value rows
  * over the deployment's environment map (`GET /api/config/env` →
  * `{ env, secret_keys }`). Rows can be added, edited, and removed (no blank or
- * duplicate keys); Save posts the assembled map through `setEnvConfig`.
+ * duplicate keys); Save posts the assembled map and marks through `setEnvConfig`.
  *
  * Secret marking: keys OWNED by a registered settings class show their
  * class-derived secret state READ-ONLY (no toggle — the owning class decides).
  * Keys owned by NO settings class get a per-row secret toggle that updates the
- * `TAI_ENV_SECRET_KEYS` marks; the marks ride out in the same Save as a
- * comma-joined value. Any row whose key is effectively secret renders MASKED
+ * operator's secret marks; the marks ride out in the same Save as its
+ * `secret_keys` list. Any row whose key is effectively secret renders MASKED
  * through `RevealInput` (reveal-on-click; display masking only, never logged).
  *
  * The `TAI_ENV_SECRET_KEYS` variable itself is managed through the toggles, not
  * as a raw row, so it is hidden from the row list to avoid a duplicate editor.
  *
+ * After a Save, the fleet report surfaces any failed propagation, and a change to a
+ * recycle-class setting shows the worker recycle it rolled (the shared recycle rows; a
+ * stopped roll says where and why).
+ *
  * State follows the shared convention: <Spinner> while loading, <ErrorState>
  * (loud) on any failure. Read-only config mode disables every control.
  */
-import { summarizeFleetFanout } from '@tai42/api-client';
+import { type RecycleRoll, summarizeFleetFanout } from '@tai42/api-client';
 import {
   Button,
   Card,
@@ -30,10 +34,11 @@ import {
   useRegisterDirty,
 } from '@tai42/studio-sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type CSSProperties, type ReactNode, useState } from 'react';
+import { type CSSProperties, type ReactNode, useId, useState } from 'react';
 
 import { type EnvVarRow, EnvVarRows, useEnvVarRows } from './env-var-rows';
 import { envConfigKey, settingsSchemaKey } from './keys';
+import { RecycleRollSection } from './RecycleRollSection';
 import { ownedSecretMap, SECRET_MARKS_ENV_VAR } from './settings-secrets';
 
 const headerStyle: CSSProperties = {
@@ -84,21 +89,26 @@ const pendingStyle: CSSProperties = {
 };
 
 /**
- * The env map a Save posts. `POST /api/config/env` MERGES: an omitted key is
+ * The body a Save posts. `POST /api/config/env` MERGES `env`: an omitted key is
  * preserved and a key is deleted only when posted with value ''. So a key the
  * operator removed (loaded from the server env but no longer a row) is posted as
  * '' or the merge writes it straight back — a silent no-op on the Remove button. A
- * rename lands here too (old key deleted, new key a fresh row). The marks var is
- * managed via toggles, so it is excluded from the rows and set explicitly: it holds
+ * rename lands here too (old key deleted, new key a fresh row). The marks are
+ * managed via toggles and REPLACE the stored set through `secret_keys`: they hold
  * ONLY keys still present as a row and NOT owned by a settings class (an owned key's
  * secret state is class-derived, never mirrored here).
  */
+interface EnvSave {
+  readonly env: Record<string, string>;
+  readonly secret_keys: string[];
+}
+
 function assembleEnvSave(input: {
   readonly rows: readonly EnvVarRow[];
   readonly initialEnv: Record<string, string>;
   readonly secretKeys: ReadonlySet<string>;
   readonly isOwned: (key: string) => boolean;
-}): Record<string, string> {
+}): EnvSave {
   const { rows, initialEnv, secretKeys, isOwned } = input;
   const env: Record<string, string> = {};
   for (const row of rows) env[row.key] = row.value;
@@ -107,8 +117,41 @@ function assembleEnvSave(input: {
     if (key !== SECRET_MARKS_ENV_VAR && !presentKeys.has(key)) env[key] = '';
   }
   const marks = [...secretKeys].filter((key) => presentKeys.has(key) && !isOwned(key)).sort();
-  env[SECRET_MARKS_ENV_VAR] = marks.join(',');
-  return env;
+  return { env, secret_keys: marks };
+}
+
+const sectionTitleStyle: CSSProperties = {
+  margin: '0 0 var(--tai-space-2)',
+  fontSize: 'var(--tai-text-md)',
+  color: 'var(--tai-color-text)',
+};
+
+const sectionIntroStyle: CSSProperties = {
+  margin: '0 0 var(--tai-space-3)',
+  color: 'var(--tai-color-text-muted)',
+  fontSize: 'var(--tai-text-sm)',
+};
+
+/** The roll a save of a recycle-class key ran: why the workers recycled, then the rows. */
+function SaveRecycleReport({ roll }: { readonly roll: RecycleRoll }): ReactNode {
+  const headingId = useId();
+  return (
+    <section aria-labelledby={headingId} style={{ marginTop: 'var(--tai-space-4)' }}>
+      <h4 id={headingId} style={sectionTitleStyle}>
+        Worker recycle
+      </h4>
+      <p style={sectionIntroStyle}>
+        Some changed settings take effect only in a fresh worker process, so the fleet recycled its
+        workers one at a time.
+      </p>
+      <RecycleRollSection
+        recycle={roll.recycle}
+        fresh={roll.fresh}
+        stopped={roll.recycle_stopped}
+        writerNote="this worker recycles itself after replying"
+      />
+    </section>
+  );
 }
 
 /** The Save button and its fleet-reload pending line — hidden in read-only mode. */
@@ -172,7 +215,7 @@ function EnvironmentEditor({
   }
 
   const mutation = useMutation({
-    mutationFn: (env: Record<string, string>) => api.setEnvConfig(env),
+    mutationFn: (body: EnvSave) => api.setEnvConfig(body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: envConfigKey });
     },
@@ -262,10 +305,17 @@ function EnvironmentEditor({
       ) : null}
 
       {/* A saved env broadcasts a reload to the fleet; surface any failed propagation
-          honestly (nothing on a converged / lone-worker save). */}
+          honestly (nothing on a converged / lone-worker save), the workers the server names
+          as still awaiting a respawn after the save, and the worker recycle a
+          recycle-class change rolled. */}
       {mutation.isSuccess ? (
         <div style={{ marginTop: 'var(--tai-space-4)' }}>
-          <FleetReport summary={summarizeFleetFanout(mutation.data.fanout)} />
+          <FleetReport
+            summary={summarizeFleetFanout(mutation.data.fanout, mutation.data.awaiting_respawn)}
+          />
+          {mutation.data.recycle !== null ? (
+            <SaveRecycleReport roll={mutation.data.recycle} />
+          ) : null}
         </div>
       ) : null}
 

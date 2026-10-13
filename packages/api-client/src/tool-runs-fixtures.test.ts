@@ -59,6 +59,6 @@ describe('tool-runs authored fixtures', () => {
 
   it('the run record redacts its result (no live tool output committed)', () => {
     const record = toolRunRecord.parse(readFixture('redacted/tool-run.json').json);
-    expect(record.result).toBe('***');
+    expect(record.status === 'succeeded' && record.result).toBe('***');
   });
 });

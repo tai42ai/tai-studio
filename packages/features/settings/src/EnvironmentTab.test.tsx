@@ -52,7 +52,9 @@ function saved(): ReturnType<ApiClient['setEnvConfig']> {
   return Promise.resolve({
     status: 'reloaded',
     env_keys: 1,
+    awaiting_respawn: [],
     fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
+    recycle: null,
   });
 }
 
@@ -61,6 +63,7 @@ function degradedSave(): ReturnType<ApiClient['setEnvConfig']> {
   return Promise.resolve({
     status: 'reloaded',
     env_keys: 1,
+    awaiting_respawn: [],
     fanout: {
       mode: 'fleet',
       op: 'set_env',
@@ -69,6 +72,7 @@ function degradedSave(): ReturnType<ApiClient['setEnvConfig']> {
       results: [{ name: 'worker-2', outcome: 'missing', payload: null, error: null, detail: null }],
       error: null,
     },
+    recycle: null,
   });
 }
 
@@ -142,7 +146,7 @@ describe('EnvironmentTab', () => {
 
     await waitFor(() => {
       expect(setEnvConfig).toHaveBeenCalledWith(
-        expect.objectContaining({ TAI_ENV_SECRET_KEYS: 'FOO,OPENAI_API_KEY' }),
+        expect.objectContaining({ secret_keys: ['FOO', 'OPENAI_API_KEY'] }),
       );
     });
   });
@@ -173,9 +177,7 @@ describe('EnvironmentTab', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
-      expect(setEnvConfig).toHaveBeenCalledWith(
-        expect.objectContaining({ TAI_ENV_SECRET_KEYS: '' }),
-      );
+      expect(setEnvConfig).toHaveBeenCalledWith(expect.objectContaining({ secret_keys: [] }));
     });
   });
 
@@ -212,7 +214,7 @@ describe('EnvironmentTab', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
-      expect(setEnvConfig).toHaveBeenCalledWith(expect.objectContaining({ A: '1', B: '' }));
+      expect(setEnvConfig).toHaveBeenCalledWith({ env: { A: '1', B: '' }, secret_keys: [] });
     });
   });
 
@@ -232,7 +234,7 @@ describe('EnvironmentTab', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
-      expect(setEnvConfig).toHaveBeenCalledWith(expect.objectContaining({ A: '', A2: '1' }));
+      expect(setEnvConfig).toHaveBeenCalledWith({ env: { A: '', A2: '1' }, secret_keys: [] });
     });
   });
 
@@ -302,5 +304,138 @@ describe('EnvironmentTab', () => {
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add variable' })).not.toBeInTheDocument();
     expect(setEnvConfig).not.toHaveBeenCalled();
+  });
+});
+
+/** A save that rolled a worker recycle; every worker's reload row states the fact that its env moved. */
+function rolledSave(stopped: boolean): ReturnType<ApiClient['setEnvConfig']> {
+  const awaiting = { status: 'ok', env_keys: 1, awaiting_respawn: ['BACKEND_MANIFEST_KEY'] };
+  return Promise.resolve({
+    status: 'ok',
+    env_keys: 1,
+    // The operation's verdict: a converged roll leaves nobody waiting; a stopped one leaves
+    // the workers it did not recycle (here every worker, the writer included).
+    awaiting_respawn: stopped
+      ? [
+          { name: 'backend-1', keys: ['BACKEND_MANIFEST_KEY'] },
+          { name: 'backend-2', keys: ['BACKEND_MANIFEST_KEY'] },
+          { name: 'serve-1', keys: ['BACKEND_MANIFEST_KEY'] },
+        ]
+      : [],
+    fanout: {
+      mode: 'fleet',
+      op: 'reload_config',
+      reachable: true,
+      local_only: false,
+      results: [
+        { name: 'serve-1', outcome: 'applied', payload: awaiting, error: null, detail: null },
+        { name: 'backend-1', outcome: 'applied', payload: awaiting, error: null, detail: null },
+        { name: 'backend-2', outcome: 'applied', payload: awaiting, error: null, detail: null },
+      ],
+      error: null,
+    },
+    recycle: stopped
+      ? {
+          recycle: [
+            {
+              name: 'backend-1',
+              kind: 'backend',
+              status: 'timed-out',
+              generation_before: 3,
+              detail: 'its old life was still present after 90s',
+            },
+          ],
+          fresh: [],
+          recycle_stopped: {
+            kind: 'backend',
+            name: 'backend-1',
+            detail: 'its old life was still present after 90s',
+          },
+        }
+      : {
+          recycle: [
+            {
+              name: 'backend-1',
+              kind: 'backend',
+              status: 'recycled',
+              generation_before: 3,
+              detail: null,
+            },
+            {
+              name: 'backend-2',
+              kind: 'backend',
+              status: 'recycled',
+              generation_before: 1,
+              detail: null,
+            },
+            {
+              name: 'serve-1',
+              kind: 'serve',
+              status: 'self-deferred',
+              generation_before: 2,
+              detail: null,
+            },
+          ],
+          fresh: [
+            { name: 'backend-1', kind: 'backend', generation: 4 },
+            { name: 'backend-2', kind: 'backend', generation: 2 },
+          ],
+          recycle_stopped: null,
+        },
+  });
+}
+
+describe('EnvironmentTab — a save that rolls a worker recycle', () => {
+  it('shows every recycled worker and the writer recycling itself, and no restart list', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<EnvironmentTab readOnly={false} />, {
+      client: baseStub(vi.fn(() => rolledSave(false))),
+    });
+    await screen.findByLabelText('Name of variable OPENAI_API_KEY');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    const section = await screen.findByRole('region', { name: 'Worker recycle' });
+    expect(section).toHaveTextContent(
+      'Some changed settings take effect only in a fresh worker process, so the fleet recycled its workers one at a time.',
+    );
+    const rows = within(section).getAllByRole('listitem');
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toHaveTextContent('backend-1');
+    expect(rows[0]).toHaveTextContent('recycled');
+    expect(rows[0]).toHaveTextContent('life 3 to 4');
+    expect(rows[2]).toHaveTextContent('self-deferred');
+    expect(rows[2]).toHaveTextContent('this worker recycles itself after replying');
+    // The server's verdict is empty for a converged roll: no restart panel, whatever the rows say.
+    expect(screen.queryByText(/need a restart/)).toBeNull();
+  });
+
+  it('says where a stopped recycle stopped and lists the workers still waiting for a restart', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<EnvironmentTab readOnly={false} />, {
+      client: baseStub(vi.fn(() => rolledSave(true))),
+    });
+    await screen.findByLabelText('Name of variable OPENAI_API_KEY');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    const stopped = await screen.findByTestId('recycle-stopped');
+    expect(stopped).toHaveTextContent('The recycle stopped at backend-1 (backend workers)');
+    expect(stopped).toHaveTextContent('its old life was still present after 90s');
+    const restart = screen.getByText(/workers need a restart/).closest('[role="status"]');
+    expect(restart).not.toBeNull();
+    expect(restart).toHaveTextContent('serve-1');
+    expect(restart).toHaveTextContent('backend-1');
+    expect(restart).toHaveTextContent('backend-2');
+  });
+
+  it('shows no recycle section for a save that carried no recycle-class key', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<EnvironmentTab readOnly={false} />, { client: baseStub(vi.fn(saved)) });
+    await screen.findByLabelText('Name of variable OPENAI_API_KEY');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    });
+    expect(screen.queryByRole('region', { name: 'Worker recycle' })).toBeNull();
   });
 });

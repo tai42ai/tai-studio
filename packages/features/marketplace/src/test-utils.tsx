@@ -329,6 +329,23 @@ export const installReceipt = (ref: string): MarketplaceInstallResult => ({
   notes: [],
   advisories: [],
   routes: [],
+  package: null,
+  pip_output: null,
+  reload: {
+    status: 'reloaded',
+    env_keys: 0,
+    recycle: null,
+    awaiting_respawn: [],
+    fanout: {
+      mode: 'local-only',
+      note: 'only this worker reloaded',
+      error: null,
+      local_only: null,
+      op: null,
+      reachable: null,
+      results: null,
+    },
+  },
 });
 
 /** The `<table>` whose header row carries `columnHeader`, failing loudly if absent. */

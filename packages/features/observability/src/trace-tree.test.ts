@@ -1,8 +1,8 @@
 /**
  * The pure trace-rebuild helpers: span nesting with orphan and CYCLE-ISLAND
  * re-parenting (nothing vanishes), recursive start-time sort, the default
- * selection, the token allowlist (cost keys excluded, total fallback), and the
- * leaf-only token roll-up that does not double-count a wrapper span.
+ * selection, a span's token count from its typed counts (the total, else input +
+ * output), and the leaf-only token roll-up that does not double-count a wrapper span.
  */
 import type { RunSpan, RunTrace } from '@tai42/api-client';
 import { describe, expect, it } from 'vitest';
@@ -22,17 +22,18 @@ function span(overrides: Partial<RunSpan> & { id: string }): RunSpan {
     parentId: null,
     traceId: 't1',
     name: overrides.id,
-    type: null,
+    kind: null,
     level: null,
     statusMessage: null,
     start: null,
     end: null,
     model: null,
-    usage: null,
+    inputTokens: null,
+    outputTokens: null,
+    totalTokens: null,
     metadata: null,
     input: null,
     output: null,
-    nodeId: null,
     ...overrides,
   };
 }
@@ -218,30 +219,21 @@ describe('defaultSelectedId', () => {
 });
 
 describe('spanTokens', () => {
-  it('sums allowlisted input and output token keys', () => {
-    expect(spanTokens({ input_tokens: 10, output_tokens: 5 })).toBe(15);
-    expect(spanTokens({ prompt_tokens: 8, completion_tokens: 2 })).toBe(10);
+  it('reads the reported total', () => {
+    expect(spanTokens(span({ id: 's', totalTokens: 42 }))).toBe(42);
   });
 
-  it('never counts a cost key as tokens', () => {
-    // A naive includes()-heuristic would read `input_cost` as input tokens.
-    expect(spanTokens({ input_cost: 0.02, output_cost: 0.05 })).toBe(0);
-    expect(spanTokens({ input_tokens: 4, input_cost: 0.02 })).toBe(4);
+  it('prefers the reported total over input + output', () => {
+    expect(spanTokens(span({ id: 's', inputTokens: 3, outputTokens: 4, totalTokens: 9 }))).toBe(9);
   });
 
-  it('falls back to an explicit total key when neither input nor output is present', () => {
-    expect(spanTokens({ total_tokens: 42 })).toBe(42);
-    expect(spanTokens({ total: 7 })).toBe(7);
+  it('sums input and output when no total is reported, counting an absent side as zero', () => {
+    expect(spanTokens(span({ id: 's', inputTokens: 10, outputTokens: 5 }))).toBe(15);
+    expect(spanTokens(span({ id: 's', inputTokens: 10 }))).toBe(10);
   });
 
-  it('prefers input+output over a total when both are present', () => {
-    expect(spanTokens({ input_tokens: 3, output_tokens: 4, total_tokens: 99 })).toBe(7);
-  });
-
-  it('is zero for missing or non-object usage', () => {
-    expect(spanTokens(null)).toBe(0);
-    expect(spanTokens('nope')).toBe(0);
-    expect(spanTokens([1, 2, 3])).toBe(0);
+  it('is zero when the span reports no tokens', () => {
+    expect(spanTokens(span({ id: 's' }))).toBe(0);
   });
 });
 
@@ -250,9 +242,9 @@ describe('traceTotals', () => {
     // The wrapper re-reports the sum of its two leaves; counting it too would
     // report 30 instead of the true 15.
     const spans = [
-      span({ id: 'wrapper', usage: { total_tokens: 15 } }),
-      span({ id: 'gen1', parentId: 'wrapper', usage: { input_tokens: 6, output_tokens: 2 } }),
-      span({ id: 'gen2', parentId: 'wrapper', usage: { input_tokens: 5, output_tokens: 2 } }),
+      span({ id: 'wrapper', totalTokens: 15 }),
+      span({ id: 'gen1', parentId: 'wrapper', inputTokens: 6, outputTokens: 2 }),
+      span({ id: 'gen2', parentId: 'wrapper', inputTokens: 5, outputTokens: 2 }),
     ];
     expect(traceTotals(trace(spans, { totalCost: 0.5 })).totalTokens).toBe(15);
   });
@@ -293,8 +285,9 @@ describe('traceTotals', () => {
     const spans = [
       span({
         id: 'gen',
-        type: 'GENERATION',
-        usage: { input_tokens: 10, output_tokens: 5 },
+        kind: 'LLM',
+        inputTokens: 10,
+        outputTokens: 5,
         start: at('2026-01-01T00:00:00Z'),
         end: at('2026-01-01T00:00:02Z'),
       }),

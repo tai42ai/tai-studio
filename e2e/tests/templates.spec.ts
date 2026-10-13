@@ -60,7 +60,15 @@ test('a multi-file upload reports a per-file outcome with one simulated failure'
         await route.fulfill({ status: 500, json: { error: 'disk full' } });
         return;
       }
-      await route.fulfill({ json: { data: { path: body.path, uploaded: true } } });
+      await route.fulfill({
+        json: {
+          data: {
+            path: body.path,
+            uploaded: true,
+            fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+          },
+        },
+      });
     },
   );
 

@@ -11,7 +11,7 @@
  *  - with no contribution the auto-form renders; after a plugin registers a
  *    panel the contributed panel renders instead.
  */
-import { ApiError } from '@tai42/api-client';
+import { ApiError, ApiSchemaError, toolRunList, toolRunRecord } from '@tai42/api-client';
 import { type ToolPanelProps } from '@tai42/studio-sdk';
 import { loadPlugin } from '@tai42/studio-sdk/host';
 import { __resetContributions } from '@tai42/studio-sdk/testing';
@@ -28,6 +28,9 @@ import {
   scopedProjection,
   type StubApiClient,
 } from './test-utils';
+
+/** No route mounts and no declared route panels: the host inputs of a plugin that contributes none. */
+const NO_HOST_INPUTS = { mounts: {}, declaredRoutePanels: [] };
 
 /** Both run doors, as a projection carries them (each a concrete route). */
 const RUN_TOOL_ROUTE = { path: '/api/run-tool', methods: ['POST'] };
@@ -96,7 +99,7 @@ describe('AutoFormRunPanel — validation + run', () => {
 
   it('runs the tool and renders an object result in the JSON tree', async () => {
     const user = userEvent.setup();
-    const runTool = vi.fn().mockResolvedValue({ greeting: 'hello' });
+    const runTool = vi.fn().mockResolvedValue({ kind: 'result', result: { greeting: 'hello' } });
     const client: StubApiClient = { runTool, listToolRuns: vi.fn().mockResolvedValue([]) };
     renderWithProviders(<AutoFormRunPanel toolName="echo" schema={EMPTY_OBJECT_SCHEMA} />, {
       client,
@@ -127,17 +130,67 @@ describe('AutoFormRunPanel — validation + run', () => {
     expect(screen.queryByTestId('tool-run-timeout')).toBeNull();
   });
 
+  it("renders the outcome a failed terminal delivered beside the door's message", async () => {
+    const user = userEvent.setup();
+    const runTool = vi.fn().mockRejectedValue(
+      new ApiError('tool run failed', 500, undefined, undefined, {
+        error: 'tool run failed',
+        outcome: { reason: 'the run stopped short' },
+      }),
+    );
+    const client: StubApiClient = { runTool, listToolRuns: vi.fn().mockResolvedValue([]) };
+    renderWithProviders(<AutoFormRunPanel toolName="echo" schema={EMPTY_OBJECT_SCHEMA} />, {
+      client,
+      projection: fullProjection(),
+    });
+
+    await user.click(await findEnabled('Run'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('tool run failed');
+    const outcome = screen.getByTestId('tool-run-outcome');
+    expect(within(outcome).getByRole('heading', { name: 'Outcome' })).toBeInTheDocument();
+    expect(within(outcome).getByText('"the run stopped short"')).toBeInTheDocument();
+  });
+
+  it('shows the unreadable-answer panel with its details when the run answer fails its schema', async () => {
+    const user = userEvent.setup();
+    const runTool = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiSchemaError('/api/run-tool', [
+          { code: 'invalid_union', path: ['kind'], message: 'Invalid discriminator value' },
+        ]),
+      );
+    const client: StubApiClient = { runTool, listToolRuns: vi.fn().mockResolvedValue([]) };
+    renderWithProviders(<AutoFormRunPanel toolName="echo" schema={EMPTY_OBJECT_SCHEMA} />, {
+      client,
+      projection: fullProjection(),
+    });
+
+    await user.click(await findEnabled('Run'));
+
+    expect(
+      await screen.findByText(
+        'The run finished, but its answer is in a format this studio cannot read, so it is not shown.',
+      ),
+    ).toBeInTheDocument();
+    await user.click(screen.getByText('Details'));
+    expect(screen.getByText('kind: Invalid discriminator value')).toBeVisible();
+  });
+
   it('submits a background run from the secondary action and shows its live detail', async () => {
     const user = userEvent.setup();
     const submitToolRun = vi.fn().mockResolvedValue({ run_id: 'bg1' });
-    const getToolRun = vi.fn().mockResolvedValue({
-      run_id: 'bg1',
-      tool_name: 'echo',
-      status: 'succeeded',
-      started_at: 't',
-      finished_at: 't2',
-      result: { ok: 1 },
-    });
+    const getToolRun = vi.fn().mockResolvedValue(
+      toolRunRecord.parse({
+        run_id: 'bg1',
+        tool_name: 'echo',
+        status: 'succeeded',
+        started_at: 't',
+        finished_at: 't2',
+        result: { ok: 1 },
+      }),
+    );
     const client: StubApiClient = {
       runTool: vi.fn(),
       submitToolRun,
@@ -195,20 +248,24 @@ describe('AutoFormRunPanel — validation + run', () => {
   it('refetches the recent-runs list after a background submit into an EMPTY list', async () => {
     const user = userEvent.setup();
     const submitToolRun = vi.fn().mockResolvedValue({ run_id: 'bg-new' });
-    const getToolRun = vi.fn().mockResolvedValue({
-      run_id: 'bg-new',
-      tool_name: 'echo',
-      status: 'running',
-      started_at: 't',
-    });
+    const getToolRun = vi.fn().mockResolvedValue(
+      toolRunRecord.parse({
+        run_id: 'bg-new',
+        tool_name: 'echo',
+        status: 'running',
+        started_at: 't',
+      }),
+    );
     // Empty on first load, then the just-submitted RUNNING run once the submit
     // invalidates and re-fetches the list.
     const listToolRuns = vi
       .fn()
       .mockResolvedValueOnce([])
-      .mockResolvedValue([
-        { run_id: 'bg-new', tool_name: 'echo', status: 'running', started_at: 't' },
-      ]);
+      .mockResolvedValue(
+        toolRunList.parse([
+          { run_id: 'bg-new', tool_name: 'echo', status: 'running', started_at: 't' },
+        ]),
+      );
     const client: StubApiClient = {
       runTool: vi.fn(),
       submitToolRun,
@@ -236,23 +293,29 @@ describe('AutoFormRunPanel — validation + run', () => {
   it('refetches the recent-runs list after a background submit into an ALL-TERMINAL list', async () => {
     const user = userEvent.setup();
     const submitToolRun = vi.fn().mockResolvedValue({ run_id: 'bg-new' });
-    const getToolRun = vi.fn().mockResolvedValue({
-      run_id: 'bg-new',
-      tool_name: 'echo',
-      status: 'running',
-      started_at: 't2',
-    });
+    const getToolRun = vi.fn().mockResolvedValue(
+      toolRunRecord.parse({
+        run_id: 'bg-new',
+        tool_name: 'echo',
+        status: 'running',
+        started_at: 't2',
+      }),
+    );
     // First load: one already-settled run (poll stopped). After the submit the
     // list re-fetches and now also carries the new running run.
     const listToolRuns = vi
       .fn()
-      .mockResolvedValueOnce([
-        { run_id: 'bg-old', tool_name: 'echo', status: 'succeeded', started_at: 't1' },
-      ])
-      .mockResolvedValue([
-        { run_id: 'bg-new', tool_name: 'echo', status: 'running', started_at: 't2' },
-        { run_id: 'bg-old', tool_name: 'echo', status: 'succeeded', started_at: 't1' },
-      ]);
+      .mockResolvedValueOnce(
+        toolRunList.parse([
+          { run_id: 'bg-old', tool_name: 'echo', status: 'succeeded', started_at: 't1' },
+        ]),
+      )
+      .mockResolvedValue(
+        toolRunList.parse([
+          { run_id: 'bg-new', tool_name: 'echo', status: 'running', started_at: 't2' },
+          { run_id: 'bg-old', tool_name: 'echo', status: 'succeeded', started_at: 't1' },
+        ]),
+      );
     const client: StubApiClient = {
       runTool: vi.fn(),
       submitToolRun,
@@ -336,7 +399,7 @@ describe('AutoFormRunPanel — client timeout', () => {
 describe('AutoFormRunPanel — run-door capability gate', () => {
   function runClient(): StubApiClient {
     return {
-      runTool: vi.fn().mockResolvedValue({ ok: 1 }),
+      runTool: vi.fn().mockResolvedValue({ kind: 'result', result: { ok: 1 } }),
       submitToolRun: vi.fn().mockResolvedValue({ run_id: 'bg' }),
       listToolRuns: vi.fn().mockResolvedValue([]),
     };
@@ -418,9 +481,13 @@ describe('RunPanel — panel vs auto-form', () => {
     function EchoPanel({ toolName }: ToolPanelProps): ReactNode {
       return <div>Custom panel for {toolName}</div>;
     }
-    await loadPlugin('acme', (ctx) => {
-      ctx.registerToolPanel({ toolName: 'echo', component: EchoPanel });
-    });
+    await loadPlugin(
+      'acme',
+      (ctx) => {
+        ctx.registerToolPanel({ toolName: 'echo', component: EchoPanel });
+      },
+      NO_HOST_INPUTS,
+    );
 
     const client: StubApiClient = {
       getToolSchema: vi.fn().mockResolvedValue({

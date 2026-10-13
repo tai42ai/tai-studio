@@ -20,9 +20,9 @@ function stubClient(listExtensions: ApiClient['listExtensions']): ApiClient {
 }
 
 const catalog: Extension[] = [
-  { name: 'search', kind: 'backend' },
-  { name: 'search_chain', kind: 'transformer' },
-  { name: 'notify', kind: 'wrapper' },
+  { name: 'search', kind: 'backend', multiple: false },
+  { name: 'search_chain', kind: 'transformer', multiple: true },
+  { name: 'notify', kind: 'wrapper', multiple: true },
 ];
 
 describe('ExtensionsPage', () => {

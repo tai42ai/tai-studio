@@ -1,37 +1,29 @@
 /** Backend identity and worker-bus fleet/fan-out response schemas. */
 import { z } from 'zod';
 
-import { jsonValue } from './shared';
+import * as openapi from '../generated/openapi-schemas';
 
 /** `GET /api/backend` — the execution-backend identity, or the absent sentinel
  * (`present: false`, a 200) when no backend plugin is registered. Backend identity
  * is kept distinct from the fleet: the fleet doors ride the app's worker bus and
  * need no backend at all. */
-export const backendInfo = z.object({
-  present: z.boolean(),
-  backend: z.string().nullable(),
-  module: z.string().nullable(),
-});
+export const backendInfo = openapi.backendInfo;
 export type BackendInfo = z.infer<typeof backendInfo>;
 
 /** The two worker kinds that join the bus: an ASGI `serve` worker or a
  * `backend` runtime process. A drift throws `ApiSchemaError`. */
-export const workerKind = z.enum(['serve', 'backend']);
+export const workerKind = openapi.workerKind;
 export type WorkerKind = z.infer<typeof workerKind>;
 
 /** The lifecycle state a worker advertises in its presence value: `ready` once its
  * resync has converged, `resyncing` while a boot/reconnect resync runs, `recycling`
  * once it has begun a graceful self-exit. A drift throws `ApiSchemaError`. */
-export const workerState = z.enum(['ready', 'resyncing', 'recycling']);
+export const workerState = openapi.workerState;
 export type WorkerState = z.infer<typeof workerState>;
 
 /** The last op a worker applied, stamped onto its presence row after the terminal
  * reply. `outcome` is the free op-outcome string; `at` is the ISO instant it landed. */
-export const workerLastOp = z.object({
-  op: z.string(),
-  outcome: z.string(),
-  at: z.string(),
-});
+export const workerLastOp = openapi.lastOp;
 export type WorkerLastOp = z.infer<typeof workerLastOp>;
 
 /**
@@ -45,17 +37,7 @@ export type WorkerLastOp = z.infer<typeof workerLastOp>;
  * only freshness signal a client reads, never a client-side threshold; `last_op` is the
  * worker's last applied op, or `null` before it has applied one.
  */
-export const fleetWorker = z.object({
-  name: z.string(),
-  kind: workerKind,
-  pid: z.number(),
-  generation: z.number(),
-  joined_at: z.string(),
-  beat_at: z.string(),
-  state: workerState,
-  stale: z.boolean(),
-  last_op: workerLastOp.nullable(),
-});
+export const fleetWorker = openapi.workerListingRow;
 export type FleetWorker = z.infer<typeof fleetWorker>;
 
 /**
@@ -64,7 +46,7 @@ export type FleetWorker = z.infer<typeof fleetWorker>;
  * processes alike), not only backend workers. A census read that fails surfaces as a
  * loud 500, never a fabricated empty fleet.
  */
-export const fleetWorkers = z.object({ workers: z.array(fleetWorker) });
+export const fleetWorkers = openapi.workerListing;
 export type FleetWorkers = z.infer<typeof fleetWorkers>;
 
 /**
@@ -76,16 +58,7 @@ export type FleetWorkers = z.infer<typeof fleetWorkers>;
  * `recycling` is departing, `stale` is a quiet row past the freshness bound carrying no
  * convergence promise).
  */
-export const fleetOutcome = z.enum([
-  'applied',
-  'failed',
-  'missing',
-  'departed',
-  'timed_out',
-  'resyncing',
-  'recycling',
-  'stale',
-]);
+export const fleetOutcome = openapi.opOutcome;
 export type FleetOutcome = z.infer<typeof fleetOutcome>;
 
 /**
@@ -94,13 +67,7 @@ export type FleetOutcome = z.infer<typeof fleetOutcome>;
  * publisher's report text for a computed gap outcome (`missing`/`departed`/`timed_out`/
  * `resyncing`/`recycling`/`stale`). A drift throws `ApiSchemaError`.
  */
-export const fleetWorkerResult = z.object({
-  name: z.string(),
-  outcome: fleetOutcome,
-  payload: jsonValue,
-  error: z.string().nullable(),
-  detail: z.string().nullable(),
-});
+export const fleetWorkerResult = openapi.workerResult;
 export type FleetWorkerResult = z.infer<typeof fleetWorkerResult>;
 
 /**
@@ -114,13 +81,7 @@ export type FleetWorkerResult = z.infer<typeof fleetWorkerResult>;
  * reload; it is also the body the mode-wrapped {@link fleetReportFanout} carries under its
  * `fleet` / `unreachable` modes.
  */
-export const fleetResult = z.object({
-  op: z.string(),
-  reachable: z.boolean(),
-  local_only: z.boolean(),
-  results: z.array(fleetWorkerResult),
-  error: z.string().nullable(),
-});
+export const fleetResult = openapi.fleetResult;
 export type FleetResult = z.infer<typeof fleetResult>;
 
 /**
@@ -146,9 +107,48 @@ export type FleetReloadResult = z.infer<typeof fleetReloadResult>;
  * unknown-key stripping would otherwise silently drop the field, hiding a failed
  * propagation from the shared fleet-report handler. A drift throws `ApiSchemaError`.
  */
+// Hand-written: the spec publishes a fan-out as one object with optional fields; the client
+// discriminates its three modes.
+const fanoutFleetResult = openapi.fleetResult.omit({ ok: true });
 export const fleetReportFanout = z.discriminatedUnion('mode', [
   z.object({ mode: z.literal('local-only'), note: z.string() }),
-  fleetResult.extend({ mode: z.literal('fleet') }),
-  fleetResult.extend({ mode: z.literal('unreachable') }),
+  fanoutFleetResult.extend({ mode: z.literal('fleet') }),
+  fanoutFleetResult.extend({ mode: z.literal('unreachable') }),
 ]);
 export type FleetReportFanout = z.infer<typeof fleetReportFanout>;
+
+/**
+ * One worker line of a fleet recycle roll. `status` is `recycled` (confirmed on
+ * reality), `timed-out` or `failed` (the target the roll stopped at — `detail` names
+ * why), or `self-deferred` (the worker that took the change recycles itself after
+ * replying). `generation_before` is the life that was recycled.
+ */
+export const recycleEntry = openapi.recycleEntry;
+export type RecycleEntry = z.infer<typeof recycleEntry>;
+
+/** One newly-ready worker life observed since the change began — capacity evidence. */
+export const freshLife = openapi.freshLife;
+export type FreshLife = z.infer<typeof freshLife>;
+
+/**
+ * Where a recycle roll stopped and why: `name` is the target it stopped at, or `null`
+ * when the bus could not be read before a target was reached.
+ */
+export const recycleStop = openapi.recycleStop;
+export type RecycleStop = z.infer<typeof recycleStop>;
+
+/**
+ * The report of a fleet recycle roll an env change carrying a recycle-class key ran:
+ * the worker lines, the fresh lives, and where the roll stopped (`null` when it ran to
+ * its end). Names only — never an env value.
+ */
+export const recycleRoll = openapi.recycleRoll;
+export type RecycleRoll = z.infer<typeof recycleRoll>;
+
+/**
+ * One worker an operation names as still awaiting a respawn: its recycle-class `keys`
+ * changed in the stored env since its process bound them (at boot, or when the plugin that
+ * declares them was loaded), and nothing in the operation respawns it.
+ */
+export const awaitingWorker = openapi.awaitingWorker;
+export type AwaitingWorker = z.infer<typeof awaitingWorker>;

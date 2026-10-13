@@ -117,8 +117,28 @@ describe('getToolRun', () => {
     );
 
     const out = await api.getToolRun('r1');
-    expect(out).toEqual(record);
+    // The unsent fields read as the published `null` defaults.
+    expect(out).toEqual({ ...record, error: null, outcome: null, resumed_interactions: null });
     expect(url).toContain('/api/tool-runs/r1');
+  });
+
+  it('refuses a stale parked record on the read with ApiSchemaError', async () => {
+    const api = createApiClient(
+      config(
+        mockFetch(() =>
+          jsonResponse({
+            data: {
+              run_id: 'r1',
+              tool_name: 'alpha',
+              status: 'parked',
+              started_at: 't',
+              result: { interaction_id: 'u1', interaction_ids: ['u1'] },
+            },
+          }),
+        ),
+      ),
+    );
+    await expect(api.getToolRun('r1')).rejects.toBeInstanceOf(ApiSchemaError);
   });
 
   it('throws a loud ApiError on a 404 (unknown/expired run)', async () => {
@@ -192,7 +212,7 @@ describe('listToolRuns', () => {
 
 describe('zod boundaries', () => {
   it('accepts every valid status and rejects an unknown one', () => {
-    for (const status of ['running', 'succeeded', 'failed', 'lost', 'parked']) {
+    for (const status of ['running', 'succeeded', 'failed', 'lost']) {
       expect(
         toolRunRecord.safeParse({ run_id: 'r', tool_name: 't', status, started_at: 's' }).success,
       ).toBe(true);
@@ -203,16 +223,41 @@ describe('zod boundaries', () => {
     ).toBe(false);
   });
 
-  it('parses a parked record whose result is the caller-ask park answer', () => {
-    const parsed = toolRunRecord.safeParse({
+  it('parses a parked record whose result is a caller-ask run answer, typed by kind', () => {
+    const parsed = toolRunRecord.parse({
       run_id: 'r',
       tool_name: 't',
       status: 'parked',
       started_at: 's',
       finished_at: 's2',
-      result: { asks: [{ id: 'i1', status: 'asking', to: 'caller', question: 'Approve?' }] },
+      result: {
+        kind: 'asks',
+        asks: [{ id: 'i1', status: 'asking', to: 'caller', question: 'Approve?' }],
+        suspended: { interaction_id: 'i1', interaction_ids: ['i1'] },
+      },
     });
-    expect(parsed.success).toBe(true);
+    expect(parsed.status === 'parked' && parsed.result.kind).toBe('asks');
+  });
+
+  it('refuses a parked record whose result is not an asks or parked run answer', () => {
+    const parked = { run_id: 'r', tool_name: 't', status: 'parked', started_at: 's' };
+    expect(toolRunRecord.safeParse({ ...parked, result: { asks: [] } }).success).toBe(false);
+    expect(toolRunRecord.safeParse({ ...parked, result: { kind: 'none' } }).success).toBe(false);
+    expect(toolRunRecord.safeParse(parked).success).toBe(false);
+  });
+
+  it("keeps a failed terminal record's outcome whole", () => {
+    const outcome = { status: 'error', error: "the run's own reason", error_kind: 'bad_input' };
+    const parsed = toolRunRecord.parse({
+      run_id: 'r',
+      tool_name: 't',
+      status: 'failed',
+      started_at: 's',
+      error: 'tool run failed',
+      outcome,
+    });
+    expect(parsed.outcome).toEqual(outcome);
+    expect(parsed.error).toBe('tool run failed');
   });
 
   it('carries the optional resumed_interactions ids', () => {
@@ -225,31 +270,31 @@ describe('zod boundaries', () => {
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.resumed_interactions).toEqual(['i1', 'i2']);
-    // Omitted entirely on a record that resumed nothing.
+    // A record that resumed nothing reads the published default.
     const bare = toolRunRecord.parse({
       run_id: 'r',
       tool_name: 't',
       status: 'running',
       started_at: 's',
     });
-    expect(bare.resumed_interactions).toBeUndefined();
+    expect(bare.resumed_interactions).toBeNull();
   });
 
-  it('reads both park-answer shapes through toolRunParkAnswer', () => {
-    // The caller-ask envelope: the tool asked its CALLER and parked.
-    expect(
-      toolRunParkAnswer.safeParse({
-        asks: [{ id: 'i1', status: 'asking', to: 'caller', question: 'Approve?' }],
-      }).success,
-    ).toBe(true);
-    // The suspension receipt: the run parked only USER asks.
-    expect(
-      toolRunParkAnswer.safeParse({
-        interaction_id: 'u1',
-        interaction_ids: ['u1'],
-        caller_interaction_ids: [],
-      }).success,
-    ).toBe(true);
+  it('reads the two park kinds of a run answer through toolRunParkAnswer', () => {
+    const suspended = { interaction_id: 'u1', interaction_ids: ['u1'] };
+    const asks = toolRunParkAnswer.parse({
+      kind: 'asks',
+      asks: [{ id: 'i1', status: 'asking', to: 'caller', question: 'Approve?' }],
+      suspended,
+    });
+    expect(asks.kind).toBe('asks');
+    expect(toolRunParkAnswer.parse({ kind: 'parked', suspended }).kind).toBe('parked');
+  });
+
+  it('refuses a result, a none and a bare park body as a parked record answer', () => {
+    expect(toolRunParkAnswer.safeParse({ kind: 'result', result: 1 }).success).toBe(false);
+    expect(toolRunParkAnswer.safeParse({ kind: 'none' }).success).toBe(false);
+    expect(toolRunParkAnswer.safeParse({ asks: [] }).success).toBe(false);
   });
 
   it('isTerminalRunStatus is false only for running', () => {
@@ -265,5 +310,21 @@ describe('envelope guard', () => {
   it('throws ApiSchemaError when the response is not a { data } envelope', async () => {
     const api = createApiClient(config(mockFetch(() => jsonResponse({ nope: true }))));
     await expect(api.getToolRun('r1')).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+});
+
+describe('the failed record', () => {
+  it('carries the outcome a failed terminal recorded beside the plain message', () => {
+    const record = toolRunRecord.parse({
+      run_id: 'r',
+      tool_name: 't',
+      status: 'failed',
+      started_at: 's',
+      finished_at: 's2',
+      error: 'tool run failed',
+      outcome: { reason: 'aborted' },
+    });
+    expect(record.status === 'failed' && record.outcome).toEqual({ reason: 'aborted' });
+    expect(record.error).toBe('tool run failed');
   });
 });

@@ -5,6 +5,133 @@
 ```ts
 
 import type { ComponentType } from 'react';
+import type { z } from 'zod';
+
+// @public
+type ChannelConversationRoute = Extract<ConversationRouteView, {
+    readonly door: 'channel';
+}>;
+
+// @public
+export function contributionCovered(projection: MeProjection, required: RequiredCapabilities | undefined): boolean;
+
+// @public (undocumented)
+type ConversationRouteView = z.infer<typeof conversationRouteView>;
+
+// @public
+const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
+    callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    channel: z.ZodDefault<z.ZodNull>;
+    door: z.ZodLiteral<"api">;
+    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    execution_key: z.ZodString;
+    execution_key_fingerprint: z.ZodString;
+    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    initial_mode: z.ZodDefault<z.ZodEnum<{
+        agent: "agent";
+        manual: "manual";
+    }>>;
+    locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    our_identity: z.ZodDefault<z.ZodNull>;
+    overlap: z.ZodDefault<z.ZodObject<{
+        deliver: z.ZodDefault<z.ZodEnum<{
+            one: "one";
+            all: "all";
+        }>>;
+        running: z.ZodDefault<z.ZodEnum<{
+            continue: "continue";
+            cancel: "cancel";
+        }>>;
+        settle_seconds: z.ZodDefault<z.ZodNumber>;
+    }, z.core.$strip>>;
+    reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    route_name: z.ZodString;
+    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    target_kind: z.ZodEnum<{
+        tool: "tool";
+        agent: "agent";
+    }>;
+    target_name: z.ZodString;
+    turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+}, z.core.$strip>, z.ZodObject<{
+    callback_url: z.ZodDefault<z.ZodNull>;
+    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    channel: z.ZodString;
+    door: z.ZodLiteral<"channel">;
+    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    execution_key: z.ZodString;
+    execution_key_fingerprint: z.ZodString;
+    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    initial_mode: z.ZodDefault<z.ZodEnum<{
+        agent: "agent";
+        manual: "manual";
+    }>>;
+    locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    our_identity: z.ZodString;
+    overlap: z.ZodDefault<z.ZodObject<{
+        deliver: z.ZodDefault<z.ZodEnum<{
+            one: "one";
+            all: "all";
+        }>>;
+        running: z.ZodDefault<z.ZodEnum<{
+            continue: "continue";
+            cancel: "cancel";
+        }>>;
+        settle_seconds: z.ZodDefault<z.ZodNumber>;
+    }, z.core.$strip>>;
+    reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    route_name: z.ZodString;
+    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    target_kind: z.ZodEnum<{
+        tool: "tool";
+        agent: "agent";
+    }>;
+    target_name: z.ZodString;
+    turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+}, z.core.$strip>], "door">;
 
 // @public
 export function getContributions(): PluginContributions;
@@ -21,7 +148,46 @@ export interface LoadedPlugin {
 }
 
 // @public
-export function loadPlugin(pluginId: string, entry: PluginEntry): Promise<void>;
+export function loadPlugin(pluginId: string, entry: PluginEntry, host: PluginLoadInputs): Promise<void>;
+
+// @public (undocumented)
+type MeProjection = z.infer<typeof meProjection>;
+
+// @public
+const meProjection: z.ZodObject<{
+    admin: z.ZodBoolean;
+    agents: z.ZodArray<z.ZodString>;
+    mintable: z.ZodBoolean;
+    owner_user_id: z.ZodNullable<z.ZodString>;
+    principal: z.ZodNullable<z.ZodObject<{
+        display_name: z.ZodString;
+        kind: z.ZodEnum<{
+            human: "human";
+            service: "service";
+        }>;
+        user_id: z.ZodString;
+    }, z.core.$strip>>;
+    public_resource_id: z.ZodString;
+    route_patterns: z.ZodArray<z.ZodObject<{
+        open_prefix: z.ZodNullable<z.ZodString>;
+        pattern: z.ZodString;
+        scope_id: z.ZodString;
+    }, z.core.$strip>>;
+    routes: z.ZodArray<z.ZodObject<{
+        methods: z.ZodArray<z.ZodString>;
+        path: z.ZodString;
+    }, z.core.$strip>>;
+    scopes: z.ZodArray<z.ZodString>;
+    sub_mcp: z.ZodArray<z.ZodObject<{
+        access_pattern: z.ZodString;
+        mount_url: z.ZodString;
+        slug: z.ZodString;
+        tools: z.ZodArray<z.ZodString>;
+        transport: z.ZodString;
+    }, z.core.$strip>>;
+    tools: z.ZodArray<z.ZodString>;
+    user_id: z.ZodString;
+}, z.core.$strip>;
 
 // @public (undocumented)
 interface NavEntryContribution {
@@ -52,8 +218,10 @@ interface PageContribution {
 interface PluginContext {
     registerNavEntry(contribution: NavEntryContribution): void;
     registerPage(contribution: PageContribution): void;
+    registerRoutePanel(contribution: RoutePanelContribution): void;
     registerSettingsTab(contribution: SettingsTabContribution): void;
     registerToolPanel(contribution: ToolPanelContribution): void;
+    routeBase(itemName: string): string | null;
 }
 
 // @public
@@ -62,6 +230,7 @@ interface PluginContributions {
     readonly navEntries: readonly RegisteredNavEntry[];
     // (undocumented)
     readonly pages: readonly RegisteredPage[];
+    readonly routePanels: ReadonlyMap<string, RegisteredRoutePanel>;
     // (undocumented)
     readonly settingsTabs: readonly RegisteredSettingsTab[];
     // (undocumented)
@@ -84,6 +253,14 @@ export interface PluginLoaderState {
     readonly plugins: readonly LoadedPlugin[];
     readonly registryError: string | null;
     readonly status: 'idle' | 'loading' | 'ready';
+}
+
+// @public
+export interface PluginLoadInputs {
+    // (undocumented)
+    readonly declaredRoutePanels: readonly string[];
+    // (undocumented)
+    readonly mounts: Readonly<Record<string, string>>;
 }
 
 // @public
@@ -114,6 +291,12 @@ interface RegisteredPage extends PageContribution {
 }
 
 // @public
+interface RegisteredRoutePanel extends RoutePanelContribution {
+    // (undocumented)
+    readonly pluginId: string;
+}
+
+// @public
 interface RegisteredSettingsTab extends SettingsTabContribution {
     // (undocumented)
     readonly pluginId: string;
@@ -123,6 +306,22 @@ interface RegisteredSettingsTab extends SettingsTabContribution {
 interface RequiredCapabilities {
     // (undocumented)
     readonly routes: readonly string[];
+}
+
+// @public
+interface RoutePanelContribution {
+    readonly channel: string;
+    // (undocumented)
+    readonly component: ComponentType<RoutePanelProps>;
+    readonly requiredCapabilities?: RequiredCapabilities;
+    readonly title: string;
+}
+
+// @public
+interface RoutePanelProps {
+    // (undocumented)
+    readonly pluginId: string;
+    readonly route: ChannelConversationRoute;
 }
 
 // @public

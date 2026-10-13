@@ -295,6 +295,7 @@ describe('route capability boundary (content-area gate)', () => {
       name: 'acme',
       version: '1.0.0',
       api_version: 1,
+      mounts: {},
       entry: 'index.js',
       integrity: { 'index.js': 'sha384-abc' },
       contributions: { tool_panels: {}, pages: ['demo'], settings_tabs: [] },

@@ -4,7 +4,8 @@
  * A `startConnect` / `reconnect` / consent-requiring `patchSubServices` call may
  * return an `authorize_url`. The PRIMARY path opens it in a popup, then waits for the
  * deployment's static callback page to `postMessage` the provider's `code` + `state`
- * back to us; that message is UNTRUSTED until origin + source + type all match (the
+ * (and the redirect's `iss`) back to us; that message is UNTRUSTED until origin + source
+ * + type all match (the
  * trust check lives in {@link watchOAuthPopup}). The FALLBACK path handles a blocked
  * popup by redirecting the whole tab to `authorize_url`; the callback page forwards the
  * result on the URL to the stashed return path, and {@link useOAuthRedirectResume}
@@ -117,7 +118,7 @@ export function useOAuthPopup(options: UseOAuthPopupOptions = {}): UseOAuthPopup
       };
 
       const finalize = (message: OAuthCallbackMessage): void => {
-        const { code, state, error } = message;
+        const { code, state, error, iss } = message;
         if (state === null) {
           // A trusted callback with no state cannot be completed — surface loudly.
           popup.close();
@@ -125,7 +126,7 @@ export function useOAuthPopup(options: UseOAuthPopupOptions = {}): UseOAuthPopup
           return;
         }
         api
-          .completeOAuth(state, code ?? '', error ?? undefined)
+          .completeOAuth(state, code ?? '', error ?? undefined, iss ?? undefined)
           .then((result) => {
             popup.close();
             settle(applyCompletion(result, queryClient, onSuccess));
@@ -165,6 +166,7 @@ interface ResumeParams {
   readonly state: string | null;
   readonly code: string | null;
   readonly error: string | null;
+  readonly iss: string | null;
 }
 
 export interface UseOAuthRedirectResumeResult {
@@ -202,6 +204,7 @@ export function useOAuthRedirectResume(
       state: search.get(OAUTH_RESUME_PARAMS.state),
       code: search.get(OAUTH_RESUME_PARAMS.code),
       error: search.get(OAUTH_RESUME_PARAMS.error),
+      iss: search.get(OAUTH_RESUME_PARAMS.iss),
     };
   }
   const startedRef = useRef(false);
@@ -218,6 +221,7 @@ export function useOAuthRedirectResume(
     url.searchParams.delete(OAUTH_RESUME_PARAMS.state);
     url.searchParams.delete(OAUTH_RESUME_PARAMS.code);
     url.searchParams.delete(OAUTH_RESUME_PARAMS.error);
+    url.searchParams.delete(OAUTH_RESUME_PARAMS.iss);
     window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
     try {
       window.sessionStorage.removeItem(OAUTH_REDIRECT_STORAGE_KEY);
@@ -227,7 +231,12 @@ export function useOAuthRedirectResume(
 
     setPending(true);
     api
-      .completeOAuth(params.state, params.code ?? '', params.error ?? undefined)
+      .completeOAuth(
+        params.state,
+        params.code ?? '',
+        params.error ?? undefined,
+        params.iss ?? undefined,
+      )
       .then((result) => {
         setPending(false);
         setNotice(applyCompletion(result, queryClient, onSuccess));

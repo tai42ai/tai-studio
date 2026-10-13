@@ -5,7 +5,8 @@
     "mapped": "scope_readonly",
     "tags": ["tools"],
     "summary": "List the registered tools.",
-    "action": "read"
+    "action": "read",
+    "declared_public": false
   },
   {
     "path": "/api/health",
@@ -13,7 +14,8 @@
     "mapped": "public",
     "tags": [],
     "summary": "Liveness probe.",
-    "action": "read"
+    "action": "read",
+    "declared_public": false
   },
   {
     "path": "/api/backup/export",
@@ -21,6 +23,16 @@
     "mapped": null,
     "tags": ["backup"],
     "summary": "Export a full backup archive.",
-    "action": "fenced"
+    "action": "fenced",
+    "declared_public": false
+  },
+  {
+    "path": "/ready",
+    "methods": ["GET"],
+    "mapped": null,
+    "tags": ["health"],
+    "summary": "Readiness probe.",
+    "action": "read",
+    "declared_public": true
   }
 ]

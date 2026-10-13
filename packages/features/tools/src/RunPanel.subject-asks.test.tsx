@@ -16,8 +16,12 @@ import { fullProjection, renderWithProviders, type StubApiClient } from './test-
 const EMPTY_OBJECT_SCHEMA = { type: 'object', properties: {}, required: [] } as const;
 
 /** The asks envelope a run returns when its tool parked one caller ask. */
+const SUSPENDED = { interaction_id: 'u1', interaction_ids: ['u1'], caller_interaction_ids: [] };
+
 const ASKS_RESULT = {
+  kind: 'asks',
   asks: [{ id: 'ask-1', status: 'asking', question: 'Approve?' }],
+  suspended: SUSPENDED,
 };
 
 /** Find the enabled sync Run button (it starts disabled until the projection resolves). */
@@ -46,7 +50,7 @@ function routesStub(): NonNullable<StubApiClient['listConversationRoutes']> {
 describe('AutoFormRunPanel — Subject section', () => {
   it('is collapsed by default and sends no subject on a plain run', async () => {
     const user = userEvent.setup();
-    const runTool = vi.fn().mockResolvedValue({ ok: 1 });
+    const runTool = vi.fn().mockResolvedValue({ kind: 'result', result: { ok: 1 } });
     const listConversationRoutes = vi.fn();
     const client: StubApiClient = {
       runTool,
@@ -68,7 +72,7 @@ describe('AutoFormRunPanel — Subject section', () => {
 
   it('sends the subject when the section is expanded and filled', async () => {
     const user = userEvent.setup();
-    const runTool = vi.fn().mockResolvedValue({ ok: 1 });
+    const runTool = vi.fn().mockResolvedValue({ kind: 'result', result: { ok: 1 } });
     const client: StubApiClient = {
       runTool,
       listToolRuns: vi.fn().mockResolvedValue([]),
@@ -95,7 +99,7 @@ describe('AutoFormRunPanel — Subject section', () => {
 
   it('refuses a partial subject and never runs', async () => {
     const user = userEvent.setup();
-    const runTool = vi.fn().mockResolvedValue({ ok: 1 });
+    const runTool = vi.fn().mockResolvedValue({ kind: 'result', result: { ok: 1 } });
     const client: StubApiClient = {
       runTool,
       listToolRuns: vi.fn().mockResolvedValue([]),
@@ -159,7 +163,7 @@ describe('AutoFormRunPanel — caller asks', () => {
 
   it('states the empty case when the run parked with no open asks', async () => {
     const user = userEvent.setup();
-    const runTool = vi.fn().mockResolvedValue({ asks: [] });
+    const runTool = vi.fn().mockResolvedValue({ kind: 'asks', asks: [], suspended: SUSPENDED });
     renderWithProviders(<AutoFormRunPanel toolName="echo" schema={EMPTY_OBJECT_SCHEMA} />, {
       client: asksClient(runTool),
       projection: fullProjection(),
@@ -174,11 +178,7 @@ describe('AutoFormRunPanel — caller asks', () => {
 
   it('shows the no-open-asks note when a run parks only user asks', async () => {
     const user = userEvent.setup();
-    const runTool = vi.fn().mockResolvedValue({
-      interaction_id: 'u1',
-      interaction_ids: ['u1'],
-      caller_interaction_ids: [],
-    });
+    const runTool = vi.fn().mockResolvedValue({ kind: 'parked', suspended: SUSPENDED });
     renderWithProviders(<AutoFormRunPanel toolName="echo" schema={EMPTY_OBJECT_SCHEMA} />, {
       client: asksClient(runTool),
       projection: fullProjection(),
@@ -191,40 +191,20 @@ describe('AutoFormRunPanel — caller asks', () => {
     );
   });
 
-  it('renders a resume_parked run visit outcome as its final result', async () => {
+  it('renders a tool value shaped like a park as the tool result, never as asks', async () => {
     const user = userEvent.setup();
     const runTool = vi.fn().mockResolvedValue({
-      action: 'resumed',
-      cancelled: [],
       kind: 'result',
-      result: { done: true },
+      result: { kind: 'asks', asks: [{ id: 'ask-2', question: 'And now?' }] },
     });
-    renderWithProviders(
-      <AutoFormRunPanel toolName="resume_parked" schema={EMPTY_OBJECT_SCHEMA} />,
-      { client: asksClient(runTool), projection: fullProjection() },
-    );
+    renderWithProviders(<AutoFormRunPanel toolName="echo" schema={EMPTY_OBJECT_SCHEMA} />, {
+      client: asksClient(runTool),
+      projection: fullProjection(),
+    });
 
     await user.click(await findEnabledRun());
 
-    expect(await screen.findByText('done:')).toBeInTheDocument();
-  });
-
-  it('renders new caller asks from a resume_parked run as another read-only list', async () => {
-    const user = userEvent.setup();
-    const runTool = vi.fn().mockResolvedValue({
-      action: 'resumed',
-      cancelled: [],
-      kind: 'asks',
-      asks: [{ id: 'ask-2', status: 'asking', question: 'And now?' }],
-    });
-    renderWithProviders(
-      <AutoFormRunPanel toolName="resume_parked" schema={EMPTY_OBJECT_SCHEMA} />,
-      { client: asksClient(runTool), projection: fullProjection() },
-    );
-
-    await user.click(await findEnabledRun());
-
-    expect(await screen.findByText('And now?')).toBeInTheDocument();
-    expect(screen.getByLabelText('Ask id ask-2')).toHaveTextContent('ask-2');
+    expect(await screen.findByRole('heading', { name: 'Result' })).toBeInTheDocument();
+    expect(screen.queryByTestId('asks-list')).toBeNull();
   });
 });

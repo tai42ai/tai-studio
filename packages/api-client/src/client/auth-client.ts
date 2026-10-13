@@ -1,5 +1,5 @@
 /** Auth scopes, routes, roles and API-key sub-client. */
-import { encodeSegment } from '../http';
+import { apiRoutes, buildPath } from '../generated/api-routes';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -87,119 +87,184 @@ export interface InvokeMemberActionBody {
   readonly input: Record<string, unknown>;
 }
 
-export function authClient(t: Transport) {
+/** Scope mapping, the route catalog and the public-route pins. */
+function scopeRouteMethods(t: Transport) {
   const { req } = t;
   return {
-    listScopes: (signal?: AbortSignal) => req('/api/auth/scopes', s.authScopes, { signal }),
+    listScopes: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_auth_scopes.path, s.authScopes, { signal }),
     addUrlToScope: (body: AddUrlToScopeBody) =>
-      req('/api/auth/scopes', s.addUrlToScopeResult, { method: 'POST', body }),
+      req(apiRoutes.post_api_auth_scopes.path, s.addUrlToScopeResult, { method: 'POST', body }),
     removeUrlFromScope: (body: { url: string }) =>
-      req('/api/auth/scopes/urls', s.removeUrlFromScopeResult, { method: 'DELETE', body }),
-    removeScope: (scopeId: string) =>
-      req(`/api/auth/scopes/${encodeSegment(scopeId)}`, s.removeScopeResult, {
+      req(apiRoutes.delete_api_auth_scopes_urls.path, s.removeUrlFromScopeResult, {
         method: 'DELETE',
+        body,
       }),
+    removeScope: (scopeId: string) =>
+      req(
+        buildPath(apiRoutes.delete_api_auth_scopes_scope_id.path, { scope_id: scopeId }),
+        s.removeScopeResult,
+        {
+          method: 'DELETE',
+        },
+      ),
     // The app's HTTP route catalog with each route's current mapping — the only
     // source of the mapper's unassigned-routes bucket (`mapped: null` entries).
-    listAuthRoutes: (signal?: AbortSignal) => req('/api/auth/routes', s.authRoutes, { signal }),
+    listAuthRoutes: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_auth_routes.path, s.authRoutes, { signal }),
     // The urls pinned to the public marker; pinning/unpinning is the dedicated
     // public-routes writer, never the scope machinery.
     listPublicRoutes: (signal?: AbortSignal) =>
-      req('/api/auth/public-routes', s.publicRoutes, { signal }),
+      req(apiRoutes.get_api_auth_public_routes.path, s.publicRoutes, { signal }),
     pinRoutePublic: (body: PinRoutePublicBody) =>
-      req('/api/auth/public-routes', s.pinPublicResult, { method: 'POST', body }),
+      req(apiRoutes.post_api_auth_public_routes.path, s.pinPublicResult, { method: 'POST', body }),
     // Unpin a public url. A url that is absent or scope-mapped is a loud 404.
     unpinPublicRoute: (url: string) =>
-      req('/api/auth/public-routes', s.unpinPublicResult, { method: 'DELETE', body: { url } }),
+      req(apiRoutes.delete_api_auth_public_routes.path, s.unpinPublicResult, {
+        method: 'DELETE',
+        body: { url },
+      }),
+  };
+}
 
+/** Role bodies, their version history and rollback. */
+function roleMethods(t: Transport) {
+  const { req } = t;
+  return {
     // The seeded + operator-authored roles as full bodies (base-tier ceiling +
     // editable per-tag grant map). ADMIN-ONLY — the route is `secret` (a listing
     // exposes each role's raw base-tier jq); a non-admin projection never reaches it.
-    listRoles: (signal?: AbortSignal) => req('/api/auth/roles', s.roleList, { signal }),
+    listRoles: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_auth_roles.path, s.roleList, { signal }),
     // Create an operator-authored role. The server validates the grant map + base
     // tier and 409s on a name collision; the reserved `admin` role cannot be created.
     createRole: (body: RoleCreateBody) =>
-      req('/api/auth/roles', s.roleBody, { method: 'POST', body }),
+      req(apiRoutes.post_api_auth_roles.path, s.roleBody, { method: 'POST', body }),
     // Edit a role's per-tag grant map + description (omit-means-keep). The reserved
     // `admin` role and any `allow_all` role are block-downgrade guarded server-side.
     updateRole: (name: string, body: RoleUpdateBody) =>
-      req(`/api/auth/roles/${encodeSegment(name)}`, s.roleBody, { method: 'PUT', body }),
-    // Delete a role. The reserved `admin` role is undeletable; a role still assigned
-    // to any principal is a loud 409.
-    deleteRole: (name: string) =>
-      req(`/api/auth/roles/${encodeSegment(name)}`, s.roleDeleted, { method: 'DELETE' }),
-    // A role's append-only version history + who/action/before→after audit trail.
-    // ADMIN-ONLY (`secret`).
-    listRoleVersions: (name: string, signal?: AbortSignal) =>
-      req(`/api/auth/roles/${encodeSegment(name)}/versions`, s.roleVersions, { signal }),
-    // Re-point a role's active version to a prior one (LIVE — holders follow on
-    // their next request); returns the re-pointed role body.
-    rollbackRole: (name: string, version: number) =>
-      req(`/api/auth/roles/${encodeSegment(name)}/rollback`, s.roleBody, {
-        method: 'POST',
-        body: { version },
-      }),
-
-    listTokensPayload: (signal?: AbortSignal) =>
-      req('/api/auth/tokens-payload', s.tokensPayload, { signal }),
-    createApiKey: (body: ApiKeyBody) =>
-      req('/api/auth/api-keys', s.createdApiKey, { method: 'POST', body }),
-    editApiKey: (userId: string, body: Omit<ApiKeyBody, 'user_id'>) =>
-      req(`/api/auth/api-keys/${encodeSegment(userId)}`, s.editApiKeyResult, {
+      req(buildPath(apiRoutes.put_api_auth_roles_name.path, { name }), s.roleBody, {
         method: 'PUT',
         body,
       }),
-    revokeApiKey: (userId: string) =>
-      req(`/api/auth/api-keys/${encodeSegment(userId)}`, s.revokeApiKeyResult, {
+    // Delete a role. The reserved `admin` role is undeletable; a role still assigned
+    // to any principal is a loud 409.
+    deleteRole: (name: string) =>
+      req(buildPath(apiRoutes.delete_api_auth_roles_name.path, { name }), s.roleDeleted, {
         method: 'DELETE',
       }),
+    // A role's append-only version history + who/action/before→after audit trail.
+    // ADMIN-ONLY (`secret`).
+    listRoleVersions: (name: string, signal?: AbortSignal) =>
+      req(buildPath(apiRoutes.get_api_auth_roles_name_versions.path, { name }), s.roleVersions, {
+        signal,
+      }),
+    // Re-point a role's active version to a prior one (LIVE — holders follow on
+    // their next request); returns the re-pointed role body.
+    rollbackRole: (name: string, version: number) =>
+      req(buildPath(apiRoutes.post_api_auth_roles_name_rollback.path, { name }), s.roleBody, {
+        method: 'POST',
+        body: { version },
+      }),
+  };
+}
+
+/** API keys, claim links and the member directory with its actions. */
+function keyMemberMethods(t: Transport) {
+  const { req } = t;
+  return {
+    listTokensPayload: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_auth_tokens_payload.path, s.tokensPayload, { signal }),
+    createApiKey: (body: ApiKeyBody) =>
+      req(apiRoutes.post_api_auth_api_keys.path, s.createdApiKey, { method: 'POST', body }),
+    editApiKey: (userId: string, body: Omit<ApiKeyBody, 'user_id'>) =>
+      req(
+        buildPath(apiRoutes.put_api_auth_api_keys_user_id.path, { user_id: userId }),
+        s.editApiKeyResult,
+        {
+          method: 'PUT',
+          body,
+        },
+      ),
+    revokeApiKey: (userId: string) =>
+      req(
+        buildPath(apiRoutes.delete_api_auth_api_keys_user_id.path, { user_id: userId }),
+        s.revokeApiKeyResult,
+        {
+          method: 'DELETE',
+        },
+      ),
     // Mint a one-time claim link carrying a raw key to another device (the QR
     // onboarding leg). The token rides the URL fragment; the server returns a
     // relative `claim_path` and the raw token ONCE.
     createClaimLink: (body: ClaimLinkBody) =>
-      req('/api/auth/claim-links', s.claimLinkCreated, { method: 'POST', body }),
+      req(apiRoutes.post_api_auth_claim_links.path, s.claimLinkCreated, { method: 'POST', body }),
 
     // The deployment-wide membership: every accounts provider's people and
     // outstanding invitations, aggregated and platform-joined server-side into one
     // directory (each row carrying its principal state + opaque routing tokens).
     // ADMIN-ONLY (`secret`) — a non-admin projection never reaches the route.
-    listMembers: (signal?: AbortSignal) => req('/api/auth/members', s.memberDirectory, { signal }),
+    listMembers: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_auth_members.path, s.memberDirectory, { signal }),
 
     // The catalog of member-admin actions every accounts provider declares, each
     // with its opaque key, rendered label, placement, and input/result JSON Schema.
     // ADMIN-ONLY (`secret`) — the same fence the members listing carries.
     listMemberActions: (signal?: AbortSignal) =>
-      req('/api/auth/member-actions', s.memberActionCatalog, { signal }),
+      req(apiRoutes.get_api_auth_member_actions.path, s.memberActionCatalog, { signal }),
     // Invoke one declared action by its opaque key, echoing the target row's handle
     // and the per-action input. The result is carried opaquely for a read-only,
     // schema-driven render. ADMIN-ONLY (`fenced`).
     invokeMemberAction: (body: InvokeMemberActionBody) =>
-      req('/api/auth/member-actions/invoke', s.invokeMemberActionResult, {
+      req(apiRoutes.post_api_auth_member_actions_invoke.path, s.invokeMemberActionResult, {
         method: 'POST',
         body,
       }),
+  };
+}
 
+/** The deployment's principals. */
+function principalMethods(t: Transport) {
+  const { req } = t;
+  return {
     // The deployment's principals (identities). ADMIN-ONLY (`secret`) — a
     // non-admin projection never reaches the route.
     listPrincipals: (signal?: AbortSignal) =>
-      req('/api/auth/principals', s.principalList, { signal }),
+      req(apiRoutes.get_api_auth_principals.path, s.principalList, { signal }),
     // Create a `human` or `service` principal and apply its role (admin only).
     // A duplicate id is a loud 409; an unknown role a loud 400.
     createPrincipal: (body: {
       user_id?: string;
-      kind: 'human' | 'service';
+      kind: s.PrincipalKind;
       display_name: string;
       role: string;
-    }) => req('/api/auth/principals', s.principal, { method: 'POST', body }),
+    }) => req(apiRoutes.post_api_auth_principals.path, s.principal, { method: 'POST', body }),
     // Update a principal's display name and/or `disabled` flag (omit-means-keep;
     // an all-absent body is a loud 400). Disabling turns off every credential the
     // principal owns.
     updatePrincipal: (userId: string, body: { display_name?: string; disabled?: boolean }) =>
-      req(`/api/auth/principals/${encodeSegment(userId)}`, s.principal, { method: 'PUT', body }),
+      req(
+        buildPath(apiRoutes.put_api_auth_principals_user_id.path, { user_id: userId }),
+        s.principal,
+        { method: 'PUT', body },
+      ),
     // Delete a principal — revokes every key it owns and its policy row.
     deletePrincipal: (userId: string) =>
-      req(`/api/auth/principals/${encodeSegment(userId)}`, s.principalDeleted, {
-        method: 'DELETE',
-      }),
+      req(
+        buildPath(apiRoutes.delete_api_auth_principals_user_id.path, { user_id: userId }),
+        s.principalDeleted,
+        {
+          method: 'DELETE',
+        },
+      ),
+  };
+}
+
+export function authClient(t: Transport) {
+  return {
+    ...scopeRouteMethods(t),
+    ...roleMethods(t),
+    ...keyMemberMethods(t),
+    ...principalMethods(t),
   };
 }

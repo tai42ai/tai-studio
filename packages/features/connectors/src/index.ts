@@ -2,6 +2,8 @@
  * @tai42/feature-connectors — the connectors surface: providers, connections, and
  * the OAuth popup flow.
  */
+export { AddServerDialog } from './add-server-dialog';
+export { ClientCredentialsDialog } from './client-credentials-dialog';
 export { ConnectDialog } from './connect-dialog';
 export { ConnectionDetail } from './connection-detail';
 export { ConnectorsPage } from './connectors-page';

@@ -27,10 +27,7 @@ const promptStyle = {
 } as const;
 
 function AskRow({ ask }: { readonly ask: ParkedCallerAsk }): ReactNode {
-  const prompt =
-    ask.question !== null && ask.question !== undefined && ask.question !== ''
-      ? ask.question
-      : '(no prompt)';
+  const prompt = ask.question !== null && ask.question !== '' ? ask.question : '(no prompt)';
 
   return (
     <li className="tai-stack tai-stack-3" style={{ listStyle: 'none' }} data-testid="ask-row">

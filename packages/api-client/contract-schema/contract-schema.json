@@ -1,5 +1,1653 @@
 {
   "$defs": {
+    "ApiConversationRoute": {
+      "description": "The stored ``api`` routing row: the create shape plus the two server-derived fields.\n\n``callback_secret`` (present only when the row declares a ``callback_url``) signs the\ndelivery callback; it is excluded from export and re-minted per row on import, so\ncallbacks signed with the pre-import secret no longer verify.\n``execution_key_fingerprint`` is the bound key's per-mint identity: a turn matches it\nagainst the live key, so a revoke+remint of the same ``user_id`` fails closed.",
+      "properties": {
+        "callback_secret": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Callback Secret"
+        },
+        "callback_url": {
+          "anyOf": [
+            {
+              "pattern": "^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?#]|$)",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Callback Url"
+        },
+        "cancel_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "cancel expression",
+            "language": "jq",
+            "returns": "null (cancel nothing), a parked interaction id, or a list of ids to cancel",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "channel": {
+          "default": null,
+          "title": "Channel",
+          "type": "null"
+        },
+        "door": {
+          "const": "api",
+          "title": "Door",
+          "type": "string"
+        },
+        "error_reply_text": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Reply Text"
+        },
+        "execution_key": {
+          "description": "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.",
+          "minLength": 1,
+          "title": "Execution Key",
+          "type": "string"
+        },
+        "execution_key_fingerprint": {
+          "description": "The bound key's per-mint identity the turn resolves against, derived server-side at create and never client-supplied.",
+          "minLength": 1,
+          "title": "Execution Key Fingerprint",
+          "type": "string"
+        },
+        "extras_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "extras expression",
+            "language": "jq",
+            "returns": "the extras mapping handed to the started target; null for no extras",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "initial_mode": {
+          "default": "agent",
+          "enum": [
+            "agent",
+            "manual"
+          ],
+          "title": "Initial Mode",
+          "type": "string"
+        },
+        "locale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locale"
+        },
+        "our_identity": {
+          "default": null,
+          "title": "Our Identity",
+          "type": "null"
+        },
+        "overlap": {
+          "$ref": "#/$defs/OverlapPolicy",
+          "default": {
+            "deliver": "one",
+            "running": "continue",
+            "settle_seconds": 0
+          }
+        },
+        "reply_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the started run's result (the SUCCESS shape) the route maps to the participant reply; null when the run asked its caller instead of finishing",
+            "label": "reply expression",
+            "language": "jq",
+            "returns": "the reply: null (silent), a string, or a list of answer parts",
+            "variables": [
+              {
+                "blurb": "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out",
+                "name": "turn",
+                "sample": {
+                  "id": "m-1",
+                  "inbound": {
+                    "id": "i-1",
+                    "kind": "message",
+                    "source": "api"
+                  }
+                }
+              },
+              {
+                "blurb": "the run's caller-ask entries when it asked instead of finishing (each the full parked entry); an empty list on a plain result",
+                "name": "asks",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "id": "i-42",
+                    "question": "proceed?"
+                  }
+                ]
+              },
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "resume_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "resume expression",
+            "language": "jq",
+            "returns": "null (resume nothing), {id, payload} to resume an ask with an answer, a bare id to take a waiting outcome, or a list of these",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "route_name": {
+          "pattern": "^[a-z0-9-]+$",
+          "title": "Route Name",
+          "type": "string"
+        },
+        "start_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the inbound turn payload the route maps to the started run's kwargs",
+            "keys": [
+              {
+                "gloss": "the inbound message text",
+                "name": "message"
+              },
+              {
+                "gloss": "the sending address",
+                "name": "sender"
+              },
+              {
+                "gloss": "door=channel: the medium address we are texted at",
+                "name": "our_identity"
+              },
+              {
+                "gloss": "door=channel: the registry channel name",
+                "name": "channel"
+              },
+              {
+                "gloss": "the turn's canonical thread id (the thread doors' id)",
+                "name": "thread_id"
+              },
+              {
+                "gloss": "multichannel only: the linked person's id",
+                "name": "person_id"
+              },
+              {
+                "gloss": "multichannel only: the person's known addresses",
+                "name": "person_addresses"
+              },
+              {
+                "gloss": "non-empty entry params, nested under this key",
+                "name": "params"
+              },
+              {
+                "gloss": "a structured form submission, present only when the inbound carried one",
+                "name": "form"
+              },
+              {
+                "gloss": "the caller-set opaque per-send form tag, present only when the submission carried one",
+                "name": "form_tag"
+              },
+              {
+                "gloss": "inbound media the participant sent, present only when the inbound carried some",
+                "name": "attachments"
+              },
+              {
+                "gloss": "a geographic point the participant shared, present only when the inbound carried one",
+                "name": "location"
+              },
+              {
+                "gloss": "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)",
+                "name": "messages"
+              },
+              {
+                "gloss": "overlap deliver=all: messages dropped in favour of this turn, in the same shape; present only when non-empty",
+                "name": "superseded"
+              },
+              {
+                "gloss": "the turn ids: {id, inbound: {id, kind, source}}",
+                "name": "turn"
+              },
+              {
+                "gloss": "an event turn's structured payload {id, kind, payload}; absent on a message turn",
+                "name": "event"
+              }
+            ],
+            "label": "start expression",
+            "language": "jq",
+            "returns": "the JSON object dispatched as the started run's kwargs; null starts nothing",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "target_kind": {
+          "enum": [
+            "agent",
+            "tool"
+          ],
+          "title": "Target Kind",
+          "type": "string"
+        },
+        "target_name": {
+          "minLength": 1,
+          "title": "Target Name",
+          "type": "string"
+        },
+        "turns_per_hour_override": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turns Per Hour Override"
+        }
+      },
+      "required": [
+        "route_name",
+        "target_kind",
+        "target_name",
+        "execution_key",
+        "door",
+        "execution_key_fingerprint"
+      ],
+      "title": "ApiConversationRoute",
+      "type": "object"
+    },
+    "ApiConversationRouteCreate": {
+      "description": "An ``api`` route: answers by signed callback to ``callback_url`` when set, else by the poll door.",
+      "properties": {
+        "callback_url": {
+          "anyOf": [
+            {
+              "pattern": "^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?#]|$)",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Callback Url"
+        },
+        "cancel_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "cancel expression",
+            "language": "jq",
+            "returns": "null (cancel nothing), a parked interaction id, or a list of ids to cancel",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "channel": {
+          "default": null,
+          "title": "Channel",
+          "type": "null"
+        },
+        "door": {
+          "const": "api",
+          "title": "Door",
+          "type": "string"
+        },
+        "error_reply_text": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Reply Text"
+        },
+        "execution_key": {
+          "description": "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.",
+          "minLength": 1,
+          "title": "Execution Key",
+          "type": "string"
+        },
+        "extras_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "extras expression",
+            "language": "jq",
+            "returns": "the extras mapping handed to the started target; null for no extras",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "initial_mode": {
+          "default": "agent",
+          "enum": [
+            "agent",
+            "manual"
+          ],
+          "title": "Initial Mode",
+          "type": "string"
+        },
+        "locale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locale"
+        },
+        "our_identity": {
+          "default": null,
+          "title": "Our Identity",
+          "type": "null"
+        },
+        "overlap": {
+          "$ref": "#/$defs/OverlapPolicy",
+          "default": {
+            "deliver": "one",
+            "running": "continue",
+            "settle_seconds": 0
+          }
+        },
+        "reply_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the started run's result (the SUCCESS shape) the route maps to the participant reply; null when the run asked its caller instead of finishing",
+            "label": "reply expression",
+            "language": "jq",
+            "returns": "the reply: null (silent), a string, or a list of answer parts",
+            "variables": [
+              {
+                "blurb": "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out",
+                "name": "turn",
+                "sample": {
+                  "id": "m-1",
+                  "inbound": {
+                    "id": "i-1",
+                    "kind": "message",
+                    "source": "api"
+                  }
+                }
+              },
+              {
+                "blurb": "the run's caller-ask entries when it asked instead of finishing (each the full parked entry); an empty list on a plain result",
+                "name": "asks",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "id": "i-42",
+                    "question": "proceed?"
+                  }
+                ]
+              },
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "resume_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "resume expression",
+            "language": "jq",
+            "returns": "null (resume nothing), {id, payload} to resume an ask with an answer, a bare id to take a waiting outcome, or a list of these",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "route_name": {
+          "pattern": "^[a-z0-9-]+$",
+          "title": "Route Name",
+          "type": "string"
+        },
+        "start_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the inbound turn payload the route maps to the started run's kwargs",
+            "keys": [
+              {
+                "gloss": "the inbound message text",
+                "name": "message"
+              },
+              {
+                "gloss": "the sending address",
+                "name": "sender"
+              },
+              {
+                "gloss": "door=channel: the medium address we are texted at",
+                "name": "our_identity"
+              },
+              {
+                "gloss": "door=channel: the registry channel name",
+                "name": "channel"
+              },
+              {
+                "gloss": "the turn's canonical thread id (the thread doors' id)",
+                "name": "thread_id"
+              },
+              {
+                "gloss": "multichannel only: the linked person's id",
+                "name": "person_id"
+              },
+              {
+                "gloss": "multichannel only: the person's known addresses",
+                "name": "person_addresses"
+              },
+              {
+                "gloss": "non-empty entry params, nested under this key",
+                "name": "params"
+              },
+              {
+                "gloss": "a structured form submission, present only when the inbound carried one",
+                "name": "form"
+              },
+              {
+                "gloss": "the caller-set opaque per-send form tag, present only when the submission carried one",
+                "name": "form_tag"
+              },
+              {
+                "gloss": "inbound media the participant sent, present only when the inbound carried some",
+                "name": "attachments"
+              },
+              {
+                "gloss": "a geographic point the participant shared, present only when the inbound carried one",
+                "name": "location"
+              },
+              {
+                "gloss": "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)",
+                "name": "messages"
+              },
+              {
+                "gloss": "overlap deliver=all: messages dropped in favour of this turn, in the same shape; present only when non-empty",
+                "name": "superseded"
+              },
+              {
+                "gloss": "the turn ids: {id, inbound: {id, kind, source}}",
+                "name": "turn"
+              },
+              {
+                "gloss": "an event turn's structured payload {id, kind, payload}; absent on a message turn",
+                "name": "event"
+              }
+            ],
+            "label": "start expression",
+            "language": "jq",
+            "returns": "the JSON object dispatched as the started run's kwargs; null starts nothing",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "target_kind": {
+          "enum": [
+            "agent",
+            "tool"
+          ],
+          "title": "Target Kind",
+          "type": "string"
+        },
+        "target_name": {
+          "minLength": 1,
+          "title": "Target Name",
+          "type": "string"
+        },
+        "turns_per_hour_override": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turns Per Hour Override"
+        }
+      },
+      "required": [
+        "route_name",
+        "target_kind",
+        "target_name",
+        "execution_key",
+        "door"
+      ],
+      "title": "ApiConversationRouteCreate",
+      "type": "object"
+    },
+    "ChannelConversationRoute": {
+      "description": "The stored ``channel`` routing row: the create shape plus the bound key's fingerprint (no callback secret).",
+      "properties": {
+        "callback_secret": {
+          "default": null,
+          "title": "Callback Secret",
+          "type": "null"
+        },
+        "callback_url": {
+          "default": null,
+          "title": "Callback Url",
+          "type": "null"
+        },
+        "cancel_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "cancel expression",
+            "language": "jq",
+            "returns": "null (cancel nothing), a parked interaction id, or a list of ids to cancel",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "channel": {
+          "pattern": "^[^:]*[^:\\s][^:]*$",
+          "title": "Channel",
+          "type": "string"
+        },
+        "door": {
+          "const": "channel",
+          "title": "Door",
+          "type": "string"
+        },
+        "error_reply_text": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Reply Text"
+        },
+        "execution_key": {
+          "description": "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.",
+          "minLength": 1,
+          "title": "Execution Key",
+          "type": "string"
+        },
+        "execution_key_fingerprint": {
+          "description": "The bound key's per-mint identity the turn resolves against, derived server-side at create and never client-supplied.",
+          "minLength": 1,
+          "title": "Execution Key Fingerprint",
+          "type": "string"
+        },
+        "extras_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "extras expression",
+            "language": "jq",
+            "returns": "the extras mapping handed to the started target; null for no extras",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "initial_mode": {
+          "default": "agent",
+          "enum": [
+            "agent",
+            "manual"
+          ],
+          "title": "Initial Mode",
+          "type": "string"
+        },
+        "locale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locale"
+        },
+        "our_identity": {
+          "pattern": "\\S",
+          "title": "Our Identity",
+          "type": "string"
+        },
+        "overlap": {
+          "$ref": "#/$defs/OverlapPolicy",
+          "default": {
+            "deliver": "one",
+            "running": "continue",
+            "settle_seconds": 0
+          }
+        },
+        "reply_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the started run's result (the SUCCESS shape) the route maps to the participant reply; null when the run asked its caller instead of finishing",
+            "label": "reply expression",
+            "language": "jq",
+            "returns": "the reply: null (silent), a string, or a list of answer parts",
+            "variables": [
+              {
+                "blurb": "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out",
+                "name": "turn",
+                "sample": {
+                  "id": "m-1",
+                  "inbound": {
+                    "id": "i-1",
+                    "kind": "message",
+                    "source": "api"
+                  }
+                }
+              },
+              {
+                "blurb": "the run's caller-ask entries when it asked instead of finishing (each the full parked entry); an empty list on a plain result",
+                "name": "asks",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "id": "i-42",
+                    "question": "proceed?"
+                  }
+                ]
+              },
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "resume_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "resume expression",
+            "language": "jq",
+            "returns": "null (resume nothing), {id, payload} to resume an ask with an answer, a bare id to take a waiting outcome, or a list of these",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "route_name": {
+          "pattern": "^[a-z0-9-]+$",
+          "title": "Route Name",
+          "type": "string"
+        },
+        "start_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the inbound turn payload the route maps to the started run's kwargs",
+            "keys": [
+              {
+                "gloss": "the inbound message text",
+                "name": "message"
+              },
+              {
+                "gloss": "the sending address",
+                "name": "sender"
+              },
+              {
+                "gloss": "door=channel: the medium address we are texted at",
+                "name": "our_identity"
+              },
+              {
+                "gloss": "door=channel: the registry channel name",
+                "name": "channel"
+              },
+              {
+                "gloss": "the turn's canonical thread id (the thread doors' id)",
+                "name": "thread_id"
+              },
+              {
+                "gloss": "multichannel only: the linked person's id",
+                "name": "person_id"
+              },
+              {
+                "gloss": "multichannel only: the person's known addresses",
+                "name": "person_addresses"
+              },
+              {
+                "gloss": "non-empty entry params, nested under this key",
+                "name": "params"
+              },
+              {
+                "gloss": "a structured form submission, present only when the inbound carried one",
+                "name": "form"
+              },
+              {
+                "gloss": "the caller-set opaque per-send form tag, present only when the submission carried one",
+                "name": "form_tag"
+              },
+              {
+                "gloss": "inbound media the participant sent, present only when the inbound carried some",
+                "name": "attachments"
+              },
+              {
+                "gloss": "a geographic point the participant shared, present only when the inbound carried one",
+                "name": "location"
+              },
+              {
+                "gloss": "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)",
+                "name": "messages"
+              },
+              {
+                "gloss": "overlap deliver=all: messages dropped in favour of this turn, in the same shape; present only when non-empty",
+                "name": "superseded"
+              },
+              {
+                "gloss": "the turn ids: {id, inbound: {id, kind, source}}",
+                "name": "turn"
+              },
+              {
+                "gloss": "an event turn's structured payload {id, kind, payload}; absent on a message turn",
+                "name": "event"
+              }
+            ],
+            "label": "start expression",
+            "language": "jq",
+            "returns": "the JSON object dispatched as the started run's kwargs; null starts nothing",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "target_kind": {
+          "enum": [
+            "agent",
+            "tool"
+          ],
+          "title": "Target Kind",
+          "type": "string"
+        },
+        "target_name": {
+          "minLength": 1,
+          "title": "Target Name",
+          "type": "string"
+        },
+        "turns_per_hour_override": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turns Per Hour Override"
+        }
+      },
+      "required": [
+        "route_name",
+        "target_kind",
+        "target_name",
+        "execution_key",
+        "door",
+        "channel",
+        "our_identity",
+        "execution_key_fingerprint"
+      ],
+      "title": "ChannelConversationRoute",
+      "type": "object"
+    },
+    "ChannelConversationRouteCreate": {
+      "description": "A ``channel`` route: answers through the registry ``channel`` at the ``our_identity`` address.",
+      "properties": {
+        "callback_url": {
+          "default": null,
+          "title": "Callback Url",
+          "type": "null"
+        },
+        "cancel_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "cancel expression",
+            "language": "jq",
+            "returns": "null (cancel nothing), a parked interaction id, or a list of ids to cancel",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "channel": {
+          "pattern": "^[^:]*[^:\\s][^:]*$",
+          "title": "Channel",
+          "type": "string"
+        },
+        "door": {
+          "const": "channel",
+          "title": "Door",
+          "type": "string"
+        },
+        "error_reply_text": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Reply Text"
+        },
+        "execution_key": {
+          "description": "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.",
+          "minLength": 1,
+          "title": "Execution Key",
+          "type": "string"
+        },
+        "extras_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "extras expression",
+            "language": "jq",
+            "returns": "the extras mapping handed to the started target; null for no extras",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "initial_mode": {
+          "default": "agent",
+          "enum": [
+            "agent",
+            "manual"
+          ],
+          "title": "Initial Mode",
+          "type": "string"
+        },
+        "locale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locale"
+        },
+        "our_identity": {
+          "pattern": "\\S",
+          "title": "Our Identity",
+          "type": "string"
+        },
+        "overlap": {
+          "$ref": "#/$defs/OverlapPolicy",
+          "default": {
+            "deliver": "one",
+            "running": "continue",
+            "settle_seconds": 0
+          }
+        },
+        "reply_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the started run's result (the SUCCESS shape) the route maps to the participant reply; null when the run asked its caller instead of finishing",
+            "label": "reply expression",
+            "language": "jq",
+            "returns": "the reply: null (silent), a string, or a list of answer parts",
+            "variables": [
+              {
+                "blurb": "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out",
+                "name": "turn",
+                "sample": {
+                  "id": "m-1",
+                  "inbound": {
+                    "id": "i-1",
+                    "kind": "message",
+                    "source": "api"
+                  }
+                }
+              },
+              {
+                "blurb": "the run's caller-ask entries when it asked instead of finishing (each the full parked entry); an empty list on a plain result",
+                "name": "asks",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "id": "i-42",
+                    "question": "proceed?"
+                  }
+                ]
+              },
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "resume_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "resume expression",
+            "language": "jq",
+            "returns": "null (resume nothing), {id, payload} to resume an ask with an answer, a bare id to take a waiting outcome, or a list of these",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "route_name": {
+          "pattern": "^[a-z0-9-]+$",
+          "title": "Route Name",
+          "type": "string"
+        },
+        "start_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the inbound turn payload the route maps to the started run's kwargs",
+            "keys": [
+              {
+                "gloss": "the inbound message text",
+                "name": "message"
+              },
+              {
+                "gloss": "the sending address",
+                "name": "sender"
+              },
+              {
+                "gloss": "door=channel: the medium address we are texted at",
+                "name": "our_identity"
+              },
+              {
+                "gloss": "door=channel: the registry channel name",
+                "name": "channel"
+              },
+              {
+                "gloss": "the turn's canonical thread id (the thread doors' id)",
+                "name": "thread_id"
+              },
+              {
+                "gloss": "multichannel only: the linked person's id",
+                "name": "person_id"
+              },
+              {
+                "gloss": "multichannel only: the person's known addresses",
+                "name": "person_addresses"
+              },
+              {
+                "gloss": "non-empty entry params, nested under this key",
+                "name": "params"
+              },
+              {
+                "gloss": "a structured form submission, present only when the inbound carried one",
+                "name": "form"
+              },
+              {
+                "gloss": "the caller-set opaque per-send form tag, present only when the submission carried one",
+                "name": "form_tag"
+              },
+              {
+                "gloss": "inbound media the participant sent, present only when the inbound carried some",
+                "name": "attachments"
+              },
+              {
+                "gloss": "a geographic point the participant shared, present only when the inbound carried one",
+                "name": "location"
+              },
+              {
+                "gloss": "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)",
+                "name": "messages"
+              },
+              {
+                "gloss": "overlap deliver=all: messages dropped in favour of this turn, in the same shape; present only when non-empty",
+                "name": "superseded"
+              },
+              {
+                "gloss": "the turn ids: {id, inbound: {id, kind, source}}",
+                "name": "turn"
+              },
+              {
+                "gloss": "an event turn's structured payload {id, kind, payload}; absent on a message turn",
+                "name": "event"
+              }
+            ],
+            "label": "start expression",
+            "language": "jq",
+            "returns": "the JSON object dispatched as the started run's kwargs; null starts nothing",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "target_kind": {
+          "enum": [
+            "agent",
+            "tool"
+          ],
+          "title": "Target Kind",
+          "type": "string"
+        },
+        "target_name": {
+          "minLength": 1,
+          "title": "Target Name",
+          "type": "string"
+        },
+        "turns_per_hour_override": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turns Per Hour Override"
+        }
+      },
+      "required": [
+        "route_name",
+        "target_kind",
+        "target_name",
+        "execution_key",
+        "door",
+        "channel",
+        "our_identity"
+      ],
+      "title": "ChannelConversationRouteCreate",
+      "type": "object"
+    },
+    "CrontabCadence": {
+      "additionalProperties": false,
+      "description": "Fire on a five-field crontab (minute, hour, day of month, month, day of week).",
+      "properties": {
+        "day_of_month": {
+          "default": "*",
+          "title": "Day Of Month",
+          "type": "string"
+        },
+        "day_of_week": {
+          "default": "*",
+          "title": "Day Of Week",
+          "type": "string"
+        },
+        "hour": {
+          "default": "*",
+          "title": "Hour",
+          "type": "string"
+        },
+        "kind": {
+          "const": "crontab",
+          "default": "crontab",
+          "title": "Kind",
+          "type": "string"
+        },
+        "minute": {
+          "default": "*",
+          "title": "Minute",
+          "type": "string"
+        },
+        "month_of_year": {
+          "default": "*",
+          "title": "Month Of Year",
+          "type": "string"
+        }
+      },
+      "title": "CrontabCadence",
+      "type": "object"
+    },
+    "FieldChangedEvent": {
+      "additionalProperties": false,
+      "description": "A declared ``field_changed`` input field changed.",
+      "properties": {
+        "field": {
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        },
+        "kind": {
+          "const": "field_changed",
+          "default": "field_changed",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field"
+      ],
+      "title": "FieldChangedEvent",
+      "type": "object"
+    },
     "HookSubject": {
       "additionalProperties": false,
       "description": "The optional state subject a hook fire targets.\n\nCarries the conversation-target scope ``(target_kind, target_name)``, the subject ``kind`` (matching\n:data:`~tai42_contract.states.SUBJECT_KIND_RE`), and a ``key_expr`` — a templated text\ncarrying (inline or by stored id) a jq program evaluated over the event payload at\nfire — it must yield a non-empty string, else the fire fails loudly like any hook\nerror. Frozen; deposited as the ambient state context so a state write during the fire\nis keyed and attributed to the hook.",
@@ -34,6 +1682,34 @@
       "title": "HookSubject",
       "type": "object"
     },
+    "IntervalCadence": {
+      "additionalProperties": false,
+      "description": "Fire every ``every`` seconds; ``relative`` aligns the schedule to the interval's own clock.",
+      "properties": {
+        "every": {
+          "description": "The interval in seconds.",
+          "exclusiveMinimum": 0,
+          "title": "Every",
+          "type": "number"
+        },
+        "kind": {
+          "const": "interval",
+          "default": "interval",
+          "title": "Kind",
+          "type": "string"
+        },
+        "relative": {
+          "default": false,
+          "title": "Relative",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "every"
+      ],
+      "title": "IntervalCadence",
+      "type": "object"
+    },
     "OverlapPolicy": {
       "description": "How a route treats a running turn and the newer participant messages that overlap it.\n\nGoverns participant MESSAGE turns on one thread only (``origin=\"client\"``,\n``inbound_kind=\"message\"``); an event turn always runs as its own turn. Two knobs and a\nwindow:\n\n* ``running`` — what happens to the turn in flight when a newer message is accepted:\n  ``continue`` leaves it running (one turn per message), ``cancel`` cancels it cooperatively\n  in favour of the newer message.\n* ``deliver`` — what a turn carries: ``one`` exactly one message per turn, ``all`` every\n  message accepted since the last turn started, in order, as one turn.\n* ``settle_seconds`` — a turn starts no earlier than this many seconds after its lead\n  message was accepted, so a burst inside the window rides in one turn. ``0`` disables it.\n\nThe default policy (``continue``/``one``/``0``) runs one turn per message and leaves the\npayload unchanged. Frozen.",
       "properties": {
@@ -65,6 +1741,28 @@
         }
       },
       "title": "OverlapPolicy",
+      "type": "object"
+    },
+    "PageAdvancedEvent": {
+      "additionalProperties": false,
+      "description": "A declared ``page_advanced`` page was advanced past.",
+      "properties": {
+        "kind": {
+          "const": "page_advanced",
+          "default": "page_advanced",
+          "title": "Kind",
+          "type": "string"
+        },
+        "page": {
+          "minLength": 1,
+          "title": "Page",
+          "type": "string"
+        }
+      },
+      "required": [
+        "page"
+      ],
+      "title": "PageAdvancedEvent",
       "type": "object"
     },
     "PresetSeedToolMeta": {
@@ -113,33 +1811,31 @@
       "title": "PresetSeedToolMeta",
       "type": "object"
     },
-    "PresetSpec": {
-      "description": "A base tool bound to fixed kwargs, resolved into a ``StructuredTool`` at run time.\n\nSee ``resolve_tools``. A base tool that interprets its fixed kwargs as a nested document\ncarries that document opaquely here.",
+    "ScheduleRowError": {
+      "additionalProperties": false,
+      "description": "A backend's last scheduling failure for a schedule, when the backend records one.",
       "properties": {
-        "base_tool": {
-          "title": "Base Tool",
-          "type": "string"
+        "at_iso": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "At Iso"
         },
-        "description": {
-          "default": "",
-          "title": "Description",
-          "type": "string"
-        },
-        "fixed_kwargs": {
-          "additionalProperties": true,
-          "title": "Fixed Kwargs",
-          "type": "object"
-        },
-        "name": {
-          "title": "Name",
+        "message": {
+          "title": "Message",
           "type": "string"
         }
       },
       "required": [
-        "name",
-        "base_tool"
+        "message"
       ],
-      "title": "PresetSpec",
+      "title": "ScheduleRowError",
       "type": "object"
     },
     "StateAttach": {
@@ -287,6 +1983,70 @@
       "title": "StateInjection",
       "type": "object"
     },
+    "StateRegimeRule": {
+      "additionalProperties": false,
+      "description": "One write-regime rule: a ``path`` (object keys and the ``\"*\"`` wildcard; ``[]`` is the root) and its ``regime``.\n\nAn undeclared path is ``free``.",
+      "properties": {
+        "path": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Path",
+          "type": "array"
+        },
+        "regime": {
+          "enum": [
+            "single",
+            "composing",
+            "free"
+          ],
+          "title": "Regime",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "regime"
+      ],
+      "title": "StateRegimeRule",
+      "type": "object"
+    },
+    "StateSubject": {
+      "additionalProperties": false,
+      "description": "One addressed subject: a scope ``(target_kind, target_name)`` plus ``(kind, key)`` within it.\n\nEquality (and identity across every store method) is all four fields. ``key`` is\nstripped and must be 1..512 characters; ``kind`` matches :data:`SUBJECT_KIND_RE`.\nFrozen so a validated subject cannot be mutated after it is read back.",
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "target_kind": {
+          "enum": [
+            "agent",
+            "tool"
+          ],
+          "title": "Target Kind",
+          "type": "string"
+        },
+        "target_name": {
+          "minLength": 1,
+          "title": "Target Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_kind",
+        "target_name",
+        "kind",
+        "key"
+      ],
+      "title": "StateSubject",
+      "type": "object"
+    },
     "StateTemplateDeclarations": {
       "additionalProperties": false,
       "description": "The ``declarations`` section of a state-template document.\n\nThe JSON ``schema`` (wire key ``schema``, attribute ``schema_``) of the static values an\nattachment stores, and an OPTIONAL ``check`` — a :class:`~tai42_contract.template.TemplatedText`\ncarrying a jq predicate over those values. Structural validation (the check's jq, the schema's\nshape) lives at the store; this model pins the served wire shape.\n\nThe wire key ``schema`` is the attribute ``schema_`` (alias) because a ``schema`` field\nwould shadow ``BaseModel.schema``.",
@@ -369,6 +2129,25 @@
       "title": "StateTemplateJq",
       "type": "object"
     },
+    "StateTemplateParameter": {
+      "additionalProperties": false,
+      "description": "One fillable template parameter: its value ``schema`` and an OPTIONAL ``default``.\n\n``has_default`` tells an absent default from an explicit ``null`` one; the wire shape omits\n``default`` when none was given.",
+      "properties": {
+        "default": {
+          "title": "Default"
+        },
+        "schema": {
+          "additionalProperties": true,
+          "title": "Schema",
+          "type": "object"
+        }
+      },
+      "required": [
+        "schema"
+      ],
+      "title": "StateTemplateParameter",
+      "type": "object"
+    },
     "StateTemplateReconcile": {
       "additionalProperties": false,
       "description": "The ``reconcile`` section of a state-template document.\n\nThree jq programs the store runs to settle a state's OPEN records on a declarations edit —\n``orphans`` names the items a record subtree orphans against the new declarations,\n``resolutions`` names the not-done resolutions a close may name, and ``close`` returns the op\nbatch that closes one orphan. Each is a :class:`~tai42_contract.template.TemplatedText` (inline\n``content`` or a stored ``id``).",
@@ -389,6 +2168,19 @@
         "resolutions"
       ],
       "title": "StateTemplateReconcile",
+      "type": "object"
+    },
+    "StateTemplateTrace": {
+      "additionalProperties": false,
+      "description": "The trace switch: when ``enabled``, every write under an attachment of the template stamps ``_trace``.",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        }
+      },
+      "title": "StateTemplateTrace",
       "type": "object"
     },
     "StateUpdate": {
@@ -505,110 +2297,18 @@
       "title": "StateUpdate",
       "type": "object"
     },
-    "SubAgentSpec": {
-      "description": "Neutral sub-agent descriptor — the in-process, live-tools shape.\n\nCarries name/description/system_prompt/tool_names/tools(live)/presets/skills/\ninline_skills/response_format/strategy/subagents — the fields a live sub-agent\n(e.g. the mcp-finder) needs. ``inline_skills`` items are plain dicts\n(``{\"name\", \"content\"}``). JSON callers use the richer ``DeepSubAgentSpec``\n(full field set) instead of this type.\n\n``tools`` is ``list[Any]`` in the contract (live ``StructuredTool`` objects in\nthe impl) — a vendor type cannot be a runtime pydantic field here.\n\n``response_format`` is a live pydantic class (in-process), the ``TemplatedText | dict``\nauthored-schema union (a JSON caller's forced-output schema — inline, or named by stored\n``id`` and rendered/parsed to its schema at the point of use), or unset.",
+    "SubmittedEvent": {
+      "additionalProperties": false,
+      "description": "The form was submitted and its ``submitted`` reaction checks it before it is accepted.",
       "properties": {
-        "description": {
-          "default": "",
-          "title": "Description",
+        "kind": {
+          "const": "submitted",
+          "default": "submitted",
+          "title": "Kind",
           "type": "string"
-        },
-        "inline_skills": {
-          "default": [],
-          "items": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "title": "Inline Skills",
-          "type": "array"
-        },
-        "name": {
-          "title": "Name",
-          "type": "string"
-        },
-        "presets": {
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/PresetSpec"
-          },
-          "title": "Presets",
-          "type": "array"
-        },
-        "response_format": {
-          "anyOf": [
-            {},
-            {
-              "$ref": "#/$defs/TemplatedText"
-            },
-            {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Response Format"
-        },
-        "skills": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "title": "Skills",
-          "type": "array"
-        },
-        "strategy": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Strategy"
-        },
-        "subagents": {
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/SubAgentSpec"
-          },
-          "title": "Subagents",
-          "type": "array"
-        },
-        "system_prompt": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TemplatedText"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "tool_names": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "title": "Tool Names",
-          "type": "array"
-        },
-        "tools": {
-          "default": [],
-          "items": {},
-          "title": "Tools",
-          "type": "array"
         }
       },
-      "required": [
-        "name"
-      ],
-      "title": "SubAgentSpec",
+      "title": "SubmittedEvent",
       "type": "object"
     },
     "TemplatedText": {
@@ -652,7 +2352,12 @@
       }
     }
   },
-  "contract_version": "16.0.0",
+  "constants": {
+    "MEDIA_ID_PATTERN": "[A-Za-z0-9_-]{43}",
+    "MEDIA_ROUTE_PREFIX": "/api/interactions/media/",
+    "PERSON_KIND": "person"
+  },
+  "contract_version": "17.0.0",
   "documents": {
     "AccessPolicy": {
       "description": "Schema for data stored at 'ac:policy:{user_id}'. Represents WHAT the user can do (permissions & logic).",
@@ -779,6 +2484,7 @@
       "type": "object"
     },
     "ChannelTemplate": {
+      "additionalProperties": false,
       "description": "A pre-approved, named template a channel sends outside its freeform window.\n\nSome media only accept arbitrary text inside a bounded conversation window (a provider's\ncustomer-service window); outside it, the sole accepted send is an operator-authored,\npre-approved template referenced by ``name`` in an approved ``language`` locale — both\nrequired and non-blank.\n\n``parameters`` is the template's runtime arguments as an OPAQUE object: the platform\nthreads it UNOPENED (never looking inside it), and the channel that declares the\n``supports_template_notifications`` capability owns its shape — it validates ``parameters``\nagainst its OWN template-parameter schema through its OPTIONAL ``validate_template`` hook\n(see :class:`~tai42_contract.channels.Channel`) and maps it to its own send API in its own\ncode. A template with no runtime arguments carries no ``parameters``; a present\n``parameters`` is a non-empty dict.",
       "properties": {
         "language": {
@@ -811,827 +2517,65 @@
       "type": "object"
     },
     "ConversationRoute": {
-      "description": "The stored routing row: :class:`ConversationRouteCreate` plus the two server-derived fields.\n\nWhat the manager persists and backup restore validates.\n\n``callback_secret`` (present only on an ``api`` row that declares a ``callback_url``)\nsigns the delivery callback; it is excluded from export and re-minted per row on import,\nso callbacks signed with the pre-import secret no longer verify.\n``execution_key_fingerprint`` is the bound key's per-mint\nidentity: a turn matches it against the live key, so a revoke+remint of the same\n``user_id`` fails closed.",
-      "properties": {
-        "callback_secret": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Callback Secret"
+      "description": "The validating form of a stored route row: ``.root`` is the door's variant.",
+      "discriminator": {
+        "mapping": {
+          "api": "#/$defs/ApiConversationRoute",
+          "channel": "#/$defs/ChannelConversationRoute"
         },
-        "callback_url": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Callback Url"
-        },
-        "cancel_expr": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TemplatedText"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "x-tai42-expression": {
-            "blurb": "the door's input document",
-            "label": "cancel expression",
-            "language": "jq",
-            "returns": "null (cancel nothing), a parked interaction id, or a list of ids to cancel",
-            "variables": [
-              {
-                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
-                "name": "parked",
-                "sample": [
-                  {
-                    "answer_format": "confirm",
-                    "asked_by": [
-                      "main"
-                    ],
-                    "group_id": "g-1",
-                    "id": "i-42",
-                    "question": "proceed?",
-                    "status": "asking",
-                    "to": "caller"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        "channel": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Channel"
-        },
-        "door": {
-          "enum": [
-            "api",
-            "channel"
-          ],
-          "title": "Door",
-          "type": "string"
-        },
-        "error_reply_text": {
-          "anyOf": [
-            {
-              "maxLength": 2000,
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Error Reply Text"
-        },
-        "execution_key": {
-          "description": "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.",
-          "minLength": 1,
-          "title": "Execution Key",
-          "type": "string"
-        },
-        "execution_key_fingerprint": {
-          "description": "The bound key's per-mint identity the turn resolves against, derived server-side at create and never client-supplied.",
-          "minLength": 1,
-          "title": "Execution Key Fingerprint",
-          "type": "string"
-        },
-        "extras_expr": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TemplatedText"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "x-tai42-expression": {
-            "blurb": "the door's input document",
-            "label": "extras expression",
-            "language": "jq",
-            "returns": "the extras mapping handed to the started target; null for no extras",
-            "variables": [
-              {
-                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
-                "name": "parked",
-                "sample": [
-                  {
-                    "answer_format": "confirm",
-                    "asked_by": [
-                      "main"
-                    ],
-                    "group_id": "g-1",
-                    "id": "i-42",
-                    "question": "proceed?",
-                    "status": "asking",
-                    "to": "caller"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        "initial_mode": {
-          "default": "agent",
-          "enum": [
-            "agent",
-            "manual"
-          ],
-          "title": "Initial Mode",
-          "type": "string"
-        },
-        "locale": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Locale"
-        },
-        "our_identity": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Our Identity"
-        },
-        "overlap": {
-          "$ref": "#/$defs/OverlapPolicy",
-          "default": {
-            "deliver": "one",
-            "running": "continue",
-            "settle_seconds": 0
-          }
-        },
-        "reply_expr": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TemplatedText"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "x-tai42-expression": {
-            "blurb": "the started run's result (the SUCCESS shape) the route maps to the participant reply; null when the run asked its caller instead of finishing",
-            "label": "reply expression",
-            "language": "jq",
-            "returns": "the reply: null (silent), a string, or a list of answer parts",
-            "variables": [
-              {
-                "blurb": "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out",
-                "name": "turn",
-                "sample": {
-                  "id": "m-1",
-                  "inbound": {
-                    "id": "i-1",
-                    "kind": "message",
-                    "source": "api"
-                  }
-                }
-              },
-              {
-                "blurb": "the run's caller-ask entries when it asked instead of finishing (each the full parked entry); an empty list on a plain result",
-                "name": "asks",
-                "sample": [
-                  {
-                    "answer_format": "confirm",
-                    "id": "i-42",
-                    "question": "proceed?"
-                  }
-                ]
-              },
-              {
-                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
-                "name": "parked",
-                "sample": [
-                  {
-                    "answer_format": "confirm",
-                    "asked_by": [
-                      "main"
-                    ],
-                    "group_id": "g-1",
-                    "id": "i-42",
-                    "question": "proceed?",
-                    "status": "asking",
-                    "to": "caller"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        "resume_expr": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TemplatedText"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "x-tai42-expression": {
-            "blurb": "the door's input document",
-            "label": "resume expression",
-            "language": "jq",
-            "returns": "null (resume nothing), {id, payload} to resume an ask with an answer, a bare id to take a waiting outcome, or a list of these",
-            "variables": [
-              {
-                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
-                "name": "parked",
-                "sample": [
-                  {
-                    "answer_format": "confirm",
-                    "asked_by": [
-                      "main"
-                    ],
-                    "group_id": "g-1",
-                    "id": "i-42",
-                    "question": "proceed?",
-                    "status": "asking",
-                    "to": "caller"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        "route_name": {
-          "title": "Route Name",
-          "type": "string"
-        },
-        "start_expr": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TemplatedText"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "x-tai42-expression": {
-            "blurb": "the inbound turn payload the route maps to the started run's kwargs",
-            "keys": [
-              {
-                "gloss": "the inbound message text",
-                "name": "message"
-              },
-              {
-                "gloss": "the sending address",
-                "name": "sender"
-              },
-              {
-                "gloss": "door=channel: the medium address we are texted at",
-                "name": "our_identity"
-              },
-              {
-                "gloss": "door=channel: the registry channel name",
-                "name": "channel"
-              },
-              {
-                "gloss": "the turn's canonical thread id (the thread doors' id)",
-                "name": "thread_id"
-              },
-              {
-                "gloss": "multichannel only: the linked person's id",
-                "name": "person_id"
-              },
-              {
-                "gloss": "multichannel only: the person's known addresses",
-                "name": "person_addresses"
-              },
-              {
-                "gloss": "non-empty entry params, nested under this key",
-                "name": "params"
-              },
-              {
-                "gloss": "a structured form submission, present only when the inbound carried one",
-                "name": "form"
-              },
-              {
-                "gloss": "inbound media the participant sent, present only when the inbound carried some",
-                "name": "attachments"
-              },
-              {
-                "gloss": "a geographic point the participant shared, present only when the inbound carried one",
-                "name": "location"
-              },
-              {
-                "gloss": "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/attachments/location when that message carried them)",
-                "name": "messages"
-              },
-              {
-                "gloss": "overlap deliver=all: messages dropped in favour of this turn, in the same shape; present only when non-empty",
-                "name": "superseded"
-              },
-              {
-                "gloss": "the turn ids: {id, inbound: {id, kind, source}}",
-                "name": "turn"
-              },
-              {
-                "gloss": "an event turn's structured payload {id, kind, payload}; absent on a message turn",
-                "name": "event"
-              }
-            ],
-            "label": "start expression",
-            "language": "jq",
-            "returns": "the JSON object dispatched as the started run's kwargs; null starts nothing",
-            "variables": [
-              {
-                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
-                "name": "parked",
-                "sample": [
-                  {
-                    "answer_format": "confirm",
-                    "asked_by": [
-                      "main"
-                    ],
-                    "group_id": "g-1",
-                    "id": "i-42",
-                    "question": "proceed?",
-                    "status": "asking",
-                    "to": "caller"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        "target_kind": {
-          "enum": [
-            "agent",
-            "tool"
-          ],
-          "title": "Target Kind",
-          "type": "string"
-        },
-        "target_name": {
-          "minLength": 1,
-          "title": "Target Name",
-          "type": "string"
-        },
-        "turns_per_hour_override": {
-          "anyOf": [
-            {
-              "exclusiveMinimum": 0,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Turns Per Hour Override"
-        }
+        "propertyName": "door"
       },
-      "required": [
-        "route_name",
-        "door",
-        "target_kind",
-        "target_name",
-        "execution_key",
-        "execution_key_fingerprint"
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ApiConversationRoute"
+        },
+        {
+          "$ref": "#/$defs/ChannelConversationRoute"
+        }
       ],
-      "title": "ConversationRoute",
-      "type": "object"
+      "title": "ConversationRouteBody"
     },
     "ConversationRouteCreate": {
-      "description": "The client-facing create/edit body for a conversation route: the fields a caller supplies.\n\nBinds a ``(target_kind, target_name)`` — an ``agent`` run or a ``tool`` dispatch — to\nan ``execution_key`` the turn runs AS (bound with pass-role at create). Both target kinds\nmay carry the parkable-door jq (:class:`ParkableDoorMixin`: ``cancel_expr`` / ``resume_expr`` /\n``start_expr`` / ``extras_expr``) plus a ``reply_expr`` (jq mapping the started run's result to\nthe reply): ``start_expr`` builds the run's kwargs (a tool dispatch's kwargs or an agent run's\n``astream`` kwargs), the cancel/resume jqs act on the run's parked interactions, and\n``reply_expr`` maps the terminal to the participant reply. ``api`` rows MAY carry an https\n``callback_url`` (the answer sink; when absent\nthe caller reads its answer back from the poll door); ``channel`` rows carry the\nregistry ``channel`` plus the ``our_identity`` the medium is texted at (N rows may\nshare a channel, each its own identity). The server-derived ``callback_secret`` and\n``execution_key_fingerprint`` are deliberately absent; :class:`ConversationRoute` is\nthis shape plus those. Frozen.",
-      "properties": {
-        "callback_url": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Callback Url"
+      "description": "The published, validating form of a route create: ``.root`` is the door's variant.",
+      "discriminator": {
+        "mapping": {
+          "api": "#/$defs/ApiConversationRouteCreate",
+          "channel": "#/$defs/ChannelConversationRouteCreate"
         },
-        "cancel_expr": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TemplatedText"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "x-tai42-expression": {
-            "blurb": "the door's input document",
-            "label": "cancel expression",
-            "language": "jq",
-            "returns": "null (cancel nothing), a parked interaction id, or a list of ids to cancel",
-            "variables": [
-              {
-                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
-                "name": "parked",
-                "sample": [
-                  {
-                    "answer_format": "confirm",
-                    "asked_by": [
-                      "main"
-                    ],
-                    "group_id": "g-1",
-                    "id": "i-42",
-                    "question": "proceed?",
-                    "status": "asking",
-                    "to": "caller"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        "channel": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Channel"
-        },
-        "door": {
-          "enum": [
-            "api",
-            "channel"
-          ],
-          "title": "Door",
-          "type": "string"
-        },
-        "error_reply_text": {
-          "anyOf": [
-            {
-              "maxLength": 2000,
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Error Reply Text"
-        },
-        "execution_key": {
-          "description": "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.",
-          "minLength": 1,
-          "title": "Execution Key",
-          "type": "string"
-        },
-        "extras_expr": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TemplatedText"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "x-tai42-expression": {
-            "blurb": "the door's input document",
-            "label": "extras expression",
-            "language": "jq",
-            "returns": "the extras mapping handed to the started target; null for no extras",
-            "variables": [
-              {
-                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
-                "name": "parked",
-                "sample": [
-                  {
-                    "answer_format": "confirm",
-                    "asked_by": [
-                      "main"
-                    ],
-                    "group_id": "g-1",
-                    "id": "i-42",
-                    "question": "proceed?",
-                    "status": "asking",
-                    "to": "caller"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        "initial_mode": {
-          "default": "agent",
-          "enum": [
-            "agent",
-            "manual"
-          ],
-          "title": "Initial Mode",
-          "type": "string"
-        },
-        "locale": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Locale"
-        },
-        "our_identity": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Our Identity"
-        },
-        "overlap": {
-          "$ref": "#/$defs/OverlapPolicy",
-          "default": {
-            "deliver": "one",
-            "running": "continue",
-            "settle_seconds": 0
-          }
-        },
-        "reply_expr": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TemplatedText"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "x-tai42-expression": {
-            "blurb": "the started run's result (the SUCCESS shape) the route maps to the participant reply; null when the run asked its caller instead of finishing",
-            "label": "reply expression",
-            "language": "jq",
-            "returns": "the reply: null (silent), a string, or a list of answer parts",
-            "variables": [
-              {
-                "blurb": "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out",
-                "name": "turn",
-                "sample": {
-                  "id": "m-1",
-                  "inbound": {
-                    "id": "i-1",
-                    "kind": "message",
-                    "source": "api"
-                  }
-                }
-              },
-              {
-                "blurb": "the run's caller-ask entries when it asked instead of finishing (each the full parked entry); an empty list on a plain result",
-                "name": "asks",
-                "sample": [
-                  {
-                    "answer_format": "confirm",
-                    "id": "i-42",
-                    "question": "proceed?"
-                  }
-                ]
-              },
-              {
-                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
-                "name": "parked",
-                "sample": [
-                  {
-                    "answer_format": "confirm",
-                    "asked_by": [
-                      "main"
-                    ],
-                    "group_id": "g-1",
-                    "id": "i-42",
-                    "question": "proceed?",
-                    "status": "asking",
-                    "to": "caller"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        "resume_expr": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TemplatedText"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "x-tai42-expression": {
-            "blurb": "the door's input document",
-            "label": "resume expression",
-            "language": "jq",
-            "returns": "null (resume nothing), {id, payload} to resume an ask with an answer, a bare id to take a waiting outcome, or a list of these",
-            "variables": [
-              {
-                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
-                "name": "parked",
-                "sample": [
-                  {
-                    "answer_format": "confirm",
-                    "asked_by": [
-                      "main"
-                    ],
-                    "group_id": "g-1",
-                    "id": "i-42",
-                    "question": "proceed?",
-                    "status": "asking",
-                    "to": "caller"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        "route_name": {
-          "title": "Route Name",
-          "type": "string"
-        },
-        "start_expr": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/TemplatedText"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "x-tai42-expression": {
-            "blurb": "the inbound turn payload the route maps to the started run's kwargs",
-            "keys": [
-              {
-                "gloss": "the inbound message text",
-                "name": "message"
-              },
-              {
-                "gloss": "the sending address",
-                "name": "sender"
-              },
-              {
-                "gloss": "door=channel: the medium address we are texted at",
-                "name": "our_identity"
-              },
-              {
-                "gloss": "door=channel: the registry channel name",
-                "name": "channel"
-              },
-              {
-                "gloss": "the turn's canonical thread id (the thread doors' id)",
-                "name": "thread_id"
-              },
-              {
-                "gloss": "multichannel only: the linked person's id",
-                "name": "person_id"
-              },
-              {
-                "gloss": "multichannel only: the person's known addresses",
-                "name": "person_addresses"
-              },
-              {
-                "gloss": "non-empty entry params, nested under this key",
-                "name": "params"
-              },
-              {
-                "gloss": "a structured form submission, present only when the inbound carried one",
-                "name": "form"
-              },
-              {
-                "gloss": "inbound media the participant sent, present only when the inbound carried some",
-                "name": "attachments"
-              },
-              {
-                "gloss": "a geographic point the participant shared, present only when the inbound carried one",
-                "name": "location"
-              },
-              {
-                "gloss": "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/attachments/location when that message carried them)",
-                "name": "messages"
-              },
-              {
-                "gloss": "overlap deliver=all: messages dropped in favour of this turn, in the same shape; present only when non-empty",
-                "name": "superseded"
-              },
-              {
-                "gloss": "the turn ids: {id, inbound: {id, kind, source}}",
-                "name": "turn"
-              },
-              {
-                "gloss": "an event turn's structured payload {id, kind, payload}; absent on a message turn",
-                "name": "event"
-              }
-            ],
-            "label": "start expression",
-            "language": "jq",
-            "returns": "the JSON object dispatched as the started run's kwargs; null starts nothing",
-            "variables": [
-              {
-                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
-                "name": "parked",
-                "sample": [
-                  {
-                    "answer_format": "confirm",
-                    "asked_by": [
-                      "main"
-                    ],
-                    "group_id": "g-1",
-                    "id": "i-42",
-                    "question": "proceed?",
-                    "status": "asking",
-                    "to": "caller"
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        "target_kind": {
-          "enum": [
-            "agent",
-            "tool"
-          ],
-          "title": "Target Kind",
-          "type": "string"
-        },
-        "target_name": {
-          "minLength": 1,
-          "title": "Target Name",
-          "type": "string"
-        },
-        "turns_per_hour_override": {
-          "anyOf": [
-            {
-              "exclusiveMinimum": 0,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Turns Per Hour Override"
-        }
+        "propertyName": "door"
       },
-      "required": [
-        "route_name",
-        "door",
-        "target_kind",
-        "target_name",
-        "execution_key"
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ApiConversationRouteCreate"
+        },
+        {
+          "$ref": "#/$defs/ChannelConversationRouteCreate"
+        }
       ],
-      "title": "ConversationRouteCreate",
-      "type": "object"
+      "title": "ConversationRouteCreateBody"
+    },
+    "FormReactionEvent": {
+      "description": "The published form of one form-reaction event.",
+      "discriminator": {
+        "mapping": {
+          "field_changed": "#/$defs/FieldChangedEvent",
+          "page_advanced": "#/$defs/PageAdvancedEvent",
+          "submitted": "#/$defs/SubmittedEvent"
+        },
+        "propertyName": "kind"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/FieldChangedEvent"
+        },
+        {
+          "$ref": "#/$defs/PageAdvancedEvent"
+        },
+        {
+          "$ref": "#/$defs/SubmittedEvent"
+        }
+      ],
+      "title": "FormReactionEventBody"
     },
     "HookParams": {
       "description": "The stored hook record: :class:`HookRegister` plus the server-derived ``execution_key_fingerprint``.\n\nManagers persist this shape, never the request body.",
@@ -2119,7 +3063,7 @@
       "type": "object"
     },
     "PresetBody": {
-      "description": "The persisted body of a versioned preset.\n\n``base_tool`` is the tool the preset binds; ``description`` is the preset's\nhuman description; ``fixed_kwargs`` are the baked kwargs (each becomes a\nhidden, fixed constant on the bound tool). ``extensions`` is a list of\nextension COMBOS — the SAME shape as a manifest ``extensions`` map value,\neach combo element an extension name or a ``{\"name\", \"config\"}`` mapping\nbinding author config (e.g. an ``ask_external`` verifier) — fed unconverted\nto the structured runtime-attach API at register (an empty outer list means\nno extensions; an empty INNER combo is rejected by the validating view).\n``output_schema`` is an optional author-set OUTPUT JSON Schema (an object\nschema): on an AGENT base it is baked into the run tool's ``response_format``\nso the agent FORCES a structured output matching it; on a plain tool it is\nadvertised as the bound tool's output schema and every result is validated\nagainst it at run time. ``input_schema`` is an optional author-set INPUT JSON\nSchema: it becomes the exposed named tool's input contract, and the caller's\nvalidated object is routed into the base tool's declared payload argument (see\n:class:`PresetInputSchemaSupport`). Only a base tool that DECLARES input-schema\nsupport accepts one; otherwise a set ``input_schema`` is a loud authoring error.\n\nEach schema is the ``TemplatedText | dict`` union: an inline ``dict`` is the JSON\nSchema document itself; a :class:`~tai42_contract.template.TemplatedText` names a stored\nschema by ``id`` (or carries it inline as ``content``), rendered and parsed as JSON to the\nsame schema at the point of use and save.\n\nEvery field must survive carry-forward on a version save: dropping\n``extensions`` would make the branch tools vanish on reload, dropping\n``base_tool`` would break the bind, dropping ``description`` would strip the\ntool's description, dropping ``output_schema`` would silently un-enforce the\nstructured output, and dropping ``input_schema`` would silently un-enforce the\nstructured input.\n\nA ``fixed_kwargs`` scalar-string value written ``!ENV ${VAR}`` is a SECRET\nREFERENCE, not a credential: the server resolves it from the environment at bind\nand the store keeps only the reference — never the resolved value.",
+      "description": "The persisted body of a versioned preset.\n\n``base_tool`` is the tool the preset binds; ``description`` is the preset's\nhuman description; ``fixed_kwargs`` are the baked kwargs (each becomes a\nhidden, fixed constant on the bound tool). ``extensions`` is a list of\nextension COMBOS — the SAME shape as a manifest ``extensions`` map value,\neach combo element an extension name or a ``{\"name\", \"config\"}`` mapping\nbinding author config (e.g. an ``ask_external`` verifier) — fed unconverted\nto the structured runtime-attach API at register (an empty outer list means\nno extensions; an empty INNER combo is rejected by the validating view).\n``output_schema`` is an optional author-set OUTPUT JSON Schema (an object\nschema): on an AGENT base it is baked into the run tool's ``response_format``\nso the agent FORCES a structured output matching it; on a plain tool it is\nadvertised as the bound tool's output schema and every result is validated\nagainst it at run time — a park is a suspend signal, not a result, and passes.\n``input_schema`` is an optional author-set INPUT JSON\nSchema: it becomes the exposed named tool's input contract, and the caller's\nvalidated object is routed into the base tool's declared payload argument (see\n:class:`PresetInputSchemaSupport`). Only a base tool that DECLARES input-schema\nsupport accepts one; otherwise a set ``input_schema`` is a loud authoring error.\n\nEach schema is the ``TemplatedText | dict`` union: an inline ``dict`` is the JSON\nSchema document itself; a :class:`~tai42_contract.template.TemplatedText` names a stored\nschema by ``id`` (or carries it inline as ``content``), rendered and parsed as JSON to the\nsame schema at the point of use and save.\n\nEvery field must survive carry-forward on a version save: dropping\n``extensions`` would make the branch tools vanish on reload, dropping\n``base_tool`` would break the bind, dropping ``description`` would strip the\ntool's description, dropping ``output_schema`` would silently un-enforce the\nstructured output, and dropping ``input_schema`` would silently un-enforce the\nstructured input.\n\nA ``fixed_kwargs`` scalar-string value written ``!ENV ${VAR}`` is a SECRET\nREFERENCE, not a credential: the server resolves it from the environment at bind\nand the store keeps only the reference — never the resolved value.",
       "properties": {
         "base_tool": {
           "title": "Base Tool",
@@ -2288,6 +3232,12 @@
       "title": "PresetSeed",
       "type": "object"
     },
+    "PreviousProfileName": {
+      "const": "@previous",
+      "description": "The rollback snapshot's name.",
+      "title": "PreviousProfileName",
+      "type": "string"
+    },
     "RoleDefinition": {
       "description": "An operator-authored role: the one validated shape every access-control surface shares.\n\nShared by the enforcer / membership-check, the management operations, and the generated\nStudio SDK.\n\nA role composes TWO layers. Layer 1 is a KEPT jq security base — carried on\nthe ``condition`` field (from ``ConditionMixin``) so the body round-trips it,\nbut NEVER authored through the grant map: the seed sets it (admin → ``None``,\neditor/viewer → their base jq) and a new role inherits it from its\n``base_tier``. Layer 2 is the editable ``grants`` — a per-tag ACCESS LEVEL\nmap (feature-group TAG name → ``none``/``read``/``write``) naming the role's\nlevel on each feature group. An absent tag means level ``none`` (deny).",
       "properties": {
@@ -2390,6 +3340,392 @@
       ],
       "title": "RoleDefinition",
       "type": "object"
+    },
+    "ScheduleCreate": {
+      "additionalProperties": false,
+      "description": "Create a schedule that runs ``tool_name`` on ``cadence``, or once now when no cadence is given.\n\n``tool_kwargs`` are the arguments each fire passes to the tool, the tool's alone and forwarded\nuntouched — a tool whose OWN argument is named ``subject`` carries it here like any argument.\n``subject`` is the OPTIONAL top-level door field naming the ``schedule``-door state context each\nfire re-establishes: the create door stamps it onto the job, and the fire keys its state writes and\nparks on it (it never reaches the base tool). ``state_binding`` is the OPTIONAL door-layer binding\nthe fire applies around the started tool alone (never the base tool's). ``schedule_name`` names a\nrecurring schedule; without it the door derives one from the tool, its arguments and the cadence.\n\nA schedule is a parkable-driving door: it carries the four :class:`ParkableDoorMixin` jqs\n(``start_expr`` builds the fired tool's kwargs; ``cancel_expr`` / ``resume_expr`` act on the run's\nparked interactions; ``extras_expr`` builds the started run's extras), each evaluated over the\nfired tool's arguments with the run's parked interactions bound as ``$parked``. Any contract jq\nneeds an ``execution_key`` (the api-key ``user_id`` the recurring fire runs as, so a park it\nraises can be rebound and resumed under that authority).",
+      "properties": {
+        "cadence": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "crontab": "#/$defs/CrontabCadence",
+                  "interval": "#/$defs/IntervalCadence"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/IntervalCadence"
+                },
+                {
+                  "$ref": "#/$defs/CrontabCadence"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The cadence; none runs the tool once now.",
+          "title": "Cadence"
+        },
+        "cancel_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "cancel expression",
+            "language": "jq",
+            "returns": "null (cancel nothing), a parked interaction id, or a list of ids to cancel",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "execution_key": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The api-key user_id a contract-bearing recurring fire runs as (required with any contract jq).",
+          "title": "Execution Key"
+        },
+        "extras_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "extras expression",
+            "language": "jq",
+            "returns": "the extras mapping handed to the started target; null for no extras",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "resume_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "resume expression",
+            "language": "jq",
+            "returns": "null (resume nothing), {id, payload} to resume an ask with an answer, a bare id to take a waiting outcome, or a list of these",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "schedule_name": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Schedule Name"
+        },
+        "start_expr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TemplatedText"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "x-tai42-expression": {
+            "blurb": "the door's input document",
+            "label": "start expression",
+            "language": "jq",
+            "returns": "the object dispatched as the started target's kwargs; null starts nothing",
+            "variables": [
+              {
+                "blurb": "the run's currently parked interactions on the door's subject — the full entries list_parked() carries, each with its id, status, to, asked_by, question and answer-format fields",
+                "name": "parked",
+                "sample": [
+                  {
+                    "answer_format": "confirm",
+                    "asked_by": [
+                      "main"
+                    ],
+                    "group_id": "g-1",
+                    "id": "i-42",
+                    "question": "proceed?",
+                    "status": "asking",
+                    "to": "caller"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "state_binding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StateBinding"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StateSubject"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tool_kwargs": {
+          "additionalProperties": true,
+          "title": "Tool Kwargs",
+          "type": "object"
+        },
+        "tool_name": {
+          "description": "The base tool to run.",
+          "minLength": 1,
+          "title": "Tool Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_name"
+      ],
+      "title": "ScheduleCreate",
+      "type": "object"
+    },
+    "ScheduleListRow": {
+      "additionalProperties": false,
+      "description": "One row of the schedule listing: no arguments, no kwargs.",
+      "properties": {
+        "cadence": {
+          "discriminator": {
+            "mapping": {
+              "crontab": "#/$defs/CrontabCadence",
+              "interval": "#/$defs/IntervalCadence"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/IntervalCadence"
+            },
+            {
+              "$ref": "#/$defs/CrontabCadence"
+            }
+          ],
+          "title": "Cadence"
+        },
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ScheduleRowError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "next_run_at_iso": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Run At Iso"
+        },
+        "next_run_at_ts": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Next Run At Ts"
+        },
+        "tool": {
+          "title": "Tool",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "tool",
+        "cadence",
+        "enabled"
+      ],
+      "title": "ScheduleListRow",
+      "type": "object"
+    },
+    "ScheduleRecord": {
+      "additionalProperties": false,
+      "description": "One exported or imported schedule: the durable definition, never runtime state.",
+      "properties": {
+        "args": {
+          "items": {},
+          "title": "Args",
+          "type": "array"
+        },
+        "cadence": {
+          "discriminator": {
+            "mapping": {
+              "crontab": "#/$defs/CrontabCadence",
+              "interval": "#/$defs/IntervalCadence"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/IntervalCadence"
+            },
+            {
+              "$ref": "#/$defs/CrontabCadence"
+            }
+          ],
+          "title": "Cadence"
+        },
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "kwargs": {
+          "additionalProperties": true,
+          "description": "The tool arguments plus the reserved door stamps the fire needs.",
+          "title": "Kwargs",
+          "type": "object"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "tool": {
+          "description": "The name of the tool the schedule fires.",
+          "minLength": 1,
+          "title": "Tool",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "tool",
+        "cadence",
+        "enabled"
+      ],
+      "title": "ScheduleRecord",
+      "type": "object"
+    },
+    "SettingsProfileName": {
+      "description": "A user-created profile name: non-empty, not starting with the reserved prefix.",
+      "minLength": 1,
+      "pattern": "^[^@]",
+      "title": "SettingsProfileName",
+      "type": "string"
     },
     "StateAttach": {
       "additionalProperties": false,
@@ -2513,8 +3849,7 @@
           "anyOf": [
             {
               "items": {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/$defs/StateRegimeRule"
               },
               "type": "array"
             },
@@ -2669,7 +4004,9 @@
           "type": "string"
         },
         "parameters": {
-          "additionalProperties": true,
+          "additionalProperties": {
+            "$ref": "#/$defs/StateTemplateParameter"
+          },
           "title": "Parameters",
           "type": "object"
         },
@@ -2686,8 +4023,7 @@
         },
         "regimes": {
           "items": {
-            "additionalProperties": true,
-            "type": "object"
+            "$ref": "#/$defs/StateRegimeRule"
           },
           "title": "Regimes",
           "type": "array"
@@ -2720,9 +4056,7 @@
           "title": "Template Jq"
         },
         "trace": {
-          "additionalProperties": true,
-          "title": "Trace",
-          "type": "object"
+          "$ref": "#/$defs/StateTemplateTrace"
         }
       },
       "required": [
@@ -2845,9 +4179,6 @@
       "title": "StateUpdate",
       "type": "object"
     },
-    "SubAgentSpec": {
-      "$ref": "#/$defs/SubAgentSpec"
-    },
     "TargetConversationConfig": {
       "description": "Per-target configuration for the conversation bridge, keyed by ``(target_kind, target_name)``.\n\nThe key names the agent or tool an inbound turn is routed to.\n``multichannel`` opts the target into person linking; ``greeting_template`` is the\nfirst-contact greeting, which may reference at most the ``{pairing_code}`` placeholder\n(minted at greeting time). The row carries no server-derived fields, so it IS its own\ncreate payload — no Create/stored split. An unknown ``{...}`` placeholder is refused so\na typo cannot render literally; a blank template string is refused, because ``None`` is\nthe explicit spelling for \"no greeting\". Frozen.",
       "properties": {
@@ -2900,5 +4231,99 @@
       "title": "TargetConversationConfig",
       "type": "object"
     }
+  },
+  "vectors": {
+    "path_coverage": [
+      {
+        "covered": true,
+        "path": "/api/a",
+        "prefix": "/api/a"
+      },
+      {
+        "covered": true,
+        "path": "/api/a/b",
+        "prefix": "/api/a"
+      },
+      {
+        "covered": true,
+        "path": "/api/a/b/c",
+        "prefix": "/api/a"
+      },
+      {
+        "covered": false,
+        "path": "/api/ab",
+        "prefix": "/api/a"
+      },
+      {
+        "covered": false,
+        "path": "/api/a",
+        "prefix": "/api/a/b"
+      },
+      {
+        "covered": false,
+        "path": "/api/b",
+        "prefix": "/api/a"
+      },
+      {
+        "covered": false,
+        "path": "/api/a/b",
+        "prefix": "/api/A"
+      },
+      {
+        "covered": false,
+        "path": "/api",
+        "prefix": "/api/a"
+      }
+    ],
+    "pattern_open_prefix": [
+      {
+        "open_prefix": "/api/x/",
+        "pattern": "^/api/x/.*$"
+      },
+      {
+        "open_prefix": "/api/x/",
+        "pattern": "^/api/x/.*"
+      },
+      {
+        "open_prefix": "/api/x",
+        "pattern": "^/api/x.*$"
+      },
+      {
+        "open_prefix": null,
+        "pattern": "/api/x/.*$"
+      },
+      {
+        "open_prefix": null,
+        "pattern": "^/api/x/$"
+      },
+      {
+        "open_prefix": null,
+        "pattern": "^/api/x/.+$"
+      },
+      {
+        "open_prefix": null,
+        "pattern": "^.*$"
+      },
+      {
+        "open_prefix": null,
+        "pattern": "^/api/(a|b)/.*$"
+      },
+      {
+        "open_prefix": null,
+        "pattern": "^/api/x/[0-9]+.*$"
+      },
+      {
+        "open_prefix": null,
+        "pattern": "^/api/x\\.y/.*$"
+      },
+      {
+        "open_prefix": null,
+        "pattern": "^/app/my\\-slug/.*$"
+      },
+      {
+        "open_prefix": "/app/my_slug1/",
+        "pattern": "^/app/my_slug1/.*$"
+      }
+    ]
   }
 }

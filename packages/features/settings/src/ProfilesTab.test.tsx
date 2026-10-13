@@ -104,27 +104,25 @@ describe('ProfilesTab — list', () => {
     expect(screen.queryByRole('columnheader', { name: 'Actions' })).not.toBeInTheDocument();
   });
 
-  it('never renders a reserved “@”-prefixed profile as a manageable row', async () => {
+  it('lists exactly the profiles the server serves, in name order', async () => {
     renderWithProviders(<ProfilesTab readOnly={false} />, {
       client: stubClient({
         listSettingsProfiles: vi.fn(() =>
           Promise.resolve([
+            { name: 'staging', description: 'Staging settings' },
             { name: 'prod', description: 'Production settings' },
-            { name: '@previous', description: 'auto-saved by the last apply' },
           ]),
         ),
       }),
       projection: fullProjection(),
     });
 
-    // The reserved profile is driven only by the Revert button — it is filtered from
-    // the list, so it never shows Edit/Apply/Delete/Diff/History controls.
-    expect(await screen.findByText('prod')).toBeInTheDocument();
-    expect(screen.queryByText('@previous')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('profile-row-@previous')).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Apply profile @previous' }),
-    ).not.toBeInTheDocument();
+    expect(await screen.findByTestId('profile-row-prod')).toBeInTheDocument();
+    const rows = screen.getAllByTestId(/^profile-row-/);
+    expect(rows.map((row) => row.getAttribute('data-testid'))).toEqual([
+      'profile-row-prod',
+      'profile-row-staging',
+    ]);
   });
 });
 

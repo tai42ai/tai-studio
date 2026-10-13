@@ -14,6 +14,8 @@ import { ManifestSectionsCard } from './ManifestSectionsCard';
 const applyResult = {
   status: 'ok',
   env_keys: 0,
+  awaiting_respawn: [],
+  recycle: null,
   fanout: { mode: 'local-only', note: 'only this worker reloaded' },
 };
 

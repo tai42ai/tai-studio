@@ -14,9 +14,9 @@ import { renderWithProviders, type StubApiClient } from './test-utils';
 import { ToolExtensionsCard } from './ToolExtensionsCard';
 
 const available: Extension[] = [
-  { name: 'marka', kind: 'wrapper' },
-  { name: 'markb', kind: 'wrapper' },
-  { name: 'chain', kind: 'transformer' },
+  { name: 'marka', kind: 'wrapper', multiple: true },
+  { name: 'markb', kind: 'wrapper', multiple: true },
+  { name: 'chain', kind: 'transformer', multiple: true },
 ];
 
 function baseClient(overrides: StubApiClient = {}): StubApiClient {
@@ -26,6 +26,8 @@ function baseClient(overrides: StubApiClient = {}): StubApiClient {
     setToolExtensions: vi.fn().mockResolvedValue({
       status: 'ok',
       env_keys: 0,
+      awaiting_respawn: [],
+      recycle: null,
       fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
     }),
     ...overrides,
@@ -204,6 +206,8 @@ describe('ToolExtensionsCard', () => {
     const setToolExtensions = vi.fn().mockResolvedValue({
       status: 'ok',
       env_keys: 1,
+      awaiting_respawn: [],
+      recycle: null,
       fanout: {
         mode: 'fleet',
         op: 'reload_config',

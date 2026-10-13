@@ -42,6 +42,12 @@ interface SelectSharedProps {
    * the visible text out of the accessible name (WCAG 2.5.3).
    */
   readonly 'aria-label'?: string;
+  /**
+   * IDREFs of elements that describe the trigger. An enclosing `Field` owns entries
+   * in the same list (its description and error), so the two are concatenated,
+   * caller's first, exactly as the text inputs do.
+   */
+  readonly 'aria-describedby'?: string;
 }
 
 /** The FLAT listbox: one ungrouped run of options. */
@@ -93,8 +99,12 @@ export function Select(props: SelectArgs) {
     disabled,
     name,
     'aria-label': ariaLabel,
+    'aria-describedby': ownDescribedBy,
   } = props;
   const field = useFieldControl();
+  const describedBy = [ownDescribedBy, field['aria-describedby']].filter(
+    (id): id is string => id !== undefined,
+  );
   // Untyped JavaScript is the only caller that reaches this. Rendering one list
   // and dropping the other would lose every entry in the discarded one silently,
   // and an empty listbox reads as "there is nothing to choose".
@@ -118,7 +128,7 @@ export function Select(props: SelectArgs) {
         // for>`, and `aria-label` outranks a native label — emitting both would
         // discard the visible text the field renders.
         aria-label={field.id === undefined ? ariaLabel : undefined}
-        aria-describedby={field['aria-describedby']}
+        aria-describedby={describedBy.length > 0 ? describedBy.join(' ') : undefined}
         aria-invalid={field['aria-invalid']}
       >
         <RadixSelect.Value placeholder={placeholder} />

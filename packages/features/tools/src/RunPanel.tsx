@@ -12,6 +12,7 @@
  * typed `ResultViewer`; a timeout → a DISTINCT "still executing server-side" notice;
  * any other failure → the generic loud `ErrorState`.
  */
+import { ApiSchemaError } from '@tai42/api-client';
 import {
   Button,
   errorMessage,
@@ -32,9 +33,11 @@ import type { ReactNode } from 'react';
 
 import { AsksList, ParkedNote } from './AsksList';
 import { BackgroundRuns } from './BackgroundRuns';
+import { FailedOutcome, failedOutcomeOf } from './FailedOutcome';
 import { toolSchemaKey } from './keys';
 import { ResultViewer } from './ResultViewer';
 import { runToolWithTimeout } from './run';
+import { UNREADABLE_RUN_ANSWER, UnreadableAnswer } from './UnreadableAnswer';
 import { type AutoFormRun, useAutoFormRun } from './useAutoFormRun';
 
 /** The distinct, loud "run still executing server-side" state (honest limit).
@@ -91,7 +94,8 @@ function RunActions({ run }: { readonly run: AutoFormRun }): ReactNode {
 }
 
 /** The run outcome: a background-submit failure, the synchronous running state, a
- * timeout or generic error, and the typed result. */
+ * timeout, an answer the api-client refused (the unreadable panel), a generic error, and
+ * the typed result. */
 function RunOutcome({ run }: { readonly run: AutoFormRun }): ReactNode {
   return (
     <>
@@ -116,7 +120,18 @@ function RunOutcome({ run }: { readonly run: AutoFormRun }): ReactNode {
       {run.timedOut ? (
         <TimeoutNotice />
       ) : run.run.isError ? (
-        <ErrorState message={errorMessage(run.run.error)} />
+        run.run.error instanceof ApiSchemaError ? (
+          <UnreadableAnswer
+            message={UNREADABLE_RUN_ANSWER}
+            error={run.run.error}
+            testId="run-answer-unreadable"
+          />
+        ) : (
+          <FailedOutcome
+            message={errorMessage(run.run.error)}
+            outcome={failedOutcomeOf(run.run.error)}
+          />
+        )
       ) : null}
 
       {run.runView?.kind === 'result' ? (

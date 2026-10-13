@@ -6,6 +6,7 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { PENDING_SAVES_CARD_ID } from './PendingSavesCard';
 import { StatesPage } from './StatesPage';
 import { renderWithProviders, type StubApiClient } from './test-utils';
 
@@ -39,6 +40,9 @@ function client(over: Partial<StubApiClient> = {}): StubApiClient {
       folded_from: [],
     }),
     listStateWrites: vi.fn().mockResolvedValue({ items: [], next_cursor: null }),
+    listPendingSaves: vi
+      .fn()
+      .mockResolvedValue({ items: [], next_cursor: null, outstanding: 0, failed: 0 }),
     ...over,
   };
 }
@@ -48,6 +52,14 @@ describe('StatesPage routing', () => {
     renderWithProviders(<StatesPage search={{}} />, { client: client() });
     expect(await screen.findByText('No states declared')).toBeInTheDocument();
     expect(screen.getByText('No state selected')).toBeInTheDocument();
+  });
+
+  it('the pending saves card sits on every pane', async () => {
+    renderWithProviders(<StatesPage search={{ state: 'profile' }} />, { client: client() });
+    expect(
+      await screen.findByText('No pending saves. Every state write has been applied.'),
+    ).toBeInTheDocument();
+    expect(document.getElementById(PENDING_SAVES_CARD_ID)).not.toBeNull();
   });
 
   it('?state= mounts the detail pane', async () => {

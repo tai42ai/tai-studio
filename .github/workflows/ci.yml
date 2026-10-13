@@ -139,12 +139,12 @@ jobs:
       # api:update` so the review sees the surface change.
       - name: API report
         run: pnpm --filter @tai42/studio-sdk --filter @tai42/api-client run api:check
-      # The served-document schemas are generated from the vendored platform contract
-      # JSON-schema bundle. Regenerate in memory and fail if the committed
-      # src/generated/served-schemas.ts differs, so a stale generated file (a bundle
-      # re-vendor without a regenerate, or a hand edit) reds the build. The comparison
-      # is on the generated source, which drops descriptions and reads the bundle
-      # parsed, so a bundle whitespace/escaping difference never trips it.
+      # The api-client's schemas, route table and served constants are generated from the
+      # two vendored platform artifacts (the contract bundle and the OpenAPI artifact).
+      # Regenerate in memory and fail if a committed src/generated/ file differs, so a
+      # stale generated file (a re-vendor without a regenerate, or a hand edit) reds the
+      # build. The comparison is on the generated source, which drops descriptions and
+      # reads the artifacts parsed, so a whitespace/escaping difference never trips it.
       - name: Schema freshness
         run: pnpm --filter @tai42/api-client run schema:check
       - name: Typecheck
@@ -276,14 +276,16 @@ jobs:
           print(f"OK: latest tai42-contract {latest} satisfies the fixture pin '{pin}'.")
           PY
 
-  # Freshness gate for the vendored contract-schema bundle's pinned major. The
-  # api-client generates its served-document schemas from
-  # packages/api-client/contract-schema/contract-schema.json, whose `contract_version`
-  # is the single source of the pinned major. This job asks PyPI for the latest
-  # published tai42-contract and fails the moment its major leaves the vendored
-  # major, so a contract major bump forces a deliberate re-vendor
+  # Freshness gate for the vendored platform artifacts' pinned majors. The api-client
+  # generates its client from packages/api-client/contract-schema/contract-schema.json
+  # (its `contract_version` is the pinned tai42-contract major) and
+  # packages/api-client/contract-schema/openapi.json (its `info.version` is the pinned
+  # tai42-skeleton major). This job asks PyPI for the latest published tai42-contract
+  # and tai42-skeleton and fails the moment either major leaves its vendored major, so a
+  # major bump forces a deliberate re-vendor
   # (`pnpm --filter @tai42/api-client run schema:refresh`) + regenerate rather than a
-  # silent stale pin. Self-contained (no siblings).
+  # silent stale pin. Both checks run before the job exits, so one run names every stale
+  # file. Self-contained (no siblings).
   api-client-contract-pin:
     needs: reuse
     if: ${{ needs.reuse.outputs.should_skip != 'true' }}
@@ -293,7 +295,7 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: '0.11.26'
-      - name: Check vendored contract major against latest tai42-contract
+      - name: Check vendored contract and OpenAPI majors against PyPI
         run: |
           uv run --with packaging python - <<'PY'
           import json
@@ -304,34 +306,57 @@ jobs:
           from packaging.specifiers import SpecifierSet
           from packaging.version import Version
 
+
+          def latest_release(package):
+              url = f"https://pypi.org/pypi/{package}/json"
+              with urllib.request.urlopen(url, timeout=30) as response:  # noqa: S310 (fixed https URL)
+                  return json.load(response)["info"]["version"]
+
+
+          def check(artifact, label, package, pinned, remedy):
+              major = pinned.major
+              specifier = SpecifierSet(f">={major},<{major + 1}")
+              latest = latest_release(package)
+              if Version(latest) not in specifier:
+                  print(
+                      f"::error file={artifact}::The vendored {label} is cut from "
+                      f"{package} {pinned} (major {major}), but the latest published "
+                      f"release is {latest}, outside '>={major},<{major + 1}'. {remedy} "
+                      f"`pnpm --filter @tai42/api-client run schema:refresh`."
+                  )
+                  return False
+              print(f"OK: latest {package} {latest} is within the vendored major {major}.")
+              return True
+
+
           bundle = Path("packages/api-client/contract-schema/contract-schema.json")
-          pinned = Version(json.loads(bundle.read_text())["contract_version"])
-          major = pinned.major
-          specifier = SpecifierSet(f">={major},<{major + 1}")
-
-          url = "https://pypi.org/pypi/tai42-contract/json"
-          with urllib.request.urlopen(url, timeout=30) as response:  # noqa: S310 (fixed https URL)
-              data = json.load(response)
-          latest = data["info"]["version"]
-
-          if Version(latest) not in specifier:
-              print(
-                  f"::error file={bundle}::The vendored contract bundle is cut from "
-                  f"tai42-contract {pinned} (major {major}), but the latest published "
-                  f"release is {latest}, outside '>={major},<{major + 1}'. Re-vendor the "
-                  f"bundle from the new major and regenerate: "
-                  f"`pnpm --filter @tai42/api-client run schema:refresh`."
-              )
+          openapi = Path("packages/api-client/contract-schema/openapi.json")
+          results = [
+              check(
+                  bundle,
+                  "contract bundle",
+                  "tai42-contract",
+                  Version(json.loads(bundle.read_text())["contract_version"]),
+                  "Re-vendor the bundle from the new major and regenerate:",
+              ),
+              check(
+                  openapi,
+                  "OpenAPI artifact",
+                  "tai42-skeleton",
+                  Version(json.loads(openapi.read_text())["info"]["version"]),
+                  "Re-vendor the artifact and regenerate:",
+              ),
+          ]
+          if not all(results):
               sys.exit(1)
-          print(f"OK: latest tai42-contract {latest} is within the vendored major {major}.")
           PY
 
   # Parity guard between the two skeleton boot manifests. The lean e2e boot
   # (e2e/boot/manifest.yml) and the docs-demo boot (e2e/docs-demo/manifest.yml)
   # drive two boots of the same SPA; the docs-demo boot is a deliberate superset,
   # so every registered capability a validated e2e screen depends on — a
-  # tool-extension attachment, a router, an extension surface, the task backend, a
-  # tool module — must also be present there, or a screen proven against the e2e
+  # tool-extension attachment, a router, an extension surface, the task backend, the
+  # monitoring backend, a tool module — must also be present there, or a screen proven against the e2e
   # boot cannot render in the docs boot. The test compares through the real
   # tai42_contract manifest model (semantic, not textual). Runs on every PR
   # (forks and Dependabot included), unlike the fork/Dependabot-gated e2e job, so
@@ -349,6 +374,39 @@ jobs:
           version: '0.11.26'
       - name: Compare the e2e and docs-demo boot manifests through the contract model
         run: uv run --python 3.13 --with pytest --with tai42-contract --with pyyaml pytest e2e/test_manifest_parity.py
+
+  # The docs-demo monitoring backend's own test suite. The plugin
+  # (e2e/docs-demo/monitoring-plugin) is the monitoring backend both the e2e boot and
+  # the docs-screenshot pipeline install into the tai42 workspace venv, so its suite
+  # runs against that same venv: the public tai42 monorepo is cloned and synced
+  # exactly as the e2e job does, the plugin is installed into it as boot.sh does, and
+  # its pytest runs there. No Docker and no backend, so it runs on every PR (forks
+  # and Dependabot included).
+  docs-demo-monitoring-plugin:
+    needs: reuse
+    if: ${{ needs.reuse.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          path: tai-studio
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ github.repository_owner }}/tai42
+          path: tai42
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: '0.11.26'
+          enable-cache: true
+      - run: uv python install 3.13
+      - name: Sync skeleton env
+        working-directory: tai42
+        run: uv sync --locked --package tai42-skeleton --extra dev
+      - name: Install the docs-demo monitoring plugin
+        run: uv pip install --python tai42/.venv/bin/python tai-studio/e2e/docs-demo/monitoring-plugin
+      - name: Test the docs-demo monitoring plugin
+        working-directory: tai-studio
+        run: ../tai42/.venv/bin/python -m pytest e2e/docs-demo/monitoring-plugin/tests
 
   # Fail when a first-party scoped npm dependency is a full major behind its latest
   # published release (smaller steps stay quiet — the update bot owns them). The check
@@ -368,9 +426,10 @@ jobs:
   # from the tai42 monorepo's uv workspace venv (``tai42/.venv``), built by "Sync
   # skeleton env": the monorepo's uv.lock resolves tai42-skeleton and every
   # first-party dependency from the workspace itself. One sibling is cloned — the
-  # public ``tai42`` monorepo; the boot recipe pip-installs the reference plugin
-  # and ``tai42/plugins/webhook-verifier-github`` (the "github" verifier) into that
-  # venv. The monorepo is public, so the cross-repo checkout reads it with the
+  # public ``tai42`` monorepo; the boot recipe pip-installs the reference plugin,
+  # the seeded docs-demo monitoring backend (``e2e/docs-demo/monitoring-plugin``),
+  # ``tai42/plugins/webhook-verifier-github`` (the "github" verifier) and
+  # ``tai42/plugins/backend-rq`` into that venv. The monorepo is public, so the cross-repo checkout reads it with the
   # default GITHUB_TOKEN. This job is heavy (Docker + a full backend), so it is
   # gated to pushes and same-repo, non-Dependabot pull requests; forks and
   # Dependabot fall back to the ``check`` job only.
@@ -419,9 +478,9 @@ jobs:
         run: uv python install 3.13
       # Build the workspace venv (tai42/.venv) the boot recipe runs the backend
       # from. The monorepo's uv.lock resolves tai42-skeleton and every first-party
-      # dependency from the workspace itself. The reference plugin and
-      # tai42/plugins/webhook-verifier-github are pip-installed into this venv by
-      # the boot recipe.
+      # dependency from the workspace itself. The reference plugin, the docs-demo
+      # monitoring backend, tai42/plugins/webhook-verifier-github and
+      # tai42/plugins/backend-rq are pip-installed into this venv by the boot recipe.
       - name: Sync skeleton env
         if: env.TAI_E2E_TARGET == ''
         working-directory: tai42

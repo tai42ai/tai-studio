@@ -11,7 +11,12 @@
  * The cure is to reload ONCE: the reload re-fetches the no-cache HTML entry and
  * with it a consistent, current chunk set. The one-shot guard is load-bearing —
  * a genuinely broken deploy (a chunk that 404s even when fresh) must surface the
- * error, NOT reload-loop. So we reload at most once per 60s window.
+ * error, NOT reload-loop. So we reload at most once per 60s window, and not at
+ * all when the browser gives the guard no storage to remember the reload in.
+ *
+ * The page's boot (`boot.ts`) applies the same guard to the app's own dynamic
+ * import through {@link recoverFromImportFailure}, so the boot and a later lazy
+ * chunk share one window and can never reload twice inside it.
  */
 
 /** Guard window: never auto-reload twice inside this span (a broken deploy stays visible). */
@@ -32,30 +37,14 @@ const DYNAMIC_IMPORT_ERROR_FRAGMENTS = [
 ];
 
 /**
- * In-memory fallback for the guard when sessionStorage is unavailable (some
- * privacy modes throw on access). At worst this allows one reload per page life.
+ * Read the last-reload timestamp. Throws when sessionStorage is unavailable (a
+ * browser that refuses storage for the site throws on access).
  */
-let reloadedThisPageLife = false;
-
-/** Read the last-reload timestamp, preferring sessionStorage, tolerating its absence. */
 function lastReloadAt(): number | undefined {
-  try {
-    const raw = window.sessionStorage.getItem(RELOAD_AT_KEY);
-    if (raw === null) return undefined;
-    const parsed = Number.parseInt(raw, 10);
-    return Number.isNaN(parsed) ? undefined : parsed;
-  } catch {
-    return reloadedThisPageLife ? Date.now() : undefined;
-  }
-}
-
-/** Persist the reload timestamp, falling back to the in-memory flag if storage throws. */
-function recordReload(now: number): void {
-  try {
-    window.sessionStorage.setItem(RELOAD_AT_KEY, String(now));
-  } catch {
-    reloadedThisPageLife = true;
-  }
+  const raw = window.sessionStorage.getItem(RELOAD_AT_KEY);
+  if (raw === null) return undefined;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isNaN(parsed) ? undefined : parsed;
 }
 
 /**
@@ -66,17 +55,28 @@ function recordReload(now: number): void {
  * stays unhandled), so a genuinely broken deploy — a chunk that 404s even when
  * fresh, failing again right after the recovery reload — surfaces loudly
  * instead of being silently swallowed while the page quietly stays broken.
+ *
+ * The guard's memory is sessionStorage, the one store that outlives the reload.
+ * When it cannot be read or written, no reload is taken: the reloaded page would
+ * remember nothing and reload again on the same failure, without end. The
+ * failure then surfaces on this load, with a warning naming why.
  */
 function reloadOnce(signal: string, specifier: string | undefined): boolean {
+  const detail = specifier !== undefined ? `: ${specifier}` : '';
   const now = Date.now();
-  const previous = lastReloadAt();
-  if (previous !== undefined && now - previous < RELOAD_WINDOW_MS) return false;
+  try {
+    const previous = lastReloadAt();
+    if (previous !== undefined && now - previous < RELOAD_WINDOW_MS) return false;
+    window.sessionStorage.setItem(RELOAD_AT_KEY, String(now));
+  } catch (error: unknown) {
+    console.warn(
+      `[stale-chunk-reload] not reloading after ${signal}${detail} — the reload guard ` +
+        `cannot record a reload (sessionStorage unavailable: ${String(error)})`,
+    );
+    return false;
+  }
 
-  console.warn(
-    `[stale-chunk-reload] reloading once after ${signal}` +
-      (specifier !== undefined ? `: ${specifier}` : ''),
-  );
-  recordReload(now);
+  console.warn(`[stale-chunk-reload] reloading once after ${signal}${detail}`);
   window.location.reload();
   return true;
 }
@@ -103,14 +103,25 @@ export function installStaleChunkReload(): void {
   // plugin builds / non-Vite bundlers): match the browser error message narrowly.
   // Same rule: suppress the rejection only when the reload was taken.
   window.addEventListener('unhandledrejection', (event) => {
-    const message = errorMessage(event.reason);
-    if (message === undefined) return;
-    const lower = message.toLowerCase();
-    if (!DYNAMIC_IMPORT_ERROR_FRAGMENTS.some((fragment) => lower.includes(fragment))) return;
-    if (reloadOnce('unhandledrejection', message)) {
+    if (recoverFromImportFailure('unhandledrejection', event.reason)) {
       event.preventDefault();
     }
   });
+}
+
+/**
+ * Recover from one rejected dynamic import: when `reason` carries a browser's
+ * failed-dynamic-import message, reload once under the shared guard. Returns
+ * whether the reload was taken; `false` (an unrelated error, or the guard window
+ * still closed) leaves the failure for the caller to surface. `signal` names the
+ * observer in the console warning.
+ */
+export function recoverFromImportFailure(signal: string, reason: unknown): boolean {
+  const message = errorMessage(reason);
+  if (message === undefined) return false;
+  const lower = message.toLowerCase();
+  if (!DYNAMIC_IMPORT_ERROR_FRAGMENTS.some((fragment) => lower.includes(fragment))) return false;
+  return reloadOnce(signal, message);
 }
 
 /** Best-effort message extraction from an arbitrary rejection reason. */

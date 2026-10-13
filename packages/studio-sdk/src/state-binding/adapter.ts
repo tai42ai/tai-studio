@@ -3,9 +3,9 @@
  *
  * A named template `update` jq declares an input object (its `params` / declared
  * input keys). A binding must map the run's OUTPUT (and the run's INPUT) into that
- * object; that mapping is the `adapter` — a single jq program over `{ output, input }`
- * that CONSTRUCTS the update jq's declared input (which the update jq then reads as
- * `.input` alongside the record).
+ * object; that mapping is the `adapter` — a single jq program over the tool output
+ * (its `.`) with the run input bound as `$input`, that CONSTRUCTS the update jq's
+ * declared input (which the update jq then reads as `$input`, over the record).
  *
  * The editor authors the adapter as a ROW form: one row per declared input key,
  * each row picking one of three value sources — a picked field (from the run's
@@ -17,10 +17,10 @@
  * object.
  */
 
-/** Which root of `{ output, input }` a picked field reads. */
+/** Which value a picked field reads: the tool output (the program's `.`) or the run input (`$input`). */
 export type FieldRoot = 'output' | 'input';
 
-/** A picked field: a path into `output` or `input`. */
+/** A picked field: a path into the tool output or the run input. */
 export interface FieldSource {
   readonly kind: 'field';
   readonly root: FieldRoot;
@@ -33,7 +33,7 @@ export interface LiteralSource {
   readonly json: string;
 }
 
-/** A raw jq expression over `{ output, input }`. */
+/** A raw jq expression over the tool output (its `.`), with the run input bound as `$input`. */
 export interface JqSource {
   readonly kind: 'jq';
   readonly expr: string;
@@ -59,13 +59,19 @@ export function jqKey(key: string): string {
   return IDENTIFIER.test(key) ? key : JSON.stringify(key);
 }
 
-/** A picked field rendered as a jq path, e.g. `.output.user.name` / `.input["odd key"]`. */
+/**
+ * A picked field rendered as a jq path: an output field reads off the program root
+ * (`.user.name`, `.["odd key"]`, the whole output `.`), an input field off the bound run
+ * input (`$input.user.name`, the whole input `$input`).
+ */
 export function fieldPathToJq(root: FieldRoot, path: readonly string[]): string {
-  let out = `.${root}`;
+  let out = root === 'input' ? '$input' : '';
   for (const segment of path) {
-    out += IDENTIFIER.test(segment) ? `.${segment}` : `[${JSON.stringify(segment)}]`;
+    out += IDENTIFIER.test(segment)
+      ? `.${segment}`
+      : `${out === '' ? '.' : ''}[${JSON.stringify(segment)}]`;
   }
-  return out;
+  return out === '' ? '.' : out;
 }
 
 /** The jq fragment ONE row's value compiles to — the row's "show jq". */
@@ -95,7 +101,7 @@ export function rowValueJq(source: MappingSource): AdapterCompileResult {
 
 /**
  * Compile a mapping form into ONE adapter jq that constructs the update jq's
- * declared input over `{ output, input }`. An empty form compiles to the
+ * declared input over the tool output and `$input`. An empty form compiles to the
  * empty object `{}`; a blank target, a duplicate target, or an invalid source is a
  * loud error.
  */
@@ -128,7 +134,7 @@ export function defaultRowsForInput(params: readonly string[]): MappingRow[] {
 // `compileAdapter` emits a canonical, PARSEABLE shape so a stored adapter reopens as
 // the form it was authored in (never UI-only state): the object
 // `{ <key>: (<value>), … }` where `<key>` is a bare identifier or a JSON string and
-// `<value>` is one of — a field path `.output…` / `.input…`, a JSON literal, or a raw
+// `<value>` is one of — a field path `.…` (output) / `$input…` (input), a JSON literal, or a raw
 // jq expression. `parseAdapter` inverts it; `parse(compileAdapter(rows).jq) === rows`
 // for every row kind whose literal is already canonical JSON. A shape it does not
 // recognise returns `null` — the editor falls back to the raw-jq escape hatch.
@@ -139,10 +145,19 @@ const ADAPTER_KEY = /^("(?:[^"\\]|\\.)*"|[A-Za-z_][A-Za-z0-9_]*)\s*:\s*\(/;
 
 /** Recover a field source from a pure path expression, or `null` if it is not one. */
 export function parseFieldPath(value: string): FieldSource | null {
-  const head = /^\.(output|input)/.exec(value);
-  if (head === null) return null;
-  const root = head[1] as FieldRoot;
-  let rest = value.slice(head[0].length);
+  let root: FieldRoot;
+  let rest: string;
+  if (value === '.') return { kind: 'field', root: 'output', path: [] };
+  if (value.startsWith('$input')) {
+    root = 'input';
+    rest = value.slice('$input'.length);
+  } else if (value.startsWith('.')) {
+    root = 'output';
+    // A root bracket (`.["odd key"]`) drops its leading dot; a root key keeps it (`.a`).
+    rest = value.startsWith('.[') ? value.slice(1) : value;
+  } else {
+    return null;
+  }
   const path: string[] = [];
   while (rest.length > 0) {
     if (rest.startsWith('.')) {

@@ -1,43 +1,32 @@
 /**
- * The tool-picker data source for the add-schedule dialog: the SCHEDULABLE base
- * tools plus the tags/meta enrichment that drives the hidden-tool exclusion and the
- * badge map. A base tool is schedulable only when its schedule vehicle is registered
- * (see `pickableToolNames`), so the picker never offers a tool the create door has no
- * recurring branch for, nor the vehicle rows themselves.
+ * The tool-picker data source for the add-schedule dialog: the tools the server serves as
+ * `schedulable`, plus the tags/meta enrichment that drives the hidden-tool exclusion and the
+ * badge map. The server marks a tool schedulable when its schedule vehicle is registered, so
+ * the picker never offers a tool the create door cannot schedule.
  */
+import type { ToolTagEntry } from '@tai42/api-client';
 import { hiddenToolNames, toolBadgesByName, useApi, useToolDisplayNames } from '@tai42/studio-sdk';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { scheduleToolMetaKey, scheduleToolsKey, scheduleToolTagsKey } from './keys';
-import { SCHEDULE_BRANCH_SUFFIX, scheduleVehicle } from './schedule-form';
+import { scheduleToolMetaKey, scheduleToolTagsKey } from './keys';
 
-/**
- * The base tools the picker offers, derived from the tools list alone. A base tool
- * `t` is schedulable exactly when its `${t}_schedule_task` vehicle is in the list —
- * the backend registers that vehicle for precisely the tools carrying the
- * `schedule_task` extension. Every `*_schedule_task` vehicle row is dropped: it is
- * the dispatch target the create door names from the picked base tool, never a
- * pickable tool in its own right.
- */
-export function pickableToolNames(toolNames: readonly string[]): string[] {
-  const present = new Set(toolNames);
-  return toolNames.filter(
-    (name) => !name.endsWith(SCHEDULE_BRANCH_SUFFIX) && present.has(scheduleVehicle(name)),
-  );
+/** The tools the picker offers: the tag rows the server serves as `schedulable`, in order. */
+export function pickableToolNames(rows: readonly ToolTagEntry[]): string[] {
+  return rows.filter((row) => row.schedulable).map((row) => row.name);
 }
 
-/** Schedulable tools + the enrichment the picker renders. `excludeToolNames`/`badgesByTool`
- *  stay empty on a failed tags/meta read (the server is the authority over runs). */
+/** Schedulable tools + the enrichment the picker renders. The tags read is the picker's
+ *  source (its loading/error legs drive the picker); `excludeToolNames`/`badgesByTool` stay
+ *  empty on a failed meta read (the server is the authority over runs). */
 export function useScheduleTools() {
   const api = useApi();
   const displayNames = useToolDisplayNames();
 
-  const toolsQuery = useQuery({ queryKey: scheduleToolsKey, queryFn: () => api.listTools() });
   const tagsQuery = useQuery({ queryKey: scheduleToolTagsKey, queryFn: () => api.listToolTags() });
   const metaQuery = useQuery({ queryKey: scheduleToolMetaKey, queryFn: () => api.listToolMeta() });
 
-  const toolNames = useMemo(() => pickableToolNames(toolsQuery.data ?? []), [toolsQuery.data]);
+  const toolNames = useMemo(() => pickableToolNames(tagsQuery.data ?? []), [tagsQuery.data]);
 
   const hiddenNames = useMemo(
     () => hiddenToolNames(tagsQuery.data ?? [], metaQuery.data?.meta ?? []),
@@ -50,5 +39,5 @@ export function useScheduleTools() {
     [tagsQuery.data, metaQuery.data],
   );
 
-  return { toolsQuery, toolNames, excludeToolNames, badgesByTool, displayNames };
+  return { toolsQuery: tagsQuery, toolNames, excludeToolNames, badgesByTool, displayNames };
 }

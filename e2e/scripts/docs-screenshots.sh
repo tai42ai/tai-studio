@@ -136,10 +136,11 @@ export MONOREPO_DIR
 # Extra plugins the docs-demo manifest loads, installed into the skeleton venv. The
 # accounts-postgres plugin's lifecycle module + login router power the login screen's
 # password form, and its declared member-admin actions back the generic Members page;
-# the rest back the toolbox/agents/storage/monitoring surfaces. The RQ backend + its
-# RQ_REDIS_URL / TAI_BUS_REDIS_URL wiring live in boot.sh (both manifests declare
-# `backend_module: tai42_backend_rq`), so they are not repeated here.
-export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres"
+# the rest back the toolbox/agents/storage surfaces. The RQ backend and the docs-demo
+# monitoring backend are installed by boot.sh (both manifests declare
+# `backend_module: tai42_backend_rq` and `monitoring_module: docs_demo_monitoring`), and
+# the RQ_REDIS_URL / TAI_BUS_REDIS_URL wiring lives there too, so none is repeated here.
+export EXTRA_PLUGINS="${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres"
 # Accounts world: order the identity resolution (accounts claims tai-sess- sessions,
 # redis claims sk- keys), pin the setup-door token to a known value so the runner can
 # initialize the owner deterministically through POST /api/setup, and tell boot.sh to
@@ -151,6 +152,10 @@ export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${PLUGINS_DIR}/agen
 export ACCESS_CONTROL_AUTH_PROVIDERS='["accounts-postgres", "redis"]'
 export TAI_SETUP_TOKEN="docs-demo-setup-token"
 export APPLY_ACCOUNTS_DDL=1
+# The accounts plugin's login throttle keeps its failure counters in Redis, and every
+# password login fails when no connection is configured. Point it at boot.sh's compose Redis
+# on its own db (8), apart from the stores boot.sh places on db 0-7.
+export TAI_ACCOUNTS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT:-6380}/8"
 # Storage backend: the seeded template files. CREATE_DIRS=false so a missing dir
 # fails loudly rather than being papered over with an empty templates list.
 export STORAGE_LOCAL_ROOT_PATH="${E2E_DIR}/docs-demo/templates"
@@ -665,8 +670,9 @@ CONVERSATION_THREAD="$(send_conversation_message "ada.lovelace@demo.tai" "Thanks
 export STUDIO_CONVERSATION_ROUTE="${CONVERSATION_ROUTE}"
 export STUDIO_CONVERSATION_THREAD="${CONVERSATION_THREAD}"
 
-# --- 7f. Seed the platform state store (the six States screens) --------------
-# One declared state, one uploaded template attached to it, two subject records (one
+# --- 7f. Seed the platform state store (the States screens) ------------------
+# One declared state, one uploaded template attached to it, a second typed template left
+# unattached (the state-template screen's frame), two subject records (one
 # written straight through the record door, one built by a `set_by_key` delta so the
 # record page's Writes audit carries an `api`-origin row), and one consumer (a hook
 # whose subject kind the state declares, so the Consumers tab lists it). Every body is
@@ -747,6 +753,33 @@ case "${attach_resp}" in
   *) die "attaching template '${STATE_TEMPLATE}' on '${STATE_NAME}' failed: ${attach_resp}" ;;
 esac
 
+# 2b. A second, unattached template whose typed sections all render on the state-template
+#     screen: a write policy, a parameter with a default, and trace writes on.
+typed_template_body="$(python3 -c '
+import json
+print(json.dumps({
+    "kind": "state-template",
+    "name": "display",
+    "description": "Per-subject display density, one policy per field.",
+    "schema": {
+        "type": "object",
+        "properties": {"density": {"type": "string", "title": "Density"}},
+    },
+    "parameters": {
+        "default_density": {
+            "schema": {"type": "string", "enum": ["compact", "comfortable"]},
+            "default": "comfortable",
+        }
+    },
+    "regimes": [{"path": ["density"], "regime": "single"}],
+    "trace": {"enabled": True},
+}))')"
+typed_resp="$(api -H "content-type: application/json" -X PUT "${BASE_URL}/api/state-templates/display?replace=true" -d "${typed_template_body}")"
+case "${typed_resp}" in
+  *'"data"'*) : ;;
+  *) die "uploading state template 'display' failed: ${typed_resp}" ;;
+esac
+
 # 3. Two subject records. `t-001` is written whole through the record door; `t-002` is
 #    seeded empty and then grown by a `set_by_key` delta, so its Writes audit shows both
 #    an `api` replace and an `api` delta row.
@@ -809,6 +842,8 @@ api "${BASE_URL}/api/states/${STATE_NAME}/consumers" | grep -q "notes-updater" \
   || die "the consumer hook is not in the state's consumers — the Consumers tab would be empty"
 api "${REC_BASE}/thread/t-002/writes" | grep -q '"api"' \
   || die "record thread/t-002 has no api write — the record page's Writes audit would be empty"
+api "${BASE_URL}/api/state-templates/display" | grep -q '"default_density"' \
+  || die "state template 'display' carries no parameter — the typed state-template frame would show no Parameters"
 
 # --- 8. Capture every screen (light + dark) ---------------------------------
 log "capturing screenshots into ${OUT_DIR}"

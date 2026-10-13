@@ -13,7 +13,9 @@
       },
       "pages": ["demo"],
       "settings_tabs": [],
-      "nav_entries": ["demo"]
-    }
+      "nav_entries": ["demo"],
+      "route_panels": ["synthetic"]
+    },
+    "mounts": {}
   }
 ]

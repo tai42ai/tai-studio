@@ -14,7 +14,9 @@ import type {
   PluginEntry,
   RegisteredNavEntry,
   RegisteredPage,
+  RegisteredRoutePanel,
   RegisteredSettingsTab,
+  RoutePanelContribution,
   SettingsTabContribution,
   ToolPanelContribution,
 } from './types';
@@ -23,6 +25,18 @@ const toolPanels = new Map<string, ToolPanelContribution>();
 const pages: RegisteredPage[] = [];
 const settingsTabs: RegisteredSettingsTab[] = [];
 const navEntries: RegisteredNavEntry[] = [];
+const routePanels = new Map<string, RegisteredRoutePanel>();
+
+/**
+ * What the host knows about a plugin from its registry listing entry: `mounts`, the
+ * plugin's own route items and their resolved absolute bases (`{item: "/api/<base>"}`),
+ * and `declaredRoutePanels`, the channels its manifest lists under
+ * `contributions.route_panels`.
+ */
+export interface PluginLoadInputs {
+  readonly mounts: Readonly<Record<string, string>>;
+  readonly declaredRoutePanels: readonly string[];
+}
 
 /** The contributions one plugin stages before they commit as a batch. */
 interface StagedContributions {
@@ -31,6 +45,7 @@ interface StagedContributions {
   readonly settingsTabs: RegisteredSettingsTab[];
   readonly tabIds: Set<string>;
   readonly navEntries: RegisteredNavEntry[];
+  readonly routePanels: Map<string, RegisteredRoutePanel>;
 }
 
 /**
@@ -48,6 +63,7 @@ function emptyStaged(): StagedContributions {
     settingsTabs: [],
     tabIds: new Set(),
     navEntries: [],
+    routePanels: new Map(),
   };
 }
 
@@ -63,6 +79,7 @@ function makeStagingContext(
   pluginId: string,
   staged: StagedContributions,
   seal: Seal,
+  host: PluginLoadInputs,
 ): PluginContext {
   const assertOpen = (): void => {
     if (seal.closed) {
@@ -120,6 +137,16 @@ function makeStagingContext(
       }
       staged.navEntries.push({ ...contribution, pluginId });
     },
+    registerRoutePanel(contribution: RoutePanelContribution): void {
+      assertOpen();
+      if (staged.routePanels.has(contribution.channel) || routePanels.has(contribution.channel)) {
+        throw new Error(`a route panel is already registered for channel ${contribution.channel}`);
+      }
+      staged.routePanels.set(contribution.channel, { ...contribution, pluginId });
+    },
+    routeBase(itemName: string): string | null {
+      return Object.hasOwn(host.mounts, itemName) ? (host.mounts[itemName] ?? null) : null;
+    },
   };
 }
 
@@ -143,6 +170,27 @@ function assertNavEntriesHavePages(pluginId: string, staged: StagedContributions
 }
 
 /**
+ * The channels a plugin registered route panels for must be exactly the channels its
+ * manifest declares: a bundle and its manifest are built together, so a mismatch is a
+ * build fault. Throwing BEFORE any commit keeps atomicity.
+ */
+function assertRoutePanelsDeclared(
+  pluginId: string,
+  staged: StagedContributions,
+  declared: readonly string[],
+): void {
+  const registered = [...staged.routePanels.keys()].sort();
+  const manifest = [...new Set(declared)].sort();
+  const same =
+    registered.length === manifest.length && registered.every((c, i) => c === manifest[i]);
+  if (!same) {
+    throw new Error(
+      `plugin “${pluginId}” registered route panels [${registered.join(', ')}] but its manifest declares [${manifest.join(', ')}]`,
+    );
+  }
+}
+
+/**
  * Commit the staged contributions as one batch, so the registry only ever holds a
  * plugin's complete set — never a partial set left behind by a mid-registration failure.
  */
@@ -151,6 +199,7 @@ function commitStaged(staged: StagedContributions): void {
   for (const [toolName, contribution] of staged.toolPanels) toolPanels.set(toolName, contribution);
   for (const tab of staged.settingsTabs) settingsTabs.push(tab);
   for (const navEntry of staged.navEntries) navEntries.push(navEntry);
+  for (const [channel, panel] of staged.routePanels) routePanels.set(channel, panel);
 }
 
 /**
@@ -164,10 +213,14 @@ function commitStaged(staged: StagedContributions): void {
  * during `entry`'s synchronous body — including a microtask it enqueues then — are
  * still captured and committed. A `register` that throws commits nothing.
  */
-export async function loadPlugin(pluginId: string, entry: PluginEntry): Promise<void> {
+export async function loadPlugin(
+  pluginId: string,
+  entry: PluginEntry,
+  host: PluginLoadInputs,
+): Promise<void> {
   const staged = emptyStaged();
   const seal: Seal = { closed: false };
-  const context = makeStagingContext(pluginId, staged, seal);
+  const context = makeStagingContext(pluginId, staged, seal, host);
 
   try {
     await entry(context);
@@ -178,12 +231,13 @@ export async function loadPlugin(pluginId: string, entry: PluginEntry): Promise<
   }
 
   assertNavEntriesHavePages(pluginId, staged);
+  assertRoutePanelsDeclared(pluginId, staged, host.declaredRoutePanels);
   commitStaged(staged);
 }
 
 /** The shell reads this after loading every installed plugin bundle. */
 export function getContributions(): PluginContributions {
-  return { toolPanels, pages, settingsTabs, navEntries };
+  return { toolPanels, pages, settingsTabs, navEntries, routePanels };
 }
 
 /** Tests reset the module-level registry between cases. */
@@ -192,4 +246,5 @@ export function __resetContributions(): void {
   pages.length = 0;
   settingsTabs.length = 0;
   navEntries.length = 0;
+  routePanels.clear();
 }

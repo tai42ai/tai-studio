@@ -197,7 +197,7 @@ function useConnectionMutations(connectionId: string, connection: ConnectionView
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: CONNECTIONS_KEY });
       setConfirmOpen(false);
-      const summary = summarizeFleetFanout(result.fanout);
+      const summary = summarizeFleetFanout(result.fanout, []);
       const fleetConverged = summary === null || summary.status === 'converged';
       // Navigate away only on a fully-clean disconnect (upstream access confirmed
       // revoked AND the reload converged). A failed/skipped revoke or a stranded fleet
@@ -333,7 +333,7 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
         consentBlocked={consentBlocked}
         refusal={refusal}
         mutationError={mutationError}
-        patchFleet={patch.isSuccess ? summarizeFleetFanout(patch.data.fanout) : null}
+        patchFleet={patch.isSuccess ? summarizeFleetFanout(patch.data.fanout, []) : null}
         oauthNotice={oauth.notice}
         onClearOauthNotice={oauth.clearNotice}
         oauthFleet={oauthFleet}

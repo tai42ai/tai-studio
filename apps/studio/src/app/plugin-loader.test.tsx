@@ -25,6 +25,8 @@ interface ManifestOverrides {
   readonly api_version?: number;
   readonly pages?: string[];
   readonly integrity?: Record<string, string>;
+  readonly mounts?: Record<string, string>;
+  readonly route_panels?: string[];
 }
 
 function manifest(overrides: ManifestOverrides = {}) {
@@ -32,12 +34,14 @@ function manifest(overrides: ManifestOverrides = {}) {
     name: 'acme',
     version: '1.0.0',
     api_version: overrides.api_version ?? 1,
+    mounts: overrides.mounts ?? {},
     entry: 'index.js',
     integrity: overrides.integrity ?? { 'index.js': 'sha384-abc' },
     contributions: {
       tool_panels: {},
       pages: overrides.pages ?? ['dashboard'],
       settings_tabs: [],
+      route_panels: overrides.route_panels ?? [],
     },
   };
 }
@@ -256,6 +260,58 @@ describe('studio-plugin loader', () => {
     const entries = getContributions().navEntries;
     expect(entries).toHaveLength(1);
     expect(entries[0]).toMatchObject({ pluginId: 'acme', path: 'dashboard' });
+  });
+
+  it('hands the listing mounts and declared route panels to the plugin register', async () => {
+    server.use(
+      http.get('*/api/plugins', () =>
+        HttpResponse.json({
+          data: [
+            manifest({ mounts: { synthetic: '/api/synthetic-alt' }, route_panels: ['synthetic'] }),
+          ],
+        }),
+      ),
+    );
+    const bases: (string | null)[] = [];
+    const importModule = vi.fn(() =>
+      pluginModule((ctx) => {
+        bases.push(ctx.routeBase('synthetic'), ctx.routeBase('absent'));
+        ctx.registerPage({
+          path: 'dashboard',
+          title: 'Dashboard',
+          component: () => <div>acme dashboard</div>,
+        });
+        ctx.registerRoutePanel({ channel: 'synthetic', title: 'Synthetic', component: () => null });
+      }),
+    );
+
+    renderStudio({ ...AUTH, initialPath: '/plugins/acme/dashboard', importModule });
+
+    expect(await screen.findByText('acme dashboard')).toBeInTheDocument();
+    expect(bases).toEqual(['/api/synthetic-alt', null]);
+    expect(getContributions().routePanels.get('synthetic')?.pluginId).toBe('acme');
+  });
+
+  it('a bundle whose route panels differ from its manifest fails loudly and commits nothing', async () => {
+    server.use(http.get('*/api/plugins', () => HttpResponse.json({ data: [manifest()] })));
+    const importModule = vi.fn(() =>
+      pluginModule((ctx) => {
+        ctx.registerPage({
+          path: 'dashboard',
+          title: 'Dashboard',
+          component: () => <div>acme dashboard</div>,
+        });
+        ctx.registerRoutePanel({ channel: 'synthetic', title: 'Synthetic', component: () => null });
+      }),
+    );
+
+    renderStudio({ ...AUTH, initialPath: '/plugins/acme/dashboard', importModule });
+
+    const card = await screen.findByText(/acme.*failed to load/i);
+    expect(card).toHaveTextContent(
+      'plugin “acme” registered route panels [synthetic] but its manifest declares []',
+    );
+    expect(getContributions().pages).toHaveLength(0);
   });
 
   it('injects manifest .css assets (sorted, exact url+integrity) BEFORE importing the JS', async () => {

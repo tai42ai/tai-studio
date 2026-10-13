@@ -1,59 +1,39 @@
 /** Tool catalog, run-result and per-tool tag response schemas. */
 import { z } from 'zod';
 
-import { jsonSchema, jsonValue } from './shared';
+import * as openapi from '../generated/openapi-schemas';
 
-export const toolNames = z.array(z.string());
+export const toolNames = openapi.stringListResponse;
 
-export const toolSchema = z.object({
-  input: jsonSchema,
-  output: jsonSchema.nullable(),
-  description: z.string().nullable(),
-});
+export const toolSchema = openapi.toolSchemaView;
 export type ToolSchema = z.infer<typeof toolSchema>;
 
-export const allToolSchemas = z.record(z.string(), toolSchema);
+export const allToolSchemas = openapi.toolsSchemaMap;
 
-export const runToolResult = jsonValue;
+/**
+ * What a synchronous run answers, by `kind`: `result` (the tool's own value in `result`),
+ * `asks` (the tool asked its CALLER and parked: the caller asks and the suspension), `parked`
+ * (only user asks remain: the suspension) or `none` (nothing ran).
+ */
+export const runAnswer = openapi.runAnswerResponse;
+export type RunAnswer = z.infer<typeof runAnswer>;
+
+export const runToolResult = runAnswer;
 
 /** The lifecycle status a parked interaction on a run's subject carries: a pending ask, an
  * ask whose continuation is resuming, or a resolved run's waiting outcome (clean/failed). */
-export const parkedStatus = z.enum(['asking', 'running', 'finished', 'failed']);
+export const parkedStatus = openapi.parkedEntry.shape.status;
 export type ParkedStatus = z.infer<typeof parkedStatus>;
 
 /**
  * One parked caller-ask entry a synchronous run-tool call returns when the tool asked its
- * CALLER (`to="caller"`) and parked. The full contract entry carries more fields; the panel
- * reads the display subset here and tolerates the rest. `question` is the prompt, `payload`
- * the structured value the ask handed the caller, `asked_by` the run chain that raised it.
+ * CALLER (`to="caller"`) and parked. `question` is the prompt, `payload` the structured
+ * value the ask handed the caller, `asked_by` the run chain that raised it.
  */
-export const parkedCallerAsk = z.object({
-  id: z.string(),
-  status: parkedStatus,
-  to: z.enum(['user', 'caller']).nullish(),
-  question: z.string().nullish(),
-  payload: z.record(z.string(), z.unknown()).nullish(),
-  asked_by: z.array(z.string()).nullish(),
-});
+export const parkedCallerAsk = openapi.parkedEntry;
 export type ParkedCallerAsk = z.infer<typeof parkedCallerAsk>;
 
-/** A synchronous run whose tool parked CALLER asks returns this envelope in place of a result:
- * the full caller-ask entries under `asks`. An empty `asks` means the run parked with no open
- * caller ask (only user asks remain). */
-export const callerAsksEnvelope = z.object({
-  asks: z.array(parkedCallerAsk),
-});
-export type CallerAsksEnvelope = z.infer<typeof callerAsksEnvelope>;
-
-/** The park receipt a synchronous run returns when its tool parked only USER asks: the
- * suspension sentinel's ids, with no caller ask for the panel to act on. */
-export const suspendedRunReceipt = z.object({
-  interaction_id: z.string(),
-  interaction_ids: z.array(z.string()),
-  caller_interaction_ids: z.array(z.string()).default([]),
-});
-export type SuspendedRunReceipt = z.infer<typeof suspendedRunReceipt>;
-
+// Hand-written: a `resume_parked` / `cancel_parked` tool's own result, opaque to the spec.
 /** What one resume / take / cancel of a parked interaction did, as `resume_parked` /
  * `cancel_parked` return it through run-tool. `kind` picks the payload: `result` (a final
  * value in `result`), `asks` (new caller asks in `asks`), `parked` (only user asks remain),
@@ -67,6 +47,7 @@ export const visitOutcome = z.object({
 });
 export type VisitOutcome = z.infer<typeof visitOutcome>;
 
+// Hand-written: a third-party media block inside a tool's own result, opaque to the spec.
 /**
  * The MEDIA content shape a direct tool run may return — fastmcp's serialized
  * `Image`/`Audio` MediaBlock (`{ type, data: <base64>, mimeType }`). One recognised
@@ -102,12 +83,8 @@ export type ToolMediaResult = z.infer<typeof toolMediaResult>;
  * `badges` are the tool's plugin-DECLARED capability labels — purely INFORMATIONAL
  * (e.g. `network`, `filesystem`), never a gate the server enforces. The overlay's
  * own badges are merged on top client-side; this read exposes only the declaration.
+ * `schedulable` is whether the tool can be scheduled.
  */
-export const toolTagEntry = z.object({
-  name: z.string(),
-  tags: z.array(z.string()),
-  badges: z.array(z.string()),
-  hidden: z.boolean(),
-});
-export const toolTags = z.array(toolTagEntry);
+export const toolTagEntry = openapi.toolTagRow;
+export const toolTags = openapi.toolTagListResponse;
 export type ToolTagEntry = z.infer<typeof toolTagEntry>;

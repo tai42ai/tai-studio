@@ -1,43 +1,45 @@
 /** Backup section, document and import-report response schemas. */
 import { z } from 'zod';
 
+import * as openapi from '../generated/openapi-schemas';
 import { fleetReportFanout } from './fleet';
 
-export const backupSections = z.array(z.object({ name: z.string(), secret: z.boolean() }));
+export const backupSections = openapi.backupSectionListing;
 
-/** The exported backup document — validated when the UI reads a picked file. */
-export const backupDocument = z.object({
+/**
+ * A backup document as the import door accepts it — validated when the UI reads a picked
+ * file. Hand-written over the export's document: the import door takes `version` 1 and a
+ * `sections` object, and the export's `errors` map is optional there.
+ */
+export const backupDocument = openapi.backupExportDocument.extend({
   version: z.literal(1),
-  created_at: z.string(),
-  sections: z.record(z.string(), z.unknown()),
-  errors: z.record(z.string(), z.string()).optional(),
+  errors: openapi.backupExportDocument.shape.errors.optional(),
 });
 export type BackupDocument = z.infer<typeof backupDocument>;
 
-export const backupImportReport = z.object({
-  ok: z.boolean(),
-  sections: z.record(
-    z.string(),
-    z.object({
-      created: z.number(),
-      updated: z.number(),
-      skipped: z.number(),
-      errors: z.array(z.string()),
-      new_api_keys: z
-        .array(
-          z.object({
-            user_id: z.string(),
-            description: z.string(),
-            api_key: z.string(),
-          }),
-        )
-        .optional(),
-      // The `manifest` and `env` sections apply through the config pipeline, so their
-      // report carries the mode-wrapped fleet `fanout` of the restore's reload; other
-      // sections omit it. Parsed EXPLICITLY so the shared fleet-report handler can
-      // surface a failed restore propagation — otherwise zod would strip it silently.
-      fanout: fleetReportFanout.optional(),
-    }),
-  ),
+// Hand-written: the spec publishes a section's fan-out as one object with optional fields
+// and its `details` as an open map; the client discriminates the fan-out's modes and reads
+// the keys a restore minted.
+/** The api keys a restore minted, shown once: carried in a section report's `details`. */
+export const backupNewApiKeys = z.array(
+  z.object({ user_id: z.string(), description: z.string(), api_key: z.string() }),
+);
+export type BackupNewApiKeys = z.infer<typeof backupNewApiKeys>;
+
+export const backupSectionReport = openapi.backupSectionReport.extend({
+  // The `manifest` and `env` sections apply through the config pipeline, so their
+  // report carries the mode-wrapped fleet `fanout` of the restore's reload; other
+  // sections carry `null`. Parsed EXPLICITLY so the shared fleet-report handler can
+  // surface a failed restore propagation.
+  fanout: fleetReportFanout.nullable().default(null),
+  details: z
+    .object({ new_api_keys: backupNewApiKeys.optional() })
+    .catchall(z.unknown())
+    .default({}),
+});
+export type BackupSectionReport = z.infer<typeof backupSectionReport>;
+
+export const backupImportReport = openapi.backupImportResult.extend({
+  sections: z.record(z.string(), backupSectionReport),
 });
 export type BackupImportReport = z.infer<typeof backupImportReport>;

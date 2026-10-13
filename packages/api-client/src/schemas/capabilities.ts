@@ -1,32 +1,27 @@
 /** Caller capability projection and auth-capabilities schemas. */
-import { z } from 'zod';
+import type { z } from 'zod';
 
-import { principalRef } from './principals';
-import { subMcpMount } from './sub-mcp';
+import * as openapi from '../generated/openapi-schemas';
 
 /** A concrete route the caller can reach, with the methods that pass its jq fence. */
-export const routeEntry = z.object({
-  path: z.string(),
-  methods: z.array(z.string()),
-});
+export const routeEntry = openapi.routeEntry;
 export type RouteEntry = z.infer<typeof routeEntry>;
 
 /**
  * A dynamic route pattern the caller can reach — a mount/pattern surface not
  * enumerable into concrete paths, projected only when its scope AND jq admit it.
+ * `open_prefix` is the literal path prefix the pattern opens, or `null` when the pattern
+ * opens none a prefix test can read.
  */
-export const patternEntry = z.object({
-  pattern: z.string(),
-  scope_id: z.string(),
-});
+export const patternEntry = openapi.patternEntry;
 export type PatternEntry = z.infer<typeof patternEntry>;
 
 /**
- * A sub-MCP mount the caller can reach, with the tools it exposes and its
- * transport. Shares the {@link subMcpMount} shape with the registry list, adding
- * the `slug` the projection carries inline (the list keys mounts by slug instead).
+ * A sub-MCP mount the caller can reach, with the tools it exposes, its transport and
+ * its served mount URL and access pattern, and the `slug` the projection carries inline
+ * (the registry list keys mounts by slug instead).
  */
-export const subMcpEntry = subMcpMount.extend({ slug: z.string() });
+export const subMcpEntry = openapi.subMcpEntry;
 export type SubMcpEntry = z.infer<typeof subMcpEntry>;
 
 /**
@@ -37,23 +32,12 @@ export type SubMcpEntry = z.infer<typeof subMcpEntry>;
  * session carries `admin: false` and a jq-exact `routes` list. `owner_user_id` is
  * the key's owner claim, `null` for a key with no owner claim. `principal` is the
  * caller's principal (kind + display name), `null` when no principal row backs the
- * credential. The invariant is projection ⊆ gate: every projected surface is one
+ * credential. `public_resource_id` is the deployment's reserved public marker (the
+ * route-table id a public route maps to — never a scope). The invariant is projection ⊆ gate: every projected surface is one
  * the server would admit, so the UI can filter on it without ever advertising a
  * door the gate denies.
  */
-export const meProjection = z.object({
-  user_id: z.string(),
-  owner_user_id: z.string().nullable(),
-  principal: principalRef.nullable().optional(),
-  admin: z.boolean(),
-  scopes: z.array(z.string()),
-  routes: z.array(routeEntry),
-  route_patterns: z.array(patternEntry),
-  sub_mcp: z.array(subMcpEntry),
-  tools: z.array(z.string()),
-  agents: z.array(z.string()),
-  mintable: z.boolean(),
-});
+export const meProjection = openapi.projectionResult;
 export type MeProjection = z.infer<typeof meProjection>;
 
 /**
@@ -62,11 +46,7 @@ export type MeProjection = z.infer<typeof meProjection>;
  * absolute URL — the Studio composes the origin); `token` is the raw claim token
  * returned exactly ONCE; `expires_at` is an ISO-8601 instant.
  */
-export const claimLinkCreated = z.object({
-  claim_path: z.string(),
-  token: z.string(),
-  expires_at: z.string(),
-});
+export const claimLinkCreated = openapi.claimLinkResult;
 export type ClaimLinkCreated = z.infer<typeof claimLinkCreated>;
 
 /**
@@ -76,7 +56,7 @@ export type ClaimLinkCreated = z.infer<typeof claimLinkCreated>;
  * `revoked: false` body. Non-strict, so a SUCCESSFUL logout never throws
  * `ApiSchemaError` on an additive field.
  */
-export const logoutResult = z.object({ revoked: z.boolean() });
+export const logoutResult = openapi.logoutResult;
 export type LogoutResult = z.infer<typeof logoutResult>;
 
 /**
@@ -85,8 +65,5 @@ export type LogoutResult = z.infer<typeof logoutResult>;
  * validator-only (keys are issued at an external issuer), so the key-creation
  * UI disables up front instead of surfacing a raw mint failure. Non-strict.
  */
-export const authCapabilities = z.object({
-  mintable: z.boolean(),
-  providers: z.array(z.object({ name: z.string(), mintable: z.boolean() })),
-});
+export const authCapabilities = openapi.mintCapabilities;
 export type AuthCapabilities = z.infer<typeof authCapabilities>;

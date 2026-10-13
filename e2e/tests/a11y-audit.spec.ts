@@ -25,7 +25,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
-import { seedCredential } from './helpers';
+import { openAddServerReview, seedCredential } from './helpers';
 
 needs();
 
@@ -86,10 +86,15 @@ for (const scheme of ['light', 'dark'] as const) {
       // One test walks all 18 feature screens through `axe.analyze` so both themes
       // are held to the same bar and each theme emits a single evidence file. A
       // per-screen analyse of a laid-out document is heavy (~0.5-2.3 s), so the
-      // full-set walk runs an order of magnitude longer than the default single-
-      // interaction budget assumes; under CPU contention it outlasts 30 s outright.
-      // `test.slow()` triples the timeout to fit the walk rather than truncate it.
-      test.slow();
+      // walk is the suite's longest test. Its bound follows the config's rule (a
+      // bound on a hang, twice the slowest completed walk) and comes out above the
+      // config's per-test bound, so the walk carries its own.
+      // Times as Playwright reports them: on the CI runner (ubuntu-latest) up to
+      // 21.1 s over six whole-suite runs; on a 20-core host shared with other work
+      // at a 1-min load average of 18-121 up to 96.8 s; while a busy-loop load
+      // generator at equal priority held that average at 109-138, 157.279 s (the
+      // dark theme). Twice that, rounded up to the next 10 s.
+      test.setTimeout(320_000);
       // Disable animations for the scan. axe reads the painted document at one
       // instant; a control caught mid-transition (a button's 150 ms disabled ->
       // enabled colour fade) samples an INTERMEDIATE colour pair that neither
@@ -101,14 +106,8 @@ for (const scheme of ['light', 'dark'] as const) {
       const report: ScreenReport[] = [];
       const blocking: string[] = [];
 
-      for (const route of FEATURE_ROUTES) {
-        await page.goto(route);
-        await waitForFeaturePage(page);
-        const theme = await page.evaluate(() =>
-          document.documentElement.getAttribute('data-theme'),
-        );
-        expect(theme, `data-theme did not resolve to ${scheme} on ${route}`).toBe(scheme);
-
+      // One axe pass over the document as it stands, filed under `route`.
+      const audit = async (route: string): Promise<void> => {
         const results = await new AxeBuilder({ page }).withTags([...WCAG_AA_TAGS]).analyze();
 
         report.push({
@@ -126,6 +125,22 @@ for (const scheme of ['light', 'dark'] as const) {
           if (v.impact === 'critical' || v.impact === 'serious') {
             blocking.push(`${route} [${scheme}]: ${v.id} (${v.impact}) — ${v.help}`);
           }
+        }
+      };
+
+      for (const route of FEATURE_ROUTES) {
+        await page.goto(route);
+        await waitForFeaturePage(page);
+        const theme = await page.evaluate(() =>
+          document.documentElement.getAttribute('data-theme'),
+        );
+        expect(theme, `data-theme did not resolve to ${scheme} on ${route}`).toBe(scheme);
+        await audit(route);
+        if (route === '/connectors') {
+          // The Connectors page also carries the "Add MCP server" dialog, framed at its
+          // review step (the fullest of its two steps).
+          await openAddServerReview(page);
+          await audit(`${route} (add MCP server, review step)`);
         }
       }
 

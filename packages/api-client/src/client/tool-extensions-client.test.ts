@@ -53,10 +53,10 @@ const localOnly = {
 const getData = {
   combos: [['marka'], ['marka', 'markb']],
   available: [
-    { name: 'argswrap', kind: 'wrapper' },
-    { name: 'backendx', kind: 'backend' },
-    { name: 'marka', kind: 'wrapper' },
-    { name: 'markb', kind: 'wrapper' },
+    { name: 'argswrap', kind: 'wrapper', multiple: true },
+    { name: 'backendx', kind: 'backend', multiple: false },
+    { name: 'marka', kind: 'wrapper', multiple: true },
+    { name: 'markb', kind: 'wrapper', multiple: true },
   ],
 };
 
@@ -67,7 +67,7 @@ describe('tool-extensions client transport', () => {
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/tools/shout/extensions');
     expect(out.combos).toEqual([['marka'], ['marka', 'markb']]);
-    expect(out.available[1]).toEqual({ name: 'backendx', kind: 'backend' });
+    expect(out.available[1]).toEqual({ name: 'backendx', kind: 'backend', multiple: false });
   });
 
   it('getToolExtensions encodes the tool name in the path', async () => {
@@ -78,7 +78,9 @@ describe('tool-extensions client transport', () => {
 
   it('setToolExtensions POSTs the full { combos } list and parses the apply result (local reload + fanout)', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { status: 'ok', env_keys: 0, fanout: localOnly } }),
+      jsonResponse({
+        data: { status: 'ok', env_keys: 0, awaiting_respawn: [], recycle: null, fanout: localOnly },
+      }),
     );
     const out = await client.setToolExtensions('shout', [['marka'], ['markb']]);
     expect(captured[0]?.method).toBe('POST');
@@ -97,6 +99,8 @@ describe('tool-extensions client transport', () => {
         data: {
           status: 'ok',
           env_keys: 2,
+          awaiting_respawn: [],
+          recycle: null,
           fanout: {
             mode: 'fleet',
             op: 'reload_config',
@@ -127,7 +131,9 @@ describe('tool-extensions client transport', () => {
 
   it('setToolExtensions sends an empty combos list to CLEAR', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { status: 'ok', env_keys: 0, fanout: localOnly } }),
+      jsonResponse({
+        data: { status: 'ok', env_keys: 0, awaiting_respawn: [], recycle: null, fanout: localOnly },
+      }),
     );
     await client.setToolExtensions('shout', []);
     expect(captured[0]?.body).toEqual({ combos: [] });
@@ -151,7 +157,9 @@ describe('tool-extensions client transport', () => {
       config: { schema: { type: 'object', title: 'Weather' } },
     };
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { status: 'ok', env_keys: 0, fanout: localOnly } }),
+      jsonResponse({
+        data: { status: 'ok', env_keys: 0, awaiting_respawn: [], recycle: null, fanout: localOnly },
+      }),
     );
     await client.setToolExtensions('shout', [['marka', configElement]]);
     expect(captured[0]?.body).toEqual({ combos: [['marka', configElement]] });

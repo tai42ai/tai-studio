@@ -202,6 +202,36 @@ export const MUTATION_FIXTURES = [
     schema: 'oauthCompleteResult',
   },
   {
+    name: 'discover-server.registration',
+    path: '/api/connectors/providers/discover',
+    file: 'mutations/discover-server.registration.json',
+    schema: 'discoveredServer',
+  },
+  {
+    name: 'discover-server.manual',
+    path: '/api/connectors/providers/discover',
+    file: 'mutations/discover-server.manual.json',
+    schema: 'discoveredServer',
+  },
+  {
+    name: 'add-server',
+    path: '/api/connectors/providers',
+    file: 'mutations/add-server.json',
+    schema: 'providerMutationResult',
+  },
+  {
+    name: 'remove-provider',
+    path: '/api/connectors/providers/{provider_id}',
+    file: 'mutations/remove-provider.json',
+    schema: 'removeProviderResult',
+  },
+  {
+    name: 'set-provider-client',
+    path: '/api/connectors/providers/{provider_id}/client',
+    file: 'mutations/set-provider-client.json',
+    schema: 'providerMutationResult',
+  },
+  {
     name: 'register-hook',
     path: '/api/hooks',
     file: 'mutations/register-hook.json',
@@ -522,6 +552,24 @@ export const REDACTED_FIXTURES = [
     schema: 'runTrace',
   },
   {
+    name: 'observability-trace-outline',
+    path: '/api/observability/runs/trace_9f8e7d6c/trace/outline',
+    file: 'redacted/observability-trace-outline.json',
+    schema: 'runTraceOutline',
+  },
+  {
+    name: 'observability-capabilities',
+    path: '/api/observability/capabilities',
+    file: 'redacted/observability-capabilities.json',
+    schema: 'observabilityCapabilities',
+  },
+  {
+    name: 'observability-resolved',
+    path: '/api/observability/runs/trace_9f8e7d6c/spans/span_tool/resolved',
+    file: 'redacted/observability-resolved.json',
+    schema: 'resolvedSpanValue',
+  },
+  {
     name: 'tool-run',
     path: '/api/tool-runs/run_9f8e7d6c5b4a3210',
     file: 'redacted/tool-run.json',
@@ -551,7 +599,9 @@ export const EXCLUDED_FROM_CAPTURE = [
   '/api/hooks', // hook tool_kwargs can carry secrets — excluded outright
   '/api/auth', // scopes / tokens / api-keys — secret-bearing, excluded outright
   '/api/backup', // backup sections/export — secret-bearing, excluded outright
-  '/api/schedules', // schedule tool kwargs can carry secrets — excluded outright
+  // a run-once create answers the fired tool's raw result, and a listed row's `error.message` is
+  // backend exception text — either can carry secrets, so excluded outright
+  '/api/schedules',
   '/api/presets', // preset fixed_kwargs can embed credentials — excluded outright
   '/api/observability', // run inputs/outputs can carry secrets — excluded outright
   '/api/tool-runs', // background run records embed tool arguments/output — secret-bearing

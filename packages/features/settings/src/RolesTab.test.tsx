@@ -22,7 +22,14 @@ import { decorBorderedControls, renderWithProviders } from './test-utils';
 // -- fixtures ----------------------------------------------------------------
 
 function route(partial: Pick<AuthRoute, 'path' | 'action'> & Partial<AuthRoute>): AuthRoute {
-  return { methods: ['GET'], mapped: null, tags: [], summary: '', ...partial };
+  return {
+    methods: ['GET'],
+    mapped: null,
+    tags: [],
+    summary: '',
+    declared_public: false,
+    ...partial,
+  };
 }
 
 /**

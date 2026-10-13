@@ -232,7 +232,9 @@ function McpConfigEditor(props: {
       ) : null}
       {/* The save persists then broadcasts a reload; surface any failed propagation
           honestly (nothing on a converged / lone-worker save). */}
-      {save.isSuccess ? <FleetReport summary={summarizeFleetFanout(save.data.fanout)} /> : null}
+      {save.isSuccess ? (
+        <FleetReport summary={summarizeFleetFanout(save.data.fanout, save.data.awaiting_respawn)} />
+      ) : null}
       {save.isError ? <ErrorState message={errorMessage(save.error)} /> : null}
       {/* The combined op is server-gated by the shared X-band + dangling-`!ENV`
           validator; a refusal (or any failure) surfaces loudly, never swallowed. */}

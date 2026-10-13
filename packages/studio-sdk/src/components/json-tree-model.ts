@@ -1,7 +1,8 @@
 /**
  * The bounded-traversal model behind `JsonTree`: container inspection, the paged
  * child slice, path identity, and the open-state computation for the depth
- * default, expand-all and collapse-all baselines. Pure — no React, no DOM.
+ * default, expand-all and collapse-all baselines and the caller's named paths.
+ * Pure — no React, no DOM.
  */
 import { isRecord } from '../guards';
 
@@ -71,8 +72,30 @@ export function childPath(parent: string, name: string): string {
   return parent === '' ? segment : `${parent}/${segment}`;
 }
 
-/** The default open state a call site's `defaultExpanded` selects. */
-export type Baseline = 'depth' | 'expanded' | 'collapsed';
+/**
+ * The identities of every container a caller's named paths open: each path is a
+ * list of keys from the root (an array item named by its index), and the root,
+ * every container along the path and the one it ends at are all opened.
+ */
+export function namedOpenPaths(paths: readonly (readonly string[])[]): ReadonlySet<string> {
+  const open = new Set<string>();
+  for (const segments of paths) {
+    let path = '';
+    open.add(path);
+    for (const segment of segments) {
+      path = childPath(path, segment);
+      open.add(path);
+    }
+  }
+  return open;
+}
+
+/**
+ * The open state the nodes start from: the three a call site's `defaultExpanded`
+ * selects (the depth-guarded default, expand-all, collapsed), and `closed`, the
+ * reader's collapse-all, which also shuts the caller's named paths.
+ */
+export type Baseline = 'depth' | 'expanded' | 'collapsed' | 'closed';
 
 export function initialBaseline(defaultExpanded: boolean | undefined): Baseline {
   if (defaultExpanded === true) return 'expanded';
@@ -119,21 +142,26 @@ export function expandedOpenPaths(root: unknown): ReadonlySet<string> {
 }
 
 /**
- * Whether a node is open, from the baseline and the reader's own toggles. An
- * explicit toggle always wins; otherwise the baseline decides — the depth-guarded
- * default opens through {@link AUTO_EXPAND_DEPTH}, expand-all opens the budgeted
- * breadth-first set, collapse-all opens nothing.
+ * Whether a node is open, from the baseline, the caller's named paths and the
+ * reader's own toggles. An explicit toggle always wins; the reader's collapse-all
+ * opens nothing; otherwise a node on a named path is open beside any baseline a call
+ * site selects, and the baseline decides the rest — a collapsed baseline opens
+ * nothing else, the depth-guarded default opens through {@link AUTO_EXPAND_DEPTH},
+ * expand-all opens the budgeted breadth-first set.
  */
 export function computeOpen(
   baseline: Baseline,
   overrides: ReadonlyMap<string, boolean>,
   expandedPaths: ReadonlySet<string> | null,
+  namedPaths: ReadonlySet<string>,
   path: string,
   depth: number,
 ): boolean {
   const override = overrides.get(path);
   if (override !== undefined) return override;
-  if (baseline === 'expanded') return expandedPaths?.has(path) ?? false;
+  if (baseline === 'closed') return false;
+  if (namedPaths.has(path)) return true;
   if (baseline === 'collapsed') return false;
+  if (baseline === 'expanded') return expandedPaths?.has(path) ?? false;
   return depth <= AUTO_EXPAND_DEPTH;
 }

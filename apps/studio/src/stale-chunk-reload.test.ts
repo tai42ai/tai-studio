@@ -121,24 +121,43 @@ describe('installStaleChunkReload', () => {
     expect(blockedRejection.defaultPrevented).toBe(false);
   });
 
-  it('still reloads once via the in-memory fallback when sessionStorage throws', async () => {
-    const throwing = {
-      getItem: () => {
-        throw new Error('storage denied');
+  it('does not reload when sessionStorage throws on read: the guard cannot remember, so the failure surfaces', async () => {
+    // A browser that refuses storage for the site (cookies blocked) throws on access.
+    // A reload would start a new page life that remembers nothing and reload again.
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      get: () => {
+        throw new DOMException('Access is denied for this document.', 'SecurityError');
       },
+    });
+
+    await install();
+    const preload = dispatchPreloadError();
+    const rejection = dispatchRejection(
+      new Error('Failed to fetch dynamically imported module /b.js'),
+    );
+    expect(reloadSpy).not.toHaveBeenCalled();
+    expect(preload.defaultPrevented).toBe(false);
+    expect(rejection.defaultPrevented).toBe(false);
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('not reloading after vite:preloadError'),
+    );
+  });
+
+  it('does not reload when sessionStorage refuses the write', async () => {
+    const refusing = {
+      getItem: () => null,
       setItem: () => {
-        throw new Error('storage denied');
+        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
       },
       clear: () => undefined,
     };
-    Object.defineProperty(window, 'sessionStorage', { configurable: true, value: throwing });
+    Object.defineProperty(window, 'sessionStorage', { configurable: true, value: refusing });
 
     await install();
-    dispatchPreloadError();
-    expect(reloadSpy).toHaveBeenCalledTimes(1);
-    // Second qualifying event stays suppressed by the module-level flag.
-    dispatchPreloadError();
-    expect(reloadSpy).toHaveBeenCalledTimes(1);
+    const event = dispatchPreloadError();
+    expect(reloadSpy).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it('reloads again once the stored timestamp is older than the 60s window', async () => {

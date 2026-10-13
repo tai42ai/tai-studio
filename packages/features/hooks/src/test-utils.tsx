@@ -128,6 +128,8 @@ export function triggerLink(overrides: Partial<TriggerLinkRecord> = {}): Trigger
     created_at: '2026-07-22T09:00:00Z',
     expires_at: null,
     token_hash_prefix: 'abc123def456',
+    execution_key_fingerprint: 'fp-events',
+    require_api_key: false,
     ...overrides,
   };
 }
@@ -140,6 +142,9 @@ export function apiKey(overrides: Partial<TokensPayload[number]> = {}): TokensPa
     scopes: ['hooks'],
     // The server nests the mint fingerprint here; the picker reads it from here.
     policy_data: { key_fingerprint: 'kf-9f2c1d' },
+    condition: null,
+    principal: null,
+    orphaned: false,
     ...overrides,
   };
 }
@@ -147,7 +152,9 @@ export function apiKey(overrides: Partial<TokensPayload[number]> = {}): TokensPa
 const baseProjection: MeProjection = {
   user_id: 'u-test',
   owner_user_id: null,
+  principal: null,
   admin: false,
+  public_resource_id: 'public',
   scopes: [],
   routes: [],
   route_patterns: [],

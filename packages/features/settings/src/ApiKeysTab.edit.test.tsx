@@ -12,13 +12,25 @@ import { clickWhenInteractable, fullProjection, renderWithProviders } from './te
 vi.setConfig({ testTimeout: 15_000 });
 
 function tokens(): TokensPayload {
-  return [{ user_id: 'alice', description: 'Alice key', scopes: ['admin'], policy_data: {} }];
+  return [
+    {
+      condition: null,
+      principal: null,
+      orphaned: false,
+      user_id: 'alice',
+      description: 'Alice key',
+      scopes: ['admin'],
+      policy_data: {},
+    },
+  ];
 }
 /** A key seeded with both a saved inline condition and policy data, so the edit
  * dialog's "Remove condition" / "Clear policy data" affordances have something to remove. */
 function seededTokens(): TokensPayload {
   return [
     {
+      principal: null,
+      orphaned: false,
       user_id: 'alice',
       description: 'Alice key',
       scopes: ['admin'],
@@ -66,6 +78,8 @@ describe('ApiKeysTab — edit key', () => {
     const user = userEvent.setup({ delay: null });
     const withPolicy: TokensPayload = [
       {
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
@@ -73,7 +87,7 @@ describe('ApiKeysTab — edit key', () => {
         condition: { content: '.policy.limit > 0' },
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ listTokensPayload: vi.fn(() => Promise.resolve(withPolicy)) }),
     });
 
@@ -88,7 +102,9 @@ describe('ApiKeysTab — edit key', () => {
   it('edits a key description and scopes', async () => {
     const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
-    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ editApiKey }) });
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+      client: baseStub({ editApiKey }),
+    });
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Edit key alice' }));
@@ -108,7 +124,7 @@ describe('ApiKeysTab — edit key', () => {
   it('"Remove condition" sends an explicit null clear for the whole condition', async () => {
     const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({
         editApiKey,
         listTokensPayload: vi.fn(() => Promise.resolve(seededTokens())),
@@ -134,7 +150,7 @@ describe('ApiKeysTab — edit key', () => {
   it('a plain emptied condition textarea preserves the saved condition (no null clear)', async () => {
     const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({
         editApiKey,
         listTokensPayload: vi.fn(() => Promise.resolve(seededTokens())),
@@ -158,7 +174,7 @@ describe('ApiKeysTab — edit key', () => {
   it('"Clear policy data" sends an explicit policy_data null clear', async () => {
     const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({
         editApiKey,
         listTokensPayload: vi.fn(() => Promise.resolve(seededTokens())),
@@ -183,7 +199,7 @@ describe('ApiKeysTab — edit key', () => {
   it('removing all policy_data rows without the explicit clear preserves the saved value', async () => {
     const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({
         editApiKey,
         listTokensPayload: vi.fn(() => Promise.resolve(seededTokens())),
@@ -215,6 +231,8 @@ describe('ApiKeysTab — edit key', () => {
     // silently change the enforced `.policy.*` value (and append a phantom version).
     const stringSeed: TokensPayload = [
       {
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
@@ -222,7 +240,7 @@ describe('ApiKeysTab — edit key', () => {
         condition: null,
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ editApiKey, listTokensPayload: vi.fn(() => Promise.resolve(stringSeed)) }),
     });
 
@@ -246,6 +264,8 @@ describe('ApiKeysTab — edit key', () => {
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     const templateSeed: TokensPayload = [
       {
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
@@ -253,7 +273,7 @@ describe('ApiKeysTab — edit key', () => {
         condition: { id: 'ac_tier', kwargs: { min: '7' } },
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({
         editApiKey,
         listTokensPayload: vi.fn(() => Promise.resolve(templateSeed)),
@@ -284,6 +304,8 @@ describe('ApiKeysTab — edit key', () => {
     // description changed) must NOT trim it into a changed body + phantom version.
     const seed: TokensPayload = [
       {
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
@@ -291,7 +313,7 @@ describe('ApiKeysTab — edit key', () => {
         condition: { content: '  .policy.limit > 0  ' },
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ editApiKey, listTokensPayload: vi.fn(() => Promise.resolve(seed)) }),
     });
 
@@ -320,6 +342,8 @@ describe('ApiKeysTab — edit key', () => {
     // stored content and its kwargs) — re-serializing would risk a phantom version.
     const seed: TokensPayload = [
       {
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
@@ -327,7 +351,7 @@ describe('ApiKeysTab — edit key', () => {
         condition: { content: '.policy.limit > {{ min }}', kwargs: { min: '7' } },
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ editApiKey, listTokensPayload: vi.fn(() => Promise.resolve(seed)) }),
     });
 
@@ -355,6 +379,8 @@ describe('ApiKeysTab — edit key', () => {
     // whole condition (the PATCH preserves it) rather than re-send a re-serialized copy.
     const seed: TokensPayload = [
       {
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
@@ -362,7 +388,7 @@ describe('ApiKeysTab — edit key', () => {
         condition: { id: 'ac_tier' },
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ editApiKey, listTokensPayload: vi.fn(() => Promise.resolve(seed)) }),
     });
 
@@ -386,6 +412,8 @@ describe('ApiKeysTab — edit key', () => {
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     const templateSeed: TokensPayload = [
       {
+        principal: null,
+        orphaned: false,
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
@@ -393,7 +421,7 @@ describe('ApiKeysTab — edit key', () => {
         condition: { id: 'ac_tier', kwargs: { min: '7' } },
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({
         editApiKey,
         listTokensPayload: vi.fn(() => Promise.resolve(templateSeed)),
@@ -415,5 +443,51 @@ describe('ApiKeysTab — edit key', () => {
     });
     const body = editApiKey.mock.calls[0]?.[1] as Record<string, unknown>;
     expect(body.condition).toEqual({ content: '.policy.limit > 0', kwargs: { min: '7' } });
+  });
+
+  it('keeps a real scope named "public" when the operator renamed the public marker', async () => {
+    const user = userEvent.setup({ delay: null });
+    const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
+    // The deployment's public marker is `open`, so `public` is an ordinary scope a key can hold.
+    const renamedMarkerScopes = {
+      'https://a.com': 'admin',
+      'https://c.com': 'public',
+      'https://pub': 'open',
+    };
+    const holdsPublicScope: TokensPayload = [
+      {
+        condition: null,
+        principal: null,
+        orphaned: false,
+        user_id: 'alice',
+        description: 'Alice key',
+        scopes: ['admin', 'public', 'open'],
+        policy_data: {},
+      },
+    ];
+    renderTab(<ApiKeysTab readOnly={false} publicId="open" />, {
+      client: baseStub({
+        editApiKey,
+        listScopes: vi.fn(() => Promise.resolve(renamedMarkerScopes)),
+        listTokensPayload: vi.fn(() => Promise.resolve(holdsPublicScope)),
+      }),
+    });
+
+    await screen.findByText('alice');
+    await user.click(screen.getByRole('button', { name: 'Edit key alice' }));
+    expect(screen.getByRole('checkbox', { name: 'public' })).toBeChecked();
+    expect(screen.queryByRole('checkbox', { name: 'open' })).toBeNull();
+    const desc = screen.getByLabelText('Description');
+    await user.clear(desc);
+    await user.type(desc, 'Alice v2');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    // The served marker `open` is never sent back as a scope; the real `public` scope survives.
+    await waitFor(() => {
+      expect(editApiKey).toHaveBeenCalledWith('alice', {
+        description: 'Alice v2',
+        scopes: ['admin', 'public'],
+      });
+    });
   });
 });

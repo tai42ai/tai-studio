@@ -131,8 +131,8 @@ export function isFullProjection(projection: MeProjection): boolean {
 
 /**
  * Whether a concrete path is `prefix` itself or nested beneath it at a PATH-SEGMENT
- * boundary — the client mirror of the server's segment-aware coverage rule
- * (access_control/settings.py: `a == b or a.startswith(b + '/')`). Matching on a
+ * boundary — the client mirror of the server's segment-aware coverage rule, held to
+ * the platform's published path-coverage vectors by the shell's tests. Matching on a
  * bare `startsWith` would let a sibling route like `/api/tools-schema` satisfy the
  * `/api/tools` token; the boundary keeps them distinct.
  */
@@ -144,22 +144,18 @@ function pathUnderPrefix(path: string, prefix: string): boolean {
  * Whether the projection reaches ANY route under one of `prefixes` — the
  * declarative test behind nav filtering and plugin `requiredCapabilities`. A
  * concrete `routes[].path` covers a prefix when it is that prefix or a
- * segment-nested descendant of it; a dynamic `route_patterns[].pattern` covers a
- * prefix only when it is a simple anchored open-wildcard pattern (`^<literal>.*$`)
- * whose open literal overlaps the prefix at a segment boundary.
- *
- * Under-showing is safe (projection is UX; the server is the authority);
- * over-showing is the bug. So any non-anchored or otherwise complex pattern
- * (alternation, char class, bounded quantifier) is conservatively treated as NOT
- * covering — its matched set is not a clean prefix, so we never infer reach from
- * it.
+ * segment-nested descendant of it; a dynamic `route_patterns[]` entry covers a
+ * prefix through its served `open_prefix` — the literal the server rules every
+ * path starting with is reachable — when it overlaps the prefix at a segment
+ * boundary. A `null` open prefix (a pattern whose matched set is not a clean
+ * prefix) covers nothing by prefix: under-showing is safe, over-showing is the bug.
  */
 export function coversAnyRoute(projection: MeProjection, prefixes: readonly string[]): boolean {
   return prefixes.some(
     (prefix) =>
       projection.routes.some((route) => pathUnderPrefix(route.path, prefix)) ||
       projection.route_patterns.some((entry) => {
-        const open = patternOpenPrefix(entry.pattern);
+        const open = entry.open_prefix;
         // The open literal L means "every path starting with L is reachable". That
         // set reaches something under `prefix` when the prefix itself lies in it
         // (`prefix.startsWith(open)`) or when the literal already dives under the
@@ -220,23 +216,4 @@ export function coversWrite(state: CapabilityState, path: string, method: string
 export function useCanWrite(path: string, method = 'POST'): boolean {
   const { state } = useCapabilities();
   return coversWrite(state, path, method);
-}
-
-const REGEX_METACHARACTERS = /[.*+?()[\]{}|\\^$]/;
-
-/**
- * The literal prefix of a simple anchored open-wildcard pattern (`^<literal>.*$`,
- * the `$` optional), or `null` when the pattern is not exactly that shape. A
- * returned literal `L` means "every path starting with `L` is reachable"; only
- * that open-wildcard form yields a sound prefix, so a bare literal, an
- * alternation, a char class, or any other construct declines (returns `null`).
- */
-function patternOpenPrefix(pattern: string): string | null {
-  if (!pattern.startsWith('^')) return null;
-  let body = pattern.slice(1);
-  if (body.endsWith('$')) body = body.slice(0, -1);
-  if (!body.endsWith('.*')) return null;
-  body = body.slice(0, -2);
-  if (body.length === 0 || REGEX_METACHARACTERS.test(body)) return null;
-  return body;
 }

@@ -3,6 +3,7 @@
  * (create / edit / diff / apply / revert / versions / delete) and owns the delete
  * mutation. Revert re-applies the reserved `@previous` profile each apply auto-saves.
  */
+import { schemas } from '@tai42/api-client';
 import { ConfirmDialog, useApi } from '@tai42/studio-sdk';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -14,7 +15,7 @@ import { ProfileFormDialog } from './ProfileFormDialog';
 import { ProfileVersionsDialog } from './ProfileVersionsDialog';
 
 /** The reserved profile that every apply auto-saves the replaced env into. */
-const PREVIOUS_PROFILE = '@previous';
+const PREVIOUS_PROFILE = schemas.previousProfileName.value;
 
 export type OpenDialog =
   | { readonly kind: 'create' }

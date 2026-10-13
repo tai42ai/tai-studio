@@ -8,7 +8,8 @@
  *
  * The whole surface reads OFF proactively: a deployment with no state store reports
  * the `states` kind `off`, so the page shows the muted `FeatureDisabled` note instead
- * of a list whose every read is empty and every write refuses.
+ * of a list whose every read is empty and every write refuses. With the feature on, the
+ * pending-saves card sits under the header on every view.
  */
 import {
   Card,
@@ -21,6 +22,7 @@ import {
 } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
+import { PendingSavesCard } from './PendingSavesCard';
 import { RecordPage } from './RecordPage';
 import { StateDetail } from './StateDetail';
 import { StatesList } from './StatesList';
@@ -44,6 +46,8 @@ export function StatesPage({ search }: PageProps<'states'>): ReactNode {
         eyebrow="Capabilities"
         description="Declared JSON documents, one per subject — the record every door reads and writes."
       />
+
+      {off && offMessage !== null ? null : <PendingSavesCard />}
 
       {off && offMessage !== null ? (
         <Card>

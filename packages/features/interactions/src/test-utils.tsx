@@ -13,6 +13,7 @@
  * `listInteractions` stub (`interactionsPage` builds a page).
  */
 import type { ApiClient, Interaction, InteractionsPage, MeProjection } from '@tai42/api-client';
+import { servedConstants } from '@tai42/api-client';
 import {
   ApiProvider,
   AuthProvider,
@@ -105,7 +106,9 @@ export function scopedProjection(overrides: Partial<MeProjection> = {}): MeProje
 const baseProjection: MeProjection = {
   user_id: 'u-test',
   owner_user_id: null,
+  principal: null,
   admin: false,
+  public_resource_id: 'public',
   scopes: [],
   routes: [],
   route_patterns: [],
@@ -218,6 +221,7 @@ export function stubClient(parts: {
     // '' for a same-origin deployment, an absolute API origin for a cross-origin
     // one; served-media refs resolve against it in the display media card.
     baseUrl: parts.baseUrl ?? '',
+    constants: servedConstants,
     streamInteractions: (_signal?: AbortSignal) => Promise.resolve(parts.channel.iterator),
     listInteractions: parts.listInteractions ?? vi.fn().mockResolvedValue(interactionsPage()),
     answerInteraction: parts.answerInteraction ?? vi.fn().mockResolvedValue(undefined),
@@ -297,6 +301,12 @@ export function pendingItem(id: string, extra: Partial<Interaction> = {}): Inter
     created_at: '2026-07-04T00:00:00Z',
     timeout_at: '2026-07-04T00:05:00Z',
     sensitive: false,
+    server_verified: null,
+    channel: null,
+    recipient: null,
+    origin: null,
+    audience: null,
+    media: null,
     ...extra,
   };
 }
