@@ -6,6 +6,7 @@
  */
 import type { ReactNode } from 'react';
 
+import { ChipGroup } from '../components/chip-group';
 import { Field } from '../components/field';
 import { RadioGroup } from '../components/radio-group';
 import { Select } from '../components/select';
@@ -22,6 +23,7 @@ export function EnumField({
   model,
   value,
   onChange,
+  choiceLabel,
 }: {
   heading: string;
   description: string | undefined;
@@ -29,6 +31,8 @@ export function EnumField({
   model: Extract<FieldModel, { kind: 'enum' }>;
   value: unknown;
   onChange: (value: unknown) => void;
+  /** The select's placeholder when the field draws as a select; absent shows `Select…`. */
+  choiceLabel?: string;
 }): ReactNode {
   const options = model.options.map((option, index) => ({
     key: String(index),
@@ -43,6 +47,21 @@ export function EnumField({
     const match = options.find((option) => option.key === key);
     if (match !== undefined) onChange(match.value);
   };
+
+  // `control: chips` draws the choice as a chip grid in place of the radio/select,
+  // at any option count.
+  if (model.control === 'chips') {
+    return (
+      <Field label={heading} description={description} error={error} group>
+        <ChipGroup
+          mode="single"
+          options={options.map((option) => ({ value: option.key, label: option.label }))}
+          value={selectedKey}
+          onValueChange={emit}
+        />
+      </Field>
+    );
+  }
 
   if (options.length <= RADIO_MAX_OPTIONS) {
     return (
@@ -61,6 +80,7 @@ export function EnumField({
         options={options.map((option) => ({ value: option.key, label: option.label }))}
         value={selectedKey}
         onValueChange={emit}
+        placeholder={choiceLabel}
       />
     </Field>
   );

@@ -308,14 +308,90 @@ describe('form per-send data schemas — applied by the form preview', () => {
       { title: 'Extras', fields: ['notes'] },
     ]);
     expect(pages).toHaveLength(2);
-    // `display` and `kind` are additive: an older {title, fields} page parses with the
-    // empty-display, input-kind defaults.
+    // `display`, `kind` and `button_label` are additive: an older {title, fields} page
+    // parses with the empty-display, input-kind, no-button-label defaults.
     expect(pages[0]).toEqual({
       title: 'Basics',
       fields: ['date', 'count'],
       display: [],
       kind: 'input',
+      button_label: null,
     });
+  });
+
+  it('formPage carries a per-send button_label, else null', () => {
+    const labelled = schemas.formPage.parse({
+      title: 'Basics',
+      fields: ['date'],
+      button_label: 'Continue',
+    });
+    expect(labelled.button_label).toBe('Continue');
+    expect(schemas.formPage.parse({ title: 'Basics', fields: ['date'] }).button_label).toBeNull();
+  });
+
+  it('wording carries the form chapter: back, submit and per-field choice labels', () => {
+    const parsed = schemas.wording.parse({
+      form: {
+        back: 'Previous',
+        submit: 'Send it',
+        fields: { lane: { choice_label: 'Pick a lane' } },
+      },
+    });
+    expect(parsed.form?.back).toBe('Previous');
+    expect(parsed.form?.submit).toBe('Send it');
+    expect(parsed.form?.fields?.lane?.choice_label).toBe('Pick a lane');
+  });
+
+  it('wording carries the choice and answer chapters, decline and submit among them', () => {
+    const parsed = schemas.wording.parse({
+      choice: { label: 'Pick a lane' },
+      answer: {
+        open: 'Open the survey',
+        confirm: 'Approve',
+        decline: 'No thanks',
+        submit: 'Send',
+        reply_hint: 'Type your full name',
+      },
+    });
+    expect(parsed.choice?.label).toBe('Pick a lane');
+    expect(parsed.answer).toMatchObject({
+      open: 'Open the survey',
+      confirm: 'Approve',
+      decline: 'No thanks',
+      submit: 'Send',
+      reply_hint: 'Type your full name',
+    });
+  });
+
+  it('wording carries the web-only chapters the inbox does not draw (lines, answer_page, status)', () => {
+    const parsed = schemas.wording.parse({
+      answer: { rejected: 'Not quite: {reason}', rejected_final: 'Closed now.' },
+      lines: { answer_link: 'Answer here: {url}', deadline: 'By {deadline}' },
+      answer_page: {
+        confirm: { heading: 'Confirm', text: 'Click to submit.' },
+        form: { failed: 'It did not send.', choose_one: 'Choose at least one.' },
+      },
+      status: {
+        answered: 'Answered',
+        countdown: { seconds_left: '{seconds} seconds left', under_minute: 'Under a minute' },
+      },
+    });
+    expect(parsed.answer?.rejected).toBe('Not quite: {reason}');
+    expect(parsed.lines?.answer_link).toBe('Answer here: {url}');
+    expect(parsed.answer_page?.confirm?.heading).toBe('Confirm');
+    expect(parsed.answer_page?.form?.failed).toBe('It did not send.');
+    expect(parsed.status?.answered).toBe('Answered');
+    expect(parsed.status?.countdown?.seconds_left).toBe('{seconds} seconds left');
+  });
+
+  it('wording accepts a null leaf and strips an unknown key', () => {
+    const parsed = schemas.wording.parse({
+      form: { back: null, nonsense: 'ignored' },
+      bogus: true,
+    });
+    expect(parsed.form?.back ?? null).toBeNull();
+    expect('bogus' in parsed).toBe(false);
+    expect('nonsense' in (parsed.form ?? {})).toBe(false);
   });
 
   it('formPage carries ordered display blocks and a review kind', () => {

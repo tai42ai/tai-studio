@@ -12,6 +12,21 @@ import type { ReactNode } from 'react';
 export type CompletionProvider = (argName: string, partial: string) => Promise<string[]>;
 
 // @public
+export interface DateRangePair {
+    // (undocumented)
+    readonly endName: string;
+    // (undocumented)
+    readonly endSchema: JsonSchema;
+    // (undocumented)
+    readonly startName: string;
+    // (undocumented)
+    readonly startSchema: JsonSchema;
+}
+
+// @public
+export function dateRangePairs(properties: readonly (readonly [string, JsonSchema])[]): readonly DateRangePair[];
+
+// @public
 export function defaultValueForSchema(schema: JsonSchema, root?: JsonSchema): unknown;
 
 // @public
@@ -74,6 +89,12 @@ interface ExpressionInputVariable {
 }
 
 // @public
+export type FormControl = 'chips' | 'textarea';
+
+// @public
+export type FormInputMode = 'text' | 'numeric' | 'decimal' | 'tel' | 'email' | 'url';
+
+// @public
 export function isFieldVisible(schema: JsonSchema, values: Record<string, unknown>): boolean;
 
 // @public
@@ -97,6 +118,7 @@ export interface JsonSchema {
     readonly contentMaxBytes?: number;
     // (undocumented)
     readonly contentMediaType?: string;
+    readonly control?: FormControl;
     // (undocumented)
     readonly default?: unknown;
     // (undocumented)
@@ -109,6 +131,7 @@ export interface JsonSchema {
     readonly enum?: readonly unknown[];
     // (undocumented)
     readonly format?: string;
+    readonly inputMode?: FormInputMode;
     // (undocumented)
     readonly items?: JsonSchema;
     // (undocumented)
@@ -185,6 +208,9 @@ export interface SchemaFormProps {
     // (undocumented)
     readonly errors?: SchemaFormErrors;
     readonly expressionField?: ExpressionFieldComponent;
+    readonly fieldWording?: Readonly<Record<string, {
+        choiceLabel?: string;
+    }>>;
     // (undocumented)
     readonly idPrefix?: string;
     readonly maxUploadBytes?: number;

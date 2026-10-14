@@ -3,7 +3,8 @@
  * every submittable renderer takes, the untrusted-payload coercions, and the
  * per-send schema the form answer validates against.
  */
-import type { FormOption, Interaction } from '@tai42/api-client';
+import type { FormOption, FormWording, Interaction, Wording } from '@tai42/api-client';
+import { schemas } from '@tai42/api-client';
 import type { JsonSchema } from '@tai42/studio-sdk';
 import { defaultValueForSchema } from '@tai42/studio-sdk';
 
@@ -16,6 +17,41 @@ export interface AnswerRendererProps {
 
 export function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** A non-blank trimmed string off the loose payload, else `undefined` (shows the default). */
+export function nonBlankString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed === '' ? undefined : value;
+}
+
+/**
+ * The caller's one `wording` catalogue off the loose `format_payload`, or `undefined` when
+ * absent or malformed — safeParsed so a bad shape falls back to the default words rather
+ * than crashing the card (the labels are chrome, never an answer).
+ */
+export function wordingOf(payload: Record<string, unknown>): Wording | undefined {
+  const parsed = schemas.wording.safeParse(payload.wording);
+  return parsed.success ? parsed.data : undefined;
+}
+
+/**
+ * The per-field words the SchemaForm draws (`wording.form.fields`), mapped to the SDK's
+ * `fieldWording` prop shape (`{ choiceLabel }`) and keyed by property name. Only a field
+ * with a non-blank `choice_label` is carried; `undefined` when none apply, so the form
+ * draws its own default placeholders.
+ */
+export function formFieldWording(
+  fields: FormWording['fields'],
+): Readonly<Record<string, { choiceLabel: string }>> | undefined {
+  if (fields == null) return undefined;
+  const entries: Record<string, { choiceLabel: string }> = {};
+  for (const [name, entry] of Object.entries(fields)) {
+    const choiceLabel = nonBlankString(entry.choice_label);
+    if (choiceLabel !== undefined) entries[name] = { choiceLabel };
+  }
+  return Object.keys(entries).length > 0 ? entries : undefined;
 }
 
 /** `value` as a `string[]`, or `null` when it is not an array of only strings. */

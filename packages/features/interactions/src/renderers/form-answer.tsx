@@ -13,7 +13,14 @@ import { useMemo, useRef, useState } from 'react';
 
 import { useFormReactor } from '../reaction-config';
 import type { AnswerRendererProps } from './answer-schema';
-import { initialFormValue, isPlainObject, schemaWithSendOptions } from './answer-schema';
+import {
+  formFieldWording,
+  initialFormValue,
+  isPlainObject,
+  nonBlankString,
+  schemaWithSendOptions,
+  wordingOf,
+} from './answer-schema';
 import { DisplayBlocks, ReviewReadback } from './form-display';
 import { MalformedPayload } from './malformed-payload';
 import {
@@ -101,6 +108,10 @@ function parseFormPayload(payload: Record<string, unknown>): ParsedForm {
 export function FormAnswer({ interaction, onSubmit, disabled }: AnswerRendererProps): ReactNode {
   const parsed = parseFormPayload(interaction.format_payload);
   if ('malformed' in parsed) return <MalformedPayload message={parsed.malformed} />;
+  // The form's caller words off the one `wording` catalogue: `back` labels the stepped
+  // form's Back button, `submit` the single-page form's terminal button, and `fields`
+  // the per-field picker placeholders the SchemaForm draws.
+  const form = wordingOf(interaction.format_payload)?.form;
   return (
     <SchemaFormAnswer
       interactionId={interaction.interaction_id}
@@ -109,10 +120,30 @@ export function FormAnswer({ interaction, onSubmit, disabled }: AnswerRendererPr
       options={parsed.options}
       pages={parsed.pages}
       reactions={parsed.reactions}
+      backLabel={nonBlankString(form?.back)}
+      submitLabel={nonBlankString(form?.submit)}
+      fieldWording={formFieldWording(form?.fields)}
       onSubmit={onSubmit}
       disabled={disabled}
     />
   );
+}
+
+interface SchemaFormAnswerProps {
+  readonly interactionId: string;
+  readonly schema: JsonSchema;
+  readonly values: Record<string, unknown>;
+  readonly options: Record<string, readonly FormOption[]>;
+  readonly pages: readonly FormPage[];
+  readonly reactions: FormReactions;
+  /** The caller's Back-button label (`wording.form.back`); absent shows "Back". */
+  readonly backLabel: string | undefined;
+  /** The caller's single-page submit label (`wording.form.submit`); absent shows "Submit". */
+  readonly submitLabel: string | undefined;
+  /** Per-field picker placeholders (`wording.form.fields`), keyed by property name. */
+  readonly fieldWording: Readonly<Record<string, { choiceLabel: string }>> | undefined;
+  readonly onSubmit: (answer: unknown) => void;
+  readonly disabled: boolean;
 }
 
 function SchemaFormAnswer({
@@ -122,18 +153,12 @@ function SchemaFormAnswer({
   options: initialOptions,
   pages,
   reactions,
+  backLabel,
+  submitLabel,
+  fieldWording,
   onSubmit,
   disabled,
-}: {
-  readonly interactionId: string;
-  readonly schema: JsonSchema;
-  readonly values: Record<string, unknown>;
-  readonly options: Record<string, readonly FormOption[]>;
-  readonly pages: readonly FormPage[];
-  readonly reactions: FormReactions;
-  readonly onSubmit: (answer: unknown) => void;
-  readonly disabled: boolean;
-}): ReactNode {
+}: SchemaFormAnswerProps): ReactNode {
   // The reaction door is chosen by the serving page (scope A): a host-provided same-origin
   // endpoint (the web channel plugin's own session door), or — by default — the in-app
   // authenticated door. Either way the round-trip POSTs `{event, values}`.
@@ -242,6 +267,8 @@ function SchemaFormAnswer({
         value={value}
         errors={errors}
         options={options}
+        fieldWording={fieldWording}
+        submitLabel={submitLabel}
         reactionError={reactionError}
         busy={busy}
         onChange={handleChange}
@@ -287,6 +314,8 @@ function SchemaFormAnswer({
       errors={errors}
       options={options}
       slots={slots}
+      backLabel={backLabel}
+      fieldWording={fieldWording}
       reactionError={reactionError}
       busy={busy}
       onChange={handleChange}
@@ -303,6 +332,8 @@ function SinglePageForm({
   value,
   errors,
   options,
+  fieldWording,
+  submitLabel,
   reactionError,
   busy,
   onChange,
@@ -312,6 +343,8 @@ function SinglePageForm({
   readonly value: unknown;
   readonly errors: SchemaFormErrors;
   readonly options: Record<string, readonly FormOption[]>;
+  readonly fieldWording: Readonly<Record<string, { choiceLabel: string }>> | undefined;
+  readonly submitLabel: string | undefined;
   readonly reactionError: string | null;
   readonly busy: boolean;
   readonly onChange: (value: unknown) => void;
@@ -320,11 +353,18 @@ function SinglePageForm({
   return (
     <div style={answerStackStyle}>
       <ReactionErrorNotice message={reactionError} />
-      <SchemaForm schema={schema} value={value} onChange={onChange} errors={errors} />
+      <SchemaForm
+        schema={schema}
+        value={value}
+        onChange={onChange}
+        errors={errors}
+        fieldWording={fieldWording}
+      />
       <FormSendOptions options={options} />
       <div>
+        {/* The terminal button carries the caller's `wording.form.submit`, else "Submit". */}
         <Button type="button" variant="primary" disabled={busy} onClick={onSubmit}>
-          Submit
+          {submitLabel ?? 'Submit'}
         </Button>
       </div>
     </div>
@@ -345,6 +385,8 @@ function SteppedForm({
   errors,
   options,
   slots,
+  backLabel,
+  fieldWording,
   reactionError,
   busy,
   onChange,
@@ -363,6 +405,8 @@ function SteppedForm({
   readonly errors: SchemaFormErrors;
   readonly options: Record<string, readonly FormOption[]>;
   readonly slots: Record<string, unknown>;
+  readonly backLabel: string | undefined;
+  readonly fieldWording: Readonly<Record<string, { choiceLabel: string }>> | undefined;
   readonly reactionError: string | null;
   readonly busy: boolean;
   readonly onChange: (value: unknown) => void;
@@ -378,25 +422,33 @@ function SteppedForm({
       {currentPage.kind === 'review' ? (
         <ReviewReadback schema={schema} value={objectValue} />
       ) : (
-        <SchemaForm schema={pageSchema} value={value} onChange={onChange} errors={errors} />
+        <SchemaForm
+          schema={pageSchema}
+          value={value}
+          onChange={onChange}
+          errors={errors}
+          fieldWording={fieldWording}
+        />
       )}
       <FormSendOptions options={options} />
       <div style={stepNavStyle}>
         <div>
           {step > 0 ? (
             <Button type="button" variant="secondary" disabled={busy} onClick={onBack}>
-              Back
+              {backLabel ?? 'Back'}
             </Button>
           ) : null}
         </div>
         <div>
+          {/* The page's primary button carries the caller's `button_label`, else the
+              surface's own word ("Confirm"/"Submit" on the last step, "Next" before). */}
           {isLast ? (
             <Button type="button" variant="primary" disabled={busy} onClick={onSubmit}>
-              {currentPage.kind === 'review' ? 'Confirm' : 'Submit'}
+              {currentPage.button_label ?? (currentPage.kind === 'review' ? 'Confirm' : 'Submit')}
             </Button>
           ) : (
             <Button type="button" variant="primary" disabled={busy} onClick={onNext}>
-              Next
+              {currentPage.button_label ?? 'Next'}
             </Button>
           )}
         </div>

@@ -38,12 +38,21 @@ export type {
 } from './context';
 export { RecordEntryRendererContext } from './context';
 export { ExpressionFieldContext } from './context';
+export type { DateRangePair } from './date-range-field';
+export { dateRangePairs } from './date-range-field';
 export { defaultValueForSchema } from './default-value';
 export { resolveRef } from './resolve';
 export type { CompletionProvider, SchemaFormProps } from './SchemaForm';
 export { SchemaForm } from './SchemaForm';
 export type { SecretRef, SecretRefFieldProps } from './SecretRefField';
 export { SecretRefField } from './SecretRefField';
-export type { Discriminator, JsonSchema, JsonSchemaType, SchemaFormErrors } from './types';
+export type {
+  Discriminator,
+  FormControl,
+  FormInputMode,
+  JsonSchema,
+  JsonSchemaType,
+  SchemaFormErrors,
+} from './types';
 export { validateAgainstSchema } from './validate';
 export { isFieldVisible } from './visibility';

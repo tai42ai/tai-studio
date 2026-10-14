@@ -95,6 +95,14 @@ export interface SchemaFormProps {
    * renders the plain string input.
    */
   readonly expressionField?: ExpressionFieldComponent;
+  /**
+   * Optional. Per-field picker placeholders, keyed by the root object's property
+   * name. A top-level `enum` field that draws as a select shows its entry's
+   * `choiceLabel` as the select placeholder (in place of the default `Select…`);
+   * other controls and nested fields are unaffected. A field with no entry draws
+   * its own default.
+   */
+  readonly fieldWording?: Readonly<Record<string, { choiceLabel?: string }>>;
 }
 
 /**
@@ -110,6 +118,7 @@ export function SchemaForm({
   completionProvider,
   maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES,
   expressionField,
+  fieldWording,
 }: SchemaFormProps): ReactNode {
   // The prop overrides the ambient door for this form only; omitted, the
   // enclosing one flows through unchanged (providing `undefined` would BLIND the
@@ -130,6 +139,7 @@ export function SchemaForm({
               required
               errors={errors}
               idPrefix={idPrefix}
+              fieldWording={fieldWording}
             />
           </div>
         </ExpressionFieldContext.Provider>
