@@ -279,6 +279,8 @@ describe('plugin nav sections', () => {
     landWithEntry('Administration');
 
     const admin = await screen.findByRole('list', { name: 'Administration' });
+    // The core rows render before the plugin load settles; wait for the plugin row.
+    await within(admin).findByRole('link', { name: 'Reference' });
     // The plugin row lands in Administration, ordered after every core row.
     expect(rowTexts(admin)).toEqual([
       'Members',
@@ -322,7 +324,8 @@ describe('plugin nav sections', () => {
     // The only entry declares a core section, so nothing is left for the fallback section.
     landWithEntry('Administration');
 
-    await screen.findByRole('list', { name: 'Administration' });
+    const admin = await screen.findByRole('list', { name: 'Administration' });
+    await within(admin).findByRole('link', { name: 'Reference' });
     expect(screen.queryByRole('list', { name: 'Plugins' })).toBeNull();
     expect(screen.queryByRole('list', { name: 'acme' })).toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Plugins' })).toBeNull();
