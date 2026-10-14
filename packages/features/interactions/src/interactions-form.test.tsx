@@ -625,11 +625,15 @@ describe('InteractionsPage — form preview: reactions, conditionals, dates, bou
         prompt: 'Short code',
         format_payload: {
           schema: { type: 'object', properties: { code: { type: 'string', maxLength: 3 } } },
+          // The control draws the bound natively and caps typed input at the maximum, so an
+          // over-length value reaches the form only prefilled; the validator still rejects
+          // it on submit.
+          data: { values: { code: 'abcd' } },
         },
       }),
     );
 
-    await user.type(await screen.findByLabelText('code'), 'abcd');
+    await screen.findByLabelText('code');
     await user.click(screen.getByRole('button', { name: 'Submit' }));
     expect(await screen.findByText(/at most 3 character/)).toBeInTheDocument();
     expect(answer).not.toHaveBeenCalled();
@@ -1342,5 +1346,74 @@ describe('InteractionsPage — form preview: the reaction door is host-configura
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe('SteppedForm — caller-set page button and Back labels', () => {
+  it('draws each page button_label on the primary button and wording.form.back on Back', async () => {
+    const user = userEvent.setup();
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-labels',
+        format: 'form',
+        prompt: 'Steps',
+        format_payload: {
+          schema: { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } } },
+          pages: [
+            { title: 'One', fields: ['a'], button_label: 'Continue' },
+            { title: 'Two', fields: ['b'], button_label: 'Send it' },
+          ],
+          wording: { form: { back: 'Go back' } },
+        },
+      }),
+    );
+
+    // Page one's primary button reads its button_label, not the generic "Next".
+    expect(await screen.findByRole('button', { name: 'Continue' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    // Page two (last) reads its own button_label, not "Submit"; Back reads the caller's word.
+    expect(screen.getByRole('button', { name: 'Send it' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Submit' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Go back' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument();
+  });
+});
+
+describe('SinglePageForm — caller-set submit button and field picker placeholder', () => {
+  it('draws wording.form.submit on the terminal button and wording.form.fields[name].choice_label on the field picker', async () => {
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-single-wording',
+        format: 'form',
+        prompt: 'Fill this in',
+        format_payload: {
+          // A six-option enum draws as a select (above the radio threshold), so its
+          // placeholder is observable; a page-less form takes `wording.form.submit`.
+          schema: {
+            type: 'object',
+            properties: {
+              lane: { type: 'string', enum: ['n', 's', 'e', 'w', 'ne', 'nw'], title: 'Lane' },
+            },
+          },
+          wording: {
+            form: { submit: 'Send it', fields: { lane: { choice_label: 'Pick a lane' } } },
+          },
+        },
+      }),
+    );
+
+    // The terminal button reads the caller's word, not the surface's own "Submit".
+    expect(await screen.findByRole('button', { name: 'Send it' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Submit' })).not.toBeInTheDocument();
+    // The select shows the caller's field placeholder in place of the default "Select…".
+    expect(screen.getByRole('combobox', { name: 'Lane' })).toHaveTextContent('Pick a lane');
   });
 });

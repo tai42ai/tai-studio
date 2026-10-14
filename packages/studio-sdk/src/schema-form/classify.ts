@@ -19,7 +19,7 @@ import {
   variantTag,
 } from './resolve';
 import { expressionAnnotation, mediaUpload } from './string-annotations';
-import type { JsonSchema } from './types';
+import type { FormControl, FormInputMode, JsonSchema } from './types';
 
 function firstString(...values: readonly unknown[]): string | undefined {
   for (const value of values) {
@@ -64,6 +64,27 @@ function classifyConst(
   };
 }
 
+// The supported `control` values, as a record so the type and the runtime set
+// stay coupled: a value added to FormControl is a compile error here until it is
+// listed.
+const FORM_CONTROLS: Record<FormControl, true> = {
+  chips: true,
+  textarea: true,
+};
+
+/**
+ * The `control` keyword off a property, narrowed to a supported value, or
+ * `undefined` for an absent or unrecognized one. Read defensively (the schema is
+ * permissive): a value outside the set reads as absent, so the field renders its
+ * default control — the server ask door is the authority that refuses it.
+ */
+function controlOf(resolved: JsonSchema): FormControl | undefined {
+  const raw: unknown = resolved.control;
+  return typeof raw === 'string' && Object.hasOwn(FORM_CONTROLS, raw)
+    ? (raw as FormControl)
+    : undefined;
+}
+
 // enum → a fixed choice list.
 function classifyEnum(
   resolved: JsonSchema,
@@ -73,7 +94,13 @@ function classifyEnum(
   const enumValues = resolved.enum ?? [];
   const options: EnumOption[] = enumValues.map((value) => ({ value, label: scalarLabel(value) }));
   const nullable = enumValues.some((value) => value === null);
-  return { model: { kind: 'enum', options }, nullable, schema: resolved, title, description };
+  return {
+    model: { kind: 'enum', options, control: controlOf(resolved) },
+    nullable,
+    schema: resolved,
+    title,
+    description,
+  };
 }
 
 // anyOf/oneOf union normalization.
@@ -214,6 +241,31 @@ function dateConstraints(resolved: JsonSchema): DateConstraints | undefined {
   return { min, max, unavailable, rangeStart, minDays, maxDays };
 }
 
+// The supported `inputMode` values, as a record so the type and the runtime set
+// stay coupled: a value added to FormInputMode is a compile error here until it
+// is listed.
+const INPUT_MODES: Record<FormInputMode, true> = {
+  text: true,
+  numeric: true,
+  decimal: true,
+  tel: true,
+  email: true,
+  url: true,
+};
+
+/**
+ * The `inputMode` keyword off a string property, narrowed to a supported value, or
+ * `undefined` for an absent or unrecognized one. Read defensively (the schema is
+ * permissive): a value outside the set reads as absent, so the field renders as a
+ * plain text box — the server ask door is the authority that refuses it.
+ */
+function inputModeOf(resolved: JsonSchema): FormInputMode | undefined {
+  const raw: unknown = resolved.inputMode;
+  return typeof raw === 'string' && Object.hasOwn(INPUT_MODES, raw)
+    ? (raw as FormInputMode)
+    : undefined;
+}
+
 function classifyString(
   resolved: JsonSchema,
   title: string | undefined,
@@ -224,6 +276,10 @@ function classifyString(
     model: {
       kind: 'string',
       format: resolved.format,
+      inputMode: inputModeOf(resolved),
+      multiline: controlOf(resolved) === 'textarea',
+      maxLength: typeof resolved.maxLength === 'number' ? resolved.maxLength : undefined,
+      minLength: typeof resolved.minLength === 'number' ? resolved.minLength : undefined,
       media: mediaUpload(resolved),
       expression: expressionAnnotation(resolved),
       date: dateConstraints(resolved),
@@ -264,7 +320,7 @@ function classifyArray(
   if (isStringItems && enumValues !== undefined && enumValues.length > 0) {
     const options = enumValues.map((value) => ({ value, label: scalarLabel(value) }));
     return {
-      model: { kind: 'multiselect', options },
+      model: { kind: 'multiselect', options, control: controlOf(resolved) },
       nullable,
       schema: resolved,
       title,

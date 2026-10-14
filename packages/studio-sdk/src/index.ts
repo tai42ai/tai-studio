@@ -171,6 +171,8 @@ export type { BadgeProps } from './components/badge';
 export { Badge } from './components/badge';
 export type { CheckboxProps } from './components/checkbox';
 export { Checkbox } from './components/checkbox';
+export type { ChipGroupProps, ChipOption } from './components/chip-group';
+export { ChipGroup } from './components/chip-group';
 export type { ConfirmDialogProps } from './components/confirm-dialog';
 export { ConfirmDialog } from './components/confirm-dialog';
 export type { DialogProps } from './components/dialog';
@@ -413,11 +415,14 @@ export {
 // -- Schema-driven forms -----------------------------------------------------
 export type {
   CompletionProvider,
+  DateRangePair,
   Discriminator,
   ExpressionFieldComponent,
   ExpressionFieldProps,
   ExpressionInputKey,
   ExpressionInputShape,
+  FormControl,
+  FormInputMode,
   JsonSchema,
   JsonSchemaType,
   RecordEntryContext,
@@ -428,6 +433,7 @@ export type {
   SecretRefFieldProps,
 } from './schema-form';
 export {
+  dateRangePairs,
   defaultValueForSchema,
   // The expression-door injection point: a host that wants `x-tai42-expression`
   // fields to author through the visual editor imports `JqField` from

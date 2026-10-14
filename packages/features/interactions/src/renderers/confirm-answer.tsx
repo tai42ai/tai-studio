@@ -2,9 +2,15 @@ import { Button } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
 import type { AnswerRendererProps } from './answer-schema';
+import { nonBlankString, wordingOf } from './answer-schema';
 import { buttonRowStyle } from './renderer-styles';
 
-export function ConfirmAnswer({ onSubmit, disabled }: AnswerRendererProps): ReactNode {
+export function ConfirmAnswer({ interaction, onSubmit, disabled }: AnswerRendererProps): ReactNode {
+  // The affirmative control carries the caller's `wording.answer.confirm`, else "Yes"; the
+  // negative carries `wording.answer.decline`, else "No".
+  const answer = wordingOf(interaction.format_payload)?.answer;
+  const confirmLabel = nonBlankString(answer?.confirm);
+  const declineLabel = nonBlankString(answer?.decline);
   return (
     <div style={buttonRowStyle}>
       <Button
@@ -15,7 +21,7 @@ export function ConfirmAnswer({ onSubmit, disabled }: AnswerRendererProps): Reac
           onSubmit(true);
         }}
       >
-        Yes
+        {confirmLabel ?? 'Yes'}
       </Button>
       <Button
         type="button"
@@ -25,7 +31,7 @@ export function ConfirmAnswer({ onSubmit, disabled }: AnswerRendererProps): Reac
           onSubmit(false);
         }}
       >
-        No
+        {declineLabel ?? 'No'}
       </Button>
     </div>
   );

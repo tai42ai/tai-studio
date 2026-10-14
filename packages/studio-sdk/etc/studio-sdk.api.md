@@ -189,6 +189,50 @@ const answerFormat: z.ZodEnum<{
 }>;
 
 // @public (undocumented)
+type AnswerPageWording = z.infer<typeof answerPageWording>;
+
+// @public
+const answerPageWording: z.ZodObject<{
+    confirm: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        heading: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>;
+    done: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        heading: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>;
+    awaiting: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        heading: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>;
+    submitted: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        heading: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>;
+    form: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        failed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        network_error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        update_failed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        choose_one: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        date_unavailable: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type AnswerWording = z.infer<typeof answerWording>;
+
+// @public
+const answerWording: z.ZodObject<{
+    open: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    confirm: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    decline: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    submit: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    reply_hint: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    rejected: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    rejected_final: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
 export type ApiClient = ReturnType<typeof createApiClient>;
 
 // @public
@@ -5320,6 +5364,44 @@ export const ChevronRightIcon: IconComponent;
 // @public
 export function childFolders(folders: readonly Folder[], parentId: string | null): Folder[];
 
+// @public (undocumented)
+export function ChipGroup(props: ChipGroupProps): ReactNode;
+
+// @public (undocumented)
+export type ChipGroupProps = {
+    readonly mode: 'single';
+    readonly options: readonly ChipOption[];
+    readonly value: string;
+    readonly onValueChange: (value: string) => void;
+    readonly disabled?: boolean;
+} | {
+    readonly mode: 'multi';
+    readonly options: readonly ChipOption[];
+    readonly value: readonly string[];
+    readonly onValueChange: (value: readonly string[]) => void;
+    readonly disabled?: boolean;
+};
+
+// @public
+export interface ChipOption {
+    // (undocumented)
+    readonly disabled?: boolean;
+    // (undocumented)
+    readonly label: string;
+    // (undocumented)
+    readonly value: string;
+}
+
+// @public (undocumented)
+type ChoiceWording = z.infer<typeof choiceWording>;
+
+// @public
+const choiceWording: z.ZodObject<{
+    label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    reply_hint: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    group_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
+
 // @public
 interface ClaimLinkBody {
     // (undocumented)
@@ -7258,6 +7340,18 @@ export interface CopyFieldProps {
 
 // @public
 export const CopyIcon: IconComponent;
+
+// @public (undocumented)
+type CountdownWording = z.infer<typeof countdownWording>;
+
+// @public
+const countdownWording: z.ZodObject<{
+    seconds_left: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    one_second_left: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    under_minute: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    under_half_minute: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    under_ten_seconds: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
 
 // @public
 export function coversAnyRoute(projection: MeProjection, prefixes: readonly string[]): boolean;
@@ -11692,6 +11786,21 @@ const dashboardMetrics: z.ZodObject<{
 export const DatabaseIcon: IconComponent;
 
 // @public
+export interface DateRangePair {
+    // (undocumented)
+    readonly endName: string;
+    // (undocumented)
+    readonly endSchema: JsonSchema;
+    // (undocumented)
+    readonly startName: string;
+    // (undocumented)
+    readonly startSchema: JsonSchema;
+}
+
+// @public
+export function dateRangePairs(properties: readonly (readonly [string, JsonSchema])[]): readonly DateRangePair[];
+
+// @public
 export function DateRangePicker(input: DateRangePickerProps): ReactNode;
 
 // @public (undocumented)
@@ -12334,6 +12443,14 @@ export interface FieldSource {
     readonly root: FieldRoot;
 }
 
+// @public (undocumented)
+type FieldWording = z.infer<typeof fieldWording>;
+
+// @public
+const fieldWording: z.ZodObject<{
+    choice_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
+
 // @public
 export const FilterIcon: IconComponent;
 
@@ -12664,6 +12781,9 @@ export function formatEnvMarker(key: string, defaultValue?: string): string;
 export function formatRangeLabel(value: DateRangeValue, presets?: readonly DateRangePreset[]): string;
 
 // @public
+export type FormControl = 'chips' | 'textarea';
+
+// @public
 const formData: z.ZodObject<{
     options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
         label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -12694,6 +12814,9 @@ export interface FormDialogProps {
     // (undocumented)
     readonly title: string;
 }
+
+// @public
+export type FormInputMode = 'text' | 'numeric' | 'decimal' | 'tel' | 'email' | 'url';
 
 // @public (undocumented)
 type FormOption = z.infer<typeof formOption>;
@@ -12726,6 +12849,7 @@ const formPage: z.ZodObject<{
         review: "review";
     }>>;
     title: z.ZodString;
+    button_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strict>;
 
 // @public (undocumented)
@@ -12759,7 +12883,20 @@ const formPages: z.ZodArray<z.ZodObject<{
         review: "review";
     }>>;
     title: z.ZodString;
+    button_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strict>>;
+
+// @public (undocumented)
+type FormPageWording = z.infer<typeof formPageWording>;
+
+// @public
+const formPageWording: z.ZodObject<{
+    failed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    network_error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    update_failed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    choose_one: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    date_unavailable: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type FormReactions = z.infer<typeof formReactions>;
@@ -12784,6 +12921,22 @@ const formUpdate: z.ZodObject<{
     }, z.core.$strict>>>>;
     errors: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
     display: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type FormWording = z.infer<typeof formWording>;
+
+// @public
+const formWording: z.ZodObject<{
+    title: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    open: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    cancel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    back: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    submit: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    review_empty: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    fields: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
+        choice_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -13474,6 +13627,7 @@ export interface JsonSchema {
     readonly contentMaxBytes?: number;
     // (undocumented)
     readonly contentMediaType?: string;
+    readonly control?: FormControl;
     // (undocumented)
     readonly default?: unknown;
     // (undocumented)
@@ -13486,6 +13640,7 @@ export interface JsonSchema {
     readonly enum?: readonly unknown[];
     // (undocumented)
     readonly format?: string;
+    readonly inputMode?: FormInputMode;
     // (undocumented)
     readonly items?: JsonSchema;
     // (undocumented)
@@ -13585,6 +13740,17 @@ interface LayoutElementProps {
     // (undocumented)
     readonly style?: CSSProperties;
 }
+
+// @public (undocumented)
+type LineWording = z.infer<typeof lineWording>;
+
+// @public
+const lineWording: z.ZodObject<{
+    answer_link: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    deadline: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    reply: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    options: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
 
 // @public
 export interface LinkButtonProps extends ButtonVariantProps, AnchorHTMLAttributes<HTMLAnchorElement> {
@@ -15214,6 +15380,15 @@ export interface PageContribution {
     // (undocumented)
     readonly title: string;
 }
+
+// @public (undocumented)
+type PageCopy = z.infer<typeof pageCopy>;
+
+// @public
+const pageCopy: z.ZodObject<{
+    heading: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
 
 // @public
 export function PageFillProvider(input: {
@@ -17616,6 +17791,28 @@ declare namespace s {
         FormPage,
         formPages,
         FormPages,
+        fieldWording,
+        FieldWording,
+        formWording,
+        FormWording,
+        choiceWording,
+        ChoiceWording,
+        answerWording,
+        AnswerWording,
+        lineWording,
+        LineWording,
+        pageCopy,
+        PageCopy,
+        formPageWording,
+        FormPageWording,
+        answerPageWording,
+        AnswerPageWording,
+        countdownWording,
+        CountdownWording,
+        statusWording,
+        StatusWording,
+        wording,
+        Wording,
         formReactions,
         FormReactions,
         formUpdate,
@@ -18263,6 +18460,9 @@ export interface SchemaFormProps {
     // (undocumented)
     readonly errors?: SchemaFormErrors;
     readonly expressionField?: ExpressionFieldComponent;
+    readonly fieldWording?: Readonly<Record<string, {
+        choiceLabel?: string;
+    }>>;
     // (undocumented)
     readonly idPrefix?: string;
     readonly maxUploadBytes?: number;
@@ -25415,6 +25615,26 @@ const stateUpdate: z.ZodObject<{
     template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strict>;
 
+// @public (undocumented)
+type StatusWording = z.infer<typeof statusWording>;
+
+// @public
+const statusWording: z.ZodObject<{
+    sending: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    answered: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    expired: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    closed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    sent: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    unavailable: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    countdown: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        seconds_left: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        one_second_left: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        under_minute: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        under_half_minute: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        under_ten_seconds: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>;
+}, z.core.$strip>;
+
 // @public
 const storageDirDeleted: z.ZodObject<{
     deleted: z.ZodBoolean;
@@ -27118,6 +27338,84 @@ const visitOutcome: z.ZodObject<{
             user: "user";
         }>>>;
     }, z.core.$strict>>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type Wording = z.infer<typeof wording>;
+
+// @public
+const wording: z.ZodObject<{
+    form: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        title: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        open: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        cancel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        back: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        submit: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        review_empty: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        fields: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
+            choice_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strip>>>>;
+    }, z.core.$strip>>>;
+    choice: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        reply_hint: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        group_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>;
+    answer: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        open: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        confirm: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        decline: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        submit: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        reply_hint: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        rejected: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        rejected_final: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>;
+    lines: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        answer_link: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        deadline: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        reply: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        options: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>;
+    answer_page: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        confirm: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+            heading: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strip>>>;
+        done: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+            heading: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strip>>>;
+        awaiting: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+            heading: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strip>>>;
+        submitted: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+            heading: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strip>>>;
+        form: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+            failed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            network_error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            update_failed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            choose_one: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            date_unavailable: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>>;
+    status: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        sending: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        answered: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        expired: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        closed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        sent: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        unavailable: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        countdown: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+            seconds_left: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            one_second_left: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            under_minute: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            under_half_minute: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            under_ten_seconds: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)

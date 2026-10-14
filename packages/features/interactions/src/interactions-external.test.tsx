@@ -323,3 +323,23 @@ describe('untrusted payloads — XSS is never a live sink', () => {
     expect(container.querySelector('script')).toBeNull();
   });
 });
+
+describe('ExternalLinkCard — caller-set open label', () => {
+  it('draws wording.answer.open as the open-button label', async () => {
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-link',
+        format: 'external',
+        prompt: 'Authorise here',
+        format_payload: {
+          url: 'https://example.com/authorise',
+          wording: { answer: { open: 'Open the survey' } },
+        },
+      }),
+    );
+    expect(screen.getByRole('link', { name: 'Open the survey' })).toBeInTheDocument();
+  });
+});
