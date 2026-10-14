@@ -46,7 +46,7 @@ export const FULL_PROJECTION: MeProjection = {
  * restores them between tests. Every unauthenticated render lands on `/login`,
  * which now fetches sign-in methods on mount; and every AUTHENTICATED render
  * fetches its capability projection from `/api/auth/me`. The strict
- * `onUnhandledRequest: 'error'` guard would fail the whole suite without both
+ * `onUnhandledFrame: 'error'` guard would fail the whole suite without both
  * defaults. An empty methods list is the "no accounts plugin ⇒ today's key-paste
  * screen" default, and a full projection is today's unfiltered nav; tests that
  * exercise either surface override them with `server.use(...)`.
@@ -55,7 +55,7 @@ export const FULL_PROJECTION: MeProjection = {
  * A minimal-but-valid dashboard-metrics payload. Since the default landing route
  * (a bare returnTo) now resolves to the Dashboard, an authenticated render at `/`
  * navigates to `/observability`, whose Stats tab reads
- * `GET /api/observability/metrics` on mount; the strict `onUnhandledRequest`
+ * `GET /api/observability/metrics` on mount; the strict `onUnhandledFrame`
  * guard would fail without a default answer here.
  */
 const DASHBOARD_METRICS = {
@@ -82,15 +82,15 @@ const defaultHandlers = [
   http.get('*/api/observability/metrics', () => HttpResponse.json({ data: DASHBOARD_METRICS })),
   // Every authenticated render mounts the SystemKindsProvider, which reads the
   // DB-backed feature states on mount; an empty table (no kind OFF) is the default,
-  // and the strict `onUnhandledRequest` guard would fail without an answer here.
+  // and the strict `onUnhandledFrame` guard would fail without an answer here.
   http.get('*/api/system/kinds', () => HttpResponse.json({ data: [] })),
   // Every authenticated render also mounts the ToolDisplayNamesProvider, which reads
   // the tool-meta overlay on mount; an empty overlay (no display names) is the
-  // default, and the strict `onUnhandledRequest` guard would fail without it.
+  // default, and the strict `onUnhandledFrame` guard would fail without it.
   http.get('*/api/tool-meta', () => HttpResponse.json({ data: { folders: [], meta: [] } })),
   // The shell-mounted interactions badge reads the paged pending base on mount
   // (`GET /api/interactions`); an empty page (nothing pending) is the default, and
-  // the strict `onUnhandledRequest` guard would fail without an answer here.
+  // the strict `onUnhandledFrame` guard would fail without an answer here.
   http.get('*/api/interactions', () =>
     HttpResponse.json({
       data: { items: [], total: 0, page: 1, page_size: 50, next_page: null, truncated: false },
@@ -104,7 +104,7 @@ export const server: SetupServer = setupServer(...defaultHandlers);
 /** Wire the msw lifecycle. Call once at the top level of a test file. */
 export function installServer(): void {
   beforeAll(() => {
-    server.listen({ onUnhandledRequest: 'error' });
+    server.listen({ onUnhandledFrame: 'error' });
   });
   afterEach(() => {
     cleanup();

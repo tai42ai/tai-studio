@@ -27,7 +27,7 @@ installServer();
 
 // The authenticated shell eagerly runs the plugin load pass (GET /api/plugins)
 // and the two feature pages under test fetch their own lists; the strict
-// onUnhandledRequest guard needs an answer for each. The Dashboard's metrics
+// onUnhandledFrame guard needs an answer for each. The Dashboard's metrics
 // come from the harness default.
 const okPlugins = http.get('*/api/plugins', () => HttpResponse.json({ data: [] }));
 const okTools = http.get('*/api/tools', () => HttpResponse.json({ data: ['alpha', 'beta'] }));
