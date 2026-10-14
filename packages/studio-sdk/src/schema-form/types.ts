@@ -11,6 +11,14 @@
 export type JsonSchemaType =
   'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array' | 'null';
 
+/**
+ * The input KIND a `string` field collects, drawn as the matching keyboard or
+ * native control. The vocabulary is the HTML `inputmode`/control naming of the
+ * concept: `numeric`/`decimal` set a text box's keyboard hint; `tel`/`email`/`url`
+ * select the matching native control. It draws, it does not validate.
+ */
+export type FormInputMode = 'text' | 'numeric' | 'decimal' | 'tel' | 'email' | 'url';
+
 /** A Pydantic-style discriminated-union tag: which property selects the variant. */
 export interface Discriminator {
   readonly propertyName: string;
@@ -61,6 +69,17 @@ export interface JsonSchema {
   readonly minItems?: number;
   readonly maxItems?: number;
   readonly pattern?: string;
+  /**
+   * The input KIND a `string` field collects — a platform keyword (see {@link
+   * FormInputMode}). The renderer draws the matching keyboard or native control:
+   * `numeric`/`decimal` a text box with that keyboard hint (the value stays the
+   * typed string, so `"007"` keeps its leading zeros), `tel`/`email`/`url` the
+   * matching native control, `text` or absent a plain text box. It DRAWS, it does
+   * not validate — the answer door still enforces `type`, `pattern` and `format`.
+   * When present it OUTRANKS `format` for the control. A value outside the set is
+   * read as absent (the server ask door is the authority that refuses it).
+   */
+  readonly inputMode?: FormInputMode;
   /**
    * Platform date-constraint keys on a `string`/`date` (or `date-time`) property. They
    * are NOT the JSON-Schema numeric keywords (which are inert on a string): `minDate`/

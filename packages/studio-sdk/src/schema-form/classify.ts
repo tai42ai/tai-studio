@@ -19,7 +19,7 @@ import {
   variantTag,
 } from './resolve';
 import { expressionAnnotation, mediaUpload } from './string-annotations';
-import type { JsonSchema } from './types';
+import type { FormInputMode, JsonSchema } from './types';
 
 function firstString(...values: readonly unknown[]): string | undefined {
   for (const value of values) {
@@ -214,6 +214,31 @@ function dateConstraints(resolved: JsonSchema): DateConstraints | undefined {
   return { min, max, unavailable, rangeStart, minDays, maxDays };
 }
 
+// The supported `inputMode` values, as a record so the type and the runtime set
+// stay coupled: a value added to FormInputMode is a compile error here until it
+// is listed.
+const INPUT_MODES: Record<FormInputMode, true> = {
+  text: true,
+  numeric: true,
+  decimal: true,
+  tel: true,
+  email: true,
+  url: true,
+};
+
+/**
+ * The `inputMode` keyword off a string property, narrowed to a supported value, or
+ * `undefined` for an absent or unrecognized one. Read defensively (the schema is
+ * permissive): a value outside the set reads as absent, so the field renders as a
+ * plain text box — the server ask door is the authority that refuses it.
+ */
+function inputModeOf(resolved: JsonSchema): FormInputMode | undefined {
+  const raw: unknown = resolved.inputMode;
+  return typeof raw === 'string' && Object.hasOwn(INPUT_MODES, raw)
+    ? (raw as FormInputMode)
+    : undefined;
+}
+
 function classifyString(
   resolved: JsonSchema,
   title: string | undefined,
@@ -224,6 +249,7 @@ function classifyString(
     model: {
       kind: 'string',
       format: resolved.format,
+      inputMode: inputModeOf(resolved),
       media: mediaUpload(resolved),
       expression: expressionAnnotation(resolved),
       date: dateConstraints(resolved),
