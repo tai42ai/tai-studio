@@ -37,6 +37,12 @@
  * that is itself removed first takes the listener with it. Removing it any
  * earlier would strip the attribute out from under the focus it exists to hold.
  *
+ * A modal opened while nothing held focus — `<body>` or the document element
+ * active, as when a page opens it from code — has no opener and no place in the
+ * page to return to. Nothing is recorded, and on close the handler only cancels
+ * Radix's default: focus stays wherever the close left it, including wherever
+ * the page itself moved it.
+ *
  * When a Trigger IS rendered both handlers stand down and prevent nothing, so
  * Radix's own restore runs untouched — there is never a second mechanism
  * competing with the primitive.
@@ -114,9 +120,16 @@ export function useModalFocusReturn(hasTrigger: boolean): ModalFocusReturnHandle
       if (hasTrigger) return;
       // The focus scope dispatches this BEFORE it focuses the panel, so the
       // active element is still whatever the reader activated to open the modal,
-      // and its ancestors are still attached to record.
+      // and its ancestors are still attached to record. `<body>` and the
+      // document element are where focus sits when nothing holds it, so they
+      // are no opener.
       const active = document.activeElement;
-      const opener = active instanceof HTMLElement ? active : null;
+      const opener =
+        active instanceof HTMLElement &&
+        active !== document.body &&
+        active !== document.documentElement
+          ? active
+          : null;
       openerRef.current = opener;
       openedUnderRef.current = opener === null ? [] : ancestorChain(opener);
     },
