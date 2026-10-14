@@ -8,7 +8,8 @@
 # list, the observability dashboard, the manifest tab, the templates list, the
 # System health card, the notifications inbox, the conversation monitor, and the
 # marketplace detail + install dialog (backed by the minimal seeded registry the
-# runner boots and points MARKETPLACE_URL at).
+# runner boots and points MARKETPLACE_URL at), and the entry-gate panel on a web
+# route's drill-in.
 #
 # The capability-scoped screens (the owned-key views of tools, interactions, and
 # notifications) authenticate as a SCOPED owned key the runner mints after boot;
@@ -159,14 +160,24 @@ storage_module: tai42_storage_local
 # trend chart, and a by-model breakdown with no external service.
 monitoring_module: docs_demo_monitoring
 
+# --- Channels ---------------------------------------------------------------
+# The web channel: registers the `web` channel and mounts its doors under
+# /api/channels/web, among them the entry-gate management doors the runner seeds two
+# web routes' gates through (docs-screenshots.sh), so a web route's drill-in renders
+# the entry-gate panel.
+channel_modules:
+  - tai42_channel_web.register
+
 # --- Studio plugins ---------------------------------------------------------
 # reference_plugin contributes the "Reference" nav entry every signed-in shot
-# waits on. The accounts provider ships no Studio page — its member administration
-# is the generic core Members page over its declared actions, not a per-provider
-# Studio surface — so it is NOT listed here (a studio_plugins entry with no studio/
-# dist aborts the boot).
+# waits on. tai42_channel_web ships a studio/ dist: the entry-gate panel on a web
+# route's drill-in. The accounts provider ships no Studio page — its member
+# administration is the generic core Members page over its declared actions, not a
+# per-provider Studio surface — so it is NOT listed here (a studio_plugins entry with
+# no studio/ dist aborts the boot).
 studio_plugins:
   - reference_plugin
+  - tai42_channel_web
 
 # --- Curated user tools -----------------------------------------------------
 # A non-empty user_tools set makes GET /api/manifest return a populated payload,
