@@ -88,15 +88,194 @@ export type FormPageKind = z.infer<typeof formPageKind>;
  * instead of, for a review page) its input fields; it defaults to empty, so a page that
  * carries none renders exactly as before. `kind` marks a `review` page — a terminal
  * summary step that shows the readback of entered values and the confirm/submit footer
- * and carries no new input fields; it defaults to `input`. Both are additive: an older
+ * and carries no new input fields; it defaults to `input`. `button_label` is the text of
+ * the page's primary button — the one that advances from an input page, or submits from
+ * the last — in the sender's words and the end-user's language; absent (`null`), the
+ * surface shows its own generic word ("Next"/"Submit"/"Confirm"). All additive: an older
  * payload ({title, fields}) parses unchanged.
  */
-export const formPage = openapi.formPage;
+export const formPage = openapi.formPage.extend({
+  button_label: z.string().nullable().default(null),
+});
 export type FormPage = z.infer<typeof formPage>;
 
 /** The `form` pages list (`format_payload.pages`), safeParsed as a whole by the preview. */
 export const formPages = z.array(formPage);
 export type FormPages = z.infer<typeof formPages>;
+
+// The one catalogue of a send's platform-drawn texts (`format_payload.wording`): a
+// question's or a notification's buttons, headings, input hints, message lines,
+// answer-page sentences, refusal sentences, settled-card badges and screen-reader labels,
+// grouped into six chapters. Every leaf is the sender's own words in the end-user's
+// language; absent (or `null`), the surface shows its own generic word. Mirrors the
+// skeleton's `Wording` model member-for-member. A renderer safeParses this off the loose
+// `format_payload`, so a malformed shape falls back to the default words rather than
+// crashing the card (the labels are chrome, never an answer). The Studio inbox draws only
+// the subset of members it has a control for; the rest parse and are ignored.
+
+/**
+ * One form field's platform-drawn words (`wording.form.fields[name]`): `choice_label` is
+ * the placeholder of the field's picker (its empty-state prompt).
+ */
+export const fieldWording = z.object({
+  choice_label: z.string().nullish(),
+});
+export type FieldWording = z.infer<typeof fieldWording>;
+
+/**
+ * A form's platform-drawn chrome (`wording.form`): `title` heads the form surface;
+ * `open`/`cancel` label the buttons that open and close it; `back` the button that returns
+ * to the previous step; `submit` the terminal button of a form with no pages;
+ * `review_empty` the review step's line before anything is filled; `fields` carries
+ * per-field words keyed by property name. The inbox draws the form inline, so it reads
+ * `back`, `submit` and `fields`; `title`/`open`/`cancel`/`review_empty` parse unused.
+ */
+export const formWording = z.object({
+  title: z.string().nullish(),
+  open: z.string().nullish(),
+  cancel: z.string().nullish(),
+  back: z.string().nullish(),
+  submit: z.string().nullish(),
+  review_empty: z.string().nullish(),
+  fields: z.record(z.string(), fieldWording).nullish(),
+});
+export type FormWording = z.infer<typeof formWording>;
+
+/**
+ * A choice list's platform-drawn words (`wording.choice`): `label` is the word on the
+ * control that presents the list, `reply_hint` the line under a numbered-text list, and
+ * `group_label` the accessible name of a flat group of option buttons. The inbox reads
+ * `label` (the select field's label and picker placeholder); the rest parse unused.
+ */
+export const choiceWording = z.object({
+  label: z.string().nullish(),
+  reply_hint: z.string().nullish(),
+  group_label: z.string().nullish(),
+});
+export type ChoiceWording = z.infer<typeof choiceWording>;
+
+/**
+ * A non-form question's answer controls and refusal sentences (`wording.answer`): `open`
+ * labels the control that opens a `confirm`/`external` question's answer page, `confirm`
+ * its affirmative control, `decline` its negative control, `submit` the button that sends a
+ * typed or picked answer, `reply_hint` the hint in an empty reply input. `rejected` /
+ * `rejected_final` are the sentences the end user reads when an answer is refused; the
+ * inbox draws neither (web-only). The inbox reads `open`, `confirm`, `decline`, `submit`
+ * and `reply_hint` where it draws the matching control.
+ */
+export const answerWording = z.object({
+  open: z.string().nullish(),
+  confirm: z.string().nullish(),
+  decline: z.string().nullish(),
+  submit: z.string().nullish(),
+  reply_hint: z.string().nullish(),
+  rejected: z.string().nullish(),
+  rejected_final: z.string().nullish(),
+});
+export type AnswerWording = z.infer<typeof answerWording>;
+
+/**
+ * The lines of a delivery message (`wording.lines`): `answer_link` carries the tappable
+ * answer link, `deadline` names the deadline, `reply` tells the end user how to reply, and
+ * `options` lists the choices. Drawn by the chat channels; the inbox draws none of them.
+ */
+export const lineWording = z.object({
+  answer_link: z.string().nullish(),
+  deadline: z.string().nullish(),
+  reply: z.string().nullish(),
+  options: z.string().nullish(),
+});
+export type LineWording = z.infer<typeof lineWording>;
+
+/** The heading and sentence of one platform-drawn answer page (`wording.answer_page.*`). */
+export const pageCopy = z.object({
+  heading: z.string().nullish(),
+  text: z.string().nullish(),
+});
+export type PageCopy = z.infer<typeof pageCopy>;
+
+/**
+ * The form page's own sentences (`wording.answer_page.form`): `failed` when a send did not
+ * land, `network_error` when the browser could not reach the server, `update_failed` when a
+ * reacting form could not refresh, `choose_one` for an empty required multi-choice, and
+ * `date_unavailable` for a blocked date. Drawn by the callback form page; the inbox draws
+ * none of them.
+ */
+export const formPageWording = z.object({
+  failed: z.string().nullish(),
+  network_error: z.string().nullish(),
+  update_failed: z.string().nullish(),
+  choose_one: z.string().nullish(),
+  date_unavailable: z.string().nullish(),
+});
+export type FormPageWording = z.infer<typeof formPageWording>;
+
+/**
+ * The pages a question's link opens (`wording.answer_page`): `confirm` the confirm page's
+ * copy, `done` the already-answered page's, `awaiting` the reply-on-the-channel page's,
+ * `submitted` the form page's post-submit copy, and `form` the form page's own
+ * validation/error sentences. Drawn by the callback pages; the inbox draws none of them.
+ */
+export const answerPageWording = z.object({
+  confirm: pageCopy.nullish(),
+  done: pageCopy.nullish(),
+  awaiting: pageCopy.nullish(),
+  submitted: pageCopy.nullish(),
+  form: formPageWording.nullish(),
+});
+export type AnswerPageWording = z.infer<typeof answerPageWording>;
+
+/**
+ * A live question card's countdown words (`wording.status.countdown`): `seconds_left` the
+ * visible plural line, `one_second_left` the visible singular, and `under_minute` /
+ * `under_half_minute` / `under_ten_seconds` the spoken lines at the three thresholds. Drawn
+ * by the web widget; the inbox draws no countdown.
+ */
+export const countdownWording = z.object({
+  seconds_left: z.string().nullish(),
+  one_second_left: z.string().nullish(),
+  under_minute: z.string().nullish(),
+  under_half_minute: z.string().nullish(),
+  under_ten_seconds: z.string().nullish(),
+});
+export type CountdownWording = z.infer<typeof countdownWording>;
+
+/**
+ * In-flight and settled status copy (`wording.status`): `sending` the screen-reader label
+ * while a send is in flight, `answered` / `expired` / `closed` the badges once a question
+ * settles, `sent` the badge after an ask-less form is submitted, `unavailable` the line
+ * when a form's door no longer resolves, and `countdown` the live-countdown words. Drawn by
+ * the web widget; the inbox draws none of them.
+ */
+export const statusWording = z.object({
+  sending: z.string().nullish(),
+  answered: z.string().nullish(),
+  expired: z.string().nullish(),
+  closed: z.string().nullish(),
+  sent: z.string().nullish(),
+  unavailable: z.string().nullish(),
+  countdown: countdownWording.nullish(),
+});
+export type StatusWording = z.infer<typeof statusWording>;
+
+/**
+ * The one catalogue of a send's platform-drawn texts (`format_payload.wording`), grouped
+ * by what each word decorates: the form (`form`), the choice list (`choice`), a question's
+ * answer controls and refusal sentences (`answer`), the lines of the delivery message
+ * (`lines`), the pages a question's link opens (`answer_page`), and in-flight and settled
+ * status (`status`). A page's primary button is the one text not here — it is on the page
+ * (`pages[].button_label`). Every leaf is the sender's own words in the end-user's
+ * language; absent (or `null`), the surface shows its own word.
+ */
+export const wording = z.object({
+  form: formWording.nullish(),
+  choice: choiceWording.nullish(),
+  answer: answerWording.nullish(),
+  lines: lineWording.nullish(),
+  answer_page: answerPageWording.nullish(),
+  status: statusWording.nullish(),
+});
+export type Wording = z.infer<typeof wording>;
 
 // The form reactions and the form update are hand-written: the spec carries them inside an
 // open `format_payload` and an open reaction `update`.

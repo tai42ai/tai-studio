@@ -124,6 +124,14 @@
  *                  inbound attachments (a served image inline, a document download chip),
  *                  via a forced transcript + served-media override the live backend never
  *                  produces.
+ *   - entry-gate — the drill-in of the seeded `relay` web route: the web channel's
+ *                  "Entry gate" panel, gate on, with its one `launch` code row.
+ *   - entry-gate-empty — the drill-in of the seeded `relay-open` web route: the panel's
+ *                  "No entry codes" state.
+ *   - entry-gate-mint — the panel's shown-once mint dialog on `relay-open`, after a real
+ *                  mint (the fresh code and its chat link).
+ *   - entry-gate-unavailable — the panel's "Entry gate unavailable" card, via the real
+ *                  `GET /api/plugins` answer with the web channel's mounts emptied.
  *   - conversation-route-agent-contract — the route CREATE dialog for an agent target,
  *                  framing the five door-contract jq fields and the execution key.
  *   - schedule-contract — the add-schedule dialog framing its door-contract section (the
@@ -204,6 +212,17 @@ const OWNED_KEY = process.env.STUDIO_OWNED_KEY;
  * route/thread that names nothing and capture an empty monitor, so it fails loudly. */
 const CONVERSATION_ROUTE = process.env.STUDIO_CONVERSATION_ROUTE;
 const CONVERSATION_THREAD = process.env.STUDIO_CONVERSATION_THREAD;
+
+/** The two seeded web routes the entry-gate shots drill into, each texted at its own name
+ * as its web identity: `ENTRY_GATE_ROUTE` gated with one live `launch` code,
+ * `ENTRY_GATE_OPEN_ROUTE` ungated with none. The runner (docs-screenshots.sh) creates both
+ * and seeds their gates after boot, then exports their names; there is no static fallback. */
+const ENTRY_GATE_ROUTE = process.env.STUDIO_ENTRY_GATE_ROUTE;
+const ENTRY_GATE_OPEN_ROUTE = process.env.STUDIO_ENTRY_GATE_OPEN_ROUTE;
+/** The web channel's entry-gate doors, keyed by a web route's identity. */
+const ENTRY_GATE_DOORS = '/api/channels/web/gates';
+/** The panel the web channel's Studio plugin contributes to a web route's drill-in. */
+const ENTRY_GATE_PANEL = 'section[aria-label="Entry gate"]';
 
 /** When set (the automated CI pipeline sets it), skip the shots tagged
  * `nondeterministic` — the QR screens, whose QR encodes a freshly-minted random token
@@ -292,6 +311,26 @@ async function frameKwargsEditor(page) {
     .evaluate((el) => {
       el.scrollIntoView({ block: 'start' });
     });
+}
+
+/** Revoke every live entry code on the web route `identity` through the real gate doors. */
+async function revokeEntryCodes(page, identity) {
+  const doors = `${STUDIO_URL}${ENTRY_GATE_DOORS}/${encodeURIComponent(identity)}`;
+  const headers = { 'x-api-key': DEMO_KEY };
+  const gate = await page.request.get(doors, { headers });
+  if (!gate.ok())
+    throw new Error(`reading the entry gate on ${identity} failed (${gate.status()})`);
+  for (const code of (await gate.json()).data.codes) {
+    const revoked = await page.request.delete(
+      `${doors}/codes/${encodeURIComponent(code.code_id)}`,
+      { headers },
+    );
+    if (!revoked.ok()) {
+      throw new Error(
+        `revoking entry code ${code.code_id} on ${identity} failed (${revoked.status()})`,
+      );
+    }
+  }
 }
 
 /**
@@ -1753,6 +1792,72 @@ const AUTHED_PAGES = [
         .evaluate((el) => el.scrollIntoView({ block: 'center' }));
     },
   },
+  {
+    // The entry-gate panel on the gated `relay` route: the "Require an entry code" box
+    // ticked and the seeded `launch` code's row. Nondeterministic: the row's Created
+    // instant is stamped when the runner mints the code, so it differs every run.
+    name: 'entry-gate',
+    nondeterministic: true,
+    path: `/conversations?route=${encodeURIComponent(ENTRY_GATE_ROUTE)}`,
+    wait: `${ENTRY_GATE_PANEL} td:text-is("launch")`,
+  },
+  {
+    // The panel on the ungated `relay-open` route, which holds no code. A code an earlier
+    // `entry-gate-mint` frame minted on it (the other theme's pass) is revoked first, so
+    // the frame always shows the empty state.
+    name: 'entry-gate-empty',
+    path: `/conversations?route=${encodeURIComponent(ENTRY_GATE_OPEN_ROUTE)}`,
+    wait: `${ENTRY_GATE_PANEL} >> text=No entry codes`,
+    setup: async (page) => {
+      await revokeEntryCodes(page, ENTRY_GATE_OPEN_ROUTE);
+    },
+  },
+  {
+    // The shown-once mint dialog on `relay-open`, after a real mint through the panel.
+    // Nondeterministic: the minted code (and the chat link carrying it) is fresh each run.
+    // The other theme's pass minted on this route too, so its codes are revoked first and
+    // the dialog opens over the same empty panel in both themes.
+    name: 'entry-gate-mint',
+    nondeterministic: true,
+    path: `/conversations?route=${encodeURIComponent(ENTRY_GATE_OPEN_ROUTE)}`,
+    wait: `${ENTRY_GATE_PANEL} >> text=No entry codes`,
+    setup: async (page) => {
+      await revokeEntryCodes(page, ENTRY_GATE_OPEN_ROUTE);
+    },
+    // The dialog is modal and hides the nav the plugin-nav wait looks for.
+    awaitPluginNav: false,
+    action: async (page) => {
+      await page.locator(ENTRY_GATE_PANEL).getByRole('button', { name: 'Mint entry code' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Mint entry code' });
+      await dialog.getByRole('button', { name: 'Mint code' }).click();
+      await dialog
+        .getByText('This code is shown once', { exact: false })
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+    },
+  },
+  {
+    // The panel's unavailable card: the real `GET /api/plugins` answer with the web
+    // channel's `mounts` emptied, so its plugin registers with no gate route to call (the
+    // live boot always mounts the web channel's doors).
+    name: 'entry-gate-unavailable',
+    path: `/conversations?route=${encodeURIComponent(ENTRY_GATE_ROUTE)}`,
+    wait: `${ENTRY_GATE_PANEL} >> text=Entry gate unavailable`,
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/plugins',
+        async (route) => {
+          const response = await route.fetch();
+          const body = await response.json();
+          const channelWeb = body.data.find((entry) => entry.name === 'tai42_channel_web');
+          if (channelWeb === undefined) {
+            throw new Error('entry-gate-unavailable: GET /api/plugins lists no tai42_channel_web');
+          }
+          channelWeb.mounts = {};
+          await route.fulfill({ response, json: body });
+        },
+      );
+    },
+  },
   // --- Capability-scoped screens (authenticated as the seeded OWNED key) -------
   // These four carry `apiKey: OWNED_KEY`, so they render the scoped projection's
   // filtered view rather than the full-admin one. The owned key is NOT a full
@@ -1923,6 +2028,19 @@ if (
   console.error(
     'STUDIO_CONVERSATION_ROUTE and STUDIO_CONVERSATION_THREAD are required: the runner ' +
       '(docs-screenshots.sh) seeds the conversation route and its threads, then exports both.',
+  );
+  process.exit(1);
+}
+
+// The entry-gate frames drill into the runtime-seeded web routes; require their names only
+// when one of those frames is in the run.
+if (
+  AUTHED_RUN.some((entry) => entry.name.startsWith('entry-gate')) &&
+  (!ENTRY_GATE_ROUTE || !ENTRY_GATE_OPEN_ROUTE)
+) {
+  console.error(
+    'STUDIO_ENTRY_GATE_ROUTE and STUDIO_ENTRY_GATE_OPEN_ROUTE are required: the runner ' +
+      '(docs-screenshots.sh) seeds the two web routes and their entry gates, then exports both.',
   );
   process.exit(1);
 }

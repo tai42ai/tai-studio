@@ -1061,11 +1061,16 @@
       color var(--tai-motion-fast) ease;
   }
 
-  .tai-chip:not(.tai-chip-static):not([aria-pressed='true']):hover:not(:disabled) {
+  .tai-chip:not(.tai-chip-static):not([aria-pressed='true']):not([aria-checked='true']):hover:not(
+      :disabled
+    ) {
     background: var(--tai-color-surface);
   }
 
-  .tai-chip[aria-pressed='true'] {
+  /* A selected chip, pressed (a multi-select toggle) OR checked (a single-select
+     radio chip): both wear the accent tint. */
+  .tai-chip[aria-pressed='true'],
+  .tai-chip[aria-checked='true'] {
     background: var(--tai-color-accent-tint);
     border-color: var(--tai-color-accent);
     color: var(--tai-color-accent-on-tint);
@@ -1073,7 +1078,8 @@
 
   /* A selected chip KEEPS its tint on hover and strengthens its border instead —
      the one part that moves in both themes (see the segment rule above). */
-  .tai-chip[aria-pressed='true']:hover:not(:disabled) {
+  .tai-chip[aria-pressed='true']:hover:not(:disabled),
+  .tai-chip[aria-checked='true']:hover:not(:disabled) {
     border-color: var(--tai-color-accent-hover);
   }
 

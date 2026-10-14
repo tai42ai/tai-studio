@@ -41,6 +41,14 @@ interface FieldNodeProps {
   readonly markRequired?: boolean;
   readonly errors: SchemaFormErrors | undefined;
   readonly idPrefix: string;
+  /**
+   * Per-field picker placeholders keyed by property name, handed to an OBJECT node so
+   * its direct `enum`-select children draw their placeholder. Carried by the root form
+   * only; nested objects receive none.
+   */
+  readonly fieldWording?: Readonly<Record<string, { choiceLabel?: string }>>;
+  /** This field's own picker placeholder, when it draws as an `enum` select. */
+  readonly choiceLabel?: string;
 }
 
 function labelText(explicit: string | undefined, label: string | undefined): string {
@@ -73,6 +81,8 @@ function FieldNodeImpl(props: FieldNodeProps): ReactNode {
     required,
     errors,
     idPrefix,
+    fieldWording: props.fieldWording,
+    choiceLabel: props.choiceLabel,
   });
 }
 
@@ -90,6 +100,8 @@ interface RenderFieldArgs {
   readonly required: boolean;
   readonly errors: SchemaFormErrors | undefined;
   readonly idPrefix: string;
+  readonly fieldWording?: Readonly<Record<string, { choiceLabel?: string }>>;
+  readonly choiceLabel?: string;
 }
 
 /** Render the field component matching the classified model kind. */
@@ -126,6 +138,7 @@ function renderField(args: RenderFieldArgs): ReactNode {
           model={model}
           value={value}
           onChange={onChange}
+          choiceLabel={args.choiceLabel}
         />
       );
     case 'string':
@@ -135,6 +148,10 @@ function renderField(args: RenderFieldArgs): ReactNode {
           description={description}
           error={error}
           format={model.format}
+          inputMode={model.inputMode}
+          multiline={model.multiline}
+          maxLength={model.maxLength}
+          minLength={model.minLength}
           media={model.media}
           expression={model.expression}
           date={model.date}
@@ -187,6 +204,7 @@ function renderCompositeField(
   model: Extract<FieldModel, { kind: 'array' | 'object' | 'record' | 'union' }>,
 ): ReactNode {
   const { heading, description, error, root, value, onChange, path, errors, idPrefix } = args;
+  const { fieldWording } = args;
   switch (model.kind) {
     case 'array':
       return (
@@ -216,6 +234,7 @@ function renderCompositeField(
             errors={errors}
             idPrefix={idPrefix}
             skip={undefined}
+            fieldWording={fieldWording}
           />
         </FieldGroup>
       );

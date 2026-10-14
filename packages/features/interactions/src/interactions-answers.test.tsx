@@ -392,3 +392,66 @@ describe('InteractionsPage — cancel (withdraw) a pending question', () => {
     });
   });
 });
+
+describe('InteractionsPage — caller-set control labels (the one wording catalogue)', () => {
+  it('select → draws wording.choice.label as the field label and picker placeholder, and wording.answer.submit on the button', async () => {
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-select',
+        format: 'select',
+        prompt: 'Pick',
+        format_payload: {
+          options: ['red', 'green', 'blue', 'black'],
+          wording: { choice: { label: 'Pick your colour' }, answer: { submit: 'Send pick' } },
+        },
+      }),
+    );
+    expect(screen.getByRole('combobox', { name: 'Pick your colour' })).toBeInTheDocument();
+    expect(screen.getByText('Pick your colour…')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Send pick' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Submit' })).not.toBeInTheDocument();
+  });
+
+  it('confirm → draws wording.answer.confirm on the affirmative and wording.answer.decline on the negative', async () => {
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-confirm',
+        format: 'confirm',
+        prompt: 'Proceed?',
+        format_payload: { wording: { answer: { confirm: 'Approve', decline: 'No thanks' } } },
+      }),
+    );
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'No thanks' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Yes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'No' })).not.toBeInTheDocument();
+  });
+
+  it('text → draws wording.answer.reply_hint as the reply placeholder and wording.answer.submit on the button', async () => {
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-text',
+        format: 'text',
+        prompt: 'Name?',
+        format_payload: {
+          wording: { answer: { reply_hint: 'Type your full name', submit: 'Send answer' } },
+        },
+      }),
+    );
+    expect(screen.getByLabelText('Your answer')).toHaveAttribute(
+      'placeholder',
+      'Type your full name',
+    );
+    expect(screen.getByRole('button', { name: 'Send answer' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Submit' })).not.toBeInTheDocument();
+  });
+});
