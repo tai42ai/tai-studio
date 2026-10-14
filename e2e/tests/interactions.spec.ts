@@ -48,10 +48,44 @@ const PENDING_PAGE = {
   },
 };
 
+/** One pending confirm carrying `wording.answer.decline` and one pending text carrying
+ * `wording.answer.submit` — the caller's negative and submit words off the one catalogue. */
+const WORDING_PAGE = {
+  data: {
+    items: [
+      {
+        interaction_id: 'cf-1',
+        group_id: 'cf-1',
+        sensitive: false,
+        question: 'Ready to proceed?',
+        answer_format: 'confirm',
+        created_at: '2026-08-01T00:00:00.000Z',
+        timeout_at: '2026-08-09T00:00:00.000Z',
+        format_payload: { wording: { answer: { confirm: 'Approve', decline: 'Not now' } } },
+      },
+      {
+        interaction_id: 'tx-1',
+        group_id: 'tx-1',
+        sensitive: false,
+        question: 'Any extra notes?',
+        answer_format: 'text',
+        created_at: '2026-08-01T00:00:01.000Z',
+        timeout_at: '2026-08-09T00:00:00.000Z',
+        format_payload: { wording: { answer: { submit: 'Send answer' } } },
+      },
+    ],
+    total: 2,
+    page: 1,
+    page_size: 50,
+    next_page: null,
+    truncated: false,
+  },
+};
+
 /** A tail-only stream: an open SSE body with no backlog and no delta frames. */
 const STREAM_BODY = [':keepalive', '', ''].join('\n');
 
-async function stubInbox(page: Page): Promise<void> {
+async function stubInbox(page: Page, pending: unknown = PENDING_PAGE): Promise<void> {
   await seedCredential(page);
   await page.route(
     (url) => url.pathname === '/api/interactions',
@@ -59,7 +93,7 @@ async function stubInbox(page: Page): Promise<void> {
       await route.fulfill({
         status: 200,
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(PENDING_PAGE),
+        body: JSON.stringify(pending),
       });
     },
   );
@@ -110,6 +144,26 @@ test('questions sharing a group fold into one grouped section; an empty free-tex
   await expect(submit).toBeDisabled();
   await firstCard.getByLabel('Your answer').fill('looks good');
   await expect(submit).toBeEnabled();
+});
+
+test("a confirm draws the caller's decline word and a text draws the caller's submit word", async ({
+  page,
+}) => {
+  await stubInbox(page, WORDING_PAGE);
+  await page.goto('/interactions');
+  await expect(page.getByRole('heading', { name: 'Interactions' })).toBeVisible();
+
+  // The confirm's negative button reads `wording.answer.decline` in place of "No"; its
+  // affirmative reads `wording.answer.confirm` in place of "Yes".
+  const confirmCard = page.getByTestId('interaction-card').filter({ hasText: 'Ready to proceed?' });
+  await expect(confirmCard.getByRole('button', { name: 'Approve' })).toBeVisible();
+  await expect(confirmCard.getByRole('button', { name: 'Not now' })).toBeVisible();
+  await expect(confirmCard.getByRole('button', { name: 'No', exact: true })).toHaveCount(0);
+
+  // The text's submit button reads `wording.answer.submit` in place of "Submit".
+  const textCard = page.getByTestId('interaction-card').filter({ hasText: 'Any extra notes?' });
+  await expect(textCard.getByRole('button', { name: 'Send answer' })).toBeVisible();
+  await expect(textCard.getByRole('button', { name: 'Submit' })).toHaveCount(0);
 });
 
 test.describe(() => {

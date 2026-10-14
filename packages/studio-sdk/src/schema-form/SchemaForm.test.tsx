@@ -181,6 +181,106 @@ describe('SchemaForm — string formats', () => {
   });
 });
 
+describe('SchemaForm — input mode', () => {
+  it('renders `inputMode: email` as a native email control', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { mail: { type: 'string', inputMode: 'email', title: 'Mail' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    expect(screen.getByLabelText('Mail')).toHaveAttribute('type', 'email');
+  });
+
+  it('renders `inputMode: url` as a native url control', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { link: { type: 'string', inputMode: 'url', title: 'Link' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    expect(screen.getByLabelText('Link')).toHaveAttribute('type', 'url');
+  });
+
+  it('renders `inputMode: tel` as a native tel control', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { contact: { type: 'string', inputMode: 'tel', title: 'Contact' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    expect(screen.getByLabelText('Contact')).toHaveAttribute('type', 'tel');
+  });
+
+  it('renders `inputMode: numeric` as a text box with the numeric keyboard hint', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { code: { type: 'string', inputMode: 'numeric', title: 'Code' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByLabelText('Code');
+    expect(input).toHaveAttribute('type', 'text');
+    expect(input).toHaveAttribute('inputmode', 'numeric');
+  });
+
+  it('renders `inputMode: decimal` as a text box with the decimal keyboard hint', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { amount: { type: 'string', inputMode: 'decimal', title: 'Amount' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByLabelText('Amount');
+    expect(input).toHaveAttribute('type', 'text');
+    expect(input).toHaveAttribute('inputmode', 'decimal');
+  });
+
+  it('renders `inputMode: text` as a plain text box with no keyboard hint', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { note: { type: 'string', inputMode: 'text', title: 'Note' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByRole('textbox', { name: 'Note' });
+    expect(input).toHaveAttribute('type', 'text');
+    expect(input).not.toHaveAttribute('inputmode');
+  });
+
+  it('lets `inputMode` outrank `format` for the control', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        code: { type: 'string', format: 'email', inputMode: 'numeric', title: 'Code' },
+      },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByLabelText('Code');
+    // The mode wins: a numeric keyboard on a text box, not the format's email control.
+    expect(input).toHaveAttribute('type', 'text');
+    expect(input).toHaveAttribute('inputmode', 'numeric');
+  });
+
+  it('reads an unknown `inputMode` value as absent — a plain text box', () => {
+    // A value outside the supported set (the typed keyword forbids it, so this
+    // models a schema off the wire): the permissive client renders the plain text
+    // box — the server ask door is the authority that refuses it.
+    const schema = JSON.parse(
+      '{"type":"object","properties":{"note":{"type":"string","inputMode":"phone","title":"Note"}}}',
+    ) as JsonSchema;
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByRole('textbox', { name: 'Note' });
+    expect(input).toHaveAttribute('type', 'text');
+    expect(input).not.toHaveAttribute('inputmode');
+  });
+
+  it('keeps a numeric field value as the typed string (never coerced)', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { code: { type: 'string', inputMode: 'numeric', title: 'Code' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    fireEvent.change(screen.getByLabelText('Code'), { target: { value: '007' } });
+    // The leading zeros survive — a string, never a JSON number.
+    expect(emitted()).toBe('{"code":"007"}');
+  });
+});
+
 describe('SchemaForm — enum', () => {
   it('renders a small enum as selectable radios and emits the real value', async () => {
     const user = userEvent.setup();
@@ -1660,5 +1760,191 @@ describe('SchemaForm — conditional fields (scope B)', () => {
 
     await user.click(screen.getByRole('checkbox', { name: 'Has pet' }));
     expect(screen.queryByRole('textbox', { name: 'Pet name' })).not.toBeInTheDocument();
+  });
+});
+
+describe('SchemaForm — chips control', () => {
+  it('draws a `control: chips` enum as a single-select ChipGroup and emits the value', async () => {
+    const user = userEvent.setup();
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { color: { enum: ['red', 'green', 'blue'], title: 'Color', control: 'chips' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    // A radiogroup of radio chips, not the radio-list or select.
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument();
+    const red = screen.getByRole('radio', { name: 'red' });
+    expect(red).toHaveClass('tai-chip');
+    expect(red).toHaveAttribute('aria-checked', 'false');
+
+    await user.click(red);
+    expect(emitted()).toBe('{"color":"red"}');
+    expect(screen.getByRole('radio', { name: 'red' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('draws a `control: chips` array as a multi-select ChipGroup and emits the selection', async () => {
+    const user = userEvent.setup();
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        tags: {
+          type: 'array',
+          control: 'chips',
+          items: { type: 'string', enum: ['red', 'green', 'blue'] },
+          title: 'Tags',
+        },
+      },
+    };
+    render(<Harness schema={schema} initial={{ tags: [] }} />);
+    // Toggle chips with `aria-pressed`, not the checkbox group.
+    const red = screen.getByRole('button', { name: 'red' });
+    expect(red).toHaveClass('tai-chip');
+    expect(red).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('checkbox', { name: 'red' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'green' }));
+    await user.click(screen.getByRole('button', { name: 'red' }));
+    // The selection reads in the options' declared order, not press order.
+    expect(emitted()).toBe('{"tags":["red","green"]}');
+    expect(screen.getByRole('button', { name: 'red' })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: 'red' }));
+    expect(emitted()).toBe('{"tags":["green"]}');
+  });
+});
+
+describe('SchemaForm — textarea control and drawn length bound', () => {
+  it('draws a `control: textarea` string as the DS Textarea with a live counter', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        notes: { type: 'string', control: 'textarea', maxLength: 200, title: 'Notes' },
+      },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    const area = screen.getByRole('textbox', { name: 'Notes' });
+    expect(area.tagName).toBe('TEXTAREA');
+    expect(area).toHaveClass('tai-textarea');
+    expect(area).toHaveAttribute('maxlength', '200');
+    expect(screen.getByText('0 / 200')).toBeInTheDocument();
+
+    fireEvent.change(area, { target: { value: 'hello' } });
+    expect(screen.getByText('5 / 200')).toBeInTheDocument();
+    expect(emitted()).toBe('{"notes":"hello"}');
+  });
+
+  it('draws the length bounds and counter on a single-line text input too', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { code: { type: 'string', minLength: 3, maxLength: 10, title: 'Code' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByRole('textbox', { name: 'Code' });
+    expect(input.tagName).toBe('INPUT');
+    expect(input).toHaveAttribute('maxlength', '10');
+    expect(input).toHaveAttribute('minlength', '3');
+    expect(screen.getByText('0 / 10')).toBeInTheDocument();
+  });
+
+  it('shows no counter when no maximum is declared', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { code: { type: 'string', minLength: 3, title: 'Code' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    expect(screen.getByRole('textbox', { name: 'Code' })).toHaveAttribute('minlength', '3');
+    expect(screen.queryByText(/\/\s*\d/)).not.toBeInTheDocument();
+  });
+});
+
+describe('SchemaForm — date range pair', () => {
+  it('draws a drawable pair as ONE range control and emits the two date strings', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        from: { type: 'string', format: 'date', title: 'From' },
+        to: { type: 'string', format: 'date', title: 'To', rangeStart: 'from' },
+      },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    // ONE control: a group labelled with both ends, holding the two native date inputs.
+    const group = screen.getByRole('group', { name: /From.*To/ });
+    const from = within(group).getByLabelText('From');
+    const to = within(group).getByLabelText('To');
+    expect(from).toHaveAttribute('type', 'date');
+    expect(to).toHaveAttribute('type', 'date');
+
+    fireEvent.change(from, { target: { value: '2024-05-01' } });
+    fireEvent.change(to, { target: { value: '2024-05-03' } });
+    expect(emitted()).toBe('{"from":"2024-05-01","to":"2024-05-03"}');
+  });
+
+  it('draws TWO date fields when a sibling visibleWhen names an end of the pair', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        from: { type: 'string', format: 'date', title: 'From' },
+        to: { type: 'string', format: 'date', title: 'To', rangeStart: 'from' },
+        note: { type: 'string', title: 'Note', visibleWhen: { field: 'to', notEmpty: true } },
+      },
+    };
+    render(<Harness schema={schema} initial={{ to: '' }} />);
+    // The tightening: the pair is NOT merged, so there is no combined range group;
+    // the two ends draw as two ordinary date fields.
+    expect(screen.queryByRole('group', { name: /From.*To/ })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('From')).toHaveAttribute('type', 'date');
+    expect(screen.getByLabelText('To')).toHaveAttribute('type', 'date');
+  });
+});
+
+describe('SchemaForm — fieldWording (per-field select placeholder)', () => {
+  // Six options exceed the radio threshold (5), so the enum draws as a select.
+  const laneSchema: JsonSchema = {
+    type: 'object',
+    properties: { lane: { enum: ['n', 's', 'e', 'w', 'ne', 'nw'], title: 'Lane' } },
+  };
+
+  it("draws a top-level enum select's placeholder from fieldWording[name].choiceLabel", () => {
+    render(
+      <SchemaForm
+        schema={laneSchema}
+        value={{}}
+        onChange={vi.fn()}
+        fieldWording={{ lane: { choiceLabel: 'Pick a lane' } }}
+      />,
+    );
+    // Nothing chosen, so the caller's placeholder shows in place of the default `Select…`.
+    expect(screen.getByRole('combobox', { name: 'Lane' })).toHaveTextContent('Pick a lane');
+    expect(screen.queryByText('Select…')).not.toBeInTheDocument();
+  });
+
+  it("falls back to the select's own default when no fieldWording entry applies", () => {
+    render(<SchemaForm schema={laneSchema} value={{}} onChange={vi.fn()} />);
+    expect(screen.getByRole('combobox', { name: 'Lane' })).toHaveTextContent('Select…');
+  });
+
+  it('applies fieldWording to the root object only, never a same-named nested field', () => {
+    const nested: JsonSchema = {
+      type: 'object',
+      properties: {
+        inner: {
+          type: 'object',
+          title: 'Inner',
+          properties: { lane: { enum: ['n', 's', 'e', 'w', 'ne', 'nw'], title: 'Lane' } },
+        },
+      },
+    };
+    render(
+      <SchemaForm
+        schema={nested}
+        value={{}}
+        onChange={vi.fn()}
+        fieldWording={{ lane: { choiceLabel: 'Pick a lane' } }}
+      />,
+    );
+    // The entry is keyed by a ROOT property name; a same-named property one level down is
+    // not the root field, so its select keeps the default `Select…`.
+    expect(screen.getByRole('combobox', { name: 'Lane' })).toHaveTextContent('Select…');
+    expect(screen.queryByText('Pick a lane')).not.toBeInTheDocument();
   });
 });

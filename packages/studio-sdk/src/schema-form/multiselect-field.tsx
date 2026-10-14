@@ -8,6 +8,7 @@
 import type { ReactNode } from 'react';
 
 import { Checkbox } from '../components/checkbox';
+import { ChipGroup } from '../components/chip-group';
 import { Field } from '../components/field';
 import type { FieldModel } from './field-model';
 
@@ -38,6 +39,26 @@ export function MultiSelectField({
       .filter((candidate) => next.includes(candidate));
     onChange(ordered);
   };
+
+  // `control: chips` draws the multi-select as a toggle-chip grid in place of the
+  // checkbox group. The chips emit the selection in the OPTIONS' declared order.
+  if (model.control === 'chips') {
+    return (
+      <Field label={heading} description={description} error={error} group>
+        <ChipGroup
+          mode="multi"
+          options={model.options.map((option) => ({
+            value: String(option.value),
+            label: option.label,
+          }))}
+          value={selected}
+          onValueChange={(next) => {
+            onChange([...next]);
+          }}
+        />
+      </Field>
+    );
+  }
   return (
     <Field label={heading} description={description} error={error} group>
       {model.options.map((option, index) => {

@@ -5,7 +5,7 @@
  * validator import the vocabulary without pulling in classification code.
  */
 import type { EnumOption } from './resolve';
-import type { JsonSchema } from './types';
+import type { FormControl, FormInputMode, JsonSchema } from './types';
 
 /**
  * How a string field accepts binary content as a JSON-serializable string.
@@ -115,10 +115,28 @@ export interface UnionVariant {
 /** The renderer-facing classification of a schema node. */
 export type FieldModel =
   | { readonly kind: 'const'; readonly value: unknown }
-  | { readonly kind: 'enum'; readonly options: readonly EnumOption[] }
+  | {
+      readonly kind: 'enum';
+      readonly options: readonly EnumOption[];
+      /** The `control` keyword off the property: `'chips'` draws the choice as a
+       *  chip grid in place of the radio/select; `undefined` keeps the default. */
+      readonly control: FormControl | undefined;
+    }
   | {
       readonly kind: 'string';
       readonly format: string | undefined;
+      /** The input kind (keyboard / native control) this string draws, from the
+       *  schema's `inputMode` keyword; `undefined` for a plain text box. It
+       *  draws, it does not validate, and it outranks `format` for the control. */
+      readonly inputMode: FormInputMode | undefined;
+      /** True when the `control` keyword is `'textarea'`: draw a multi-line text
+       *  control instead of a single-line box. It draws, it does not validate. */
+      readonly multiline: boolean;
+      /** The `maxLength`/`minLength` JSON-Schema bounds, drawn on the control (a
+       *  native cap plus a live counter when `maxLength` is set) and enforced by
+       *  the validator. `undefined` leaves that bound unconstrained. */
+      readonly maxLength: number | undefined;
+      readonly minLength: number | undefined;
       /** Present when media annotations opt the field into the upload control. */
       readonly media: MediaUpload | undefined;
       /** Present when a well-formed `x-tai42-expression` annotation opts the
@@ -138,6 +156,10 @@ export type FieldModel =
       // `array` field — a multi-select needs a known option set to draw.
       readonly kind: 'multiselect';
       readonly options: readonly EnumOption[];
+      /** The `control` keyword off the property: `'chips'` draws the multi-select
+       *  as a toggle-chip grid in place of the checkbox group; `undefined` keeps
+       *  the default. */
+      readonly control: FormControl | undefined;
     }
   | {
       readonly kind: 'object';
