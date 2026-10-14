@@ -14,12 +14,13 @@
 #      marketplace registry (e2e/docs-demo/marketplace-registry.py, one seeded
 #      generic route-carrying plugin) and points MARKETPLACE_URL at it, then boots a
 #      DOCS-DEMO tai42-skeleton (e2e/docs-demo/manifest.yml) via e2e/boot/boot.sh,
-#      installing the agents / storage-local / toolbox / seeded-monitoring plugins
-#      into the skeleton venv;
+#      installing the agents / storage-local / toolbox / channel-web /
+#      seeded-monitoring plugins into the skeleton venv;
 #   2. waits for /health, then seeds the demo accounts, the scoped surfaces (an
 #      owned key plus its audience-addressed notification + pending question), the
 #      named settings profile the Profiles tab lists, the conversation route
-#      whose threads the Conversations screen reads, and the platform state store
+#      whose threads the Conversations screen reads, two web routes whose entry
+#      gates the entry-gate panel reads, and the platform state store
 #      (a declared state with an attached template, subject records and a consumer hook —
 #      its own dedicated database, created in §3b and migrated by boot.sh);
 #   3. captures every screen in both themes with e2e/scripts/docs-screenshots.mjs
@@ -136,11 +137,12 @@ export MONOREPO_DIR
 # Extra plugins the docs-demo manifest loads, installed into the skeleton venv. The
 # accounts-postgres plugin's lifecycle module + login router power the login screen's
 # password form, and its declared member-admin actions back the generic Members page;
-# the rest back the toolbox/agents/storage surfaces. The RQ backend and the docs-demo
+# the web channel serves the entry-gate doors and ships the entry-gate panel's studio
+# dist; the rest back the toolbox/agents/storage surfaces. The RQ backend and the docs-demo
 # monitoring backend are installed by boot.sh (both manifests declare
 # `backend_module: tai42_backend_rq` and `monitoring_module: docs_demo_monitoring`), and
 # the RQ_REDIS_URL / TAI_BUS_REDIS_URL wiring lives there too, so none is repeated here.
-export EXTRA_PLUGINS="${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres"
+export EXTRA_PLUGINS="${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres ${PLUGINS_DIR}/channel-web"
 # Accounts world: order the identity resolution (accounts claims tai-sess- sessions,
 # redis claims sk- keys), pin the setup-door token to a known value so the runner can
 # initialize the owner deterministically through POST /api/setup, and tell boot.sh to
@@ -156,6 +158,9 @@ export APPLY_ACCOUNTS_DDL=1
 # password login fails when no connection is configured. Point it at boot.sh's compose Redis
 # on its own db (8), apart from the stores boot.sh places on db 0-7.
 export TAI_ACCOUNTS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT:-6380}/8"
+# The web channel keeps its entry gates and codes in its own Redis store, and every gate
+# door answers 501 when none is configured. Point it at boot.sh's compose Redis on db 9.
+export CHANNEL_WEB_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT:-6380}/9"
 # Storage backend: the seeded template files. CREATE_DIRS=false so a missing dir
 # fails loudly rather than being papered over with an empty templates list.
 export STORAGE_LOCAL_ROOT_PATH="${E2E_DIR}/docs-demo/templates"
@@ -669,6 +674,83 @@ send_conversation_message "ada.lovelace@demo.tai" "Hi — where is my request? I
 CONVERSATION_THREAD="$(send_conversation_message "ada.lovelace@demo.tai" "Thanks. Can you restart it for me instead?")"
 export STUDIO_CONVERSATION_ROUTE="${CONVERSATION_ROUTE}"
 export STUDIO_CONVERSATION_THREAD="${CONVERSATION_THREAD}"
+
+# --- 7e2. Seed two web routes + their entry gates (the entry-gate panel) ------
+# Two routes on the `web` channel through the same management door as the conversation
+# route above, each texted at its own name as its identity: `relay`, whose entry gate is
+# turned on with one live code labelled `launch`, and `relay-open`, gate off and no code.
+# The gates are written through the web channel's own gate doors. A rerun against the
+# persisted store first revokes every live code on both identities, so each holds exactly
+# the codes seeded here.
+log "seeding the web routes + their entry gates"
+GATE_ROUTE="relay"
+GATE_OPEN_ROUTE="relay-open"
+GATE_BASE="${BASE_URL}/api/channels/web/gates"
+
+seed_web_route() {
+  local name="$1" body resp
+  body="$(ROUTE="${name}" EXECUTION_KEY="${DEMO_USER_ID}" python3 -c '
+import json, os
+print(json.dumps({
+    "door": "channel",
+    "channel": "web",
+    "our_identity": os.environ["ROUTE"],
+    "target_kind": "tool",
+    "target_name": "studio_demo_echo",
+    "start_expr": {"content": "{message: .message}"},
+    "execution_key": os.environ["EXECUTION_KEY"],
+}))')"
+  resp="$(api -H "content-type: application/json" -X POST "${BASE_URL}/api/conversations/${name}" -d "${body}")"
+  case "${resp}" in
+    *'"route_name"'*) : ;;
+    *) die "creating the web route '${name}' failed: ${resp}" ;;
+  esac
+}
+
+# Revoke every live code on one identity, read through the gate read door.
+revoke_entry_codes() {
+  local identity="$1" code_ids code_id
+  code_ids="$(api "${GATE_BASE}/${identity}" | python3 -c 'import json,sys
+for code in json.load(sys.stdin)["data"]["codes"]:
+    print(code["code_id"])')" \
+    || die "could not read the entry gate on '${identity}'"
+  for code_id in ${code_ids}; do
+    api -X DELETE "${GATE_BASE}/${identity}/codes/${code_id}" | grep -q '"revoked"' \
+      || die "could not revoke entry code ${code_id} on '${identity}'"
+  done
+}
+
+# Set one identity's gate flag (a JSON boolean) through the toggle door.
+set_entry_gate() {
+  local identity="$1" enabled="$2"
+  api -H "content-type: application/json" -X PUT "${GATE_BASE}/${identity}" \
+    -d "{\"enabled\":${enabled}}" \
+    | ENABLED="${enabled}" python3 -c 'import json,os,sys
+assert json.load(sys.stdin)["data"]["enabled"] is (os.environ["ENABLED"] == "true")' \
+    || die "could not set the entry gate on '${identity}' to ${enabled}"
+}
+
+seed_web_route "${GATE_ROUTE}"
+seed_web_route "${GATE_OPEN_ROUTE}"
+revoke_entry_codes "${GATE_ROUTE}"
+revoke_entry_codes "${GATE_OPEN_ROUTE}"
+set_entry_gate "${GATE_ROUTE}" true
+set_entry_gate "${GATE_OPEN_ROUTE}" false
+api -H "content-type: application/json" -X POST "${GATE_BASE}/${GATE_ROUTE}/codes" \
+  -d '{"label":"launch","expires_at":null}' | grep -q '"code_id"' \
+  || die "could not mint the 'launch' entry code on '${GATE_ROUTE}'"
+# The gate read is the panel's own source: `relay` must be on with exactly the `launch`
+# code, `relay-open` off with none.
+api "${GATE_BASE}/${GATE_ROUTE}" | python3 -c 'import json,sys
+gate = json.load(sys.stdin)["data"]
+assert gate["enabled"] is True and [c["label"] for c in gate["codes"]] == ["launch"], gate' \
+  || die "the entry gate on '${GATE_ROUTE}' is not on with exactly the 'launch' code"
+api "${GATE_BASE}/${GATE_OPEN_ROUTE}" | python3 -c 'import json,sys
+gate = json.load(sys.stdin)["data"]
+assert gate["enabled"] is False and gate["codes"] == [], gate' \
+  || die "the entry gate on '${GATE_OPEN_ROUTE}' is not off with no code"
+export STUDIO_ENTRY_GATE_ROUTE="${GATE_ROUTE}"
+export STUDIO_ENTRY_GATE_OPEN_ROUTE="${GATE_OPEN_ROUTE}"
 
 # --- 7f. Seed the platform state store (the States screens) ------------------
 # One declared state, one uploaded template attached to it, a second typed template left
