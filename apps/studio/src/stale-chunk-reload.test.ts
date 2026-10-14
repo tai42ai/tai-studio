@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 
 /**
  * These tests exercise the global stale-chunk recovery in isolation. Each test
@@ -11,6 +11,8 @@ const RELOAD_AT_KEY = 'tai-stale-chunk-reload-at';
 let reloadSpy: ReturnType<typeof vi.fn>;
 /** Listeners the module registered this test, captured so we can remove them. */
 let registered: [string, EventListenerOrEventListenerObject][];
+/** The spy that captures those listeners. */
+let addEventListenerSpy: MockInstance<typeof window.addEventListener>;
 /** jsdom's own sessionStorage descriptor, restored after a test overrides it. */
 const originalSessionStorage = Object.getOwnPropertyDescriptor(window, 'sessionStorage');
 
@@ -50,14 +52,16 @@ beforeEach(() => {
   // Capture every listener the module installs so afterEach can remove it, and
   // prevent accumulation across the suite's repeated install() calls.
   const original = window.addEventListener.bind(window);
-  vi.spyOn(window, 'addEventListener').mockImplementation((type, listener, options) => {
-    registered.push([type, listener]);
-    original(type, listener, options);
-  });
+  addEventListenerSpy = vi
+    .spyOn(window, 'addEventListener')
+    .mockImplementation((type, listener, options) => {
+      registered.push([type, listener]);
+      original(type, listener, options);
+    });
 });
 
 afterEach(() => {
-  vi.mocked(window.addEventListener).mockRestore();
+  addEventListenerSpy.mockRestore();
   for (const [type, listener] of registered) window.removeEventListener(type, listener);
   // Restore jsdom's real sessionStorage if a test overrode it.
   if (originalSessionStorage !== undefined) {
