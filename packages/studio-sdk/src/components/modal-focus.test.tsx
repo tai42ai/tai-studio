@@ -13,7 +13,7 @@
 import { render, renderHook, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfirmDialog } from './confirm-dialog';
 import { Dialog } from './dialog';
@@ -241,5 +241,113 @@ describe('modal focus return without a trigger', () => {
     await waitFor(() => {
       expect(trigger).toHaveFocus();
     });
+  });
+});
+
+/**
+ * A page that opens a trigger-less modal from code — a deep link, a timer, a
+ * keyboard shortcut handled on the document — so nothing is focused when it
+ * opens, and that puts focus on a region of its own once the modal closes.
+ * The region's focus is scheduled the way a page reclaims focus after a close:
+ * on a 0 ms timer from `onOpenChange(false)`.
+ */
+function PageHost({ modal }: { modal: 'dialog' | 'drawer' }) {
+  const [open, setOpen] = useState(true);
+  const onOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) {
+      setTimeout(() => {
+        document.getElementById('region')?.focus();
+      }, 0);
+    }
+  };
+  return (
+    <div>
+      <section id="region" data-testid="region" tabIndex={-1} aria-label="Region">
+        <p>content</p>
+      </section>
+      {modal === 'dialog' ? (
+        <Dialog title="Details" open={open} onOpenChange={onOpenChange}>
+          <Button>Inside</Button>
+        </Dialog>
+      ) : (
+        <Drawer title="Details" open={open} onOpenChange={onOpenChange}>
+          <Button>Inside</Button>
+        </Drawer>
+      )}
+    </div>
+  );
+}
+
+describe('modal focus return when nothing was focused on open', () => {
+  beforeEach(() => {
+    // Every case starts from a page where nothing holds focus.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    document.documentElement.removeAttribute('tabindex');
+  });
+
+  it.each(['dialog', 'drawer'] as const)(
+    'leaves focus where the page put it after a %s closes',
+    async (modal) => {
+      const user = userEvent.setup();
+      expect(document.activeElement).toBe(document.body);
+      render(<PageHost modal={modal} />);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      const region = screen.getByTestId('region');
+      await waitFor(() => {
+        expect(activeDescription()).toBe('SECTION[data-testid=region]');
+      });
+      // Let every close-time timer run, then check focus stayed on the region.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(document.activeElement).toBe(region);
+      expect(document.documentElement).not.toHaveAttribute('tabindex');
+    },
+  );
+
+  it('leaves focus where the page put it when the document element held focus on open', async () => {
+    const user = userEvent.setup();
+    const html = document.documentElement;
+    html.setAttribute('tabindex', '-1');
+    html.focus();
+    expect(document.activeElement).toBe(html);
+    try {
+      render(<PageHost modal="dialog" />);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      const region = screen.getByTestId('region');
+      await waitFor(() => {
+        expect(activeDescription()).toBe('SECTION[data-testid=region]');
+      });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(document.activeElement).toBe(region);
+    } finally {
+      html.removeAttribute('tabindex');
+    }
+  });
+
+  it('leaves focus on <body> when nothing was focused and the page places none', async () => {
+    const user = userEvent.setup();
+    function BareHost() {
+      const [open, setOpen] = useState(true);
+      return (
+        <Dialog title="Details" open={open} onOpenChange={setOpen}>
+          <Button>Inside</Button>
+        </Dialog>
+      );
+    }
+    render(<BareHost />);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(document.activeElement).toBe(document.body);
+    expect(document.documentElement).not.toHaveAttribute('tabindex');
   });
 });
