@@ -27,13 +27,6 @@ function Harness({
   );
 }
 
-// Published-type gate: the props must be nameable from the package entry.
-const _props: OverlayDetailsFieldsProps = {
-  value: { displayName: '', tags: [] },
-  onChange: () => undefined,
-};
-void _props;
-
 describe('overlayDetailsPatch — the pinned display-name mapping', () => {
   it('maps a blank input to display_name: null (clear), never ""', () => {
     expect(overlayDetailsPatch({ displayName: '', tags: [] }).display_name).toBeNull();
@@ -58,6 +51,14 @@ describe('overlayDetailsPatch — the pinned display-name mapping', () => {
 });
 
 describe('OverlayDetailsFields', () => {
+  it('names its props type from the package entry', () => {
+    const props: OverlayDetailsFieldsProps = {
+      value: { displayName: '', tags: [] },
+      onChange: () => undefined,
+    };
+    expect(props.value).toEqual({ displayName: '', tags: [] });
+  });
+
   it('edits the display name through onChange, reflected in the patch', async () => {
     render(<Harness initial={{ displayName: '', tags: [] }} />);
     await userEvent.type(screen.getByLabelText('Display name'), 'Paris');

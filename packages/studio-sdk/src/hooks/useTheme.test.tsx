@@ -112,6 +112,11 @@ describe('useTheme', () => {
     expect(screen.getByTestId('preference')).toHaveTextContent('light');
   });
 
+  it('accepts each of the three documented preferences as a ThemePreference', () => {
+    const preferences: ThemePreference[] = ['light', 'dark', 'system'];
+    expect(preferences).toEqual(['light', 'dark', 'system']);
+  });
+
   it('throws when used outside a ThemeProvider', () => {
     expect(() => render(<ThemeConsumer />)).toThrow(/ThemeProvider/);
   });
@@ -188,7 +193,3 @@ describe('useTheme', () => {
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
   });
 });
-
-// A compile-time check that the union stays exactly the three documented values.
-const _preferences: ThemePreference[] = ['light', 'dark', 'system'];
-void _preferences;

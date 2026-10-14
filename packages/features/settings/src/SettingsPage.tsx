@@ -63,10 +63,9 @@ function SettingsLoading(): ReactNode {
   );
 }
 
-export function SettingsPage(props: PageProps<'settings'>): ReactNode {
-  // The settings route carries no search parameters; the props are part of the
-  // shared page contract but there is nothing to read from them here.
-  void props;
+// The settings route carries no search parameters; the props are part of the
+// shared page contract but there is nothing to read from them here.
+export function SettingsPage(_props: PageProps<'settings'>): ReactNode {
   const api = useApi();
   const { status, contributions } = usePluginContributions();
   const { state: capabilityState } = useCapabilities();

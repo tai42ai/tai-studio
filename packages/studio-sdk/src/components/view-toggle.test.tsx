@@ -31,6 +31,11 @@ describe('ViewToggle', () => {
 });
 
 describe('useViewMode', () => {
+  it('names the ViewMode type from the package entry', () => {
+    const mode: ViewMode = 'list';
+    expect(mode).toBe('list');
+  });
+
   it('returns the fallback when nothing is stored', () => {
     const { result } = renderHook(() => useViewMode('tools', 'cards'));
     expect(result.current[0]).toBe('cards');
@@ -72,7 +77,3 @@ describe('useViewMode', () => {
     setItem.mockRestore();
   });
 });
-
-// Type-level: the setter accepts exactly a ViewMode.
-const _mode: ViewMode = 'list';
-void _mode;
