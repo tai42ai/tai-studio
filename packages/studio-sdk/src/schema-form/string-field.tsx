@@ -117,7 +117,7 @@ export function StringField({
       ) : (
         <TextInput
           type={stringInputType(format)}
-          // A native date control enforces its inclusive bounds (scope C); on a
+          // A native date control enforces its inclusive bounds; on a
           // non-date input the browser ignores these, and the validator enforces the
           // rest (unavailable days, range span) that the control cannot draw.
           min={date?.min}

@@ -1,9 +1,9 @@
 /**
  * The single evaluator for a property's `visibleWhen` predicate — a static,
- * declarative field-visibility rule (scope B). The renderer (`ObjectFields`) and the
+ * declarative field-visibility rule. The renderer (`ObjectFields`) and the
  * validator both call it so a field shown by the form is exactly the field validated at
  * submit, and a hidden field is neither rendered nor required. It reads only sibling
- * values already in the object; it never calls a consumer handler (that is scope A).
+ * values already in the object; it never calls a consumer handler.
  *
  * A malformed predicate degrades to VISIBLE: the send-time server validation rejects a
  * malformed predicate loudly, so one never reaches a well-formed render, and showing a

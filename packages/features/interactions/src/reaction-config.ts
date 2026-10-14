@@ -1,5 +1,5 @@
 /**
- * The host-injected configuration for a form's on-change reaction round-trip (scope A),
+ * The host-injected configuration for a form's on-change reaction round-trip,
  * and the transport it uses when the host points it at its own door.
  *
  * WHY IT IS INJECTED: the reaction door differs PER SURFACE. The in-app Studio inbox

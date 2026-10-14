@@ -50,7 +50,7 @@ export function ObjectFields({
     <>
       {properties.map(([name, propSchema]) => {
         if (skip !== undefined && name === skip) return null;
-        // A field hidden by its `visibleWhen` predicate (scope B) is not rendered; the
+        // A field hidden by its `visibleWhen` predicate is not rendered; the
         // validator skips it in step, so a hidden field is neither shown nor required.
         if (!isFieldVisible(propSchema, obj)) return null;
         const childPath = path === '' ? name : `${path}.${name}`;

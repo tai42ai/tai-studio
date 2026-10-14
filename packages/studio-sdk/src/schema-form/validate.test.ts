@@ -237,7 +237,7 @@ describe('validateAgainstSchema — value/length/items bounds (parity with the s
   });
 });
 
-describe('validateAgainstSchema — date constraints (scope C)', () => {
+describe('validateAgainstSchema — date constraints', () => {
   const dateSchema = (extra: Partial<JsonSchema>): JsonSchema => ({
     type: 'object',
     properties: { day: { type: 'string', format: 'date', ...extra } },
@@ -284,7 +284,7 @@ describe('validateAgainstSchema — date constraints (scope C)', () => {
   });
 });
 
-describe('validateAgainstSchema — multi-select (scope E)', () => {
+describe('validateAgainstSchema — multi-select', () => {
   const multi: JsonSchema = {
     type: 'object',
     properties: {
@@ -305,7 +305,7 @@ describe('validateAgainstSchema — multi-select (scope E)', () => {
   });
 });
 
-describe('validateAgainstSchema — conditional fields (scope B)', () => {
+describe('validateAgainstSchema — conditional fields', () => {
   const schema: JsonSchema = {
     type: 'object',
     properties: {
