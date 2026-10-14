@@ -11,6 +11,24 @@
 export type JsonSchemaType =
   'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array' | 'null';
 
+/**
+ * The input KIND a `string` field collects, drawn as the matching keyboard or
+ * native control. The vocabulary is the HTML `inputmode`/control naming of the
+ * concept: `numeric`/`decimal` set a text box's keyboard hint; `tel`/`email`/`url`
+ * select the matching native control. It draws, it does not validate.
+ */
+export type FormInputMode = 'text' | 'numeric' | 'decimal' | 'tel' | 'email' | 'url';
+
+/**
+ * The CONTROL a surface draws for a property in place of the default for the
+ * property's shape. `chips` draws a choice (a `string` with an `enum`, or an
+ * `array` of such strings) as a tap-to-select chip grid instead of the
+ * radio/select or checkbox group. `textarea` draws a `string` as a multi-line
+ * text control instead of a single-line box. It changes what is DRAWN, never what
+ * is accepted — the value and its validation stay the property's own.
+ */
+export type FormControl = 'chips' | 'textarea';
+
 /** A Pydantic-style discriminated-union tag: which property selects the variant. */
 export interface Discriminator {
   readonly propertyName: string;
@@ -61,6 +79,26 @@ export interface JsonSchema {
   readonly minItems?: number;
   readonly maxItems?: number;
   readonly pattern?: string;
+  /**
+   * The input KIND a `string` field collects — a platform keyword (see {@link
+   * FormInputMode}). The renderer draws the matching keyboard or native control:
+   * `numeric`/`decimal` a text box with that keyboard hint (the value stays the
+   * typed string, so `"007"` keeps its leading zeros), `tel`/`email`/`url` the
+   * matching native control, `text` or absent a plain text box. It DRAWS, it does
+   * not validate — the answer door still enforces `type`, `pattern` and `format`.
+   * When present it OUTRANKS `format` for the control. A value outside the set is
+   * read as absent (the server ask door is the authority that refuses it).
+   */
+  readonly inputMode?: FormInputMode;
+  /**
+   * The CONTROL to draw for this property in place of its shape's default — a
+   * platform keyword (see {@link FormControl}). `chips` draws a `string`-with-`enum`
+   * or an `array` of such strings as a chip grid; `textarea` draws a `string` as a
+   * multi-line text control. It DRAWS, it does not validate — the answer door still
+   * enforces the property's `type`, `enum`, `maxLength` and the rest. A value outside
+   * the set is read as absent (the server ask door is the authority that refuses it).
+   */
+  readonly control?: FormControl;
   /**
    * Platform date-constraint keys on a `string`/`date` (or `date-time`) property. They
    * are NOT the JSON-Schema numeric keywords (which are inert on a string): `minDate`/
