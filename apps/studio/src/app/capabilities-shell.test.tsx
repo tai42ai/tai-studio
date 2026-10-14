@@ -156,6 +156,8 @@ describe('grouped nav structure', () => {
   it('leads with Dashboard, then renders the five sections in order with their headers', async () => {
     landAuthed();
     const nav = await screen.findByRole('navigation', { name: 'Primary' });
+    // The landmark mounts with the loading skeleton; the sections follow the projection.
+    await within(nav).findByRole('link', { name: 'Dashboard' });
 
     // The section headers appear in the approved order.
     const headers = Array.from(nav.querySelectorAll('.tai-nav-section-header')).map(
