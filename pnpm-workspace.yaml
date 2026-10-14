@@ -52,6 +52,15 @@ overrides:
   # baseline-browser-mapping data-integrity advisory in the 2.x line, patched at
   # 2.11.0. Dev-only, reached transitively through browserslist.
   'baseline-browser-mapping': '>=2.11.0'
+  # source-map-js indexed source-map section-offset DoS, patched at 1.2.2. Dev-only,
+  # reached transitively through vite -> postcss.
+  'source-map-js': '>=1.2.2'
+  # nanoid custom-generator infinite loop in the 3.x line, patched at 3.3.18. Dev-only,
+  # reached transitively through vite -> postcss.
+  'nanoid@3': '>=3.3.18 <4'
+  # handlebars JavaScript-injection advisories in the 4.x line, patched at 4.7.10.
+  # Dev-only, reached transitively through eslint-plugin-boundaries.
+  'handlebars@4': '>=4.7.10 <5'
 
 minimumReleaseAgeExclude:
   - '@tai42/jq-studio@0.1.0 || 0.1.1 || 0.1.2 || 0.1.3 || 0.1.6'
