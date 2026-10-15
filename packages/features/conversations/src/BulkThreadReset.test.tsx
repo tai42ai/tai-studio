@@ -48,7 +48,12 @@ function server() {
         return Promise.reject(new ApiError('thread has a turn in flight', 409));
       }
       present.delete(threadId);
-      return Promise.resolve({ removed: 1, route_name: ROUTE, thread_id: threadId });
+      return Promise.resolve({
+        removed: 1,
+        route_name: ROUTE,
+        thread_id: threadId,
+        states_erased: 0,
+      });
     }),
   };
   return {
