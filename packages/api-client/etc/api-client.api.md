@@ -1527,8 +1527,8 @@ const backupImportReport: z.ZodObject<{
                 error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 name: z.ZodString;
                 outcome: z.ZodEnum<{
-                    applied: "applied";
                     failed: "failed";
+                    applied: "applied";
                     missing: "missing";
                     departed: "departed";
                     timed_out: "timed_out";
@@ -1549,8 +1549,8 @@ const backupImportReport: z.ZodObject<{
                 error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 name: z.ZodString;
                 outcome: z.ZodEnum<{
-                    applied: "applied";
                     failed: "failed";
+                    applied: "applied";
                     missing: "missing";
                     departed: "departed";
                     timed_out: "timed_out";
@@ -1627,8 +1627,8 @@ const backupSectionReport: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -1649,8 +1649,8 @@ const backupSectionReport: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -2159,6 +2159,7 @@ const conversationFailedMessages: z.ZodObject<{
                 url: z.ZodString;
             }, z.core.$strict>], "kind">>>>;
             pages: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+                button_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 display: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     alt: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     kind: z.ZodEnum<{
@@ -2191,6 +2192,79 @@ const conversationFailedMessages: z.ZodObject<{
                 language: z.ZodString;
                 name: z.ZodString;
                 parameters: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+            }, z.core.$strict>>>;
+            wording: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                answer: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    confirm: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    decline: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    rejected: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    rejected_final: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    reply_hint: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    submit: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                answer_page: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    awaiting: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    confirm: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    done: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    form: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        choose_one: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        date_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        network_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        update_failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    submitted: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                }, z.core.$strict>>>;
+                choice: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    group_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    reply_hint: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                form: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    back: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    cancel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    fields: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
+                        choice_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    review_empty: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    submit: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    title: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                lines: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    answer_link: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    deadline: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    options: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    reply: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                status: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    answered: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    closed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    countdown: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        one_second_left: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        seconds_left: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        under_half_minute: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        under_minute: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        under_ten_seconds: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    expired: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    sending: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    sent: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
             }, z.core.$strict>>>;
         }, z.core.$strict>>>>;
         answer_status: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
@@ -2338,6 +2412,7 @@ const conversationMessage: z.ZodObject<{
             url: z.ZodString;
         }, z.core.$strict>], "kind">>>>;
         pages: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+            button_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             display: z.ZodDefault<z.ZodArray<z.ZodObject<{
                 alt: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 kind: z.ZodEnum<{
@@ -2370,6 +2445,79 @@ const conversationMessage: z.ZodObject<{
             language: z.ZodString;
             name: z.ZodString;
             parameters: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+        }, z.core.$strict>>>;
+        wording: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            answer: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                confirm: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                decline: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                rejected: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                rejected_final: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                reply_hint: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                submit: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strict>>>;
+            answer_page: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                awaiting: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                confirm: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                done: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                form: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    choose_one: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    date_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    network_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    update_failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                submitted: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+            }, z.core.$strict>>>;
+            choice: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                group_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                reply_hint: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strict>>>;
+            form: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                back: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                cancel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                fields: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
+                    choice_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                review_empty: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                submit: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                title: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strict>>>;
+            lines: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                answer_link: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                deadline: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                options: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                reply: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strict>>>;
+            status: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                answered: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                closed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                countdown: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    one_second_left: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    seconds_left: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    under_half_minute: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    under_minute: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    under_ten_seconds: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                expired: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                sending: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                sent: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strict>>>;
         }, z.core.$strict>>>;
     }, z.core.$strict>>>>;
     answer_status: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
@@ -2515,6 +2663,7 @@ const conversationMessageSearchPage: z.ZodObject<{
                 url: z.ZodString;
             }, z.core.$strict>], "kind">>>>;
             pages: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+                button_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 display: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     alt: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     kind: z.ZodEnum<{
@@ -2547,6 +2696,79 @@ const conversationMessageSearchPage: z.ZodObject<{
                 language: z.ZodString;
                 name: z.ZodString;
                 parameters: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+            }, z.core.$strict>>>;
+            wording: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                answer: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    confirm: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    decline: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    rejected: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    rejected_final: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    reply_hint: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    submit: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                answer_page: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    awaiting: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    confirm: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    done: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    form: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        choose_one: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        date_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        network_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        update_failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    submitted: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                }, z.core.$strict>>>;
+                choice: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    group_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    reply_hint: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                form: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    back: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    cancel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    fields: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
+                        choice_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    review_empty: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    submit: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    title: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                lines: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    answer_link: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    deadline: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    options: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    reply: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                status: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    answered: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    closed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    countdown: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        one_second_left: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        seconds_left: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        under_half_minute: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        under_minute: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        under_ten_seconds: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    expired: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    sending: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    sent: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
             }, z.core.$strict>>>;
         }, z.core.$strict>>>>;
         answer_status: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
@@ -3469,6 +3691,7 @@ const conversationTranscriptPage: z.ZodObject<{
                 url: z.ZodString;
             }, z.core.$strict>], "kind">>>>;
             pages: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
+                button_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 display: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     alt: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     kind: z.ZodEnum<{
@@ -3501,6 +3724,79 @@ const conversationTranscriptPage: z.ZodObject<{
                 language: z.ZodString;
                 name: z.ZodString;
                 parameters: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+            }, z.core.$strict>>>;
+            wording: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                answer: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    confirm: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    decline: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    rejected: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    rejected_final: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    reply_hint: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    submit: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                answer_page: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    awaiting: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    confirm: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    done: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    form: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        choose_one: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        date_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        network_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        update_failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    submitted: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                }, z.core.$strict>>>;
+                choice: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    group_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    reply_hint: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                form: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    back: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    cancel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    fields: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
+                        choice_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    review_empty: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    submit: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    title: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                lines: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    answer_link: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    deadline: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    options: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    reply: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
+                status: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    answered: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    closed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    countdown: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        one_second_left: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        seconds_left: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        under_half_minute: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        under_minute: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        under_ten_seconds: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    }, z.core.$strict>>>;
+                    expired: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    sending: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    sent: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strict>>>;
             }, z.core.$strict>>>;
         }, z.core.$strict>>>>;
         answer_status: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
@@ -4171,7 +4467,7 @@ export function createApiClient(config: ApiConfig): {
                     detail: string | null;
                     error: string | null;
                     name: string;
-                    outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                    outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                     payload: unknown;
                 }[];
                 mode: "fleet";
@@ -4184,7 +4480,7 @@ export function createApiClient(config: ApiConfig): {
                     detail: string | null;
                     error: string | null;
                     name: string;
-                    outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                    outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                     payload: unknown;
                 }[];
                 mode: "unreachable";
@@ -5020,6 +5316,7 @@ export function createApiClient(config: ApiConfig): {
                     text: string;
                 })[] | null;
                 pages: {
+                    button_label: string | null;
                     display: {
                         alt: string | null;
                         kind: "heading" | "body" | "image";
@@ -5045,6 +5342,79 @@ export function createApiClient(config: ApiConfig): {
                     language: string;
                     name: string;
                     parameters: Record<string, unknown> | null;
+                } | null;
+                wording: {
+                    answer: {
+                        confirm: string | null;
+                        decline: string | null;
+                        open: string | null;
+                        rejected: string | null;
+                        rejected_final: string | null;
+                        reply_hint: string | null;
+                        submit: string | null;
+                    } | null;
+                    answer_page: {
+                        awaiting: {
+                            heading: string | null;
+                            text: string | null;
+                        } | null;
+                        confirm: {
+                            heading: string | null;
+                            text: string | null;
+                        } | null;
+                        done: {
+                            heading: string | null;
+                            text: string | null;
+                        } | null;
+                        form: {
+                            choose_one: string | null;
+                            date_unavailable: string | null;
+                            failed: string | null;
+                            network_error: string | null;
+                            update_failed: string | null;
+                        } | null;
+                        submitted: {
+                            heading: string | null;
+                            text: string | null;
+                        } | null;
+                    } | null;
+                    choice: {
+                        group_label: string | null;
+                        label: string | null;
+                        reply_hint: string | null;
+                    } | null;
+                    form: {
+                        back: string | null;
+                        cancel: string | null;
+                        fields: Record<string, {
+                            choice_label: string | null;
+                        }>;
+                        open: string | null;
+                        review_empty: string | null;
+                        submit: string | null;
+                        title: string | null;
+                    } | null;
+                    lines: {
+                        answer_link: string | null;
+                        deadline: string | null;
+                        options: string | null;
+                        reply: string | null;
+                    } | null;
+                    status: {
+                        answered: string | null;
+                        closed: string | null;
+                        countdown: {
+                            one_second_left: string | null;
+                            seconds_left: string | null;
+                            under_half_minute: string | null;
+                            under_minute: string | null;
+                            under_ten_seconds: string | null;
+                        } | null;
+                        expired: string | null;
+                        sending: string | null;
+                        sent: string | null;
+                        unavailable: string | null;
+                    } | null;
                 } | null;
             }[] | null;
             answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
@@ -5141,6 +5511,7 @@ export function createApiClient(config: ApiConfig): {
                     text: string;
                 })[] | null;
                 pages: {
+                    button_label: string | null;
                     display: {
                         alt: string | null;
                         kind: "heading" | "body" | "image";
@@ -5166,6 +5537,79 @@ export function createApiClient(config: ApiConfig): {
                     language: string;
                     name: string;
                     parameters: Record<string, unknown> | null;
+                } | null;
+                wording: {
+                    answer: {
+                        confirm: string | null;
+                        decline: string | null;
+                        open: string | null;
+                        rejected: string | null;
+                        rejected_final: string | null;
+                        reply_hint: string | null;
+                        submit: string | null;
+                    } | null;
+                    answer_page: {
+                        awaiting: {
+                            heading: string | null;
+                            text: string | null;
+                        } | null;
+                        confirm: {
+                            heading: string | null;
+                            text: string | null;
+                        } | null;
+                        done: {
+                            heading: string | null;
+                            text: string | null;
+                        } | null;
+                        form: {
+                            choose_one: string | null;
+                            date_unavailable: string | null;
+                            failed: string | null;
+                            network_error: string | null;
+                            update_failed: string | null;
+                        } | null;
+                        submitted: {
+                            heading: string | null;
+                            text: string | null;
+                        } | null;
+                    } | null;
+                    choice: {
+                        group_label: string | null;
+                        label: string | null;
+                        reply_hint: string | null;
+                    } | null;
+                    form: {
+                        back: string | null;
+                        cancel: string | null;
+                        fields: Record<string, {
+                            choice_label: string | null;
+                        }>;
+                        open: string | null;
+                        review_empty: string | null;
+                        submit: string | null;
+                        title: string | null;
+                    } | null;
+                    lines: {
+                        answer_link: string | null;
+                        deadline: string | null;
+                        options: string | null;
+                        reply: string | null;
+                    } | null;
+                    status: {
+                        answered: string | null;
+                        closed: string | null;
+                        countdown: {
+                            one_second_left: string | null;
+                            seconds_left: string | null;
+                            under_half_minute: string | null;
+                            under_minute: string | null;
+                            under_ten_seconds: string | null;
+                        } | null;
+                        expired: string | null;
+                        sending: string | null;
+                        sent: string | null;
+                        unavailable: string | null;
+                    } | null;
                 } | null;
             }[] | null;
             answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
@@ -5433,6 +5877,7 @@ export function createApiClient(config: ApiConfig): {
                     text: string;
                 })[] | null;
                 pages: {
+                    button_label: string | null;
                     display: {
                         alt: string | null;
                         kind: "heading" | "body" | "image";
@@ -5458,6 +5903,79 @@ export function createApiClient(config: ApiConfig): {
                     language: string;
                     name: string;
                     parameters: Record<string, unknown> | null;
+                } | null;
+                wording: {
+                    answer: {
+                        confirm: string | null;
+                        decline: string | null;
+                        open: string | null;
+                        rejected: string | null;
+                        rejected_final: string | null;
+                        reply_hint: string | null;
+                        submit: string | null;
+                    } | null;
+                    answer_page: {
+                        awaiting: {
+                            heading: string | null;
+                            text: string | null;
+                        } | null;
+                        confirm: {
+                            heading: string | null;
+                            text: string | null;
+                        } | null;
+                        done: {
+                            heading: string | null;
+                            text: string | null;
+                        } | null;
+                        form: {
+                            choose_one: string | null;
+                            date_unavailable: string | null;
+                            failed: string | null;
+                            network_error: string | null;
+                            update_failed: string | null;
+                        } | null;
+                        submitted: {
+                            heading: string | null;
+                            text: string | null;
+                        } | null;
+                    } | null;
+                    choice: {
+                        group_label: string | null;
+                        label: string | null;
+                        reply_hint: string | null;
+                    } | null;
+                    form: {
+                        back: string | null;
+                        cancel: string | null;
+                        fields: Record<string, {
+                            choice_label: string | null;
+                        }>;
+                        open: string | null;
+                        review_empty: string | null;
+                        submit: string | null;
+                        title: string | null;
+                    } | null;
+                    lines: {
+                        answer_link: string | null;
+                        deadline: string | null;
+                        options: string | null;
+                        reply: string | null;
+                    } | null;
+                    status: {
+                        answered: string | null;
+                        closed: string | null;
+                        countdown: {
+                            one_second_left: string | null;
+                            seconds_left: string | null;
+                            under_half_minute: string | null;
+                            under_minute: string | null;
+                            under_ten_seconds: string | null;
+                        } | null;
+                        expired: string | null;
+                        sending: string | null;
+                        sent: string | null;
+                        unavailable: string | null;
+                    } | null;
                 } | null;
             }[] | null;
             answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
@@ -5629,7 +6147,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -5642,7 +6160,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -5663,7 +6181,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -5676,7 +6194,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -5719,7 +6237,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -5732,7 +6250,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -5817,7 +6335,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -5830,7 +6348,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -5839,7 +6357,7 @@ export function createApiClient(config: ApiConfig): {
     readonly disconnect: (id: string) => Promise<{
         connection_id: string;
         removed_manifest_entries: string[];
-        upstream_revoke_outcome: "success" | "skipped" | "failed";
+        upstream_revoke_outcome: "success" | "failed" | "skipped";
         upstream_revoke_status: number | null;
         fanout: {
             mode: "local-only";
@@ -5853,7 +6371,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -5866,7 +6384,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -5896,7 +6414,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -5909,7 +6427,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -5939,7 +6457,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -5952,7 +6470,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -5996,7 +6514,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -6009,7 +6527,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -6095,7 +6613,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -6108,7 +6626,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -6180,7 +6698,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -6193,7 +6711,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -6213,7 +6731,7 @@ export function createApiClient(config: ApiConfig): {
             detail: string | null;
             error: string | null;
             name: string;
-            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
         }[];
     }>;
@@ -6281,7 +6799,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -6294,7 +6812,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -6326,7 +6844,7 @@ export function createApiClient(config: ApiConfig): {
             detail: string | null;
             error: string | null;
             name: string;
-            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
         }[];
     }>;
@@ -6368,7 +6886,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -6381,7 +6899,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -6425,7 +6943,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -6438,7 +6956,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -6482,7 +7000,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -6495,7 +7013,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -6539,7 +7057,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -6552,7 +7070,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -6596,7 +7114,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -6609,7 +7127,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -6625,7 +7143,7 @@ export function createApiClient(config: ApiConfig): {
             detail: string | null;
             error: string | null;
             name: string;
-            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
         }[];
     }>;
@@ -6639,7 +7157,7 @@ export function createApiClient(config: ApiConfig): {
             detail: string | null;
             error: string | null;
             name: string;
-            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
         }[];
     }>;
@@ -6653,7 +7171,7 @@ export function createApiClient(config: ApiConfig): {
             detail: string | null;
             error: string | null;
             name: string;
-            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
         }[];
     }>;
@@ -6794,7 +7312,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "fleet";
@@ -6807,7 +7325,7 @@ export function createApiClient(config: ApiConfig): {
                 detail: string | null;
                 error: string | null;
                 name: string;
-                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
             }[];
             mode: "unreachable";
@@ -6845,7 +7363,7 @@ export function createApiClient(config: ApiConfig): {
             detail: string | null;
             error: string | null;
             name: string;
-            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
         }[];
     }>;
@@ -7459,7 +7977,7 @@ export function createApiClient(config: ApiConfig): {
     readonly retryPendingSave: (id: string) => Promise<{
         id: string;
         last_error: string | null;
-        status: "running" | "applied" | "failed" | "calls" | "pending";
+        status: "running" | "failed" | "applied" | "calls" | "pending";
     }>;
     readonly discardPendingSave: (id: string) => Promise<{
         discarded: string;
@@ -7845,7 +8363,7 @@ export function createApiClient(config: ApiConfig): {
             detail: string | null;
             error: string | null;
             name: string;
-            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
         }[];
     }>;
@@ -7859,7 +8377,7 @@ export function createApiClient(config: ApiConfig): {
             detail: string | null;
             error: string | null;
             name: string;
-            outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
         }[];
     }>;
@@ -8050,8 +8568,8 @@ const disconnectResult: z.ZodObject<{
     removed_manifest_entries: z.ZodArray<z.ZodString>;
     upstream_revoke_outcome: z.ZodEnum<{
         success: "success";
-        skipped: "skipped";
         failed: "failed";
+        skipped: "skipped";
     }>;
     upstream_revoke_status: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     fanout: z.ZodDefault<z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
@@ -8067,8 +8585,8 @@ const disconnectResult: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -8089,8 +8607,8 @@ const disconnectResult: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -8218,8 +8736,8 @@ export type FleetOutcome = z.infer<typeof fleetOutcome>;
 
 // @public
 const fleetOutcome: z.ZodEnum<{
-    applied: "applied";
     failed: "failed";
+    applied: "applied";
     missing: "missing";
     departed: "departed";
     timed_out: "timed_out";
@@ -8243,8 +8761,8 @@ const fleetReloadResult: z.ZodObject<{
         error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            applied: "applied";
             failed: "failed";
+            applied: "applied";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
@@ -8273,8 +8791,8 @@ const fleetReportFanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
         error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            applied: "applied";
             failed: "failed";
+            applied: "applied";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
@@ -8295,8 +8813,8 @@ const fleetReportFanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
         error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            applied: "applied";
             failed: "failed";
+            applied: "applied";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
@@ -8337,8 +8855,8 @@ const fleetResult: z.ZodObject<{
         error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            applied: "applied";
             failed: "failed";
+            applied: "applied";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
@@ -8403,8 +8921,8 @@ const fleetWorkerResult: z.ZodObject<{
     error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     name: z.ZodString;
     outcome: z.ZodEnum<{
-        applied: "applied";
         failed: "failed";
+        applied: "applied";
         missing: "missing";
         departed: "departed";
         timed_out: "timed_out";
@@ -10118,8 +10636,8 @@ const mcpReloadResult: z.ZodObject<{
         error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            applied: "applied";
             failed: "failed";
+            applied: "applied";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
@@ -10483,8 +11001,8 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<[z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -10505,8 +11023,8 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<[z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -10633,8 +11151,8 @@ const patchSubServicesResult: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -10655,8 +11173,8 @@ const patchSubServicesResult: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -10734,8 +11252,8 @@ const pendingSaveRetried: z.ZodObject<{
     last_error: z.ZodNullable<z.ZodString>;
     status: z.ZodEnum<{
         running: "running";
-        applied: "applied";
         failed: "failed";
+        applied: "applied";
         calls: "calls";
         pending: "pending";
     }>;
@@ -11349,8 +11867,8 @@ const profileApplyResponse: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -11371,8 +11889,8 @@ const profileApplyResponse: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -11445,8 +11963,8 @@ const providerMutationResult: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -11467,8 +11985,8 @@ const providerMutationResult: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -11728,8 +12246,8 @@ const reloadConfigResult: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -11750,8 +12268,8 @@ const reloadConfigResult: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -11785,8 +12303,8 @@ const removeProviderResult: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -11807,8 +12325,8 @@ const removeProviderResult: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -19879,8 +20397,8 @@ const startConnectResult: z.ZodUnion<readonly [z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -19901,8 +20419,8 @@ const startConnectResult: z.ZodUnion<readonly [z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -21285,8 +21803,8 @@ const toolExtensionsApplyResult: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -21307,8 +21825,8 @@ const toolExtensionsApplyResult: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                applied: "applied";
                 failed: "failed";
+                applied: "applied";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
