@@ -31,9 +31,31 @@ const INBOUND_TURN_KEYS = [
   { name: 'sender', gloss: 'the caller / end-user address the turn came from' },
   { name: 'our_identity', gloss: 'the identity the medium reached us at (null on the api door)' },
   { name: 'channel', gloss: 'the channel name (null on the api door)' },
+  {
+    name: 'route',
+    gloss:
+      'the name of the route the turn entered through, so a flow bound to several routes can tell them apart',
+  },
+  { name: 'thread_id', gloss: "the turn's canonical thread id (the thread doors' id)" },
   { name: 'person_id', gloss: 'the linked person id, when the sender is a paired person' },
   { name: 'person_addresses', gloss: "the linked person's known addresses, when paired" },
   { name: 'params', gloss: 'opaque caller-supplied entry params, when present' },
+  {
+    name: 'form',
+    gloss: 'a structured form submission, present only when the inbound carried one',
+  },
+  {
+    name: 'form_tag',
+    gloss: 'the caller-set opaque per-send form tag, present only when the submission carried one',
+  },
+  {
+    name: 'attachments',
+    gloss: 'inbound media the participant sent, present only when the inbound carried some',
+  },
+  {
+    name: 'location',
+    gloss: 'a geographic point the participant shared, present only when the inbound carried one',
+  },
   {
     name: 'messages',
     gloss:
@@ -43,6 +65,11 @@ const INBOUND_TURN_KEYS = [
     name: 'superseded',
     gloss:
       "under deliver: all, the earlier messages this turn's lead superseded or carried, oldest first — each in the same shape as messages, present only when non-empty",
+  },
+  { name: 'turn', gloss: 'the turn ids: {id, inbound: {id, kind, source}}' },
+  {
+    name: 'event',
+    gloss: "an event turn's structured payload {id, kind, payload}; absent on a message turn",
   },
 ] as const;
 
