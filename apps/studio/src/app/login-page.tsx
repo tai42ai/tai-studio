@@ -4,10 +4,11 @@
  * — around the permanent key-paste fallback. When no accounts plugin is
  * installed the methods list is empty and the screen is exactly the key-paste
  * form: the operator pastes a full-privilege API key provisioned on the
- * skeleton. The key/session token is held IN MEMORY by default; an explicit
- * "remember on this device" opt-in persists it to sessionStorage (never
- * localStorage — the SDK `useAuth` owns that policy; this screen only calls
- * `login`).
+ * skeleton. A pasted key is VERIFIED against `GET /api/auth/me` before it is
+ * accepted, so a wrong key surfaces an inline error instead of a dead end. The
+ * key/session token is held IN MEMORY by default; an explicit "remember on this
+ * device" opt-in persists it to sessionStorage (never localStorage — the SDK
+ * `useAuth` owns that policy, driven here only through the sign-in hooks).
  *
  * On authentication the screen navigates to `returnTo` — the location the
  * operator originally requested (the returnTo pin) — defaulting to `/`, where the
@@ -15,8 +16,9 @@
  * runs from an effect keyed on `isAuthenticated`, so the router's injected auth
  * context has already flipped before the guarded destination re-evaluates.
  *
- * Method discovery, the SSO hand-back, and the claim hand-off run in dedicated
- * hooks; the method/notice/key-paste views are their own components. The renderer
+ * Method discovery, the SSO hand-back, the claim hand-off, and the key-paste
+ * verification each run in a dedicated hook; the method/notice/key-paste views are
+ * their own components. The renderer
  * HARDENS the metadata it consumes: a method's target must be a same-origin
  * relative `/api/` path (checked in the method view) or it renders a loud error
  * card instead of a credential-leaking off-origin request.
@@ -30,6 +32,7 @@ import { SIGN_OUT_NOTICE, visibleMethods } from './login-methods';
 import { SetupEntry } from './setup-entry';
 import { SIGN_OUT_NOTICE_KEY } from './sign-out-notice';
 import { useClaimLogin } from './use-claim-login';
+import { useKeyLogin } from './use-key-login';
 import { useLoginForm } from './use-login-form';
 import { useLoginMethods } from './use-login-methods';
 import { useSsoExchange } from './use-sso-exchange';
@@ -43,7 +46,7 @@ export function LoginPage({
   ssoCode?: string;
   inviteToken?: string;
 }): ReactNode {
-  const { login, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { theme } = useTheme();
   const navigate = useNavigate();
   // The brand mark, matched to the active theme: the light mark's gradient runs to
@@ -74,6 +77,10 @@ export function LoginPage({
     onFailure: () => {
       setKeyPasteOpen(true);
     },
+  });
+  const { submitting: keySubmitting, submitKey } = useKeyLogin({
+    remember,
+    onError: setLoginError,
   });
 
   useEffect(() => {
@@ -127,6 +134,11 @@ export function LoginPage({
             onKeyPasteOpen={() => {
               setKeyPasteOpen(true);
             }}
+            keyError={loginError}
+            keySubmitting={keySubmitting}
+            onKeySubmit={() => {
+              void submitKey(key);
+            }}
           />
         ) : (
           <>
@@ -167,13 +179,12 @@ export function LoginPage({
               expanded={keyPasteExpanded}
               keyValue={key}
               onKeyChange={setKey}
+              submitting={keySubmitting}
               onOpen={() => {
                 setKeyPasteOpen(true);
               }}
               onSubmit={() => {
-                const trimmed = key.trim();
-                if (trimmed === '') return;
-                login(trimmed, remember);
+                void submitKey(key);
               }}
             />
           </>
