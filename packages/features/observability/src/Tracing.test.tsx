@@ -371,6 +371,40 @@ describe('TracingTab — runs table', () => {
 
     expect(await screen.findByTestId('observability-read-not-supported')).toBeInTheDocument();
   });
+
+  it('renders the backend guidance inline on a too-broad 400 — never the marketplace pitch', async () => {
+    const client: StubApiClient = {
+      listRuns: vi
+        .fn()
+        .mockRejectedValue(
+          new ApiError('Narrow the time range to under 7 days.', 400, 'monitoring-read-too-broad'),
+        ),
+    };
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
+      client: tracing(client),
+    });
+
+    const notice = await screen.findByTestId('observability-read-too-broad');
+    // The backend's exact words are shown, never masked as an empty "No runs".
+    expect(notice).toHaveTextContent('Narrow the time range to under 7 days.');
+    expect(screen.queryByTestId('observability-read-not-supported')).not.toBeInTheDocument();
+    expect(screen.queryByText('No runs match the current filters.')).not.toBeInTheDocument();
+    // The filters stay on screen so the reader can narrow and retry.
+    expect(screen.getByLabelText('Run time range')).toBeInTheDocument();
+  });
+
+  it('shows the empty "No runs match" state when the filters match nothing', async () => {
+    const client: StubApiClient = {
+      listRuns: vi.fn().mockResolvedValue({ items: [], page: 1, nextPage: null }),
+    };
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
+      client: tracing(client),
+    });
+
+    expect(await screen.findByText('No runs match the current filters.')).toBeInTheDocument();
+    expect(screen.queryByTestId('observability-read-too-broad')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('observability-read-not-supported')).not.toBeInTheDocument();
+  });
 });
 
 describe('TracingTab — trace view', () => {
