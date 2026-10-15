@@ -790,6 +790,10 @@ export const servedDocumentsJson = {
                   "name": "channel"
                 },
                 {
+                  "gloss": "the name of the conversation route the turn entered through",
+                  "name": "route"
+                },
+                {
                   "gloss": "the turn's canonical thread id (the thread doors' id)",
                   "name": "thread_id"
                 },
@@ -1184,6 +1188,10 @@ export const servedDocumentsJson = {
                 {
                   "gloss": "door=channel: the registry channel name",
                   "name": "channel"
+                },
+                {
+                  "gloss": "the name of the conversation route the turn entered through",
+                  "name": "route"
                 },
                 {
                   "gloss": "the turn's canonical thread id (the thread doors' id)",
@@ -1675,6 +1683,10 @@ export const servedDocumentsJson = {
                   "name": "channel"
                 },
                 {
+                  "gloss": "the name of the conversation route the turn entered through",
+                  "name": "route"
+                },
+                {
                   "gloss": "the turn's canonical thread id (the thread doors' id)",
                   "name": "thread_id"
                 },
@@ -2057,6 +2069,10 @@ export const servedDocumentsJson = {
                 {
                   "gloss": "door=channel: the registry channel name",
                   "name": "channel"
+                },
+                {
+                  "gloss": "the name of the conversation route the turn entered through",
+                  "name": "route"
                 },
                 {
                   "gloss": "the turn's canonical thread id (the thread doors' id)",

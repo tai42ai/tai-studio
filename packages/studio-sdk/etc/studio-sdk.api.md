@@ -2422,12 +2422,14 @@ unreadable: number;
 readonly deleteConversationThread: (routeName: string, threadId: string) => Promise<{
 removed: number;
 route_name: string;
+states_erased: number;
 thread_id: string;
 }>;
 readonly deleteConversationPerson: (personId: string) => Promise<{
 erased: boolean;
 person_id: string;
 removed: number;
+states_erased: number;
 }>;
 readonly listChannels: (signal?: AbortSignal) => Promise<{
 channels: string[];
@@ -6818,6 +6820,7 @@ const conversationPersonDeleted: z.ZodObject<{
     erased: z.ZodBoolean;
     person_id: z.ZodString;
     removed: z.ZodNumber;
+    states_erased: z.ZodNumber;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -7478,6 +7481,7 @@ type ConversationThreadDeleted = z.infer<typeof conversationThreadDeleted>;
 const conversationThreadDeleted: z.ZodObject<{
     removed: z.ZodNumber;
     route_name: z.ZodString;
+    states_erased: z.ZodNumber;
     thread_id: z.ZodString;
 }, z.core.$strip>;
 
@@ -9983,12 +9987,14 @@ function createApiClient(config: ApiConfig): {
     readonly deleteConversationThread: (routeName: string, threadId: string) => Promise<{
         removed: number;
         route_name: string;
+        states_erased: number;
         thread_id: string;
     }>;
     readonly deleteConversationPerson: (personId: string) => Promise<{
         erased: boolean;
         person_id: string;
         removed: number;
+        states_erased: number;
     }>;
     readonly listChannels: (signal?: AbortSignal) => Promise<{
         channels: string[];
@@ -19801,6 +19807,9 @@ const servedDocumentsJson: {
                                 readonly gloss: "door=channel: the registry channel name";
                                 readonly name: "channel";
                             }, {
+                                readonly gloss: "the name of the conversation route the turn entered through";
+                                readonly name: "route";
+                            }, {
                                 readonly gloss: "the turn's canonical thread id (the thread doors' id)";
                                 readonly name: "thread_id";
                             }, {
@@ -20108,6 +20117,9 @@ const servedDocumentsJson: {
                             }, {
                                 readonly gloss: "door=channel: the registry channel name";
                                 readonly name: "channel";
+                            }, {
+                                readonly gloss: "the name of the conversation route the turn entered through";
+                                readonly name: "route";
                             }, {
                                 readonly gloss: "the turn's canonical thread id (the thread doors' id)";
                                 readonly name: "thread_id";
@@ -20490,6 +20502,9 @@ const servedDocumentsJson: {
                                 readonly gloss: "door=channel: the registry channel name";
                                 readonly name: "channel";
                             }, {
+                                readonly gloss: "the name of the conversation route the turn entered through";
+                                readonly name: "route";
+                            }, {
                                 readonly gloss: "the turn's canonical thread id (the thread doors' id)";
                                 readonly name: "thread_id";
                             }, {
@@ -20786,6 +20801,9 @@ const servedDocumentsJson: {
                             }, {
                                 readonly gloss: "door=channel: the registry channel name";
                                 readonly name: "channel";
+                            }, {
+                                readonly gloss: "the name of the conversation route the turn entered through";
+                                readonly name: "route";
                             }, {
                                 readonly gloss: "the turn's canonical thread id (the thread doors' id)";
                                 readonly name: "thread_id";

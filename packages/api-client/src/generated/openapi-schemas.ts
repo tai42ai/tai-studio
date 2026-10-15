@@ -682,7 +682,7 @@ export type PersonAddress = z.infer<typeof personAddress>;
 export const person = z.object({ "addresses": z.array(personAddress).min(1), "created_at": z.string(), "locale": z.string().nullable().default(null), "person_id": z.string().min(1), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1) });
 export type Person = z.infer<typeof person>;
 
-export const personDeleteResult = z.object({ "erased": z.boolean(), "person_id": z.string(), "removed": z.number().int() });
+export const personDeleteResult = z.object({ "erased": z.boolean(), "person_id": z.string(), "removed": z.number().int(), "states_erased": z.number().int() });
 export type PersonDeleteResult = z.infer<typeof personDeleteResult>;
 
 export const policyRollback = z.object({ "version": z.number().int() });
@@ -1159,7 +1159,7 @@ export type TemplateUpload = z.infer<typeof templateUpload>;
 export const templateUploadResult = z.object({ "fanout": fanoutSummary, "path": z.string(), "uploaded": z.boolean() });
 export type TemplateUploadResult = z.infer<typeof templateUploadResult>;
 
-export const threadDeleteResult = z.object({ "removed": z.number().int(), "route_name": z.string(), "thread_id": z.string() });
+export const threadDeleteResult = z.object({ "removed": z.number().int(), "route_name": z.string(), "states_erased": z.number().int(), "thread_id": z.string() });
 export type ThreadDeleteResult = z.infer<typeof threadDeleteResult>;
 
 export const threadMessageAck = z.object({ "message_id": z.string(), "thread_id": z.string() });
