@@ -871,7 +871,12 @@ describe('conversation thread delete transport', () => {
   it('DELETEs the thread door with the thread id as a QUERY value, encoded once', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: { removed: 3, route_name: 'chat', thread_id: 'svc-chat/+15551234567' },
+        data: {
+          removed: 3,
+          route_name: 'chat',
+          states_erased: 1,
+          thread_id: 'svc-chat/+15551234567',
+        },
       }),
     );
     const out = await client.deleteConversationThread('chat', 'svc-chat/+15551234567');
@@ -885,7 +890,12 @@ describe('conversation thread delete transport', () => {
   it('encodes an already-encoded principal in the thread id exactly once', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: { removed: 0, route_name: 'chat', thread_id: 'bridge:chat:user%40example.com/u1' },
+        data: {
+          removed: 0,
+          route_name: 'chat',
+          states_erased: 0,
+          thread_id: 'bridge:chat:user%40example.com/u1',
+        },
       }),
     );
     await client.deleteConversationThread('chat', 'bridge:chat:user%40example.com/u1');
@@ -896,7 +906,7 @@ describe('conversation thread delete transport', () => {
 
   it('encodes a route name that is not URL-safe', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { removed: 0, route_name: 'a b/c', thread_id: 't' } }),
+      jsonResponse({ data: { removed: 0, route_name: 'a b/c', states_erased: 0, thread_id: 't' } }),
     );
     await client.deleteConversationThread('a b/c', 't');
     expect(captured[0]?.url).toBe('/api/conversations/a%20b%2Fc/thread?thread_id=t');
@@ -915,7 +925,7 @@ describe('conversation thread delete transport', () => {
 describe('conversation person delete transport', () => {
   it('DELETEs the person door with the id on the PATH and unwraps the reply', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { person_id: 'p-123', removed: 4, erased: true } }),
+      jsonResponse({ data: { person_id: 'p-123', removed: 4, erased: true, states_erased: 2 } }),
     );
     const out = await client.deleteConversationPerson('p-123');
     expect(captured[0]?.method).toBe('DELETE');
@@ -926,7 +936,7 @@ describe('conversation person delete transport', () => {
 
   it('answers erased=false on an already-gone person (a retry, never a 404)', async () => {
     const { client } = harness(() =>
-      jsonResponse({ data: { person_id: 'p-123', removed: 0, erased: false } }),
+      jsonResponse({ data: { person_id: 'p-123', removed: 0, erased: false, states_erased: 0 } }),
     );
     const out = await client.deleteConversationPerson('p-123');
     expect(out.erased).toBe(false);
