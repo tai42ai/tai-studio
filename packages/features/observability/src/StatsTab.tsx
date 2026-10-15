@@ -3,7 +3,8 @@
  * by-model breakdown, all sourced from `getObservabilityMetrics(from,to,
  * granularity)`. A "View runs" action drills through to the tracing tab carrying
  * the current filter set in the URL. A 501 from the reader renders the dedicated
- * read-not-supported state; every other failure is a loud, visible error.
+ * read-not-supported state; a too-broad refusal renders the backend's guidance
+ * inline beside the range picker; every other failure is a loud, visible error.
  */
 import type { DashboardMetrics } from '@tai42/api-client';
 import {
@@ -38,7 +39,12 @@ import {
   formatTokenCount,
 } from './format';
 import { metricsKey } from './keys';
-import { isReadNotSupported, ReadNotSupported } from './read-support';
+import {
+  isReadNotSupported,
+  isReadTooBroad,
+  ReadNotSupported,
+  ReadTooBroadNotice,
+} from './read-support';
 
 type TrendMetric = 'runs' | 'cost' | 'avgLatencyMs' | 'totalTokens';
 
@@ -219,6 +225,11 @@ export function StatsTab({ search }: { readonly search: ObservabilitySearch }): 
           <Skeleton height={96} />
           <Skeleton height={160} />
         </div>
+      ) : isReadTooBroad(query.error) ? (
+        // A considered "too broad" refusal: the backend can read, this window is
+        // just too wide. Show its exact guidance inline with the range picker still
+        // above — never the marketplace pitch, never a blanked dashboard.
+        <ReadTooBroadNotice message={errorMessage(query.error)} />
       ) : query.isError ? (
         <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
       ) : (

@@ -360,6 +360,21 @@ describe('TraceView', () => {
     expect(await screen.findByTestId('observability-read-not-supported')).toBeInTheDocument();
   });
 
+  it('renders the backend guidance inline on a too-broad 400 — never the marketplace pitch', async () => {
+    const client: StubApiClient = {
+      getRunTrace: vi
+        .fn()
+        .mockRejectedValue(
+          new ApiError('Narrow the time range to under 7 days.', 400, 'monitoring-read-too-broad'),
+        ),
+    };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    const notice = await screen.findByTestId('observability-read-too-broad');
+    expect(notice).toHaveTextContent('Narrow the time range to under 7 days.');
+    expect(screen.queryByTestId('observability-read-not-supported')).not.toBeInTheDocument();
+  });
+
   it('renders a 404 as a not-available state, never a retry-forever error', async () => {
     const client: StubApiClient = {
       getRunTrace: vi.fn().mockRejectedValue(new ApiError('trace not found', 404)),

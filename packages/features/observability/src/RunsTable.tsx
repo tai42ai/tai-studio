@@ -28,7 +28,12 @@ import { type ReactNode, useState } from 'react';
 
 import { FilterBar } from './FilterBar';
 import { mergeSearch, type ObservabilitySearch } from './filters';
-import { isReadNotSupported, ReadNotSupported } from './read-support';
+import {
+  isReadNotSupported,
+  isReadTooBroad,
+  ReadNotSupported,
+  ReadTooBroadNotice,
+} from './read-support';
 import { RunRow } from './RunRow';
 import { RunsPagination } from './RunsPagination';
 import { SortableHeader } from './SortableHeader';
@@ -93,6 +98,11 @@ export function RunsTable({
           <Skeleton height={32} />
           <Skeleton height={32} />
         </div>
+      ) : isReadTooBroad(query.error) ? (
+        // A considered "too broad" refusal: the backend can read, the filters just
+        // ask for too wide a window. Show its exact guidance inline with the filters
+        // still above — never the marketplace pitch, never an empty "No runs".
+        <ReadTooBroadNotice message={errorMessage(query.error)} />
       ) : query.isLoadingError ? (
         // Only the INITIAL-load failure (no pages retained) blanks the table.
         <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />

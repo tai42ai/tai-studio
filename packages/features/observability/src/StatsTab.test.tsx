@@ -172,6 +172,23 @@ describe('StatsTab', () => {
     expect(await screen.findByTestId('observability-read-not-supported')).toBeInTheDocument();
   });
 
+  it('renders the backend guidance inline on a too-broad 400 — never the marketplace pitch', async () => {
+    const client: StubApiClient = {
+      getObservabilityMetrics: vi
+        .fn()
+        .mockRejectedValue(
+          new ApiError('Narrow the time range to under 30 days.', 400, 'monitoring-read-too-broad'),
+        ),
+    };
+    renderWithProviders(<StatsTab search={{ tab: 'dashboard' }} />, { client });
+
+    const notice = await screen.findByTestId('observability-read-too-broad');
+    expect(notice).toHaveTextContent('Narrow the time range to under 30 days.');
+    expect(screen.queryByTestId('observability-read-not-supported')).not.toBeInTheDocument();
+    // The range picker stays on screen so the reader can narrow and retry.
+    expect(screen.getByLabelText('Metrics time range')).toBeInTheDocument();
+  });
+
   it('surfaces a non-501 failure loudly and refetches on retry', async () => {
     const user = userEvent.setup();
     const getObservabilityMetrics = vi.fn().mockRejectedValue(new ApiError('metrics down', 500));
