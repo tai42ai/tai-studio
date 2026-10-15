@@ -79,6 +79,15 @@ export type AgentsEntriesAdd = z.infer<typeof agentsEntriesAdd>;
 export const answerFormat = z.enum(["text","confirm","select","form","external","free"]);
 export type AnswerFormat = z.infer<typeof answerFormat>;
 
+export const formPageWording = z.object({ "choose_one": z.string().nullable().default(null), "date_unavailable": z.string().nullable().default(null), "failed": z.string().nullable().default(null), "network_error": z.string().nullable().default(null), "update_failed": z.string().nullable().default(null) }).strict();
+export type FormPageWording = z.infer<typeof formPageWording>;
+
+export const pageCopy = z.object({ "heading": z.string().nullable().default(null), "text": z.string().nullable().default(null) }).strict();
+export type PageCopy = z.infer<typeof pageCopy>;
+
+export const answerPageWording = z.object({ "awaiting": pageCopy.nullable().default(null), "confirm": pageCopy.nullable().default(null), "done": pageCopy.nullable().default(null), "form": formPageWording.nullable().default(null), "submitted": pageCopy.nullable().default(null) }).strict();
+export type AnswerPageWording = z.infer<typeof answerPageWording>;
+
 export const formOption = z.object({ "label": z.string().nullable().default(null), "value": z.string() }).strict();
 export type FormOption = z.infer<typeof formOption>;
 
@@ -88,7 +97,7 @@ export type FormData = z.infer<typeof formData>;
 export const displayBlock = z.object({ "alt": z.string().nullable().default(null), "kind": z.enum(["heading","body","image"]), "slot": z.string().nullable().default(null), "src": z.string().nullable().default(null), "text": z.string().nullable().default(null) }).strict();
 export type DisplayBlock = z.infer<typeof displayBlock>;
 
-export const formPage = z.object({ "display": z.array(displayBlock).default([]), "fields": z.array(z.string()), "kind": z.enum(["input","review"]).default("input"), "title": z.string() }).strict();
+export const formPage = z.object({ "button_label": z.string().nullable().default(null), "display": z.array(displayBlock).default([]), "fields": z.array(z.string()), "kind": z.enum(["input","review"]).default("input"), "title": z.string() }).strict();
 export type FormPage = z.infer<typeof formPage>;
 
 export const linkOption = z.object({ "kind": z.literal("link").default("link"), "label": z.string(), "url": z.string() }).strict();
@@ -109,7 +118,31 @@ export type ReplyOption = z.infer<typeof replyOption>;
 export const optionSection = z.object({ "rows": z.array(replyOption), "title": z.string() }).strict();
 export type OptionSection = z.infer<typeof optionSection>;
 
-export const answerPart = z.object({ "data": formData.nullable().default(null), "footer": z.string().nullable().default(null), "form_tag": z.string().nullable().default(null), "header": mediaItem.nullable().default(null), "location": locationElement.nullable().default(null), "media": z.array(mediaItem).nullable().default(null), "message": z.string().default(""), "options": z.array(z.discriminatedUnion("kind", [replyOption, linkOption])).nullable().default(null), "pages": z.array(formPage).nullable().default(null), "schema": z.record(z.string(), z.unknown()).nullable().default(null), "sections": z.array(optionSection).nullable().default(null), "template": channelTemplate.nullable().default(null) }).strict();
+export const answerWording = z.object({ "confirm": z.string().nullable().default(null), "decline": z.string().nullable().default(null), "open": z.string().nullable().default(null), "rejected": z.string().nullable().default(null), "rejected_final": z.string().nullable().default(null), "reply_hint": z.string().nullable().default(null), "submit": z.string().nullable().default(null) }).strict();
+export type AnswerWording = z.infer<typeof answerWording>;
+
+export const choiceWording = z.object({ "group_label": z.string().nullable().default(null), "label": z.string().nullable().default(null), "reply_hint": z.string().nullable().default(null) }).strict();
+export type ChoiceWording = z.infer<typeof choiceWording>;
+
+export const fieldWording = z.object({ "choice_label": z.string().nullable().default(null) }).strict();
+export type FieldWording = z.infer<typeof fieldWording>;
+
+export const formWording = z.object({ "back": z.string().nullable().default(null), "cancel": z.string().nullable().default(null), "fields": z.record(z.string(), fieldWording).default({}), "open": z.string().nullable().default(null), "review_empty": z.string().nullable().default(null), "submit": z.string().nullable().default(null), "title": z.string().nullable().default(null) }).strict();
+export type FormWording = z.infer<typeof formWording>;
+
+export const lineWording = z.object({ "answer_link": z.string().nullable().default(null), "deadline": z.string().nullable().default(null), "options": z.string().nullable().default(null), "reply": z.string().nullable().default(null) }).strict();
+export type LineWording = z.infer<typeof lineWording>;
+
+export const countdownWording = z.object({ "one_second_left": z.string().nullable().default(null), "seconds_left": z.string().nullable().default(null), "under_half_minute": z.string().nullable().default(null), "under_minute": z.string().nullable().default(null), "under_ten_seconds": z.string().nullable().default(null) }).strict();
+export type CountdownWording = z.infer<typeof countdownWording>;
+
+export const statusWording = z.object({ "answered": z.string().nullable().default(null), "closed": z.string().nullable().default(null), "countdown": countdownWording.nullable().default(null), "expired": z.string().nullable().default(null), "sending": z.string().nullable().default(null), "sent": z.string().nullable().default(null), "unavailable": z.string().nullable().default(null) }).strict();
+export type StatusWording = z.infer<typeof statusWording>;
+
+export const wording = z.object({ "answer": answerWording.nullable().default(null), "answer_page": answerPageWording.nullable().default(null), "choice": choiceWording.nullable().default(null), "form": formWording.nullable().default(null), "lines": lineWording.nullable().default(null), "status": statusWording.nullable().default(null) }).strict();
+export type Wording = z.infer<typeof wording>;
+
+export const answerPart = z.object({ "data": formData.nullable().default(null), "footer": z.string().nullable().default(null), "form_tag": z.string().nullable().default(null), "header": mediaItem.nullable().default(null), "location": locationElement.nullable().default(null), "media": z.array(mediaItem).nullable().default(null), "message": z.string().default(""), "options": z.array(z.discriminatedUnion("kind", [replyOption, linkOption])).nullable().default(null), "pages": z.array(formPage).nullable().default(null), "schema": z.record(z.string(), z.unknown()).nullable().default(null), "sections": z.array(optionSection).nullable().default(null), "template": channelTemplate.nullable().default(null), "wording": wording.nullable().default(null) }).strict();
 export type AnswerPart = z.infer<typeof answerPart>;
 
 export const overlapPolicy = z.object({ "deliver": z.enum(["one","all"]).default("one"), "running": z.enum(["continue","cancel"]).default("continue"), "settle_seconds": z.number().int().gte(0).lte(30).default(0) });
@@ -583,7 +616,7 @@ export type NotificationListing = z.infer<typeof notificationListing>;
 export const notifyResult = z.string();
 export type NotifyResult = z.infer<typeof notifyResult>;
 
-export const notifyUser = z.object({ "audience": z.string().nullable().default(null), "channel": z.string().nullable().default(null), "data": formData.nullable().default(null), "footer": z.string().nullable().default(null), "form_tag": z.string().nullable().default(null), "header": mediaItem.nullable().default(null), "location": locationElement.nullable().default(null), "media": z.array(mediaItem).nullable().default(null), "message": z.string(), "options": z.array(z.discriminatedUnion("kind", [replyOption, linkOption])).nullable().default(null), "pages": z.array(formPage).nullable().default(null), "recipient": z.string().nullable().default(null), "schema": z.record(z.string(), z.unknown()).nullable().default(null), "sections": z.array(optionSection).nullable().default(null), "sender_identity": z.string().nullable().default(null), "template": channelTemplate.nullable().default(null) }).strict();
+export const notifyUser = z.object({ "audience": z.string().nullable().default(null), "channel": z.string().nullable().default(null), "data": formData.nullable().default(null), "footer": z.string().nullable().default(null), "form_tag": z.string().nullable().default(null), "header": mediaItem.nullable().default(null), "location": locationElement.nullable().default(null), "media": z.array(mediaItem).nullable().default(null), "message": z.string(), "options": z.array(z.discriminatedUnion("kind", [replyOption, linkOption])).nullable().default(null), "pages": z.array(formPage).nullable().default(null), "recipient": z.string().nullable().default(null), "schema": z.record(z.string(), z.unknown()).nullable().default(null), "sections": z.array(optionSection).nullable().default(null), "sender_identity": z.string().nullable().default(null), "template": channelTemplate.nullable().default(null), "wording": wording.nullable().default(null) }).strict();
 export type NotifyUser = z.infer<typeof notifyUser>;
 
 export const oAuthCancelled = z.object({ "kind": z.literal("cancelled"), "message": z.string() });
