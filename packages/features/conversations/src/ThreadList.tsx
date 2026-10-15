@@ -19,11 +19,12 @@
  * every retained page — by PAUSING past that depth, never by dropping the page it
  * refreshes for. A paused list says so and offers the way back.
  */
-import type { ConversationDeliveryStatus } from '@tai42/api-client';
-import { useApi } from '@tai42/studio-sdk';
+import { apiRoutes, type ConversationDeliveryStatus } from '@tai42/api-client';
+import { useApi, useCanWrite } from '@tai42/studio-sdk';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, type RefObject, useRef } from 'react';
+import { type ReactNode, type RefObject, useMemo, useRef } from 'react';
 
+import { BulkThreadReset } from './BulkThreadReset';
 import { RELATIVE_TICK_MS, useNow } from './clock';
 import { useFocusHandoff } from './focus';
 import { countOf } from './format';
@@ -31,6 +32,7 @@ import { conversationThreadsKey } from './keys';
 import { useLiveRegion } from './live-region';
 import { boundedRefresh, trimToNewestPage } from './paging';
 import { TruncatedNotice } from './read-states';
+import { useThreadSelection } from './thread-selection';
 import { ThreadListBody } from './ThreadListBody';
 import { ThreadRefreshNotice } from './ThreadRefreshNotice';
 import { useTailingPager } from './useTailingPager';
@@ -110,6 +112,14 @@ export function ThreadList({
   });
   const filtered = status !== undefined || address !== undefined;
 
+  // Bulk reset fans out the per-thread DELETE door, so it is offered on the same
+  // terms that door is: the dynamic (templated) DELETE route a scoped projection
+  // can never method-express, so the whole multi-select surface withdraws for a
+  // caller who cannot delete, leaving the read-only listing it was.
+  const canReset = useCanWrite(apiRoutes.delete_api_conversations_route_name_thread.path, 'DELETE');
+  const loadedIds = useMemo(() => pager.items.map((thread) => thread.thread_id), [pager.items]);
+  const selection = useThreadSelection(loadedIds);
+
   return (
     // Focusable, unreachable by Tab: it is where focus lands on the way back from
     // a thread whose row is no longer listed.
@@ -123,6 +133,13 @@ export function ThreadList({
         {route}
       </h2>
       {pager.truncated ? <TruncatedNotice noun="threads" /> : null}
+      {canReset ? (
+        <BulkThreadReset
+          route={route}
+          selectedIds={selection.selectedIds}
+          onReset={selection.deselect}
+        />
+      ) : null}
       <ThreadListBody
         route={route}
         selected={selected}
@@ -139,6 +156,17 @@ export function ThreadList({
         loadMoreRef={loadMoreRef}
         onLoadMore={pager.onLoadMore}
         onRetryMore={() => void query.fetchNextPage()}
+        selection={
+          canReset
+            ? {
+                isSelected: selection.isSelected,
+                onToggle: selection.toggle,
+                allSelected: selection.allSelected,
+                someSelected: selection.someSelected,
+                onToggleAll: selection.toggleAll,
+              }
+            : undefined
+        }
       />
       <ThreadRefreshNotice
         paused={pager.paused}
