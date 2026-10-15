@@ -301,6 +301,10 @@
                 "name": "channel"
               },
               {
+                "gloss": "the name of the conversation route the turn entered through",
+                "name": "route"
+              },
+              {
                 "gloss": "the turn's canonical thread id (the thread doors' id)",
                 "name": "thread_id"
               },
@@ -692,6 +696,10 @@
               {
                 "gloss": "door=channel: the registry channel name",
                 "name": "channel"
+              },
+              {
+                "gloss": "the name of the conversation route the turn entered through",
+                "name": "route"
               },
               {
                 "gloss": "the turn's canonical thread id (the thread doors' id)",
@@ -1089,6 +1097,10 @@
                 "name": "channel"
               },
               {
+                "gloss": "the name of the conversation route the turn entered through",
+                "name": "route"
+              },
+              {
                 "gloss": "the turn's canonical thread id (the thread doors' id)",
                 "name": "thread_id"
               },
@@ -1474,6 +1486,10 @@
               {
                 "gloss": "door=channel: the registry channel name",
                 "name": "channel"
+              },
+              {
+                "gloss": "the name of the conversation route the turn entered through",
+                "name": "route"
               },
               {
                 "gloss": "the turn's canonical thread id (the thread doors' id)",
@@ -2357,7 +2373,7 @@
     "MEDIA_ROUTE_PREFIX": "/api/interactions/media/",
     "PERSON_KIND": "person"
   },
-  "contract_version": "19.0.0",
+  "contract_version": "19.2.0",
   "documents": {
     "AccessPolicy": {
       "description": "Schema for data stored at 'ac:policy:{user_id}'. Represents WHAT the user can do (permissions & logic).",
