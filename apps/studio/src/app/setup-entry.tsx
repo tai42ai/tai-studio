@@ -31,6 +31,9 @@ export function SetupEntry({
   onKeyChange,
   keyPasteOpen,
   onKeyPasteOpen,
+  keyError,
+  keySubmitting,
+  onKeySubmit,
 }: {
   setupLogin: SetupLogin;
   remember: boolean;
@@ -39,6 +42,13 @@ export function SetupEntry({
   onKeyChange: (value: string) => void;
   keyPasteOpen: boolean;
   onKeyPasteOpen: () => void;
+  /** The inline error from a refused key-paste, or `null`. */
+  keyError: string | null;
+  /** Whether the pasted key is being verified; disables the submit control. */
+  keySubmitting: boolean;
+  /** Verify the pasted key and sign in on success (the same verified leg the login
+   * screen uses). */
+  onKeySubmit: () => void;
 }): ReactNode {
   const { login } = useAuth();
   const form = useSetupForm(setupLogin);
@@ -114,17 +124,20 @@ export function SetupEntry({
         </form>
       )}
 
+      {keyError !== null ? (
+        <p role="alert" style={{ ...errorStyle, marginTop: 'var(--tai-space-4)' }}>
+          {keyError}
+        </p>
+      ) : null}
+
       <KeyPasteForm
         hasMethods
         expanded={keyPasteOpen}
         keyValue={keyValue}
         onKeyChange={onKeyChange}
         onOpen={onKeyPasteOpen}
-        onSubmit={() => {
-          const trimmed = keyValue.trim();
-          if (trimmed === '') return;
-          login(trimmed, remember);
-        }}
+        submitting={keySubmitting}
+        onSubmit={onKeySubmit}
       />
     </>
   );

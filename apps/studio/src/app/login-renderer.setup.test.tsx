@@ -266,6 +266,29 @@ describe('login renderer setup mode', () => {
     });
   });
 
+  it('refuses a wrong key pasted on the setup entry inline and never navigates', async () => {
+    const user = userEvent.setup();
+    // The setup screen's key-paste fallback is the same credential as the login
+    // screen's: a refused key answers 401 on the identity probe and must surface
+    // inline rather than be accepted into a dead end.
+    server.use(
+      methods({ needs_setup: true, claim_fragment_key: 'claim', setup_login: null, methods: [] }),
+      http.get('*/api/auth/me', () => HttpResponse.json({ error: 'bad key' }, { status: 401 })),
+    );
+    const { studio } = renderStudio({ initialPath: '/tools' });
+
+    await screen.findByRole('heading', { name: 'Set up this deployment' });
+    await user.click(screen.getByRole('button', { name: 'Use an API key instead' }));
+    await user.type(await screen.findByLabelText('API key'), 'wrong-key');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('That API key was not accepted');
+    // Never accepted: still on /login and the key never reached the store.
+    expect(studio.router.state.location.pathname).toBe('/login');
+    expect(globalThis.sessionStorage.getItem('tai-studio.apiKey')).toBeNull();
+  });
+
   it('setup keeps the key-paste fallback reachable', async () => {
     const user = userEvent.setup();
     const tools = capturingTools();
@@ -285,6 +308,8 @@ describe('login renderer setup mode', () => {
     await waitFor(() => {
       expect(studio.router.state.location.pathname).toBe('/tools');
     });
-    expect(tools.header()).toBe('paste-key');
+    await waitFor(() => {
+      expect(tools.header()).toBe('paste-key');
+    });
   });
 });

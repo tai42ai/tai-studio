@@ -110,7 +110,10 @@ describe('login renderer', () => {
     await waitFor(() => {
       expect(studio.router.state.location.pathname).toBe('/tools');
     });
-    expect(tools.header()).toBe('paste-key');
+    // The key verifies, then signs in; the Tools page reads it one async hop later.
+    await waitFor(() => {
+      expect(tools.header()).toBe('paste-key');
+    });
   });
 
   it('collapses key-paste behind a toggle when methods exist, then signs in with a pasted key', async () => {
@@ -146,7 +149,50 @@ describe('login renderer', () => {
     await waitFor(() => {
       expect(studio.router.state.location.pathname).toBe('/tools');
     });
-    expect(tools.header()).toBe('toggle-key');
+    await waitFor(() => {
+      expect(tools.header()).toBe('toggle-key');
+    });
+  });
+
+  it('refuses a wrong pasted key inline and never navigates (verified before accepted)', async () => {
+    const user = userEvent.setup();
+    // The default empty-methods screen renders the key-paste form expanded. The
+    // key IS the session credential, so a refused key answers 401 on the identity
+    // probe and must surface inline rather than be accepted into a dead end.
+    server.use(
+      http.get('*/api/auth/me', () => HttpResponse.json({ error: 'bad key' }, { status: 401 })),
+    );
+    const { studio } = renderStudio({ initialPath: '/tools' });
+
+    await user.type(await screen.findByLabelText('API key'), 'wrong-key');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('That API key was not accepted');
+    // Never accepted: no navigation off /login (the returnTo pin intact), and the
+    // key never reached the in-memory/sessionStorage store.
+    expect(studio.router.state.location.pathname).toBe('/login');
+    expect(studio.router.state.location.search).toEqual({ redirect: '/tools' });
+    expect(globalThis.sessionStorage.getItem('tai-studio.apiKey')).toBeNull();
+  });
+
+  it('a key-paste verification failure (500) shows a generic message AND logs the original', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    server.use(
+      http.get('*/api/auth/me', () => HttpResponse.json({ error: 'boom' }, { status: 500 })),
+    );
+    const { studio } = renderStudio({ initialPath: '/tools' });
+
+    await user.type(await screen.findByLabelText('API key'), 'some-key');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Something went wrong signing in');
+    // The original diagnostic is logged, never swallowed, and the operator stays put.
+    expect(spy).toHaveBeenCalled();
+    expect(studio.router.state.location.pathname).toBe('/login');
+    spy.mockRestore();
   });
 
   it('needs_setup:false renders the sign-in forms and no setup entry', async () => {
@@ -306,7 +352,9 @@ describe('login renderer', () => {
     await waitFor(() => {
       expect(studio.router.state.location.pathname).toBe('/tools');
     });
-    expect(tools.header()).toBe('fallback-key');
+    await waitFor(() => {
+      expect(tools.header()).toBe('fallback-key');
+    });
     spy.mockRestore();
   });
 });

@@ -148,7 +148,8 @@ export function LoginNotices({
 /**
  * The permanent API-key paste fallback. It is the whole screen when no methods are
  * declared, and an opt-in "Use an API key instead" affordance otherwise. The key is
- * full-privilege; `onSubmit` trims and signs in.
+ * full-privilege; `onSubmit` verifies and signs in, and the submit control is
+ * disabled while that verification is in flight.
  */
 export function KeyPasteForm({
   hasMethods,
@@ -157,6 +158,7 @@ export function KeyPasteForm({
   onKeyChange,
   onOpen,
   onSubmit,
+  submitting = false,
 }: {
   hasMethods: boolean;
   expanded: boolean;
@@ -164,6 +166,8 @@ export function KeyPasteForm({
   onKeyChange: (value: string) => void;
   onOpen: () => void;
   onSubmit: () => void;
+  /** Whether the pasted key is being verified; disables the submit control. */
+  submitting?: boolean;
 }): ReactNode {
   return (
     <>
@@ -201,7 +205,7 @@ export function KeyPasteForm({
             />
           </Field>
           <div style={{ marginTop: 'var(--tai-space-4)' }}>
-            <Button type="submit" variant="primary" disabled={keyValue.trim() === ''}>
+            <Button type="submit" variant="primary" disabled={submitting || keyValue.trim() === ''}>
               Sign in
             </Button>
           </div>
