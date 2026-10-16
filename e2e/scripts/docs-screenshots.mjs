@@ -70,7 +70,11 @@
  *                  the subjects held by a failed pending save and links to the Pending saves card,
  *                  via the live subjects page with a forced `held` entry (the same failed save the
  *                  pending-saves frame shows).
- *   - dashboard  — the observability Dashboard (`GET /api/observability/metrics`):
+ *   - states-records-check — the Records tab's "Check records against the schema" card after a
+ *                  live walk of the `notes` thread records: the summary and the misfits table, via
+ *                  the live check page with a forced misfit added (every seeded record fits the
+ *                  schema it was written under, so the demo backend reports none).
+ *   - dashboard  —the observability Dashboard (`GET /api/observability/metrics`):
  *                  the seeded docs-demo monitoring backend gives it a real trend
  *                  chart AND a by-model breakdown.
  *   - dashboard-by-model-unavailable — the same Dashboard with the by-model card in
@@ -124,7 +128,13 @@
  *                  inbound attachments (a served image inline, a document download chip),
  *                  via a forced transcript + served-media override the live backend never
  *                  produces.
- *   - entry-gate — the drill-in of the seeded `relay` web route: the web channel's
+ *   - conversation-bulk-reset-{select,confirm,result} — the thread list's bulk reset over a
+ *                  forced route and its three threads: every row ticked through the header
+ *                  checkbox with the "Reset selected (3)" action, the confirm dialog naming the
+ *                  count, and the per-item result (two threads reset, one failed row with its
+ *                  reason and a Retry). The deletes are answered by route stubs, so no live
+ *                  thread is forgotten.
+ *   - entry-gate —the drill-in of the seeded `relay` web route: the web channel's
  *                  "Entry gate" panel, gate on, with its one `launch` code row.
  *   - entry-gate-empty — the drill-in of the seeded `relay-open` web route: the panel's
  *                  "No entry codes" state.
@@ -475,6 +485,23 @@ const HELD_ON_SUBJECTS_PAGE = [
   { save_id: '42', held_by: '41', subjects: [PENDING_SAVES_SUBJECT] },
 ];
 
+// The Check records card lists only the records that do not fit the state's current schema.
+// Every seeded `notes` record was validated against that schema when it was written, so the
+// live walk finds none; the walk's first page is fetched live and answered with one misfit
+// added on the listed subject `t-001` (a stored item id that is not a string, the reason the
+// pending-saves payload above names). Its `updated_at` is a fixed instant, so the Updated cell
+// reads the same on every run.
+const CHECK_RECORDS_MISFIT = {
+  subject: { target_kind: 'tool', target_name: 'studio_demo_echo', kind: 'thread', key: 't-001' },
+  updated_at: 1_788_255_000,
+  reasons: [{ path: '$.items[0].id', message: "7 is not of type 'string'" }],
+};
+/** The Records tab's Check records card. */
+const checkRecordsCard = (page) =>
+  page.locator('.tai-card').filter({
+    has: page.getByRole('heading', { name: 'Check records against the schema', level: 3 }),
+  });
+
 // The Members People table's "Mixed roles" badge reads a person whose logins hold different
 // roles. The demo's accounts provider holds one login per person, so the live directory is
 // fetched and answered with one forced member row added: two logins, one `viewer` and one
@@ -622,7 +649,7 @@ const ATTACHMENT_TRANSCRIPT_RECORD = {
 };
 
 /** One paged read-door envelope shaped as the doors return it. */
-function attachmentPageOf(items, extra = {}) {
+function pageOf(items, extra = {}) {
   return {
     items,
     total: items.length,
@@ -632,6 +659,126 @@ function attachmentPageOf(items, extra = {}) {
     truncated: false,
     ...extra,
   };
+}
+
+/** Answer every `GET` on `pathname` with the skeleton's `{ data }` envelope; other methods
+ * fall through to the live skeleton. */
+async function stubGet(page, pathname, data) {
+  await page.route(
+    (url) => url.pathname === pathname,
+    async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({ json: { data } });
+    },
+  );
+}
+
+/** The forced channel route the stubbed conversation frames list. The live seeded routes'
+ * threads are stamped when the runner drives their turns, so a frame that needs fixed threads
+ * or records serves this route and its reads instead. */
+const STUB_CHANNEL_ROUTE = {
+  route_name: ATTACHMENT_TRANSCRIPT_ROUTE,
+  door: 'channel',
+  target_kind: 'agent',
+  target_name: 'assistant',
+  start_expr: null,
+  reply_expr: null,
+  execution_key: 'studio-docs',
+  execution_key_fingerprint: 'fp-docs',
+  initial_mode: 'agent',
+  channel: 'whatsapp',
+  our_identity: '+10000000000',
+  callback_url: null,
+  turns_per_hour_override: null,
+  error_reply_text: null,
+  callback_secret: null,
+  locale: null,
+  overlap: { running: 'continue', deliver: 'one', settle_seconds: 0 },
+};
+
+// The bulk-reset frames select over three threads on the forced channel route above: enough
+// for the header select-all, a multi-count action, and a result that mixes resets with one
+// failure. Each thread's last activity is relative to the capture (like the pending-saves
+// ages), so the list's relative "last spoke" labels read the same on every run.
+const BULK_RESET_ROUTE = STUB_CHANNEL_ROUTE.route_name;
+const BULK_RESET_THREADS = [
+  { address: '+10000000001', minutesAgo: 12, messages: 4, delivery: 'delivered' },
+  { address: '+10000000002', minutesAgo: 3 * 60, messages: 2, delivery: 'delivered' },
+  { address: '+10000000003', minutesAgo: 2 * 24 * 60, messages: 7, delivery: 'failed' },
+].map((thread) => ({ ...thread, thread_id: `${BULK_RESET_ROUTE}/${thread.address}` }));
+/** The thread whose reset the result frame fails: a turn is in flight on it, so its DELETE
+ * answers 409 with the skeleton's `{ error }` message. */
+const BULK_RESET_FAILED_THREAD = BULK_RESET_THREADS[2].thread_id;
+const BULK_RESET_FAILURE = 'This thread has a turn in flight; try again once it settles.';
+/** The action that opens the confirm, and the confirm's own label; both name the count. */
+const BULK_RESET_ACTION = `Reset selected (${BULK_RESET_THREADS.length})`;
+const BULK_RESET_CONFIRM = `Reset ${BULK_RESET_THREADS.length} threads`;
+
+/** The threads page the bulk-reset frames list, keeping only the threads in `present`. */
+function bulkResetThreadsPage(present) {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  return pageOf(
+    BULK_RESET_THREADS.filter((thread) => present.has(thread.thread_id)).map((thread) => ({
+      thread_id: thread.thread_id,
+      client_address: thread.address,
+      last_activity_at: nowSeconds - thread.minutesAgo * 60,
+      message_count: thread.messages,
+      last_delivery_status: thread.delivery,
+    })),
+  );
+}
+
+/**
+ * Serve the bulk-reset frames' doors: the forced route list, and the route's threads read
+ * from a live set. With `answerDeletes`, the per-thread DELETE door is answered too: every
+ * thread but the failing one resets and drops from the set, the failing one answers 409, and
+ * no request reaches the live skeleton.
+ */
+async function stubBulkResetDoors(page, { answerDeletes }) {
+  const present = new Set(BULK_RESET_THREADS.map((thread) => thread.thread_id));
+  await stubGet(page, '/api/conversations', pageOf([STUB_CHANNEL_ROUTE]));
+  await page.route(
+    (url) => url.pathname === `/api/conversations/${BULK_RESET_ROUTE}/threads`,
+    async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({ json: { data: bulkResetThreadsPage(present) } });
+    },
+  );
+  if (!answerDeletes) return;
+  await page.route(
+    (url) => url.pathname === `/api/conversations/${BULK_RESET_ROUTE}/thread`,
+    async (route) => {
+      if (route.request().method() !== 'DELETE') {
+        await route.fallback();
+        return;
+      }
+      const threadId = new URL(route.request().url()).searchParams.get('thread_id') ?? '';
+      if (threadId === BULK_RESET_FAILED_THREAD) {
+        await route.fulfill({ status: 409, json: { error: BULK_RESET_FAILURE } });
+        return;
+      }
+      present.delete(threadId);
+      await route.fulfill({
+        json: {
+          data: { removed: 1, route_name: BULK_RESET_ROUTE, thread_id: threadId, states_erased: 0 },
+        },
+      });
+    },
+  );
+}
+
+/** Tick every loaded thread through the header checkbox, then wait for the count action. */
+async function selectAllThreads(page) {
+  await page.getByRole('checkbox', { name: 'Select all threads' }).click();
+  await page
+    .getByRole('button', { name: BULK_RESET_ACTION })
+    .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
 }
 
 // The look-up answer the `connectors-add-server` frame stubs: a server that signs in at
@@ -1368,6 +1515,38 @@ const AUTHED_PAGES = [
         .filter({ has: page.getByRole('heading', { name: 'Subjects', level: 3 }) }),
   },
   {
+    // The Check records card after a walk of the `notes` thread records: the live check page
+    // with the forced misfit above added to its first page. The action runs the check and waits
+    // for the misfit's row. The card is captured whole, so the summary and the misfits table are
+    // framed without the subjects table above it.
+    name: 'states-records-check',
+    path: '/states?state=notes&tab=records',
+    wait: 'h3:has-text("Check records against the schema")',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/states/notes/records/check',
+        async (route) => {
+          const response = await route.fetch();
+          const body = await response.json();
+          const first = !new URL(route.request().url()).searchParams.has('cursor');
+          const items = first ? [CHECK_RECORDS_MISFIT, ...body.data.items] : body.data.items;
+          await route.fulfill({ response, json: { ...body, data: { ...body.data, items } } });
+        },
+      );
+    },
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Check records', exact: true }).click();
+      await page
+        .getByTestId('check-summary')
+        .filter({ hasText: '1 do not fit' })
+        .waitFor({ state: 'visible', timeout: 8000 });
+      await checkRecordsCard(page)
+        .getByRole('button', { name: CHECK_RECORDS_MISFIT.subject.key, exact: true })
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+    frame: checkRecordsCard,
+  },
+  {
     name: 'dashboard',
     path: '/observability',
     // The trend AreaChart renders only with a non-empty time series (real seeded
@@ -1720,47 +1899,13 @@ const AUTHED_PAGES = [
     name: 'conversation-inbound-attachments',
     nondeterministic: true,
     path: `/conversations?route=${encodeURIComponent(ATTACHMENT_TRANSCRIPT_ROUTE)}&thread=${encodeURIComponent(ATTACHMENT_TRANSCRIPT_THREAD)}`,
-    wait: '[data-testid="attachment-document"]',
+    wait: '[data-testid="media-document"]',
     setup: async (page) => {
-      const stubGet = async (pathname, data) => {
-        await page.route(
-          (url) => url.pathname === pathname,
-          async (route) => {
-            if (route.request().method() !== 'GET') {
-              await route.fallback();
-              return;
-            }
-            await route.fulfill({ json: { data } });
-          },
-        );
-      };
+      await stubGet(page, '/api/conversations', pageOf([STUB_CHANNEL_ROUTE]));
       await stubGet(
-        '/api/conversations',
-        attachmentPageOf([
-          {
-            route_name: ATTACHMENT_TRANSCRIPT_ROUTE,
-            door: 'channel',
-            target_kind: 'agent',
-            target_name: 'assistant',
-            start_expr: null,
-            reply_expr: null,
-            execution_key: 'studio-docs',
-            execution_key_fingerprint: 'fp-docs',
-            initial_mode: 'agent',
-            channel: 'whatsapp',
-            our_identity: '+10000000000',
-            callback_url: null,
-            turns_per_hour_override: null,
-            error_reply_text: null,
-            callback_secret: null,
-            locale: null,
-            overlap: { running: 'continue', deliver: 'one', settle_seconds: 0 },
-          },
-        ]),
-      );
-      await stubGet(
+        page,
         `/api/conversations/${ATTACHMENT_TRANSCRIPT_ROUTE}/threads`,
-        attachmentPageOf([
+        pageOf([
           {
             thread_id: ATTACHMENT_TRANSCRIPT_THREAD,
             client_address: ATTACHMENT_TRANSCRIPT_ADDRESS,
@@ -1770,13 +1915,14 @@ const AUTHED_PAGES = [
           },
         ]),
       );
-      await stubGet(`/api/conversations/${ATTACHMENT_TRANSCRIPT_ROUTE}/thread/mode`, {
+      await stubGet(page, `/api/conversations/${ATTACHMENT_TRANSCRIPT_ROUTE}/thread/mode`, {
         mode: 'agent',
         source: 'route',
       });
       await stubGet(
+        page,
         `/api/conversations/${ATTACHMENT_TRANSCRIPT_ROUTE}/transcript`,
-        attachmentPageOf([ATTACHMENT_TRANSCRIPT_RECORD], { order: 'desc' }),
+        pageOf([ATTACHMENT_TRANSCRIPT_RECORD], { order: 'desc', person_id: null }),
       );
       await page.route(
         (url) => url.pathname.startsWith('/api/interactions/media/'),
@@ -1790,6 +1936,58 @@ const AUTHED_PAGES = [
       await page
         .getByRole('link', { name: 'report.pdf' })
         .evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    },
+  },
+  {
+    // The thread list's multi-select surface over the forced route's three threads: the header
+    // checkbox ticks every loaded row and reveals the "Reset selected (3)" danger action. The
+    // DELETE capability the action is gated on comes from the full-admin key.
+    name: 'conversation-bulk-reset-select',
+    path: `/conversations?route=${encodeURIComponent(BULK_RESET_ROUTE)}`,
+    wait: '[data-testid="conversation-threads-table"]',
+    setup: async (page) => {
+      await stubBulkResetDoors(page, { answerDeletes: false });
+    },
+    action: selectAllThreads,
+  },
+  {
+    // The "Reset selected threads" confirm, whose copy and confirm label name the count. It is
+    // never confirmed, so nothing is deleted. The dialog is modal and hides the nav the
+    // plugin-nav wait looks for.
+    name: 'conversation-bulk-reset-confirm',
+    path: `/conversations?route=${encodeURIComponent(BULK_RESET_ROUTE)}`,
+    wait: '[data-testid="conversation-threads-table"]',
+    awaitPluginNav: false,
+    setup: async (page) => {
+      await stubBulkResetDoors(page, { answerDeletes: false });
+    },
+    action: async (page) => {
+      await selectAllThreads(page);
+      await page.getByRole('button', { name: BULK_RESET_ACTION }).click();
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: BULK_RESET_CONFIRM })
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+    },
+  },
+  {
+    // The per-item result of a confirmed reset: the stubbed DELETE door resets two threads,
+    // which drop from the list, and answers 409 for the third, which stays as a failed row
+    // with its reason and a Retry beside the "2 threads reset." summary.
+    name: 'conversation-bulk-reset-result',
+    path: `/conversations?route=${encodeURIComponent(BULK_RESET_ROUTE)}`,
+    wait: '[data-testid="conversation-threads-table"]',
+    setup: async (page) => {
+      await stubBulkResetDoors(page, { answerDeletes: true });
+    },
+    action: async (page) => {
+      await selectAllThreads(page);
+      await page.getByRole('button', { name: BULK_RESET_ACTION }).click();
+      await page.getByRole('dialog').getByRole('button', { name: BULK_RESET_CONFIRM }).click();
+      await page
+        .getByTestId('conversation-bulk-reset-result')
+        .getByRole('button', { name: 'Retry' })
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
     },
   },
   {
