@@ -5,7 +5,7 @@
  * server-side match over the records and lists the hits. Every result opens the record
  * page through the shell router (`?state=&subject=&target=`).
  */
-import type { HeldPendingSave, StateDetail, StateSubject, SubjectRow } from '@tai42/api-client';
+import type { StateDetail, StateSubject, SubjectRow } from '@tai42/api-client';
 import { servedConstants } from '@tai42/api-client';
 import {
   Button,
@@ -33,25 +33,13 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, type SyntheticEvent, useState } from 'react';
 
-import { conversationTargetsKey, stateSearchKey, stateSubjectsKey, subjectIdentity } from './keys';
-import { PENDING_SAVES_CARD_ID } from './PendingSavesCard';
+import { CheckRecordsCard } from './CheckRecordsCard';
+import { HeldSubjectsLine } from './HeldSubjectsLine';
+import { conversationTargetsKey, stateSearchKey, stateSubjectsKey } from './keys';
 import { formatSubjectParam, formatTargetParam } from './record-subject';
+import { formatWhen, isoWhen } from './recordTime';
 
 const PERSON_KIND = servedConstants.PERSON_KIND;
-
-/** The Updated cell's display for a subject row's epoch-seconds `updated_at`: the locale
- * instant, or the raw value when unparseable (the full ISO rides on the cell's `title`). */
-function formatWhen(epochSeconds: number): string {
-  const parsed = new Date(epochSeconds * 1000);
-  return Number.isNaN(parsed.getTime()) ? String(epochSeconds) : parsed.toLocaleString();
-}
-
-/** The full ISO instant for a subject row's `updated_at`, for the Updated cell's `title`
- * (undefined when the epoch is unparseable, so the cell carries no title). */
-function isoWhen(epochSeconds: number): string | undefined {
-  const parsed = new Date(epochSeconds * 1000);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
-}
 
 /** A discovered conversation target, as the target picker offers it. */
 interface TargetOption {
@@ -183,6 +171,17 @@ export function RecordsTab({ state }: { readonly state: StateDetail }): ReactNod
       </Card>
 
       <SubjectsBrowser
+        stateName={state.name}
+        kinds={kinds}
+        onOpen={(subject) => {
+          openRecord(subject.kind, subject.key, {
+            targetKind: subject.target_kind,
+            targetName: subject.target_name,
+          });
+        }}
+      />
+
+      <CheckRecordsCard
         stateName={state.name}
         kinds={kinds}
         onOpen={(subject) => {
@@ -340,45 +339,6 @@ function SubjectsBrowser({
  * The content search: a JSONB containment match over the state's records. The box takes
  * a JSON object (validated client-side); each hit is a subject the record page opens.
  */
-/**
- * The line above a Records table when some of the state's subjects are held by a failed pending
- * save: their rows show the last applied data. "Pending saves" scrolls to the card that retries
- * or discards the save. Nothing renders when no subject is held.
- */
-function HeldSubjectsLine({
-  held = [],
-}: {
-  readonly held?: readonly HeldPendingSave[] | undefined;
-}): ReactNode {
-  const subjects = new Set(
-    held.flatMap((save) => save.subjects.map((subject) => subjectIdentity(subject))),
-  );
-  if (subjects.size === 0) return null;
-  return (
-    <p style={{ margin: 0, color: 'var(--tai-color-warn-text)' }} data-testid="held-subjects-line">
-      {subjects.size} subject(s) on this state are held by a failed pending save and show their last
-      applied data. Retry or discard it under{' '}
-      <button
-        type="button"
-        className="tai-link"
-        style={{
-          background: 'none',
-          border: 'none',
-          padding: 0,
-          font: 'inherit',
-          cursor: 'pointer',
-        }}
-        onClick={() => {
-          document.getElementById(PENDING_SAVES_CARD_ID)?.scrollIntoView({ behavior: 'smooth' });
-        }}
-      >
-        Pending saves
-      </button>
-      .
-    </p>
-  );
-}
-
 function RecordSearch({
   stateName,
   onOpen,

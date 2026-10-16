@@ -35,6 +35,9 @@ function client(over: Partial<StubApiClient> = {}): StubApiClient {
       .fn()
       .mockResolvedValue({ subjects: [subjectRow], next_cursor: null, held: [] }),
     searchStateRecords: vi.fn().mockResolvedValue({ matches: [], next_cursor: null, held: [] }),
+    checkStateRecords: vi
+      .fn()
+      .mockResolvedValue({ checked: 0, items: [], next_cursor: null, held: [] }),
     ...over,
   };
 }
@@ -271,5 +274,161 @@ describe('RecordsTab', () => {
     expect(await within(searchCard).findByTestId('held-subjects-line')).toHaveTextContent(
       /^1 subject\(s\) on this state are held/,
     );
+  });
+});
+
+/** The card under the subjects table, where a kind's records are checked against the schema. */
+function misfit(
+  key: string,
+  reasons = [{ path: '$.age', message: "'age' is a required property" }],
+) {
+  return { subject: { ...subject, key }, updated_at: 1767225600, reasons };
+}
+
+describe('RecordsTab — check records against the schema', () => {
+  it('walks every page following next_cursor and sums checked + misfits', async () => {
+    const user = userEvent.setup({ delay: null });
+    const checkStateRecords = vi
+      .fn()
+      .mockResolvedValueOnce({ checked: 50, items: [misfit('p-7')], next_cursor: 'c2', held: [] })
+      .mockResolvedValueOnce({ checked: 30, items: [], next_cursor: null, held: [] });
+    renderWithProviders(<RecordsTab state={state} />, { client: client({ checkStateRecords }) });
+    await user.click(await screen.findByRole('button', { name: 'Check records' }));
+    await waitFor(() => {
+      expect(checkStateRecords).toHaveBeenCalledTimes(2);
+    });
+    // The default kind drives the walk; the second page reads from the first's cursor.
+    expect(checkStateRecords.mock.calls[0]?.[1]).toEqual({
+      kind: 'person',
+      limit: 500,
+      cursor: undefined,
+    });
+    expect(checkStateRecords.mock.calls[1]?.[1]).toEqual({
+      kind: 'person',
+      limit: 500,
+      cursor: 'c2',
+    });
+    expect(await screen.findByTestId('check-summary')).toHaveTextContent(
+      '80 checked — 1 do not fit',
+    );
+  });
+
+  it('picks the kind to check from the select', async () => {
+    const user = userEvent.setup({ delay: null });
+    const checkStateRecords = vi
+      .fn()
+      .mockResolvedValue({ checked: 1, items: [], next_cursor: null, held: [] });
+    renderWithProviders(<RecordsTab state={state} />, { client: client({ checkStateRecords }) });
+    // The card's own kind select (scoped past the lookup/browse ones), then the Check button.
+    const checkCard = (await screen.findByText('Check records against the schema')).closest(
+      'div',
+    ) as HTMLElement;
+    await user.click(within(checkCard).getByRole('combobox'));
+    await user.click(await screen.findByRole('option', { name: 'thread' }));
+    await user.click(within(checkCard).getByRole('button', { name: 'Check records' }));
+    await waitFor(() => {
+      expect(checkStateRecords).toHaveBeenCalled();
+    });
+    expect(checkStateRecords.mock.calls[0]?.[1]).toEqual({
+      kind: 'thread',
+      limit: 500,
+      cursor: undefined,
+    });
+  });
+
+  it('lists each misfit with its reasons and opens the record on a row link', async () => {
+    const user = userEvent.setup({ delay: null });
+    const checkStateRecords = vi.fn().mockResolvedValue({
+      checked: 10,
+      items: [misfit('p-7', [{ path: '$.age', message: "'age' is a required property" }])],
+      next_cursor: null,
+      held: [],
+    });
+    const { navigate } = renderWithProviders(<RecordsTab state={state} />, {
+      client: client({ checkStateRecords }),
+    });
+    await user.click(await screen.findByRole('button', { name: 'Check records' }));
+    // The reason renders `path — message`.
+    expect(
+      await screen.findByText("'age' is a required property", { exact: false }),
+    ).toHaveTextContent("$.age — 'age' is a required property");
+    await user.click(await screen.findByRole('button', { name: 'p-7' }));
+    expect(navigate).toHaveBeenCalledWith('states', {
+      state: 'profile',
+      subject: 'person:p-7',
+      target: 'agent:assistant',
+    });
+  });
+
+  it('shows the all-fit empty state when a full walk finds no misfits', async () => {
+    const user = userEvent.setup({ delay: null });
+    const checkStateRecords = vi
+      .fn()
+      .mockResolvedValue({ checked: 5, items: [], next_cursor: null, held: [] });
+    renderWithProviders(<RecordsTab state={state} />, { client: client({ checkStateRecords }) });
+    await user.click(await screen.findByRole('button', { name: 'Check records' }));
+    expect(await screen.findByText('All records fit')).toBeInTheDocument();
+    expect(screen.getByTestId('check-summary')).toHaveTextContent('5 checked — 0 do not fit');
+  });
+
+  it('names the held subjects the walk skipped', async () => {
+    const user = userEvent.setup({ delay: null });
+    const checkStateRecords = vi.fn().mockResolvedValue({
+      checked: 4,
+      items: [],
+      next_cursor: null,
+      held: [{ save_id: '7', held_by: '7', subjects: [subject] }],
+    });
+    renderWithProviders(<RecordsTab state={state} />, { client: client({ checkStateRecords }) });
+    await user.click(await screen.findByRole('button', { name: 'Check records' }));
+    const line = await screen.findByTestId('held-subjects-line');
+    expect(line).toHaveTextContent(/^1 subject\(s\) on this state are held/);
+  });
+
+  it('reads a 501 as a muted not-enabled note, never an alert', async () => {
+    const user = userEvent.setup({ delay: null });
+    const checkStateRecords = vi.fn().mockRejectedValue(new ApiError('no store', 501));
+    renderWithProviders(<RecordsTab state={state} />, { client: client({ checkStateRecords }) });
+    await user.click(await screen.findByRole('button', { name: 'Check records' }));
+    expect(await screen.findByTestId('check-disabled')).toHaveTextContent(
+      /Checking records is not enabled on this deployment/,
+    );
+    // Muted, not a loud error surface.
+    expect(screen.queryByText('Something went wrong')).toBeNull();
+  });
+
+  it('stops loudly on a mid-walk page error and resumes from the last good cursor on Retry', async () => {
+    const user = userEvent.setup({ delay: null });
+    const checkStateRecords = vi
+      .fn()
+      .mockResolvedValueOnce({ checked: 50, items: [misfit('p-7')], next_cursor: 'c2', held: [] })
+      .mockRejectedValueOnce(new Error('page 2 down'))
+      .mockResolvedValueOnce({ checked: 30, items: [misfit('p-9')], next_cursor: null, held: [] });
+    renderWithProviders(<RecordsTab state={state} />, { client: client({ checkStateRecords }) });
+    await user.click(await screen.findByRole('button', { name: 'Check records' }));
+    // The failure is loud, and the partial aggregate stays on screen (never a silent truncation).
+    expect(await screen.findByText('page 2 down')).toBeInTheDocument();
+    expect(screen.getByTestId('check-summary')).toHaveTextContent('50 checked — 1 do not fit');
+    expect(screen.getByRole('button', { name: 'p-7' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => {
+      expect(checkStateRecords).toHaveBeenCalledTimes(3);
+    });
+    // The retry resumes from the failed page's cursor rather than restarting the walk.
+    expect(checkStateRecords.mock.calls[1]?.[1]).toEqual({
+      kind: 'person',
+      limit: 500,
+      cursor: 'c2',
+    });
+    expect(checkStateRecords.mock.calls[2]?.[1]).toEqual({
+      kind: 'person',
+      limit: 500,
+      cursor: 'c2',
+    });
+    expect(await screen.findByTestId('check-summary')).toHaveTextContent(
+      '80 checked — 2 do not fit',
+    );
+    expect(screen.getByRole('button', { name: 'p-9' })).toBeInTheDocument();
   });
 });

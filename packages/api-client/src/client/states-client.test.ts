@@ -188,6 +188,67 @@ describe('states client transport', () => {
     expect(page.matches[0]?.updated_at).toBe(1767225600);
   });
 
+  it('validateStateRecord() POSTs the candidate document as the body and parses the verdict', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: { fits: false, reasons: [{ path: '$', message: "'age' is a required property" }] },
+      }),
+    );
+    const out = await client.validateStateRecord('profile', { tone: 'warm' });
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/states/profile/records/validate');
+    // The request body IS the candidate document — no `{filters}`/`{data}` envelope.
+    expect(captured[0]?.body).toEqual({ tone: 'warm' });
+    expect(out.fits).toBe(false);
+    expect(out.reasons[0]?.path).toBe('$');
+    expect(out.reasons[0]?.message).toBe("'age' is a required property");
+  });
+
+  it('validateStateRecord() parses a fitting document (fits:true, reasons defaults to [])', async () => {
+    const { client } = harness(() => jsonResponse({ data: { fits: true } }));
+    const out = await client.validateStateRecord('profile', { tone: 'warm', age: 3 });
+    expect(out.fits).toBe(true);
+    expect(out.reasons).toEqual([]);
+  });
+
+  it('checkStateRecords() sends the kind + keyset query and parses a misfits-only page', async () => {
+    const misfit = {
+      subject,
+      updated_at: 1767225600,
+      reasons: [{ path: '$.age', message: "'age' is a required property" }],
+    };
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { checked: 50, items: [misfit], next_cursor: 'c2' } }),
+    );
+    const page = await client.checkStateRecords('profile', { kind: 'person', limit: 500 });
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/states/profile/records/check?kind=person&limit=500');
+    expect(page.checked).toBe(50);
+    expect(page.items[0]?.subject.key).toBe('p-1');
+    expect(page.items[0]?.updated_at).toBe(1767225600);
+    expect(page.items[0]?.reasons[0]?.path).toBe('$.age');
+    expect(page.next_cursor).toBe('c2');
+    // `held` defaults to [] when the page omits it.
+    expect(page.held).toEqual([]);
+  });
+
+  it('checkStateRecords() carries an opaque cursor so a caller can walk the pages', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { checked: 3, items: [], next_cursor: null } }),
+    );
+    const page = await client.checkStateRecords('profile', {
+      kind: 'person',
+      limit: 500,
+      cursor: 'c2',
+    });
+    expect(captured[0]?.url).toBe(
+      '/api/states/profile/records/check?kind=person&limit=500&cursor=c2',
+    );
+    // A terminal page: no misfits and `next_cursor` null ends a walk.
+    expect(page.items).toEqual([]);
+    expect(page.next_cursor).toBeNull();
+  });
+
   it('attachStateTemplate() PUTs the attachment and parses the acknowledgement', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({ data: { attached: true, state: 'profile', template: 'notes' } }),

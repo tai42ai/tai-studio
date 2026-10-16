@@ -126,6 +126,40 @@ export type SubjectPage = z.infer<typeof subjectPage>;
 export const recordSearchPage = openapi.stateSearchPage;
 export type RecordSearchPage = z.infer<typeof recordSearchPage>;
 
+/**
+ * One way a candidate document does not fit a state's effective schema (mirrors
+ * ValidationReason): the JSON `path` of the offending node (`$` for the document root)
+ * and the validator's `message`. A document that fits has none.
+ */
+export const validationReason = openapi.validationReason;
+export type ValidationReason = z.infer<typeof validationReason>;
+
+/**
+ * `POST /api/states/{name}/records/validate` — whether a candidate document `fits` the
+ * state's effective schema, with every `reasons` entry it fails on (ordered by JSON
+ * path). A misfit is a 200 whose body says `fits:false`; a non-object body or a broken
+ * `$ref` is the route's 422.
+ */
+export const recordValidation = openapi.recordValidation;
+export type RecordValidation = z.infer<typeof recordValidation>;
+
+/**
+ * One stored record that does not fit its state's current effective schema (mirrors
+ * RecordCheckItem): the `subject` it belongs to, its last-write `updated_at` (epoch
+ * seconds) and every `reasons` entry it fails on.
+ */
+export const recordCheckItem = openapi.recordCheckItem;
+export type RecordCheckItem = z.infer<typeof recordCheckItem>;
+
+/**
+ * `GET /api/states/{name}/records/check` — one keyset page of the state's records checked
+ * against its effective schema: `checked` (records read this page), `items` (the MISFITS
+ * ONLY), `next_cursor` (the cursor the next page reads from, `null` at the end) and `held`
+ * (the saves held by a failed pending save whose subjects the page skipped).
+ */
+export const recordCheckPage = openapi.recordCheckPage;
+export type RecordCheckPage = z.infer<typeof recordCheckPage>;
+
 /** A WriteEntry's origin completed by the platform chokepoint (mirrors CompletedOrigin). */
 export const completedOrigin = openapi.completedOrigin;
 export type CompletedOrigin = z.infer<typeof completedOrigin>;

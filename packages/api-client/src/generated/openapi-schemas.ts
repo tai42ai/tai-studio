@@ -826,6 +826,18 @@ export type PublicRoutePin = z.infer<typeof publicRoutePin>;
 export const publicRouteUnpin = z.object({ "url": z.string() });
 export type PublicRouteUnpin = z.infer<typeof publicRouteUnpin>;
 
+export const validationReason = z.object({ "message": z.string(), "path": z.string() }).strict();
+export type ValidationReason = z.infer<typeof validationReason>;
+
+export const recordCheckItem = z.object({ "reasons": z.array(validationReason).default([]), "subject": stateSubject, "updated_at": z.number() }).strict();
+export type RecordCheckItem = z.infer<typeof recordCheckItem>;
+
+export const recordCheckPage = z.object({ "checked": z.number().int(), "held": z.array(heldPendingSave).default([]), "items": z.array(recordCheckItem).default([]), "next_cursor": z.string().nullable().default(null) }).strict();
+export type RecordCheckPage = z.infer<typeof recordCheckPage>;
+
+export const recordValidation = z.object({ "fits": z.boolean(), "reasons": z.array(validationReason).default([]) }).strict();
+export type RecordValidation = z.infer<typeof recordValidation>;
+
 export const reloadConfig = z.object({ "targets": z.array(z.string()).nullable().default(null) });
 export type ReloadConfig = z.infer<typeof reloadConfig>;
 
@@ -1414,6 +1426,7 @@ export const responseSchemas = {
   get_api_states_name_attachments: stateAttachmentList,
   get_api_states_name_attachments_template: stateAttachmentRow,
   get_api_states_name_consumers: stateConsumerList,
+  get_api_states_name_records_check: recordCheckPage,
   get_api_states_name_records_target_kind_target_name_kind_key: stateRecordOrNull,
   get_api_states_name_records_target_kind_target_name_kind_key_template_jq_program: templateJqResult,
   get_api_states_name_records_target_kind_target_name_kind_key_writes: writesPage,
@@ -1511,6 +1524,7 @@ export const responseSchemas = {
   post_api_states_name_records_target_kind_target_name_kind_key_deltas: applyResult,
   post_api_states_name_records_target_kind_target_name_kind_key_fold: foldReport,
   post_api_states_name_records_target_kind_target_name_kind_key_template_jq_program: templateJqApplyResult,
+  post_api_states_name_records_validate: recordValidation,
   post_api_storage_resources: resourceStored,
   post_api_sub_mcp: subMcpRegistrationResult,
   post_api_template: templateFetchView,
