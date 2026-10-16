@@ -282,6 +282,21 @@ const FRAMES: readonly Frame[] = [
     ready: (page) => page.getByText('t-001').first(),
   },
   {
+    // The "Check records against the schema" card after a live walk. The card sits below
+    // the lookup and subjects cards, so it is scrolled into view before the check runs; the
+    // summary then reports the walk and — the seeded `notes` records all fit the effective
+    // schema — the all-fit empty state stands.
+    name: 'states-records-check',
+    path: '/states?state=notes&tab=records',
+    ready: (page) => page.getByRole('heading', { name: 'Check records against the schema' }),
+    action: async (page) => {
+      const check = page.getByRole('button', { name: 'Check records' });
+      await check.scrollIntoViewIfNeeded();
+      await check.click();
+      await page.getByTestId('check-summary').waitFor({ state: 'visible' });
+    },
+  },
+  {
     // The Consumers tab: everything that binds the state; waits on the seeded hook.
     name: 'states-consumers',
     path: '/states?state=notes&tab=consumers',
