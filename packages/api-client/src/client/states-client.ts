@@ -203,6 +203,32 @@ function stateRecordMethods(t: Transport) {
           signal,
         },
       ),
+    // Validate a candidate document against the state's effective schema. The request body
+    // IS the candidate document (not an envelope); the answer says whether it `fits` and,
+    // when it does not, every reason. A misfit is a 200 whose body says `fits:false`; only a
+    // non-object body or a broken `$ref` is the route's 422.
+    validateStateRecord: (name: string, doc: Record<string, unknown>, signal?: AbortSignal) =>
+      req(
+        buildPath(apiRoutes.post_api_states_name_records_validate.path, { name }),
+        s.recordValidation,
+        { method: 'POST', body: doc, signal },
+      ),
+    // One keyset page of the state's stored records checked against its effective schema.
+    // `items` are the MISFITS ONLY; a caller walks `next_cursor` (null at the end) to cover
+    // every record. Optionally scoped to one subject `kind`.
+    checkStateRecords: (
+      name: string,
+      params: { kind?: string } & StatePageQuery,
+      signal?: AbortSignal,
+    ) =>
+      req(
+        buildPath(apiRoutes.get_api_states_name_records_check.path, { name }),
+        s.recordCheckPage,
+        {
+          signal,
+          query: { kind: params.kind, limit: params.limit, cursor: params.cursor },
+        },
+      ),
     // A subject with no document yet reads as `null` (a 200 `{data: null}`, the record
     // page's Create path) — never an error, so the schema is nullable.
     getStateRecord: (name: string, subject: StateSubjectRef, signal?: AbortSignal) =>

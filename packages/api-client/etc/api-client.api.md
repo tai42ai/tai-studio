@@ -806,6 +806,10 @@ export const apiRoutes: {
         readonly method: "GET";
         readonly path: "/api/states/{name}/consumers";
     };
+    readonly get_api_states_name_records_check: {
+        readonly method: "GET";
+        readonly path: "/api/states/{name}/records/check";
+    };
     readonly get_api_states_name_records_target_kind_target_name_kind_key: {
         readonly method: "GET";
         readonly path: "/api/states/{name}/records/{target_kind}/{target_name}/{kind}/{key}";
@@ -1213,6 +1217,10 @@ export const apiRoutes: {
     readonly post_api_states_name_records_target_kind_target_name_kind_key_template_jq_program: {
         readonly method: "POST";
         readonly path: "/api/states/{name}/records/{target_kind}/{target_name}/{kind}/{key}/template-jq/{program}";
+    };
+    readonly post_api_states_name_records_validate: {
+        readonly method: "POST";
+        readonly path: "/api/states/{name}/records/validate";
     };
     readonly post_api_storage_resources: {
         readonly method: "POST";
@@ -7618,6 +7626,42 @@ export function createApiClient(config: ApiConfig): {
             }[];
         }[] | undefined;
     }>;
+    readonly validateStateRecord: (name: string, doc: Record<string, unknown>, signal?: AbortSignal) => Promise<{
+        fits: boolean;
+        reasons: {
+            message: string;
+            path: string;
+        }[];
+    }>;
+    readonly checkStateRecords: (name: string, params: {
+        kind?: string;
+    } & StatePageQuery, signal?: AbortSignal) => Promise<{
+        checked: number;
+        held: {
+            held_by: string;
+            save_id: string;
+            subjects: {
+                key: string;
+                kind: string;
+                target_kind: "tool" | "agent";
+                target_name: string;
+            }[];
+        }[];
+        items: {
+            reasons: {
+                message: string;
+                path: string;
+            }[];
+            subject: {
+                key: string;
+                kind: string;
+                target_kind: "tool" | "agent";
+                target_name: string;
+            };
+            updated_at: number;
+        }[];
+        next_cursor: string | null;
+    }>;
     readonly getStateRecord: (name: string, subject: StateSubjectRef, signal?: AbortSignal) => Promise<{
         canonical_subject: {
             key: string;
@@ -12123,6 +12167,65 @@ const reconnectResult: z.ZodObject<{
     flow_id: z.ZodString;
 }, z.core.$strip>;
 
+// @public (undocumented)
+export type RecordCheckItem = z.infer<typeof recordCheckItem>;
+
+// @public
+const recordCheckItem: z.ZodObject<{
+    reasons: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        message: z.ZodString;
+        path: z.ZodString;
+    }, z.core.$strict>>>;
+    subject: z.ZodObject<{
+        key: z.ZodString;
+        kind: z.ZodString;
+        target_kind: z.ZodEnum<{
+            tool: "tool";
+            agent: "agent";
+        }>;
+        target_name: z.ZodString;
+    }, z.core.$strict>;
+    updated_at: z.ZodNumber;
+}, z.core.$strict>;
+
+// @public (undocumented)
+export type RecordCheckPage = z.infer<typeof recordCheckPage>;
+
+// @public
+const recordCheckPage: z.ZodObject<{
+    checked: z.ZodNumber;
+    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        held_by: z.ZodString;
+        save_id: z.ZodString;
+        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            key: z.ZodString;
+            kind: z.ZodString;
+            target_kind: z.ZodEnum<{
+                tool: "tool";
+                agent: "agent";
+            }>;
+            target_name: z.ZodString;
+        }, z.core.$strict>>>;
+    }, z.core.$strict>>>;
+    items: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        reasons: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            message: z.ZodString;
+            path: z.ZodString;
+        }, z.core.$strict>>>;
+        subject: z.ZodObject<{
+            key: z.ZodString;
+            kind: z.ZodString;
+            target_kind: z.ZodEnum<{
+                tool: "tool";
+                agent: "agent";
+            }>;
+            target_name: z.ZodString;
+        }, z.core.$strict>;
+        updated_at: z.ZodNumber;
+    }, z.core.$strict>>>;
+    next_cursor: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+}, z.core.$strict>;
+
 // @public
 const recordErased: z.ZodObject<{
     erased: z.ZodBoolean;
@@ -12160,6 +12263,18 @@ const recordSearchPage: z.ZodObject<{
     }, z.core.$strip>>;
     next_cursor: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
+
+// @public (undocumented)
+export type RecordValidation = z.infer<typeof recordValidation>;
+
+// @public
+const recordValidation: z.ZodObject<{
+    fits: z.ZodBoolean;
+    reasons: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        message: z.ZodString;
+        path: z.ZodString;
+    }, z.core.$strict>>>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 export type RecycleEntry = z.infer<typeof recycleEntry>;
@@ -13436,6 +13551,14 @@ declare namespace s {
         SubjectPage,
         recordSearchPage,
         RecordSearchPage,
+        validationReason,
+        ValidationReason,
+        recordValidation,
+        RecordValidation,
+        recordCheckItem,
+        RecordCheckItem,
+        recordCheckPage,
+        RecordCheckPage,
         completedOrigin,
         CompletedOrigin,
         writeEntry,
@@ -14250,6 +14373,14 @@ declare namespace schemas {
         SubjectPage,
         recordSearchPage,
         RecordSearchPage,
+        validationReason,
+        ValidationReason,
+        recordValidation,
+        RecordValidation,
+        recordCheckItem,
+        RecordCheckItem,
+        recordCheckPage,
+        RecordCheckPage,
         completedOrigin,
         CompletedOrigin,
         writeEntry,
@@ -22349,6 +22480,15 @@ export interface ValidatePresetBody {
     // (undocumented)
     readonly state_binding?: s.StateBinding | null;
 }
+
+// @public (undocumented)
+export type ValidationReason = z.infer<typeof validationReason>;
+
+// @public
+const validationReason: z.ZodObject<{
+    message: z.ZodString;
+    path: z.ZodString;
+}, z.core.$strict>;
 
 // @public (undocumented)
 export type VisitOutcome = z.infer<typeof visitOutcome>;
