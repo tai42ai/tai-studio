@@ -1,6 +1,7 @@
 /**
- * Design-review frames for the conversation-route overlap policy and its transcript
- * outcomes, captured against the LIVE boot skeleton in BOTH themes at 1440×900:
+ * Design-review frames for the conversation-route overlap policy, its transcript
+ * outcomes, and the thread-list bulk reset, captured against the LIVE boot skeleton
+ * in BOTH themes at 1440×900:
  *
  *   - `conversation-route-create` — the CREATE dialog open, its `Overlap` group scrolled
  *     into view, blank, showing the group hint (the defaults live in the hint, not the
@@ -13,6 +14,16 @@
  *   - `conversation-transcript-outcomes` — one thread's transcript carrying a `merged`
  *     record (`Merged into <id>`) and a `superseded` record (`Superseded by <id>`) beside
  *     a normal answered one.
+ *   - `conversation-inbound-attachments` — one thread's transcript whose visitor turn
+ *     carries a served image inline and a document download chip beside its text.
+ *   - `conversation-bulk-reset-select` — the thread list's multi-select surface: the
+ *     per-row checkboxes, the header select-all ticked, and the "Reset selected (N)"
+ *     danger action.
+ *   - `conversation-bulk-reset-confirm` — the "Reset selected threads" confirm dialog,
+ *     whose copy and confirm label name the selected count.
+ *   - `conversation-bulk-reset-result` — the per-item result: the "N threads reset."
+ *     summary beside a failed row carrying its reason and a Retry, from a fan-out with
+ *     one thread held by a turn in flight.
  *
  * Every door the surface reads is served through `page.route`, deterministically; other
  * routes and non-GET methods fall through to the live skeleton. The write capability is
@@ -160,6 +171,49 @@ const ATTACHMENT_RECORD = {
   delivery_status: 'delivered',
   created_at: 1_800_000_010,
 };
+
+/** The route the bulk-reset frames drive their thread list on — one of the table
+ * routes, so the `/api/conversations` stub already lists it and the list renders. */
+const BULK_ROUTE = 'assistant-line';
+
+/** The three loaded threads the bulk-reset frames select over: enough to show the
+ * select-all header, a multi-count action, and a mixed success/failure result. */
+const BULK_THREADS = [
+  {
+    thread_id: `${BULK_ROUTE}/+10000000001`,
+    client_address: '+10000000001',
+    last_activity_at: 1_800_000_201,
+    message_count: 4,
+    last_delivery_status: 'delivered',
+  },
+  {
+    thread_id: `${BULK_ROUTE}/+10000000002`,
+    client_address: '+10000000002',
+    last_activity_at: 1_800_000_202,
+    message_count: 2,
+    last_delivery_status: 'delivered',
+  },
+  {
+    thread_id: `${BULK_ROUTE}/+10000000003`,
+    client_address: '+10000000003',
+    last_activity_at: 1_800_000_203,
+    message_count: 7,
+    last_delivery_status: 'failed',
+  },
+] as const;
+
+/** The one thread whose reset the result frame fails: its DELETE rejects with a 409
+ * (a turn in flight), so the batch shows a success summary beside one failed row. */
+const BULK_FAILED_THREAD = `${BULK_ROUTE}/+10000000003`;
+
+/** The reason the failed row surfaces — the skeleton's `{ error }` message shape. */
+const BULK_FAILURE_REASON = 'This thread has a turn in flight; try again once it settles.';
+
+/** The accessible name of the multi-count action, shared by the select and confirm frames. */
+const BULK_RESET_ACTION = `Reset selected (${String(BULK_THREADS.length)})`;
+
+/** The confirm dialog's confirm label, which names the selected count. */
+const BULK_CONFIRM_LABEL = `Reset ${String(BULK_THREADS.length)} threads`;
 
 /** Fulfil a `GET` on `pathname` with the skeleton's `{ data }` envelope; other routes and
  * non-GET methods fall through to the live skeleton. */
@@ -322,6 +376,99 @@ const FRAMES: readonly Frame[] = [
       await page.getByRole('link', { name: 'report.pdf' }).scrollIntoViewIfNeeded();
     },
     ready: (page) => page.getByRole('link', { name: 'report.pdf' }),
+  },
+  {
+    // The thread list's multi-select surface: the per-row checkboxes, the header
+    // select-all ticked over every loaded row, and the "Reset selected (N)" danger
+    // action it reveals. The DELETE capability the surface gates on is granted by
+    // the admin boot credential, as the create/edit dialogs are.
+    name: 'conversation-bulk-reset-select',
+    url: `/conversations?route=${encodeURIComponent(BULK_ROUTE)}`,
+    setup: async (page) => {
+      await stubGet(page, '/api/conversations', pageOf(TABLE_ROUTES));
+      await stubGet(page, `/api/conversations/${BULK_ROUTE}/threads`, pageOf(BULK_THREADS));
+    },
+    action: async (page) => {
+      await page.getByRole('checkbox', { name: 'Select all threads' }).click();
+      await page.getByRole('button', { name: BULK_RESET_ACTION }).waitFor({ state: 'visible' });
+    },
+    ready: (page) => page.getByRole('button', { name: BULK_RESET_ACTION }),
+  },
+  {
+    // The "Reset selected threads" confirm dialog, whose copy and confirm label both
+    // name the selected count before any thread is forgotten.
+    name: 'conversation-bulk-reset-confirm',
+    url: `/conversations?route=${encodeURIComponent(BULK_ROUTE)}`,
+    setup: async (page) => {
+      await stubGet(page, '/api/conversations', pageOf(TABLE_ROUTES));
+      await stubGet(page, `/api/conversations/${BULK_ROUTE}/threads`, pageOf(BULK_THREADS));
+    },
+    action: async (page) => {
+      await page.getByRole('checkbox', { name: 'Select all threads' }).click();
+      await page.getByRole('button', { name: BULK_RESET_ACTION }).click();
+      await page.getByRole('dialog').waitFor({ state: 'visible' });
+    },
+    ready: (page) => page.getByRole('button', { name: BULK_CONFIRM_LABEL }),
+  },
+  {
+    // The per-item result: the fan-out over the per-thread DELETE door with one
+    // thread held by a turn in flight, so the summary ("N threads reset.") shows
+    // beside a failed row carrying its reason and a Retry. The threads door reads a
+    // live set a successful delete drops from; the one in-flight thread's DELETE
+    // rejects with a 409, surfacing loudly instead of being hidden.
+    name: 'conversation-bulk-reset-result',
+    url: `/conversations?route=${encodeURIComponent(BULK_ROUTE)}`,
+    setup: async (page) => {
+      await stubGet(page, '/api/conversations', pageOf(TABLE_ROUTES));
+      const present = new Map<string, (typeof BULK_THREADS)[number]>(
+        BULK_THREADS.map((thread) => [thread.thread_id, thread]),
+      );
+      await page.route(
+        (url) => url.pathname === `/api/conversations/${BULK_ROUTE}/threads`,
+        async (route) => {
+          if (route.request().method() !== 'GET') {
+            await route.fallback();
+            return;
+          }
+          await route.fulfill({ json: { data: pageOf([...present.values()]) } });
+        },
+      );
+      await page.route(
+        (url) => url.pathname === `/api/conversations/${BULK_ROUTE}/thread`,
+        async (route) => {
+          if (route.request().method() !== 'DELETE') {
+            await route.fallback();
+            return;
+          }
+          const threadId = new URL(route.request().url()).searchParams.get('thread_id') ?? '';
+          if (threadId === BULK_FAILED_THREAD) {
+            await route.fulfill({ status: 409, json: { error: BULK_FAILURE_REASON } });
+            return;
+          }
+          present.delete(threadId);
+          await route.fulfill({
+            json: {
+              data: {
+                removed: 1,
+                route_name: BULK_ROUTE,
+                thread_id: threadId,
+                states_erased: 0,
+              },
+            },
+          });
+        },
+      );
+    },
+    action: async (page) => {
+      await page.getByRole('checkbox', { name: 'Select all threads' }).click();
+      await page.getByRole('button', { name: BULK_RESET_ACTION }).click();
+      await page.getByRole('button', { name: BULK_CONFIRM_LABEL }).click();
+      await page
+        .getByTestId('conversation-bulk-reset-result')
+        .getByRole('button', { name: 'Retry' })
+        .waitFor({ state: 'visible' });
+    },
+    ready: (page) => page.getByTestId('conversation-bulk-reset-result'),
   },
 ];
 
