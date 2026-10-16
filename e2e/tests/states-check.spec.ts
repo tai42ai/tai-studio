@@ -23,7 +23,7 @@ needs('kind:states', 'mutable');
 
 /** The state, template and subject this scenario authors. */
 const STATE = 'e2e_check';
-const TEMPLATE = 'e2e_required';
+const TEMPLATE = 'e2e-required';
 const TARGET_NAME = 'assistant';
 const SUBJECT_KEY = 'e2e-c-1';
 
