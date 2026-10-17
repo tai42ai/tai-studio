@@ -1675,6 +1675,7 @@ answer: string | null;
 answer_parts: {
 data: {
 options: Record<string, {
+description: string | null;
 label: string | null;
 value: string;
 }[]>;
@@ -1870,6 +1871,7 @@ answer: string | null;
 answer_parts: {
 data: {
 options: Record<string, {
+description: string | null;
 label: string | null;
 value: string;
 }[]>;
@@ -2236,6 +2238,7 @@ answer: string | null;
 answer_parts: {
 data: {
 options: Record<string, {
+description: string | null;
 label: string | null;
 value: string;
 }[]>;
@@ -2469,6 +2472,7 @@ status: string;
 readonly reactInteraction: (interactionId: string, event: ReactionEvent, values: unknown) => Promise<{
 values: Record<string, unknown>;
 options: Record<string, {
+description: string | null;
 label: string | null;
 value: string;
 }[]>;
@@ -6075,6 +6079,7 @@ const conversationFailedMessages: z.ZodObject<{
         answer_parts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
             data: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+                    description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     value: z.ZodString;
                 }, z.core.$strict>>>>;
@@ -6328,6 +6333,7 @@ const conversationMessage: z.ZodObject<{
     answer_parts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
         data: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+                description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 value: z.ZodString;
             }, z.core.$strict>>>>;
@@ -6579,6 +6585,7 @@ const conversationMessageSearchPage: z.ZodObject<{
         answer_parts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
             data: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+                    description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     value: z.ZodString;
                 }, z.core.$strict>>>>;
@@ -7612,6 +7619,7 @@ const conversationTranscriptPage: z.ZodObject<{
         answer_parts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
             data: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+                    description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     value: z.ZodString;
                 }, z.core.$strict>>>>;
@@ -9276,6 +9284,7 @@ function createApiClient(config: ApiConfig): {
             answer_parts: {
                 data: {
                     options: Record<string, {
+                        description: string | null;
                         label: string | null;
                         value: string;
                     }[]>;
@@ -9471,6 +9480,7 @@ function createApiClient(config: ApiConfig): {
             answer_parts: {
                 data: {
                     options: Record<string, {
+                        description: string | null;
                         label: string | null;
                         value: string;
                     }[]>;
@@ -9837,6 +9847,7 @@ function createApiClient(config: ApiConfig): {
             answer_parts: {
                 data: {
                     options: Record<string, {
+                        description: string | null;
                         label: string | null;
                         value: string;
                     }[]>;
@@ -10070,6 +10081,7 @@ function createApiClient(config: ApiConfig): {
     readonly reactInteraction: (interactionId: string, event: ReactionEvent, values: unknown) => Promise<{
         values: Record<string, unknown>;
         options: Record<string, {
+            description: string | null;
             label: string | null;
             value: string;
         }[]>;
@@ -13604,6 +13616,7 @@ export type FormControl = 'chips' | 'textarea';
 // @public
 const formData: z.ZodObject<{
     options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+        description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         value: z.ZodString;
     }, z.core.$strict>>>>;
@@ -13641,6 +13654,7 @@ type FormOption = z.infer<typeof formOption>;
 
 // @public
 const formOption: z.ZodObject<{
+    description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     value: z.ZodString;
 }, z.core.$strict>;
@@ -13734,6 +13748,7 @@ type FormUpdate = z.infer<typeof formUpdate>;
 const formUpdate: z.ZodObject<{
     values: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+        description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         value: z.ZodString;
     }, z.core.$strict>>>>;
@@ -14264,6 +14279,7 @@ const interactionReaction: z.ZodObject<{
     update: z.ZodObject<{
         values: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+            description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             value: z.ZodString;
         }, z.core.$strict>>>>;

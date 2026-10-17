@@ -13,7 +13,8 @@
  * as the matching `<input type>`, `numeric`/`decimal` as a text box with the `inputmode`
  * keyboard hint, `text` plain) with the value kept as the typed string; a re-optioned field
  * (`choice`) as a CHOICE of the send's values rather than a free control; the "Options
- * for this send" value→label mapping; a `control: chips` choice as a ChipGroup (single
+ * for this send" value→label mapping, with an option's second line (`description`) after
+ * its label and none for a null one; a `control: chips` choice as a ChipGroup (single
  * for a string enum, multi for an array of enum strings); a `control: textarea` string as
  * a `<textarea>` with a live length counter; a drawable `rangeStart` date pair as ONE
  * range control (and the two-field degrade when a sibling's `visibleWhen` names an end);
@@ -156,6 +157,40 @@ const FORM_INTERACTION = {
 const PENDING_PAGE = {
   data: {
     items: [FORM_INTERACTION],
+    total: 1,
+    page: 1,
+    page_size: 50,
+    next_page: null,
+    truncated: false,
+  },
+};
+
+/** One pending form question whose per-send options carry a second line: `early` with a
+ * `description`, `late` with a null one. */
+const SECOND_LINE_PAGE = {
+  data: {
+    items: [
+      {
+        interaction_id: 'form-second-line-1',
+        group_id: 'form-second-line-1',
+        answer_format: 'form',
+        question: 'Pick a slot',
+        created_at: '2026-08-01T00:00:00.000Z',
+        timeout_at: '2026-08-09T00:00:00.000Z',
+        sensitive: false,
+        format_payload: {
+          schema: { type: 'object', properties: { slot: { type: 'string' } } },
+          data: {
+            options: {
+              slot: [
+                { value: 'early', label: 'Early', description: 'Opens at 9:00' },
+                { value: 'late', label: 'Late', description: null },
+              ],
+            },
+          },
+        },
+      },
+    ],
     total: 1,
     page: 1,
     page_size: 50,
@@ -465,6 +500,22 @@ test('the form preview shows prefilled values, the per-send options, the drawn c
   await expect(stepStatus).toContainText('Step 1 of 4 — Basics');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.screenshot({ path: `${OUT_DIR}/form-preview-dark.png` });
+});
+
+test("the per-send options legend shows an option's second line, and none for a null description", async ({
+  page,
+}) => {
+  await stubInbox(page, SECOND_LINE_PAGE);
+  await page.goto('/interactions');
+
+  const card = page.getByTestId('interaction-card').filter({ hasText: 'Pick a slot' });
+  await expect(card).toBeVisible();
+
+  // A non-blank `description` reads ` — <description>` after `label (value)`; a null one
+  // adds nothing, so that option reads `label (value)` alone.
+  const options = card.getByTestId('form-send-options');
+  await expect(options).toContainText('slot');
+  await expect(options).toContainText('Early (early) — Opens at 9:00, Late (late)');
 });
 
 test("a non-form question draws its answer control with the caller's platform-drawn text", async ({

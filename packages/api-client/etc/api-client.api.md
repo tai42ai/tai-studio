@@ -2118,6 +2118,7 @@ const conversationFailedMessages: z.ZodObject<{
         answer_parts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
             data: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+                    description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     value: z.ZodString;
                 }, z.core.$strict>>>>;
@@ -2371,6 +2372,7 @@ const conversationMessage: z.ZodObject<{
     answer_parts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
         data: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+                description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 value: z.ZodString;
             }, z.core.$strict>>>>;
@@ -2622,6 +2624,7 @@ const conversationMessageSearchPage: z.ZodObject<{
         answer_parts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
             data: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+                    description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     value: z.ZodString;
                 }, z.core.$strict>>>>;
@@ -3652,6 +3655,7 @@ const conversationTranscriptPage: z.ZodObject<{
         answer_parts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodObject<{
             data: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+                    description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     value: z.ZodString;
                 }, z.core.$strict>>>>;
@@ -5289,6 +5293,7 @@ export function createApiClient(config: ApiConfig): {
             answer_parts: {
                 data: {
                     options: Record<string, {
+                        description: string | null;
                         label: string | null;
                         value: string;
                     }[]>;
@@ -5484,6 +5489,7 @@ export function createApiClient(config: ApiConfig): {
             answer_parts: {
                 data: {
                     options: Record<string, {
+                        description: string | null;
                         label: string | null;
                         value: string;
                     }[]>;
@@ -5850,6 +5856,7 @@ export function createApiClient(config: ApiConfig): {
             answer_parts: {
                 data: {
                     options: Record<string, {
+                        description: string | null;
                         label: string | null;
                         value: string;
                     }[]>;
@@ -6083,6 +6090,7 @@ export function createApiClient(config: ApiConfig): {
     readonly reactInteraction: (interactionId: string, event: ReactionEvent, values: unknown) => Promise<{
         values: Record<string, unknown>;
         options: Record<string, {
+            description: string | null;
             label: string | null;
             value: string;
         }[]>;
@@ -9029,6 +9037,7 @@ const folderRecord: z.ZodObject<{
 // @public
 const formData: z.ZodObject<{
     options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+        description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         value: z.ZodString;
     }, z.core.$strict>>>>;
@@ -9044,6 +9053,7 @@ export type FormOption = z.infer<typeof formOption>;
 
 // @public
 const formOption: z.ZodObject<{
+    description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     value: z.ZodString;
 }, z.core.$strict>;
@@ -9137,6 +9147,7 @@ export type FormUpdate = z.infer<typeof formUpdate>;
 const formUpdate: z.ZodObject<{
     values: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+        description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         value: z.ZodString;
     }, z.core.$strict>>>>;
@@ -9609,6 +9620,7 @@ const interactionReaction: z.ZodObject<{
     update: z.ZodObject<{
         values: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+            description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             value: z.ZodString;
         }, z.core.$strict>>>>;
