@@ -88,7 +88,7 @@ export type PageCopy = z.infer<typeof pageCopy>;
 export const answerPageWording = z.object({ "awaiting": pageCopy.nullable().default(null), "confirm": pageCopy.nullable().default(null), "done": pageCopy.nullable().default(null), "form": formPageWording.nullable().default(null), "submitted": pageCopy.nullable().default(null) }).strict();
 export type AnswerPageWording = z.infer<typeof answerPageWording>;
 
-export const formOption = z.object({ "label": z.string().nullable().default(null), "value": z.string() }).strict();
+export const formOption = z.object({ "description": z.string().nullable().default(null), "label": z.string().nullable().default(null), "value": z.string() }).strict();
 export type FormOption = z.infer<typeof formOption>;
 
 export const formData = z.object({ "options": z.record(z.string(), z.array(formOption)).default({}), "values": z.record(z.string(), z.unknown()).default({}) }).strict();
