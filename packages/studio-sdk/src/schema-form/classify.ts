@@ -213,10 +213,10 @@ function classifyAllOf(
 }
 
 /**
- * The platform date constraints on a `date`/`date-time` string property (scope C), or
+ * The platform date constraints on a `date`/`date-time` string property, or
  * `undefined` for a plain or non-date string. Each key is read defensively (the schema is
  * permissive); a date property with no constraint key classifies with `date: undefined`
- * so it renders exactly as before.
+ * and draws the plain date or date-time control with no bounds.
  */
 function dateConstraints(resolved: JsonSchema): DateConstraints | undefined {
   if (resolved.format !== 'date' && resolved.format !== 'date-time') return undefined;
@@ -312,7 +312,7 @@ function classifyArray(
   }
   // An array whose items are a FIXED set of strings (an `enum` on the items, or a
   // per-send option list that set one) is a multi-select: a checkbox group over a known
-  // option set (scope E). An array of free strings keeps the add/remove `array` field.
+  // option set. An array of free strings keeps the add/remove `array` field.
   const items = resolveRef(resolved.items, root);
   const itemTypes = typeList(items);
   const isStringItems = itemTypes.length === 1 && itemTypes[0] === 'string';

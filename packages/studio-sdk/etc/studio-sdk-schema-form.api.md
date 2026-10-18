@@ -210,6 +210,7 @@ export interface SchemaFormProps {
     readonly expressionField?: ExpressionFieldComponent;
     readonly fieldWording?: Readonly<Record<string, {
         choiceLabel?: string;
+        invalid?: string;
     }>>;
     // (undocumented)
     readonly idPrefix?: string;
@@ -252,6 +253,9 @@ export function validateAgainstSchema(schema: JsonSchema, value: unknown, option
 
 // @public
 interface ValidateOptions {
+    readonly fieldWording?: Readonly<Record<string, {
+        invalid?: string;
+    }>>;
     readonly maxUploadBytes?: number;
 }
 

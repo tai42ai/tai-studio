@@ -67,7 +67,7 @@ export function activeVariantIndex(
     const required = resolved.required ?? [];
     let score = 0;
     for (const key of required) {
-      if (key in value) score += 1;
+      if (Object.hasOwn(value, key)) score += 1;
     }
     if (score > bestScore) {
       bestScore = score;

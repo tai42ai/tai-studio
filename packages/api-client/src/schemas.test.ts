@@ -355,6 +355,14 @@ describe('form per-send data schemas — applied by the form preview', () => {
     expect(parsed.form?.fields?.lane?.choice_label).toBe('Pick a lane');
   });
 
+  it('wording carries a per-field invalid sentence beside the choice label', () => {
+    const parsed = schemas.wording.parse({
+      form: { fields: { code: { invalid: 'Use three capital letters' } } },
+    });
+    expect(parsed.form?.fields?.code?.invalid).toBe('Use three capital letters');
+    expect(parsed.form?.fields?.code?.choice_label).toBeUndefined();
+  });
+
   it('wording carries the choice and answer chapters, decline and submit among them', () => {
     const parsed = schemas.wording.parse({
       choice: { label: 'Pick a lane' },

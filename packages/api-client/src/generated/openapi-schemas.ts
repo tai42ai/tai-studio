@@ -124,7 +124,7 @@ export type AnswerWording = z.infer<typeof answerWording>;
 export const choiceWording = z.object({ "group_label": z.string().nullable().default(null), "label": z.string().nullable().default(null), "reply_hint": z.string().nullable().default(null) }).strict();
 export type ChoiceWording = z.infer<typeof choiceWording>;
 
-export const fieldWording = z.object({ "choice_label": z.string().nullable().default(null) }).strict();
+export const fieldWording = z.object({ "choice_label": z.string().nullable().default(null), "invalid": z.string().nullable().default(null) }).strict();
 export type FieldWording = z.infer<typeof fieldWording>;
 
 export const formWording = z.object({ "back": z.string().nullable().default(null), "cancel": z.string().nullable().default(null), "fields": z.record(z.string(), fieldWording).default({}), "open": z.string().nullable().default(null), "review_empty": z.string().nullable().default(null), "submit": z.string().nullable().default(null), "title": z.string().nullable().default(null) }).strict();

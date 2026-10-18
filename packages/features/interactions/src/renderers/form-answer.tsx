@@ -12,7 +12,7 @@ import type { ReactNode } from 'react';
 import { useMemo, useRef, useState } from 'react';
 
 import { useFormReactor } from '../reaction-config';
-import type { AnswerRendererProps } from './answer-schema';
+import type { AnswerRendererProps, FormFieldWords } from './answer-schema';
 import {
   formFieldWording,
   initialFormValue,
@@ -140,8 +140,8 @@ interface SchemaFormAnswerProps {
   readonly backLabel: string | undefined;
   /** The caller's single-page submit label (`wording.form.submit`); absent shows "Submit". */
   readonly submitLabel: string | undefined;
-  /** Per-field picker placeholders (`wording.form.fields`), keyed by property name. */
-  readonly fieldWording: Readonly<Record<string, { choiceLabel: string }>> | undefined;
+  /** Per-field words (`wording.form.fields`): picker placeholders and invalid sentences. */
+  readonly fieldWording: Readonly<Record<string, FormFieldWords>> | undefined;
   readonly onSubmit: (answer: unknown) => void;
   readonly disabled: boolean;
 }
@@ -159,12 +159,12 @@ function SchemaFormAnswer({
   onSubmit,
   disabled,
 }: SchemaFormAnswerProps): ReactNode {
-  // The reaction door is chosen by the serving page (scope A): a host-provided same-origin
+  // The reaction door is chosen by the serving page: a host-provided same-origin
   // endpoint (the web channel plugin's own session door), or — by default — the in-app
   // authenticated door. Either way the round-trip POSTs `{event, values}`.
   const react = useFormReactor(interactionId);
 
-  // Per-send options may be REPLACED by a reaction while the form is open (scope A), so
+  // Per-send options may be REPLACED by a reaction while the form is open, so
   // they are state, not a prop: the control re-renders against the current option set.
   const [options, setOptions] = useState(initialOptions);
   // The schema the controls and the validator both use: the published schema with each
@@ -243,7 +243,7 @@ function SchemaFormAnswer({
   };
 
   const validateWhole = (): boolean => {
-    const found = validateAgainstSchema(effectiveSchema, value);
+    const found = validateAgainstSchema(effectiveSchema, value, { fieldWording });
     setValidationErrors(found);
     return Object.keys(found).length === 0;
   };
@@ -259,7 +259,7 @@ function SchemaFormAnswer({
     onSubmit(value);
   };
 
-  // No declared pages: the whole form on one surface, exactly as before.
+  // No declared pages: the whole form on one surface.
   if (pages.length === 0) {
     return (
       <SinglePageForm
@@ -283,7 +283,9 @@ function SchemaFormAnswer({
   }
 
   const advance = async (): Promise<void> => {
-    const found = validateAgainstSchema(pageInputSchema(effectiveSchema, currentPage), value);
+    const found = validateAgainstSchema(pageInputSchema(effectiveSchema, currentPage), value, {
+      fieldWording,
+    });
     setValidationErrors(found);
     if (Object.keys(found).length > 0) return;
     if (reactions.page_advanced.includes(currentPage.title)) {
@@ -343,7 +345,7 @@ function SinglePageForm({
   readonly value: unknown;
   readonly errors: SchemaFormErrors;
   readonly options: Record<string, readonly FormOption[]>;
-  readonly fieldWording: Readonly<Record<string, { choiceLabel: string }>> | undefined;
+  readonly fieldWording: Readonly<Record<string, FormFieldWords>> | undefined;
   readonly submitLabel: string | undefined;
   readonly reactionError: string | null;
   readonly busy: boolean;
@@ -406,7 +408,7 @@ function SteppedForm({
   readonly options: Record<string, readonly FormOption[]>;
   readonly slots: Record<string, unknown>;
   readonly backLabel: string | undefined;
-  readonly fieldWording: Readonly<Record<string, { choiceLabel: string }>> | undefined;
+  readonly fieldWording: Readonly<Record<string, FormFieldWords>> | undefined;
   readonly reactionError: string | null;
   readonly busy: boolean;
   readonly onChange: (value: unknown) => void;
@@ -472,11 +474,14 @@ function changedTopLevelKeys(previous: unknown, next: unknown): string[] {
  * still resolves and no entered value is dropped between steps.
  */
 function pageInputSchema(schema: JsonSchema, page: FormPage): JsonSchema {
-  const properties: Record<string, JsonSchema> = {};
-  for (const name of page.fields) {
-    const prop = schema.properties?.[name];
-    if (prop !== undefined) properties[name] = prop;
-  }
+  const declared = schema.properties ?? {};
+  // Built from entries so every field name, `__proto__` included, lands as an own key.
+  const properties = Object.fromEntries(
+    page.fields.flatMap((name) => {
+      const prop = Object.hasOwn(declared, name) ? declared[name] : undefined;
+      return prop === undefined ? [] : [[name, prop] as const];
+    }),
+  );
   const required = (schema.required ?? []).filter((name) => page.fields.includes(name));
   return { ...schema, properties, required };
 }

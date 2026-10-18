@@ -5,7 +5,7 @@
  * container constraint on a free-form `json` field. It never throws on a
  * malformed value — a malformed value IS the error it reports.
  */
-import { isRecord } from '../guards';
+import { isRecord, ownValue } from '../guards';
 import { classifySchema } from './classify';
 import type { DateConstraints, FieldModel } from './field-model';
 import { decodedByteSize, effectiveMaxBytes, overCapMessage } from './media';
@@ -22,16 +22,62 @@ export interface ValidateOptions {
    * absent both, the shared default applies.
    */
   readonly maxUploadBytes?: number;
+  /**
+   * Per-field words, keyed by the root object's exact property name. A field's
+   * `invalid` sentence replaces every shape error on that field and anything inside
+   * it (a format, pattern, length, bound, type or item error). A missing required
+   * value keeps its own required message, and a `pattern` that cannot compile keeps
+   * its own message, since that is a defect of the schema, not of the value. A field
+   * with no `invalid` sentence keeps the SDK's word for the failing shape.
+   */
+  readonly fieldWording?: Readonly<Record<string, { invalid?: string }>>;
 }
 
 /** The invariants every per-node validator shares while walking one value tree. */
 interface ValidateCtx {
   /** The document root, for `$ref` resolution during re-classification. */
   readonly root: JsonSchema;
-  /** The path-keyed error bag every validator writes into. */
+  /**
+   * The path-keyed error bag every validator writes into. It has no prototype, so a
+   * path that names a built-in object member (`toString`, `__proto__`) is an ordinary key.
+   */
   readonly errors: Record<string, string>;
   /** The host's default media byte cap (a field's own cap still overrides it). */
   readonly maxUploadBytes: number | undefined;
+  /**
+   * The root object's property the walk is inside, or `undefined` at the root itself
+   * and inside a root that is not an object or record.
+   */
+  readonly field: string | undefined;
+  /**
+   * The paths whose error is a shape error a field's `invalid` sentence may replace,
+   * each mapped to the root property it lies inside.
+   */
+  readonly shapeErrorFields: Map<string, string>;
+}
+
+/**
+ * Record a shape error at `path`: the value breaks a shape the schema declares. Inside
+ * a root property, that field's `invalid` sentence may replace it.
+ */
+function shapeError(ctx: ValidateCtx, path: string, message: string): void {
+  ctx.errors[path] = message;
+  if (ctx.field === undefined) ctx.shapeErrorFields.delete(path);
+  else ctx.shapeErrorFields.set(path, ctx.field);
+}
+
+/**
+ * Record an error at `path` that is not a shape the value breaks (a missing required
+ * value, a schema constraint that cannot run): a field's words never replace it.
+ */
+function keptError(ctx: ValidateCtx, path: string, message: string): void {
+  ctx.errors[path] = message;
+  ctx.shapeErrorFields.delete(path);
+}
+
+/** The context for the child `name` of the value at `path`: a root child is its own field. */
+function childCtx(ctx: ValidateCtx, path: string, name: string): ValidateCtx {
+  return path === '' ? { ...ctx, field: name } : ctx;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -78,9 +124,9 @@ function validateJson(
   ctx: ValidateCtx,
 ): void {
   if (model.jsonType === 'object' && !isRecord(value)) {
-    ctx.errors[path] = 'must be a JSON object';
+    shapeError(ctx, path, 'must be a JSON object');
   } else if (model.jsonType === 'array' && !Array.isArray(value)) {
-    ctx.errors[path] = 'must be a JSON array';
+    shapeError(ctx, path, 'must be a JSON array');
   }
 }
 
@@ -90,7 +136,7 @@ function validateConst(
   path: string,
   ctx: ValidateCtx,
 ): void {
-  if (value !== model.value) ctx.errors[path] = `must equal ${scalarLabel(model.value)}`;
+  if (value !== model.value) shapeError(ctx, path, `must equal ${scalarLabel(model.value)}`);
 }
 
 function validateEnum(
@@ -100,7 +146,7 @@ function validateEnum(
   ctx: ValidateCtx,
 ): void {
   const allowed = model.options.some((option) => option.value === value);
-  if (!allowed) ctx.errors[path] = 'must be one of the allowed values';
+  if (!allowed) shapeError(ctx, path, 'must be one of the allowed values');
 }
 
 function validateString(
@@ -110,7 +156,7 @@ function validateString(
   ctx: ValidateCtx,
 ): void {
   if (typeof value !== 'string') {
-    ctx.errors[path] = 'must be a string';
+    shapeError(ctx, path, 'must be a string');
     return;
   }
   // A media-annotated string carries a byte cap; enforce it on the value's
@@ -121,22 +167,22 @@ function validateString(
     const cap = effectiveMaxBytes(model.media.maxBytes, ctx.maxUploadBytes);
     const size = decodedByteSize(value);
     if (size > cap) {
-      ctx.errors[path] = overCapMessage('The value', size, cap);
+      shapeError(ctx, path, overCapMessage('The value', size, cap));
       return;
     }
   }
   if (value.length > 0 && model.format !== undefined) {
     const message = formatError(model.format, value);
     if (message !== undefined) {
-      ctx.errors[path] = message;
+      shapeError(ctx, path, message);
       return;
     }
   }
-  // Date bounds and unavailable days (scope C). Range span/ordering needs the sibling
+  // Date bounds and unavailable days. Range span/ordering needs the sibling
   // start field, so it is enforced at the object level (see validateDateRanges).
   if (model.date !== undefined && value.length > 0) {
     const message = dateConstraintError(model.date, value);
-    if (message !== undefined) ctx.errors[path] = message;
+    if (message !== undefined) shapeError(ctx, path, message);
   }
 }
 
@@ -159,14 +205,14 @@ function validateNumber(
   ctx: ValidateCtx,
 ): void {
   if (typeof value !== 'number' || Number.isNaN(value)) {
-    ctx.errors[path] = model.integer ? 'must be an integer' : 'must be a number';
+    shapeError(ctx, path, model.integer ? 'must be an integer' : 'must be a number');
     return;
   }
-  if (model.integer && !Number.isInteger(value)) ctx.errors[path] = 'must be an integer';
+  if (model.integer && !Number.isInteger(value)) shapeError(ctx, path, 'must be an integer');
 }
 
 function validateBoolean(value: unknown, path: string, ctx: ValidateCtx): void {
-  if (typeof value !== 'boolean') ctx.errors[path] = 'must be true or false';
+  if (typeof value !== 'boolean') shapeError(ctx, path, 'must be true or false');
 }
 
 function validateArray(
@@ -176,7 +222,7 @@ function validateArray(
   ctx: ValidateCtx,
 ): void {
   if (!Array.isArray(value)) {
-    ctx.errors[path] = 'must be an array';
+    shapeError(ctx, path, 'must be an array');
     return;
   }
   value.forEach((item, index) => {
@@ -191,31 +237,36 @@ function validateObject(
   ctx: ValidateCtx,
 ): void {
   if (!isRecord(value)) {
-    ctx.errors[path] = 'must be an object';
+    shapeError(ctx, path, 'must be an object');
     return;
   }
   const propMap = new Map(model.properties);
   for (const [name, propSchema] of model.properties) {
-    // A field hidden by its `visibleWhen` predicate (scope B) is not part of the answer:
+    // A field hidden by its `visibleWhen` predicate is not part of the answer:
     // it is not required and not validated, and a value left on it is dropped by the
     // server, not an error here. Evaluated on the current values, so a field that was
     // hidden by the predicate is skipped even if it still carries a stale value.
     if (!isFieldVisible(propSchema, value)) continue;
     const childPath = joinPath(path, name);
-    const childValue = value[name];
+    const childValue = ownValue(value, name);
     if (childValue === undefined) {
-      if (model.required.has(name)) ctx.errors[childPath] = `"${name}" is required`;
+      if (model.required.has(name)) markRequired(childPath, name, ctx);
       continue;
     }
-    walk(propSchema, childValue, childPath, ctx);
+    walk(propSchema, childValue, childPath, childCtx(ctx, path, name));
   }
   // Required keys naming a property that somehow isn't declared still count.
   for (const name of model.required) {
-    if (!propMap.has(name) && value[name] === undefined) {
-      ctx.errors[joinPath(path, name)] = `"${name}" is required`;
+    if (!propMap.has(name) && ownValue(value, name) === undefined) {
+      markRequired(joinPath(path, name), name, ctx);
     }
   }
   validateDateRanges(model, value, path, ctx);
+}
+
+/** Record a missing required value at `path`, the one error a field's words never replace. */
+function markRequired(path: string, name: string, ctx: ValidateCtx): void {
+  keptError(ctx, path, `"${name}" is required`);
 }
 
 /** Days from `start` to `end` inclusive (both `YYYY-MM-DD`); 1 when they are equal. */
@@ -224,7 +275,7 @@ function inclusiveDayCount(start: string, end: string): number {
 }
 
 /**
- * Enforce a date RANGE declared on an END field (scope C): the end is on or after its
+ * Enforce a date RANGE declared on an END field: the end is on or after its
  * named `rangeStart` field, and the inclusive day span is within `minDays`/`maxDays`.
  * Read from the two plain date values — nothing recombined. A missing or not-yet-valid
  * endpoint is left to that field's own validation; a hidden end field is skipped.
@@ -239,14 +290,14 @@ function validateDateRanges(
     if (!isFieldVisible(propSchema, value)) continue;
     const resolved = resolveRef(propSchema, ctx.root);
     if (typeof resolved.rangeStart !== 'string') continue;
-    const endValue = value[name];
-    const startValue = value[resolved.rangeStart];
+    const endValue = ownValue(value, name);
+    const startValue = ownValue(value, resolved.rangeStart);
     if (typeof endValue !== 'string' || typeof startValue !== 'string') continue;
     if (!DATE_RE.test(endValue) || !DATE_RE.test(startValue)) continue;
     const childPath = joinPath(path, name);
     if (ctx.errors[childPath] !== undefined) continue;
     const message = dateRangeMessage(resolved, startValue, endValue);
-    if (message !== undefined) ctx.errors[childPath] = message;
+    if (message !== undefined) shapeError(childCtx(ctx, path, name), childPath, message);
   }
 }
 
@@ -273,20 +324,20 @@ function validateMultiselect(
   ctx: ValidateCtx,
 ): void {
   if (!Array.isArray(value)) {
-    ctx.errors[path] = 'must be an array';
+    shapeError(ctx, path, 'must be an array');
     return;
   }
   const allowed = new Set(model.options.map((option) => option.value));
   for (const item of value) {
     if (!allowed.has(item)) {
-      ctx.errors[path] = 'must be one of the allowed values';
+      shapeError(ctx, path, 'must be one of the allowed values');
       return;
     }
   }
 }
 
 /**
- * The JSON-Schema value/length/items bounds the client mirrors from the server (bug 4):
+ * The JSON-Schema value/length/items bounds the client mirrors from the server:
  * `minLength`/`maxLength`/`pattern` on a string, `minimum`/`maximum` on a number,
  * `minItems`/`maxItems` on an array. Applied only when the kind check found no type
  * error. A `pattern` that cannot compile surfaces as a loud field error, never a silent
@@ -306,11 +357,11 @@ function applyStringBounds(
 ): void {
   const length = Array.from(value).length;
   if (typeof schema.minLength === 'number' && length < schema.minLength) {
-    ctx.errors[path] = `must be at least ${String(schema.minLength)} character(s)`;
+    shapeError(ctx, path, `must be at least ${String(schema.minLength)} character(s)`);
     return;
   }
   if (typeof schema.maxLength === 'number' && length > schema.maxLength) {
-    ctx.errors[path] = `must be at most ${String(schema.maxLength)} character(s)`;
+    shapeError(ctx, path, `must be at most ${String(schema.maxLength)} character(s)`);
     return;
   }
   if (typeof schema.pattern !== 'string' || schema.pattern === '') return;
@@ -318,10 +369,10 @@ function applyStringBounds(
   try {
     pattern = new RegExp(schema.pattern);
   } catch {
-    ctx.errors[path] = 'has an invalid pattern constraint';
+    keptError(ctx, path, 'has an invalid pattern constraint');
     return;
   }
-  if (!pattern.test(value)) ctx.errors[path] = 'must match the required pattern';
+  if (!pattern.test(value)) shapeError(ctx, path, 'must match the required pattern');
 }
 
 function applyNumberBounds(
@@ -331,11 +382,11 @@ function applyNumberBounds(
   ctx: ValidateCtx,
 ): void {
   if (typeof schema.minimum === 'number' && value < schema.minimum) {
-    ctx.errors[path] = `must be at least ${String(schema.minimum)}`;
+    shapeError(ctx, path, `must be at least ${String(schema.minimum)}`);
     return;
   }
   if (typeof schema.maximum === 'number' && value > schema.maximum) {
-    ctx.errors[path] = `must be at most ${String(schema.maximum)}`;
+    shapeError(ctx, path, `must be at most ${String(schema.maximum)}`);
   }
 }
 
@@ -346,11 +397,11 @@ function applyArrayBounds(
   ctx: ValidateCtx,
 ): void {
   if (typeof schema.minItems === 'number' && value.length < schema.minItems) {
-    ctx.errors[path] = `must have at least ${String(schema.minItems)} item(s)`;
+    shapeError(ctx, path, `must have at least ${String(schema.minItems)} item(s)`);
     return;
   }
   if (typeof schema.maxItems === 'number' && value.length > schema.maxItems) {
-    ctx.errors[path] = `must have at most ${String(schema.maxItems)} item(s)`;
+    shapeError(ctx, path, `must have at most ${String(schema.maxItems)} item(s)`);
   }
 }
 
@@ -361,11 +412,11 @@ function validateRecord(
   ctx: ValidateCtx,
 ): void {
   if (!isRecord(value)) {
-    ctx.errors[path] = 'must be an object';
+    shapeError(ctx, path, 'must be an object');
     return;
   }
   for (const [key, entryValue] of Object.entries(value)) {
-    walk(model.values, entryValue, joinPath(path, key), ctx);
+    walk(model.values, entryValue, joinPath(path, key), childCtx(ctx, path, key));
   }
 }
 
@@ -378,7 +429,7 @@ function validateUnion(
   const index = activeVariantIndex(value, model.variants, model.discriminator, ctx.root);
   const variant = index === -1 ? undefined : model.variants[index];
   if (variant === undefined) {
-    ctx.errors[path] = 'does not match any allowed variant';
+    shapeError(ctx, path, 'does not match any allowed variant');
     return;
   }
   walk(variant.schema, value, path, ctx);
@@ -388,12 +439,12 @@ function walk(schema: JsonSchema, value: unknown, path: string, ctx: ValidateCtx
   const classified = classifySchema(schema, ctx.root);
 
   if (value === null) {
-    if (!classified.nullable) ctx.errors[path] = 'must not be null';
+    if (!classified.nullable) shapeError(ctx, path, 'must not be null');
     return;
   }
 
   dispatchKind(classified.model, value, path, ctx);
-  // The value/length/items bounds (bug 4) mirror the server and apply only when the kind
+  // The value/length/items bounds mirror the server and apply only when the kind
   // check found no type error for this field — a bound on a wrong-typed value is noise.
   if (ctx.errors[path] === undefined) applyBounds(classified.schema, value, path, ctx);
 }
@@ -437,17 +488,47 @@ function dispatchKind(model: FieldModel, value: unknown, path: string, ctx: Vali
 }
 
 /**
+ * Replace each shape error inside a root property whose words carry an `invalid`
+ * sentence with that sentence; every other error keeps its own message.
+ */
+function applyFieldWording(
+  fieldWording: Readonly<Record<string, { invalid?: string }>>,
+  errors: Record<string, string>,
+  shapeErrorFields: ReadonlyMap<string, string>,
+): void {
+  for (const [path, field] of shapeErrorFields) {
+    if (!Object.hasOwn(fieldWording, field)) continue;
+    const invalid = fieldWording[field]?.invalid;
+    if (invalid !== undefined) errors[path] = invalid;
+  }
+}
+
+/**
  * Validate `value` against `schema`, returning a per-path error bag (empty =
  * valid). The caller runs this before submit and feeds the result back to
  * `SchemaForm` for display. `options.maxUploadBytes` mirrors the renderer's
- * `maxUploadBytes` prop so a media field's byte cap is enforced identically here.
+ * `maxUploadBytes` prop so a media field's byte cap is enforced identically here;
+ * `options.fieldWording` puts a field's own `invalid` sentence in place of the
+ * SDK's word for any shape error on that field.
  */
 export function validateAgainstSchema(
   schema: JsonSchema,
   value: unknown,
   options?: ValidateOptions,
 ): SchemaFormErrors {
-  const errors: Record<string, string> = {};
-  walk(schema, value, '', { root: schema, errors, maxUploadBytes: options?.maxUploadBytes });
-  return errors;
+  const errors = Object.create(null) as Record<string, string>;
+  const shapeErrorFields = new Map<string, string>();
+  walk(schema, value, '', {
+    root: schema,
+    errors,
+    maxUploadBytes: options?.maxUploadBytes,
+    field: undefined,
+    shapeErrorFields,
+  });
+  if (options?.fieldWording !== undefined) {
+    applyFieldWording(options.fieldWording, errors, shapeErrorFields);
+  }
+  // Hand back an ordinary object; its entries are defined as own keys, so a path such as
+  // `__proto__` stays an entry of the result.
+  return Object.fromEntries(Object.entries(errors));
 }

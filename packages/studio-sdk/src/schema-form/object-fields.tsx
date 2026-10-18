@@ -6,6 +6,7 @@
  */
 import type { ReactNode } from 'react';
 
+import { ownValue } from '../guards';
 import { DateRangeField, dateRangePairs } from './date-range-field';
 import { FieldNode } from './field-node';
 import { useKeyedCallbacks } from './keyed-callbacks';
@@ -45,7 +46,7 @@ export function ObjectFields({
    * object only; a property whose `enum` draws as a select shows its entry's
    * `choiceLabel` as the select placeholder. Absent for nested objects.
    */
-  fieldWording?: Readonly<Record<string, { choiceLabel?: string }>>;
+  fieldWording?: Readonly<Record<string, { choiceLabel?: string; invalid?: string }>>;
 }): ReactNode {
   const obj = isPlainObject(value) ? value : {};
   const changeFor = useKeyedCallbacks<string, unknown>(
@@ -66,7 +67,7 @@ export function ObjectFields({
       {properties.map(([name, propSchema]) => {
         if (skip !== undefined && name === skip) return null;
         if (skippedEnds.has(name)) return null;
-        // A field hidden by its `visibleWhen` predicate (scope B) is not rendered; the
+        // A field hidden by its `visibleWhen` predicate is not rendered; the
         // validator skips it in step, so a hidden field is neither shown nor required.
         if (!isFieldVisible(propSchema, obj)) return null;
         const pair = pairByStart.get(name);
@@ -75,13 +76,13 @@ export function ObjectFields({
             <DateRangeField
               key={name}
               pair={pair}
-              startValue={obj[pair.startName]}
-              endValue={obj[pair.endName]}
+              startValue={ownValue(obj, pair.startName)}
+              endValue={ownValue(obj, pair.endName)}
               startRequired={requiredKeys.has(pair.startName)}
               endRequired={requiredKeys.has(pair.endName)}
               markRequired={markRequired}
-              startError={errors?.[childPathOf(pair.startName)]}
-              endError={errors?.[childPathOf(pair.endName)]}
+              startError={ownValue(errors, childPathOf(pair.startName))}
+              endError={ownValue(errors, childPathOf(pair.endName))}
               onChangeStart={changeFor(pair.startName)}
               onChangeEnd={changeFor(pair.endName)}
             />
@@ -92,7 +93,7 @@ export function ObjectFields({
             key={name}
             schema={propSchema}
             root={root}
-            value={obj[name]}
+            value={ownValue(obj, name)}
             onChange={changeFor(name)}
             path={childPathOf(name)}
             label={name}

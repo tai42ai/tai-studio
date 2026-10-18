@@ -128,3 +128,29 @@ describe('skeletonValueForSchema', () => {
     expect(skeletonValueForSchema(schema)).toEqual({});
   });
 });
+
+describe('a property named __proto__', () => {
+  // JSON.parse keeps `__proto__` as an ordinary own key, as a schema from the wire carries it.
+  const optionalWithDefault = JSON.parse(
+    '{"type":"object","properties":{"__proto__":{"type":"string","default":"abc"}}}',
+  ) as JsonSchema;
+  const required = JSON.parse(
+    '{"type":"object","properties":{"__proto__":{"type":"string"}},"required":["__proto__"]}',
+  ) as JsonSchema;
+
+  it('seeds its default as an own entry of an ordinary object', () => {
+    for (const seeded of [
+      defaultValueForSchema(optionalWithDefault),
+      skeletonValueForSchema(optionalWithDefault),
+    ]) {
+      expect(Object.getPrototypeOf(seeded)).toBe(Object.prototype);
+      expect(Object.getOwnPropertyDescriptor(seeded, '__proto__')?.value).toBe('abc');
+    }
+  });
+
+  it('seeds a required one as an own entry in the skeleton', () => {
+    const seeded = skeletonValueForSchema(required);
+    expect(Object.getPrototypeOf(seeded)).toBe(Object.prototype);
+    expect(Object.getOwnPropertyDescriptor(seeded, '__proto__')?.value).toBe('');
+  });
+});

@@ -1,5 +1,5 @@
 /**
- * The multi-select field renderer (scope E): an array of a fixed set of strings drawn
+ * The multi-select field renderer: an array of a fixed set of strings drawn
  * as a checkbox group, one checkbox per option, emitting a `string[]`. Classification
  * lands an array here only when its items carry a known option set (an `enum`, or a
  * per-send option list), so there is always a definite set of boxes to draw; an array of

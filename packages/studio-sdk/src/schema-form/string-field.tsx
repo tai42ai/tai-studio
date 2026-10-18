@@ -142,7 +142,7 @@ export function StringField({
           // numeric/decimal keyboard); `undefined` for every other control, which
           // selects its kind through `type` instead.
           inputMode={control.inputMode}
-          // A native date control enforces its inclusive bounds (scope C); on a
+          // A native date control enforces its inclusive bounds; on a
           // non-date input the browser ignores these, and the validator enforces the
           // rest (unavailable days, range span) that the control cannot draw.
           min={date?.min}
@@ -421,7 +421,7 @@ const INPUT_MODE_CONTROLS: Record<
 };
 
 // The native control for a string field: the `inputMode` keyword OUTRANKS
-// `format` when present; otherwise the format mapping stands as before. The value
+// `format` when present; otherwise the format mapping picks the control. The value
 // is always the typed string — `numeric`/`decimal` set only the keyboard, never a
 // number coercion.
 function stringControl(
