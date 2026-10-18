@@ -66,18 +66,19 @@ function seedObject(
   root: JsonSchema,
   mintScalars: boolean,
 ): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
+  const entries: [string, unknown][] = [];
   for (const [name, propSchema] of model.properties) {
     if (model.required.has(name)) {
       const seeded = seedValue(propSchema, root, mintScalars);
-      if (seeded !== undefined) result[name] = seeded;
+      if (seeded !== undefined) entries.push([name, seeded]);
       continue;
     }
     const propClassified = classifySchema(propSchema, root);
     const propDefault = explicitDefault(propSchema, propClassified.schema);
-    if (propDefault.present) result[name] = propDefault.value;
+    if (propDefault.present) entries.push([name, propDefault.value]);
   }
-  return result;
+  // Built from entries so every property name, `__proto__` included, lands as an own key.
+  return Object.fromEntries(entries);
 }
 
 /**

@@ -88,7 +88,7 @@ export type FormPageKind = z.infer<typeof formPageKind>;
  *
  * `display` is the ordered list of display-only blocks the page shows alongside (or
  * instead of, for a review page) its input fields; it defaults to empty, so a page that
- * carries none renders exactly as before. `kind` marks a `review` page — a terminal
+ * carries none shows only its input fields. `kind` marks a `review` page — a terminal
  * summary step that shows the readback of entered values and the confirm/submit footer
  * and carries no new input fields; it defaults to `input`. `button_label` is the text of
  * the page's primary button — the one that advances from an input page, or submits from
@@ -117,10 +117,13 @@ export type FormPages = z.infer<typeof formPages>;
 
 /**
  * One form field's platform-drawn words (`wording.form.fields[name]`): `choice_label` is
- * the placeholder of the field's picker (its empty-state prompt).
+ * the placeholder of the field's picker (its empty-state prompt); `invalid` is the
+ * sentence shown when the field's value does not have its declared shape (never for a
+ * missing required value).
  */
 export const fieldWording = z.object({
   choice_label: z.string().nullish(),
+  invalid: z.string().nullish(),
 });
 export type FieldWording = z.infer<typeof fieldWording>;
 
@@ -285,7 +288,7 @@ export type Wording = z.infer<typeof wording>;
 /**
  * When a `form` reacts while it is open (`format_payload.reactions`): the plain,
  * renderer-readable description of WHEN the form calls its reaction handler. Absent ⇒ a
- * static (non-reacting) form, exactly as before. `field_changed` names the fields whose
+ * static (non-reacting) form that never calls a handler. `field_changed` names the fields whose
  * change triggers a reaction; `page_advanced` names the pages (by title) whose advance
  * triggers one; `submitted` is true when the submission is checked by a reaction before
  * acceptance; `choices` names the fields whose CHOICE LISTS a reaction may replace while

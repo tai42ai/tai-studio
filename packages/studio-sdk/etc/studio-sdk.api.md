@@ -1785,6 +1785,7 @@ back: string | null;
 cancel: string | null;
 fields: Record<string, {
 choice_label: string | null;
+invalid: string | null;
 }>;
 open: string | null;
 review_empty: string | null;
@@ -1981,6 +1982,7 @@ back: string | null;
 cancel: string | null;
 fields: Record<string, {
 choice_label: string | null;
+invalid: string | null;
 }>;
 open: string | null;
 review_empty: string | null;
@@ -2348,6 +2350,7 @@ back: string | null;
 cancel: string | null;
 fields: Record<string, {
 choice_label: string | null;
+invalid: string | null;
 }>;
 open: string | null;
 review_empty: string | null;
@@ -6208,6 +6211,7 @@ const conversationFailedMessages: z.ZodObject<{
                     cancel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     fields: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
                         choice_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     }, z.core.$strict>>>;
                     open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     review_empty: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -6462,6 +6466,7 @@ const conversationMessage: z.ZodObject<{
                 cancel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 fields: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
                     choice_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
                 open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 review_empty: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -6714,6 +6719,7 @@ const conversationMessageSearchPage: z.ZodObject<{
                     cancel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     fields: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
                         choice_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     }, z.core.$strict>>>;
                     open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     review_empty: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -7748,6 +7754,7 @@ const conversationTranscriptPage: z.ZodObject<{
                     cancel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     fields: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
                         choice_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     }, z.core.$strict>>>;
                     open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     review_empty: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -9394,6 +9401,7 @@ function createApiClient(config: ApiConfig): {
                         cancel: string | null;
                         fields: Record<string, {
                             choice_label: string | null;
+                            invalid: string | null;
                         }>;
                         open: string | null;
                         review_empty: string | null;
@@ -9590,6 +9598,7 @@ function createApiClient(config: ApiConfig): {
                         cancel: string | null;
                         fields: Record<string, {
                             choice_label: string | null;
+                            invalid: string | null;
                         }>;
                         open: string | null;
                         review_empty: string | null;
@@ -9957,6 +9966,7 @@ function createApiClient(config: ApiConfig): {
                         cancel: string | null;
                         fields: Record<string, {
                             choice_label: string | null;
+                            invalid: string | null;
                         }>;
                         open: string | null;
                         review_empty: string | null;
@@ -13279,6 +13289,7 @@ type FieldWording = z.infer<typeof fieldWording>;
 // @public
 const fieldWording: z.ZodObject<{
     choice_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    invalid: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>;
 
 // @public
@@ -13769,6 +13780,7 @@ const formWording: z.ZodObject<{
     review_empty: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     fields: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
         choice_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        invalid: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     }, z.core.$strip>>>>;
 }, z.core.$strip>;
 
@@ -19375,6 +19387,7 @@ export interface SchemaFormProps {
     readonly expressionField?: ExpressionFieldComponent;
     readonly fieldWording?: Readonly<Record<string, {
         choiceLabel?: string;
+        invalid?: string;
     }>>;
     // (undocumented)
     readonly idPrefix?: string;
@@ -28123,6 +28136,9 @@ const validateConditionResult: z.ZodObject<{
 
 // @public
 interface ValidateOptions {
+    readonly fieldWording?: Readonly<Record<string, {
+        invalid?: string;
+    }>>;
     readonly maxUploadBytes?: number;
 }
 
@@ -28288,6 +28304,7 @@ const wording: z.ZodObject<{
         review_empty: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         fields: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
             choice_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            invalid: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         }, z.core.$strip>>>>;
     }, z.core.$strip>>>;
     choice: z.ZodOptional<z.ZodNullable<z.ZodObject<{

@@ -100,9 +100,11 @@ export interface SchemaFormProps {
    * name. A top-level `enum` field that draws as a select shows its entry's
    * `choiceLabel` as the select placeholder (in place of the default `Select…`);
    * other controls and nested fields are unaffected. A field with no entry draws
-   * its own default.
+   * its own default. The entry's `invalid` sentence is not read here: pass the same
+   * record to `validateAgainstSchema` as `fieldWording`, and the errors it returns
+   * carry that sentence.
    */
-  readonly fieldWording?: Readonly<Record<string, { choiceLabel?: string }>>;
+  readonly fieldWording?: Readonly<Record<string, { choiceLabel?: string; invalid?: string }>>;
 }
 
 /**

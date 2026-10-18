@@ -308,7 +308,7 @@ describe('InteractionsPage — form preview: per-send values, options and pages'
 
     // The per-send list lands on the array's ITEMS, giving a fixed option set, so the
     // array draws as a multi-select (a checkbox per value) rather than the add/remove
-    // control — one consistent field definition across channels (scope E).
+    // control — one consistent field definition across channels.
     expect(await screen.findByRole('checkbox', { name: 'x' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'y' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add item' })).not.toBeInTheDocument();
@@ -574,7 +574,7 @@ describe('InteractionsPage — form preview: reactions, conditionals, dates, bou
     expect(notice).toHaveTextContent('handler timed out');
   });
 
-  it('shows and hides a conditional field, and submits the shown value (scope B)', async () => {
+  it('shows and hides a conditional field, and submits the shown value', async () => {
     const user = userEvent.setup();
     const answer = vi.fn().mockResolvedValue(undefined);
     const { channel } = renderInbox(answer);
@@ -609,7 +609,7 @@ describe('InteractionsPage — form preview: reactions, conditionals, dates, bou
     });
   });
 
-  it('passes date bounds to the native control and enforces the range on submit (scope C)', async () => {
+  it('passes date bounds to the native control and enforces the range on submit', async () => {
     const user = userEvent.setup();
     const answer = vi.fn().mockResolvedValue(undefined);
     const { channel } = renderInbox(answer);
@@ -645,7 +645,7 @@ describe('InteractionsPage — form preview: reactions, conditionals, dates, bou
     expect(answer).not.toHaveBeenCalled();
   });
 
-  it('enforces a client-side length bound before submit (bug 4 parity)', async () => {
+  it('enforces a client-side length bound before submit, as the server does', async () => {
     const user = userEvent.setup();
     const answer = vi.fn().mockResolvedValue(undefined);
     const { channel } = renderInbox(answer);
@@ -708,6 +708,67 @@ describe('InteractionsPage — form preview: display blocks, review formatting, 
     expect(within(display).getByRole('img', { name: 'A map' })).toBeInTheDocument();
     // A slot seeded from the send data shows that value before any reaction.
     expect(screen.getByTestId('form-slot-total')).toHaveTextContent('seed-total');
+  });
+
+  it('draws a paged field named __proto__ and holds Next on its required error', async () => {
+    const user = userEvent.setup();
+    const { channel } = renderInbox();
+    // JSON.parse keeps `__proto__` as an ordinary own key, as a payload from the wire carries it.
+    const schema = JSON.parse(
+      '{"type":"object","properties":{"__proto__":{"type":"string","title":"Code"},"a":{"type":"string","title":"A"}},"required":["__proto__","a"]}',
+    ) as Record<string, unknown>;
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-proto-page',
+        format: 'form',
+        prompt: 'Codes',
+        format_payload: {
+          schema,
+          pages: [
+            { title: 'Codes', fields: ['__proto__', 'a'] },
+            { title: 'Done', fields: [] },
+          ],
+        },
+      }),
+    );
+
+    const code = await screen.findByRole('textbox', { name: 'Code' });
+    await user.type(screen.getByRole('textbox', { name: 'A' }), 'x');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(code).toBeInTheDocument();
+    expect(await screen.findByText('"__proto__" is required')).toBeInTheDocument();
+  });
+
+  it('holds Next on a shape error in a paged field named __proto__', async () => {
+    const user = userEvent.setup();
+    const { channel } = renderInbox();
+    // JSON.parse keeps `__proto__` as an ordinary own key, as a payload from the wire carries it.
+    const schema = JSON.parse(
+      '{"type":"object","properties":{"__proto__":{"type":"string","title":"Code","minLength":3}}}',
+    ) as Record<string, unknown>;
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-proto-page-shape',
+        format: 'form',
+        prompt: 'Codes',
+        format_payload: {
+          schema,
+          pages: [
+            { title: 'One', fields: ['__proto__'] },
+            { title: 'Two', fields: [] },
+          ],
+        },
+      }),
+    );
+
+    await user.type(await screen.findByRole('textbox', { name: 'Code' }), 'x');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByText('must be at least 3 character(s)')).toBeInTheDocument();
+    expect(screen.getByTestId('form-step-status')).toHaveTextContent('Step 1 of 2 — One');
   });
 
   it('degrades an image block with no source to its alt text', async () => {
@@ -976,6 +1037,34 @@ describe('InteractionsPage — form preview: reaction failure shapes and object 
 });
 
 describe('InteractionsPage — form preview: review readback edge formatting', () => {
+  it('reads a blank field named toString back as a dash', async () => {
+    const user = userEvent.setup();
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-review-builtin-name',
+        format: 'form',
+        prompt: 'Review',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: { toString: { type: 'string', title: 'Nickname' } },
+          },
+          pages: [
+            { title: 'Edit', fields: ['toString'] },
+            { title: 'Review', fields: [], kind: 'review' },
+          ],
+        },
+      }),
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
+    const review = await screen.findByTestId('form-review');
+    expect(within(review).getByText('—')).toBeInTheDocument();
+  });
+
   it('uses field titles and renders empty values and empty selections as a dash', async () => {
     const user = userEvent.setup();
     const { channel } = renderInbox();
@@ -1448,5 +1537,122 @@ describe('SinglePageForm — caller-set submit button and field picker placehold
     expect(screen.queryByRole('button', { name: 'Submit' })).not.toBeInTheDocument();
     // The select shows the caller's field placeholder in place of the default "Select…".
     expect(screen.getByRole('combobox', { name: 'Lane' })).toHaveTextContent('Pick a lane');
+  });
+});
+
+describe('Form answer — caller-set invalid sentence per field', () => {
+  const schema = {
+    type: 'object',
+    properties: {
+      code: { type: 'string', pattern: '^[A-Z]{3}$', title: 'Code' },
+      note: { type: 'string', pattern: '^[a-z]+$', title: 'Note' },
+    },
+    required: ['code'],
+  };
+  const wording = { form: { fields: { code: { invalid: 'Use three capital letters' } } } };
+
+  it('shows wording.form.fields[name].invalid under the field after an invalid submit', async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn().mockResolvedValue(undefined);
+    const { channel } = renderInbox(answer);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-invalid-single',
+        format: 'form',
+        prompt: 'Codes',
+        format_payload: { schema, data: { values: { code: 'abc', note: 'ABC' } }, wording },
+      }),
+    );
+
+    await screen.findByLabelText(/Code/);
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    // The field with a sentence shows it; the field without keeps the SDK's word.
+    expect(await screen.findByText('Use three capital letters')).toBeInTheDocument();
+    expect(screen.queryByText('must match the required pattern')).toBeInTheDocument();
+    expect(answer).not.toHaveBeenCalled();
+  });
+
+  it('keeps the required message for a missing value', async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn().mockResolvedValue(undefined);
+    const { channel } = renderInbox(answer);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-invalid-required',
+        format: 'form',
+        prompt: 'Codes',
+        format_payload: { schema, wording },
+      }),
+    );
+
+    await screen.findByLabelText(/Code/);
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(await screen.findByText(/"code" is required/)).toBeInTheDocument();
+    expect(screen.queryByText('Use three capital letters')).not.toBeInTheDocument();
+    expect(answer).not.toHaveBeenCalled();
+  });
+
+  it("shows a page field's invalid sentence when Next is refused", async () => {
+    const user = userEvent.setup();
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-invalid-paged',
+        format: 'form',
+        prompt: 'Codes',
+        format_payload: {
+          schema,
+          data: { values: { code: 'abc' } },
+          pages: [
+            { title: 'One', fields: ['code'] },
+            { title: 'Two', fields: ['note'] },
+          ],
+          wording,
+        },
+      }),
+    );
+
+    await screen.findByLabelText(/Code/);
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByText('Use three capital letters')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Two' })).not.toBeInTheDocument();
+  });
+
+  it("shows the last page field's invalid sentence when the stepped form's submit is refused", async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn().mockResolvedValue(undefined);
+    const { channel } = renderInbox(answer);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-invalid-paged-submit',
+        format: 'form',
+        prompt: 'Codes',
+        format_payload: {
+          schema,
+          data: { values: { code: 'ABC', note: 'ABC' } },
+          pages: [
+            { title: 'One', fields: ['code'] },
+            { title: 'Two', fields: ['note'] },
+          ],
+          wording: { form: { fields: { note: { invalid: 'Use small letters only' } } } },
+        },
+      }),
+    );
+
+    await screen.findByLabelText(/Code/);
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await screen.findByLabelText(/Note/);
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(await screen.findByText('Use small letters only')).toBeInTheDocument();
+    expect(screen.queryByText('must match the required pattern')).not.toBeInTheDocument();
+    expect(answer).not.toHaveBeenCalled();
   });
 });

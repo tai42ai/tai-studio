@@ -1679,7 +1679,7 @@ describe('SchemaForm — design system', () => {
   });
 });
 
-describe('SchemaForm — date constraints (scope C)', () => {
+describe('SchemaForm — date constraints', () => {
   it('passes minDate/maxDate to the native date control', () => {
     const schema: JsonSchema = {
       type: 'object',
@@ -1701,7 +1701,7 @@ describe('SchemaForm — date constraints (scope C)', () => {
   });
 });
 
-describe('SchemaForm — multi-select (scope E)', () => {
+describe('SchemaForm — multi-select', () => {
   it('renders an array of a fixed string set as a checkbox group and emits the selection', async () => {
     const user = userEvent.setup();
     const schema: JsonSchema = {
@@ -1738,7 +1738,7 @@ describe('SchemaForm — multi-select (scope E)', () => {
   });
 });
 
-describe('SchemaForm — conditional fields (scope B)', () => {
+describe('SchemaForm — conditional fields', () => {
   it('shows and hides a field as its predicate flips on the current values', async () => {
     const user = userEvent.setup();
     const schema: JsonSchema = {
@@ -1946,5 +1946,211 @@ describe('SchemaForm — fieldWording (per-field select placeholder)', () => {
     // not the root field, so its select keeps the default `Select…`.
     expect(screen.getByRole('combobox', { name: 'Lane' })).toHaveTextContent('Select…');
     expect(screen.queryByText('Pick a lane')).not.toBeInTheDocument();
+  });
+
+  it("takes an entry's invalid sentence beside its choiceLabel, shown through the validator's errors", () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        lane: { enum: ['n', 's', 'e', 'w', 'ne', 'nw'], title: 'Lane' },
+        code: { type: 'string', pattern: '^[A-Z]{3}$', title: 'Code' },
+      },
+    };
+    const value = { code: 'abc' };
+    const errors = validateAgainstSchema(schema, value, {
+      fieldWording: { code: { invalid: 'Use three capital letters' } },
+    });
+    render(
+      <SchemaForm
+        schema={schema}
+        value={value}
+        onChange={vi.fn()}
+        errors={errors}
+        fieldWording={{
+          lane: { choiceLabel: 'Pick a lane' },
+          code: { invalid: 'Use three capital letters' },
+        }}
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'Lane' })).toHaveTextContent('Pick a lane');
+    expect(screen.getByLabelText('Code')).toHaveAccessibleDescription('Use three capital letters');
+  });
+});
+
+describe('SchemaForm — a property named like a built-in object member', () => {
+  const name: JsonSchema = { type: 'string', title: 'Name' };
+  const end: JsonSchema = { type: 'string', format: 'date', title: 'To', rangeStart: 'from' };
+
+  it('shows no error on a field named toString when the error bag has none', () => {
+    render(
+      <SchemaForm
+        schema={{ type: 'object', properties: { toString: name } }}
+        value={{ toString: 'x' }}
+        onChange={() => undefined}
+        errors={{}}
+      />,
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Name' })).not.toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+  });
+
+  it('shows no error on a date range whose end is named constructor when the error bag has none', () => {
+    render(
+      <SchemaForm
+        schema={{
+          type: 'object',
+          properties: {
+            from: { type: 'string', format: 'date', title: 'From' },
+            constructor: end,
+          },
+        }}
+        value={{}}
+        onChange={() => undefined}
+        errors={{}}
+      />,
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('draws a blank field named toString empty, with no error', () => {
+    render(
+      <SchemaForm
+        schema={{ type: 'object', properties: { toString: name } }}
+        value={{}}
+        onChange={() => undefined}
+        errors={{}}
+      />,
+    );
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveValue('');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('hides a field whose visibleWhen reads a blank field named toString', () => {
+    render(
+      <SchemaForm
+        schema={{
+          type: 'object',
+          properties: {
+            toString: name,
+            extra: {
+              type: 'string',
+              title: 'Extra',
+              visibleWhen: { field: 'toString', notEmpty: true },
+            },
+          },
+        }}
+        value={{}}
+        onChange={() => undefined}
+      />,
+    );
+    expect(screen.queryByRole('textbox', { name: 'Extra' })).not.toBeInTheDocument();
+  });
+
+  it('shows no error on a date range whose start is named toString when the error bag has none', () => {
+    const start: JsonSchema = { type: 'string', format: 'date', title: 'From' };
+    render(
+      <SchemaForm
+        schema={{
+          type: 'object',
+          properties: {
+            toString: start,
+            to: { type: 'string', format: 'date', title: 'To', rangeStart: 'toString' },
+          },
+        }}
+        value={{}}
+        onChange={() => undefined}
+        errors={{}}
+      />,
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('draws the union variant whose required keys the value itself holds', () => {
+    const named: JsonSchema = { type: 'string', title: 'Named' };
+    render(
+      <Harness
+        schema={{
+          type: 'object',
+          properties: {
+            pick: {
+              anyOf: [
+                {
+                  type: 'object',
+                  title: 'First',
+                  properties: { toString: named },
+                  required: ['toString'],
+                },
+                {
+                  type: 'object',
+                  title: 'Second',
+                  properties: { b: { type: 'string', title: 'B' } },
+                  required: ['b'],
+                },
+              ],
+            },
+          },
+        }}
+        initial={{ pick: { b: 'xy' } }}
+      />,
+    );
+    expect(screen.getByRole('textbox', { name: 'B *' })).toHaveValue('xy');
+  });
+
+  it('keeps a typed record key __proto__ in the emitted map', async () => {
+    const user = userEvent.setup();
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        env: { type: 'object', additionalProperties: { type: 'string' }, title: 'Env' },
+      },
+    };
+    render(<Harness schema={schema} initial={{ env: { A: '1' } }} />);
+    await user.click(screen.getByRole('button', { name: 'Add entry' }));
+    await user.type(screen.getByRole('textbox', { name: 'Key 2' }), '__proto__');
+    await user.type(nthByRole('textbox', 'Value', 1), 'v');
+    expect(emitted()).toBe('{"env":{"A":"1","__proto__":"v"}}');
+  });
+
+  it('carries a held __proto__ value across a union variant switch', async () => {
+    const user = userEvent.setup();
+    const schema = JSON.parse(
+      JSON.stringify({
+        anyOf: [
+          {
+            type: 'object',
+            title: 'A',
+            properties: { proto_key: { type: 'string', title: 'Shared' }, a: { type: 'string' } },
+            required: ['a'],
+          },
+          {
+            type: 'object',
+            title: 'B',
+            properties: { proto_key: { type: 'string', title: 'Shared' }, b: { type: 'string' } },
+            required: ['b'],
+          },
+        ],
+      }).replaceAll('"proto_key"', '"__proto__"'),
+    ) as JsonSchema;
+    render(
+      <Harness schema={schema} initial={JSON.parse('{"__proto__":"keep","a":"x"}') as unknown} />,
+    );
+    await user.click(screen.getByRole('combobox', { name: 'Variant' }));
+    await user.click(await screen.findByRole('option', { name: 'B' }));
+    expect(emitted()).toContain('"__proto__":"keep"');
+  });
+
+  it('shows the error the bag carries for a field named toString', () => {
+    render(
+      <SchemaForm
+        schema={{ type: 'object', properties: { toString: name } }}
+        value={{ toString: 'x' }}
+        onChange={() => undefined}
+        errors={{ toString: 'Too short' }}
+      />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Too short');
   });
 });

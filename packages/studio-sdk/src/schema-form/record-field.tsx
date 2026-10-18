@@ -43,7 +43,7 @@ interface Analysis {
 }
 
 function analyzeRows(rows: readonly Row[]): Analysis {
-  const value: Record<string, unknown> = {};
+  const entries: [string, unknown][] = [];
   const seen = new Set<string>();
   const blankRowIds = new Set<number>();
   const duplicateRowIds = new Set<number>();
@@ -57,8 +57,10 @@ function analyzeRows(rows: readonly Row[]): Analysis {
       continue;
     }
     seen.add(row.key);
-    value[row.key] = row.value;
+    entries.push([row.key, row.value]);
   }
+  // Built from entries so every typed key, `__proto__` included, lands as an own key.
+  const value = Object.fromEntries(entries);
   return { value, blankRowIds, duplicateRowIds };
 }
 

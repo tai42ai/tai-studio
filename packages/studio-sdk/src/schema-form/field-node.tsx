@@ -9,6 +9,7 @@ import { memo, type ReactNode } from 'react';
 import { Checkbox } from '../components/checkbox';
 import { Field } from '../components/field';
 import { NumberInput, TextInput } from '../components/inputs';
+import { ownValue } from '../guards';
 import { ArrayField } from './array-field';
 import { classifySchema } from './classify';
 import { EnumField } from './enum-field';
@@ -46,7 +47,7 @@ interface FieldNodeProps {
    * its direct `enum`-select children draw their placeholder. Carried by the root form
    * only; nested objects receive none.
    */
-  readonly fieldWording?: Readonly<Record<string, { choiceLabel?: string }>>;
+  readonly fieldWording?: Readonly<Record<string, { choiceLabel?: string; invalid?: string }>>;
   /** This field's own picker placeholder, when it draws as an `enum` select. */
   readonly choiceLabel?: string;
 }
@@ -73,7 +74,7 @@ function FieldNodeImpl(props: FieldNodeProps): ReactNode {
     nullable: classified.nullable,
     heading,
     description,
-    error: errors?.[path],
+    error: ownValue(errors, path),
     root,
     value,
     onChange,
@@ -100,7 +101,7 @@ interface RenderFieldArgs {
   readonly required: boolean;
   readonly errors: SchemaFormErrors | undefined;
   readonly idPrefix: string;
-  readonly fieldWording?: Readonly<Record<string, { choiceLabel?: string }>>;
+  readonly fieldWording?: Readonly<Record<string, { choiceLabel?: string; invalid?: string }>>;
   readonly choiceLabel?: string;
 }
 

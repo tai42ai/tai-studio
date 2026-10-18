@@ -36,20 +36,30 @@ export function wordingOf(payload: Record<string, unknown>): Wording | undefined
   return parsed.success ? parsed.data : undefined;
 }
 
+/** One field's caller words in the SDK's `fieldWording` shape. */
+export interface FormFieldWords {
+  readonly choiceLabel?: string;
+  readonly invalid?: string;
+}
+
 /**
- * The per-field words the SchemaForm draws (`wording.form.fields`), mapped to the SDK's
- * `fieldWording` prop shape (`{ choiceLabel }`) and keyed by property name. Only a field
- * with a non-blank `choice_label` is carried; `undefined` when none apply, so the form
- * draws its own default placeholders.
+ * The per-field words of `wording.form.fields`, mapped to the SDK's `fieldWording` shape
+ * (`{ choiceLabel, invalid }`) and keyed by property name: `choiceLabel` is the field
+ * picker's placeholder the SchemaForm draws, `invalid` the sentence `validateAgainstSchema`
+ * shows in place of the field's shape errors. Only non-blank words are carried, and only a
+ * field with at least one is listed; `undefined` when none apply, so the form draws its own
+ * default words.
  */
 export function formFieldWording(
   fields: FormWording['fields'],
-): Readonly<Record<string, { choiceLabel: string }>> | undefined {
+): Readonly<Record<string, FormFieldWords>> | undefined {
   if (fields == null) return undefined;
-  const entries: Record<string, { choiceLabel: string }> = {};
+  const entries: Record<string, FormFieldWords> = {};
   for (const [name, entry] of Object.entries(fields)) {
     const choiceLabel = nonBlankString(entry.choice_label);
-    if (choiceLabel !== undefined) entries[name] = { choiceLabel };
+    const invalid = nonBlankString(entry.invalid);
+    if (choiceLabel === undefined && invalid === undefined) continue;
+    entries[name] = { choiceLabel, invalid };
   }
   return Object.keys(entries).length > 0 ? entries : undefined;
 }

@@ -65,12 +65,11 @@ function switchVariantValue(
   const { model } = classifySchema(target.schema, root);
   if (model.kind !== 'object') return seeded;
   const targetNames = new Set(model.properties.map(([name]) => name));
-  const merged: Record<string, unknown> = { ...seeded };
-  for (const [name, held] of Object.entries(current)) {
-    if (name === discriminator) continue;
-    if (targetNames.has(name)) merged[name] = held;
-  }
-  return merged;
+  const carried = Object.entries(current).filter(
+    ([name]) => name !== discriminator && targetNames.has(name),
+  );
+  // Built from entries so every property name, `__proto__` included, lands as an own key.
+  return Object.fromEntries([...Object.entries(seeded), ...carried]);
 }
 
 /** Title-case a property name: `kind` → "Kind", `content_type` → "Content Type". */

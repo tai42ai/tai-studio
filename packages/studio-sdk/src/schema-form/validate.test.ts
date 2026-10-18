@@ -237,7 +237,7 @@ describe('validateAgainstSchema — value/length/items bounds (parity with the s
   });
 });
 
-describe('validateAgainstSchema — date constraints (scope C)', () => {
+describe('validateAgainstSchema — date constraints', () => {
   const dateSchema = (extra: Partial<JsonSchema>): JsonSchema => ({
     type: 'object',
     properties: { day: { type: 'string', format: 'date', ...extra } },
@@ -284,7 +284,7 @@ describe('validateAgainstSchema — date constraints (scope C)', () => {
   });
 });
 
-describe('validateAgainstSchema — multi-select (scope E)', () => {
+describe('validateAgainstSchema — multi-select', () => {
   const multi: JsonSchema = {
     type: 'object',
     properties: {
@@ -305,7 +305,7 @@ describe('validateAgainstSchema — multi-select (scope E)', () => {
   });
 });
 
-describe('validateAgainstSchema — conditional fields (scope B)', () => {
+describe('validateAgainstSchema — conditional fields', () => {
   const schema: JsonSchema = {
     type: 'object',
     properties: {
@@ -328,5 +328,272 @@ describe('validateAgainstSchema — conditional fields (scope B)', () => {
       /at least 2/,
     );
     expect(validateAgainstSchema(schema, { hasPet: true, petName: 'Rex' })).toEqual({});
+  });
+});
+
+describe('validateAgainstSchema — per-field invalid wording', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      email: { type: 'string', format: 'email' },
+      code: { type: 'string', pattern: '^[A-Z]{3}$' },
+      codeNote: { type: 'string', pattern: '^[a-z]+$' },
+      count: { type: 'integer', minimum: 1 },
+      tags: { type: 'array', items: { type: 'string', minLength: 2 } },
+      address: {
+        type: 'object',
+        properties: { street: { type: 'string' }, zip: { type: 'string', pattern: '^\\d{5}$' } },
+        required: ['street'],
+      },
+    },
+    required: ['email', 'code'],
+  };
+  const fieldWording = {
+    email: { invalid: 'Type your work address' },
+    code: { invalid: 'Use three capital letters' },
+    count: { invalid: 'Pick one or more' },
+    tags: { invalid: 'Each tag needs two letters' },
+    address: { invalid: 'Check the address' },
+  };
+
+  it("replaces a format, pattern or minimum error with the field's own sentence", () => {
+    const errors = validateAgainstSchema(
+      schema,
+      { email: 'nope', code: 'abc', count: 0 },
+      { fieldWording },
+    );
+    expect(errors.email).toBe('Type your work address');
+    expect(errors.code).toBe('Use three capital letters');
+    expect(errors.count).toBe('Pick one or more');
+  });
+
+  it('keeps the SDK word on a field with no invalid sentence, even one sharing a name prefix', () => {
+    const errors = validateAgainstSchema(
+      schema,
+      { email: 'a@b.co', code: 'ABC', codeNote: 'ABC' },
+      { fieldWording },
+    );
+    expect(errors.codeNote).toBe('must match the required pattern');
+  });
+
+  it('never replaces a missing required value, at the top level or inside the field', () => {
+    const errors = validateAgainstSchema(schema, { address: { zip: '1' } }, { fieldWording });
+    expect(errors.email).toBe('"email" is required');
+    expect(errors.code).toBe('"code" is required');
+    expect(errors['address.street']).toBe('"street" is required');
+    expect(errors['address.zip']).toBe('Check the address');
+  });
+
+  it('replaces an error on an array item of the field', () => {
+    const errors = validateAgainstSchema(
+      schema,
+      { email: 'a@b.co', code: 'ABC', tags: ['ok', 'x'] },
+      { fieldWording },
+    );
+    expect(errors['tags[1]']).toBe('Each tag needs two letters');
+    expect(errors['tags[0]']).toBeUndefined();
+  });
+
+  it('leaves a valid value without an error', () => {
+    expect(
+      validateAgainstSchema(schema, { email: 'a@b.co', code: 'ABC', count: 2 }, { fieldWording }),
+    ).toEqual({});
+  });
+
+  it('never replaces the error of a pattern that cannot compile', () => {
+    const withBadPattern: JsonSchema = {
+      type: 'object',
+      properties: { code: { type: 'string', pattern: '(?i)^abc$' } },
+    };
+    const errors = validateAgainstSchema(
+      withBadPattern,
+      { code: 'ABC' },
+      { fieldWording: { code: { invalid: 'Enter abc' } } },
+    );
+    expect(errors.code).toBe('has an invalid pattern constraint');
+  });
+
+  it('replaces the ordering or span error on a date range end', () => {
+    const range: JsonSchema = {
+      type: 'object',
+      properties: {
+        from: { type: 'string', format: 'date' },
+        to: { type: 'string', format: 'date', rangeStart: 'from', maxDays: 2 },
+      },
+    };
+    const wording = { fieldWording: { to: { invalid: 'Pick a later end' } } };
+    expect(validateAgainstSchema(range, { from: '2026-01-05', to: '2026-01-01' }, wording)).toEqual(
+      { to: 'Pick a later end' },
+    );
+    expect(validateAgainstSchema(range, { from: '2026-01-01', to: '2026-01-05' }, wording)).toEqual(
+      { to: 'Pick a later end' },
+    );
+  });
+
+  describe('a property whose name contains a dot', () => {
+    const dotted: JsonSchema = {
+      type: 'object',
+      properties: {
+        a: { type: 'string', pattern: '^x$' },
+        'a.b': { type: 'string', minLength: 3 },
+      },
+    };
+
+    it('does not take the sentence of the field its name starts with', () => {
+      const errors = validateAgainstSchema(
+        dotted,
+        { a: 'y', 'a.b': 'q' },
+        { fieldWording: { a: { invalid: 'A sentence' } } },
+      );
+      expect(errors).toEqual({ a: 'A sentence', 'a.b': 'must be at least 3 character(s)' });
+    });
+
+    it('gets its own sentence whatever the order of the wording keys', () => {
+      const expected = { a: 'A sentence', 'a.b': 'AB sentence' };
+      expect(
+        validateAgainstSchema(
+          dotted,
+          { a: 'y', 'a.b': 'q' },
+          { fieldWording: { 'a.b': { invalid: 'AB sentence' }, a: { invalid: 'A sentence' } } },
+        ),
+      ).toEqual(expected);
+      expect(
+        validateAgainstSchema(
+          dotted,
+          { a: 'y', 'a.b': 'q' },
+          { fieldWording: { a: { invalid: 'A sentence' }, 'a.b': { invalid: 'AB sentence' } } },
+        ),
+      ).toEqual(expected);
+    });
+  });
+});
+
+describe('validateAgainstSchema — a property named like a built-in object member', () => {
+  it('checks the bounds of a field named toString', () => {
+    const field: JsonSchema = { type: 'string', minLength: 3 };
+    const schema: JsonSchema = { type: 'object', properties: { toString: field } };
+    expect(validateAgainstSchema(schema, { toString: 'x' })).toEqual({
+      toString: 'must be at least 3 character(s)',
+    });
+  });
+
+  it('checks the date range on an end field named constructor', () => {
+    const end: JsonSchema = { type: 'string', format: 'date', rangeStart: 'from' };
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { from: { type: 'string', format: 'date' }, constructor: end },
+    };
+    expect(
+      validateAgainstSchema(schema, { from: '2026-01-05', constructor: '2026-01-01' }),
+    ).toEqual({ constructor: 'must be on or after the start date' });
+  });
+
+  it('reports the error of a field named __proto__ as its own key', () => {
+    // JSON.parse keeps `__proto__` as an ordinary own key, as a schema and value from
+    // the wire carry it.
+    const schema = JSON.parse(
+      '{"type":"object","properties":{"__proto__":{"type":"string"}}}',
+    ) as JsonSchema;
+    const errors = validateAgainstSchema(schema, JSON.parse('{"__proto__":5}'));
+    expect(Object.keys(errors)).toEqual(['__proto__']);
+    expect(Object.getOwnPropertyDescriptor(errors, '__proto__')?.value).toBe('must be a string');
+  });
+
+  it("puts the field's invalid sentence on a field named __proto__", () => {
+    const schema = JSON.parse(
+      '{"type":"object","properties":{"__proto__":{"type":"string","minLength":3}}}',
+    ) as JsonSchema;
+    const errors = validateAgainstSchema(schema, JSON.parse('{"__proto__":"x"}'), {
+      fieldWording: JSON.parse('{"__proto__":{"invalid":"Three letters"}}') as Record<
+        string,
+        { invalid?: string }
+      >,
+    });
+    expect(Object.getOwnPropertyDescriptor(errors, '__proto__')?.value).toBe('Three letters');
+  });
+
+  it('leaves an optional blank field named toString without an error', () => {
+    const field: JsonSchema = { type: 'string' };
+    expect(validateAgainstSchema({ type: 'object', properties: { toString: field } }, {})).toEqual(
+      {},
+    );
+  });
+
+  it('reports a required blank field named toString as required', () => {
+    const field: JsonSchema = { type: 'string' };
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { toString: field },
+      required: ['toString'],
+    };
+    expect(validateAgainstSchema(schema, {})).toEqual({ toString: '"toString" is required' });
+  });
+
+  it("keeps the required message over the field's invalid sentence on a blank toString", () => {
+    const field: JsonSchema = { type: 'string', minLength: 3 };
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { toString: field },
+      required: ['toString'],
+    };
+    expect(
+      validateAgainstSchema(
+        schema,
+        {},
+        { fieldWording: { toString: { invalid: 'Three letters' } } },
+      ),
+    ).toEqual({ toString: '"toString" is required' });
+  });
+
+  it('reports a required key named constructor that no property declares', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { a: { type: 'string' } },
+      required: ['constructor'],
+    };
+    expect(validateAgainstSchema(schema, {})).toEqual({
+      constructor: '"constructor" is required',
+    });
+  });
+
+  it('hides a field whose visibleWhen reads a blank field named toString', () => {
+    const field: JsonSchema = { type: 'string' };
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        toString: field,
+        extra: { type: 'string', visibleWhen: { field: 'toString', notEmpty: true } },
+      },
+      required: ['extra'],
+    };
+    expect(validateAgainstSchema(schema, {})).toEqual({});
+  });
+
+  it('picks the union variant by the required keys the value itself holds', () => {
+    const named: JsonSchema = { type: 'string' };
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        pick: {
+          anyOf: [
+            { type: 'object', properties: { toString: named }, required: ['toString'] },
+            {
+              type: 'object',
+              properties: { b: { type: 'string', minLength: 2 } },
+              required: ['b'],
+            },
+          ],
+        },
+      },
+    };
+    expect(validateAgainstSchema(schema, { pick: { b: 'xy' } })).toEqual({});
+  });
+
+  it('returns an ordinary object', () => {
+    const errors = validateAgainstSchema(
+      { type: 'object', properties: { a: { type: 'string' } } },
+      { a: 1 },
+    );
+    expect(Object.getPrototypeOf(errors)).toBe(Object.prototype);
   });
 });

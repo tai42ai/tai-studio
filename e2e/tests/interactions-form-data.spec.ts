@@ -27,8 +27,11 @@
  * buttons (`wording.answer.confirm` / `.decline`), a `text`'s reply placeholder
  * (`wording.answer.reply_hint`), an `external` link's open button (`wording.answer.open`);
  * a page-less `form` draws its terminal button (`wording.form.submit`) and a field's picker
- * placeholder (`wording.form.fields[name].choice_label`). Abstract fixtures only. The form
- * shot pair is captured in both themes, by tokens, for visual review.
+ * placeholder (`wording.form.fields[name].choice_label`). A form field's caller sentence
+ * (`wording.form.fields[name].invalid`) stands in for the surface's own word on a value of
+ * the wrong shape, while a missing required value keeps its required message. Abstract
+ * fixtures only. The form shot pair is captured in both themes, by tokens, for visual
+ * review.
  */
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -286,6 +289,41 @@ const LABELS_PAGE = {
       },
     ],
     total: 5,
+    page: 1,
+    page_size: 50,
+    next_page: null,
+    truncated: false,
+  },
+};
+
+/** One page-less pending `form` whose required `code` field carries a `pattern` and the
+ * caller's `wording.form.fields.code.invalid` sentence; the optional `note` field carries a
+ * `pattern` and no sentence, so it keeps the surface's own word. */
+const INVALID_WORDING_PAGE = {
+  data: {
+    items: [
+      {
+        interaction_id: 'iw-1',
+        group_id: 'iw-1',
+        sensitive: false,
+        answer_format: 'form',
+        question: 'Enter a code',
+        created_at: '2026-08-01T00:00:00.000Z',
+        timeout_at: '2026-08-09T00:00:00.000Z',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: {
+              code: { type: 'string', pattern: '^[A-Z]{3}$', title: 'Code' },
+              note: { type: 'string', pattern: '^[a-z]+$', title: 'Note' },
+            },
+            required: ['code'],
+          },
+          wording: { form: { fields: { code: { invalid: 'Use three capital letters' } } } },
+        },
+      },
+    ],
+    total: 1,
     page: 1,
     page_size: 50,
     next_page: null,
@@ -571,4 +609,30 @@ test("a non-form question draws its answer control with the caller's platform-dr
   await expect(formCard.getByRole('button', { name: 'Send it' })).toBeVisible();
   await expect(formCard.getByRole('button', { name: 'Submit' })).toHaveCount(0);
   await expect(formCard.getByRole('combobox', { name: 'Lane' })).toContainText('Pick a lane');
+});
+
+test("a form field's caller sentence replaces the shape error, never the required message", async ({
+  page,
+}) => {
+  await stubInbox(page, INVALID_WORDING_PAGE);
+  await page.goto('/interactions');
+  await expect(page.getByRole('heading', { name: 'Interactions' })).toBeVisible();
+
+  const formCard = page.getByTestId('interaction-card').filter({ hasText: 'Enter a code' });
+  const code = formCard.getByRole('textbox', { name: 'Code' });
+  const note = formCard.getByRole('textbox', { name: 'Note' });
+  const submit = formCard.getByRole('button', { name: 'Submit' });
+
+  // A missing required value keeps the required message, never the caller's sentence.
+  await submit.click();
+  await expect(code).toHaveAccessibleDescription('"code" is required');
+  await expect(formCard.getByText('Use three capital letters')).toHaveCount(0);
+
+  // A value of the wrong shape shows the caller's `wording.form.fields.code.invalid`
+  // under the field; the field with no sentence keeps the surface's own word.
+  await code.fill('abc');
+  await note.fill('ABC');
+  await submit.click();
+  await expect(code).toHaveAccessibleDescription('Use three capital letters');
+  await expect(note).toHaveAccessibleDescription('must match the required pattern');
 });
