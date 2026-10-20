@@ -92,7 +92,7 @@ export function useToolExtensionsEditor(tool: string, origin: ToolExtensionsOrig
     },
     onSuccess: () => {
       // A combo save rebinds/tears the per-combo BRANCH tools, so several views shift at
-      // once: this panel's combo load + tool picker, the extension-catalog families on
+      // once: this panel's combo load + tool picker, the extension catalog on
       // this same page, and the registered-tool master list. Invalidate all of them so
       // every dependent view refetches — the same catalog + tool-list refresh the
       // tools-page extensions card performs.

@@ -77,8 +77,9 @@ describe('BackupTab', () => {
 
   it('exports the chosen sections and triggers a download', async () => {
     const user = userEvent.setup();
+    const exported = { version: 1, created_at: '2026-07-05T00:00:00Z', sections: {}, errors: {} };
     const exportBackup = vi.fn(() =>
-      Promise.resolve(new Blob(['{}'], { type: 'application/json' })),
+      Promise.resolve(new Blob([JSON.stringify(exported)], { type: 'application/json' })),
     );
     // Spy the anchor click so jsdom does not attempt (and log) a real navigation;
     // the download wiring is still asserted for real via the captured anchor.
@@ -98,6 +99,42 @@ describe('BackupTab', () => {
     expect(createObjectURL).toHaveBeenCalled();
     expect(anchor?.getAttribute('href')).toBe('blob:mock');
     expect(anchor?.download).toMatch(/^tai-backup-.*\.json$/);
+  });
+
+  it('keeps the download and names each section the export dropped with its message', async () => {
+    const user = userEvent.setup();
+    const exported = {
+      version: 1,
+      created_at: '2026-07-05T00:00:00Z',
+      sections: { manifest: {} },
+      errors: {
+        templates: "Template 'logo.png' is not a text template: binary content",
+        webhooks: 'webhook store unavailable',
+      },
+    };
+    const exportBackup = vi.fn(() =>
+      Promise.resolve(new Blob([JSON.stringify(exported)], { type: 'application/json' })),
+    );
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub({ exportBackup }) });
+
+    await screen.findByRole('checkbox', { name: 'manifest' });
+    await user.click(screen.getByRole('button', { name: 'Export backup' }));
+
+    const warning = await screen.findByTestId('export-section-errors');
+    expect(createObjectURL).toHaveBeenCalled();
+    expect(warning).toHaveAttribute('role', 'alert');
+    expect(warning).toHaveClass('tai-warn-state');
+    expect(
+      within(warning).getByText('Backup downloaded, but 2 sections failed to export'),
+    ).toBeInTheDocument();
+    const templates = within(warning).getByTestId('export-error-templates');
+    expect(within(templates).getByText('templates')).toBeInTheDocument();
+    expect(
+      within(templates).getByText("Template 'logo.png' is not a text template: binary content"),
+    ).toBeInTheDocument();
+    const webhooks = within(warning).getByTestId('export-error-webhooks');
+    expect(within(webhooks).getByText('webhook store unavailable')).toBeInTheDocument();
   });
 
   it('renders the import report with highlighted error rows', async () => {

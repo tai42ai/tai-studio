@@ -324,13 +324,8 @@ export type { ExecutionKeyPickerProps, ExecutionKeyQuery } from './components/ex
 export { ExecutionKeyPicker, isExecutionKeyListEmpty } from './components/execution-key-picker';
 export type { ExtensionComboBuilderProps } from './components/extension-combo-builder';
 export { ExtensionComboBuilder } from './components/extension-combo-builder';
-export type { ExtensionFamily, ExtensionKindGroup } from './components/extension-grouping';
-export {
-  baseNameOf,
-  groupByKind,
-  groupIntoFamilies,
-  kindVariant,
-} from './components/extension-grouping';
+export type { ExtensionKindGroup } from './components/extension-grouping';
+export { groupByKind, kindVariant } from './components/extension-grouping';
 export type { ExtensionPickerProps } from './components/extension-picker';
 export { ExtensionPicker } from './components/extension-picker';
 export type { ExternalLinkButtonProps } from './components/external-link';

@@ -86,6 +86,7 @@ export type {
   AuthRoute,
   BackendInfo,
   BackupDocument,
+  BackupExportDocument,
   BackupImportReport,
   BackupNewApiKeys,
   BackupSectionReport,

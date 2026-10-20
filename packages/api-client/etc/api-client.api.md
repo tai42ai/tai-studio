@@ -1513,6 +1513,17 @@ const backupDocument: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public (undocumented)
+export type BackupExportDocument = z.infer<typeof backupExportDocument>;
+
+// @public
+const backupExportDocument: z.ZodObject<{
+    created_at: z.ZodString;
+    errors: z.ZodRecord<z.ZodString, z.ZodString>;
+    sections: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    version: z.ZodNumber;
+}, z.core.$strip>;
+
+// @public (undocumented)
 export type BackupImportReport = z.infer<typeof backupImportReport>;
 
 // @public (undocumented)
@@ -13672,6 +13683,8 @@ declare namespace s {
         pinPublicResult,
         unpinPublicResult,
         backupSections,
+        backupExportDocument,
+        BackupExportDocument,
         backupDocument,
         BackupDocument,
         backupNewApiKeys,
@@ -14494,6 +14507,8 @@ declare namespace schemas {
         pinPublicResult,
         unpinPublicResult,
         backupSections,
+        backupExportDocument,
+        BackupExportDocument,
         backupDocument,
         BackupDocument,
         backupNewApiKeys,

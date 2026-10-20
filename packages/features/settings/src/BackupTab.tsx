@@ -5,7 +5,9 @@
  * Export: a checkbox per available section (`listBackupSections`). Secret
  * sections default UNCHECKED with a warning; checking one shows a plain "this
  * file will contain secrets" note (the manifest gets a softer note). Export
- * downloads the returned blob as a file.
+ * downloads the returned blob as a file, then reads the document's `errors` map:
+ * each section whose exporter failed is absent from the file and is named, with
+ * its message, in a warning under the export controls.
  *
  * Import: pick a file, parse it (loud on malformed JSON / wrong shape), choose
  * which of its sections to restore, then import. The per-section report
@@ -14,8 +16,8 @@
  * an `access_control` restore are shown once in copy boxes.
  *
  * SAFETY: the backup file is operator-uploaded and fully untrusted, so EVERY
- * report field — including per-section error strings and minted-key metadata —
- * renders as ESCAPED text through the design-system components, never an HTML
+ * report field — including per-section error strings (import and export) and
+ * minted-key metadata — renders as ESCAPED text through the design-system components, never an HTML
  * sink. Read-only config mode disables importing (a write); export stays
  * available.
  */
@@ -45,6 +47,7 @@ import {
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { type CSSProperties, type ReactNode, useId, useRef, useState } from 'react';
 
+import { ExportSectionErrors, readExportErrors } from './ExportSectionErrors';
 import { backupSectionsKey } from './keys';
 import { RecycleRollSection } from './RecycleRollSection';
 
@@ -159,11 +162,15 @@ function ExportCard({ sections }: { readonly sections: readonly Section[] }): Re
   );
 
   const mutation = useMutation({
-    mutationFn: (names: string[]) => api.exportBackup(names),
-    onSuccess: (blob) => {
+    mutationFn: async (names: string[]) => {
+      const blob = await api.exportBackup(names);
+      return { blob, errors: await readExportErrors(blob) };
+    },
+    onSuccess: ({ blob }) => {
       triggerDownload(blob, backupFilename());
     },
   });
+  const exportErrors = mutation.data?.errors ?? {};
 
   const toggle = (name: string, next: boolean): void => {
     setSelected((current) => {
@@ -207,6 +214,7 @@ function ExportCard({ sections }: { readonly sections: readonly Section[] }): Re
       ) : null}
 
       {mutation.isError ? <ErrorState message={errorMessage(mutation.error)} /> : null}
+      {Object.keys(exportErrors).length > 0 ? <ExportSectionErrors errors={exportErrors} /> : null}
 
       <Button
         type="button"

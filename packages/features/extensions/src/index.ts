@@ -9,7 +9,7 @@
 export { ApplyExtensionsPanel } from './apply-extensions';
 export {
   ExtensionEntry,
-  ExtensionFamilyCard,
+  ExtensionKindCard,
   ExtensionsPage,
   extensionsQueryKey,
 } from './extensions';

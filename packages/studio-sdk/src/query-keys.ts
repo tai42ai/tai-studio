@@ -14,10 +14,10 @@
 export const toolsListKey = ['tools'] as const;
 
 /**
- * The extension catalog (`GET /api/extensions`). The extensions feature keys its
- * read-only catalog on it; a tool's extension-combo save (in the tools feature)
- * creates or tears down branch tools, so it invalidates this key too — a
- * cross-feature reference that must resolve to one authoritative constant.
+ * The registered-extension catalog (`GET /api/extensions`). The extensions feature
+ * keys its read-only catalog on it and the tools feature invalidates it after a
+ * tool's extension-combo save — a cross-feature reference that must resolve to one
+ * authoritative constant.
  */
 export const extensionsQueryKey = ['extensions'] as const;
 

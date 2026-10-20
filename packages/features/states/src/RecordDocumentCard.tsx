@@ -3,7 +3,7 @@
  * on an existing record, drives create/edit through {@link DocumentEditor}, and hosts
  * the danger-confirm erase. Loading and read errors surface loudly in place.
  */
-import type { StateSubjectRef } from '@tai42/api-client';
+import type { StateRecord, StateSubjectRef } from '@tai42/api-client';
 import {
   Button,
   Card,
@@ -127,10 +127,46 @@ export function RecordDocumentCard({ subject, rec }: RecordDocumentCardProps): R
             if (!rec.eraseMutation.isPending) rec.setEraseOpen(false);
           }}
         >
-          Erase record &lsquo;{subject.kind} {subject.key}&rsquo;? The document and its audit trail
-          stay in the ledger; a new document starts empty.
+          <EraseConfirmText subject={subject} record={record} />
         </ConfirmDialog>
       ) : null}
+    </>
+  );
+}
+
+/**
+ * What an erase really does. The platform resolves the subject to its canonical record first:
+ * when this subject is folded into another, the erase deletes that canonical record, unlinks
+ * every subject folded into it (this one included) and records its write row under the canonical
+ * subject, so the text names the canonical record and says what this page then shows.
+ */
+function EraseConfirmText({
+  subject,
+  record,
+}: {
+  readonly subject: StateSubjectRef;
+  readonly record: StateRecord | null;
+}): ReactNode {
+  const canonical = record?.canonical_subject ?? subject;
+  const here = `${subject.kind} ${subject.key}`;
+  if (canonical.kind === subject.kind && canonical.key === subject.key) {
+    return (
+      <>
+        Erase record &lsquo;{here}&rsquo;? Its document is deleted for good, and any subjects folded
+        into it stop pointing to it. The Writes table keeps its rows, plus one for this erase, but
+        no copy of the document. This cannot be undone.
+      </>
+    );
+  }
+  const erased = `${canonical.kind} ${canonical.key}`;
+  return (
+    <>
+      Erase record &lsquo;{erased}&rsquo;? &lsquo;{here}&rsquo; is folded into it, so the document
+      shown here is its document. That document is deleted for good, and every subject folded into
+      &lsquo;{erased}&rsquo; stops pointing to it, &lsquo;{here}&rsquo; included, which is left with
+      no document. The erase is recorded in the Writes of &lsquo;{erased}&rsquo;, not here: this
+      Writes table then shows only the writes made to &lsquo;{here}&rsquo; before its fold. This
+      cannot be undone.
     </>
   );
 }

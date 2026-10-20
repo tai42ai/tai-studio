@@ -9,10 +9,9 @@
  * by ORIGIN + name (a manifest tool and a same-named preset never share a cache
  * entry).
  *
- * `extensionsQueryKey` is also invalidated by the tools feature (a tool's
- * extension-combo save rebinds branch tools), so it is the authoritative SDK
- * constant, re-exported here so this feature's call sites import it by the same
- * local name.
+ * `extensionsQueryKey` is also invalidated by the tools feature after a tool's
+ * extension-combo save, so it is the authoritative SDK constant, re-exported here
+ * so this feature's call sites import it by the same local name.
  */
 export { extensionsQueryKey } from '@tai42/studio-sdk';
 

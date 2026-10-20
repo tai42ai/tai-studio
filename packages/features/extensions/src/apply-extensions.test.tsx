@@ -99,7 +99,7 @@ describe('ApplyExtensionsPanel — manifest tool', () => {
     await screen.findByText('Extension set 1');
     await user.click(screen.getByRole('button', { name: 'Save extensions' }));
 
-    // A combo save rebinds branch tools, so the catalog families and the registered-tool
+    // A combo save rebinds branch tools, so the extension catalog and the registered-tool
     // master list both shift — both must be invalidated, matching the tools-page card.
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ['extensions'] });

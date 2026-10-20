@@ -1,5 +1,9 @@
-/** The write audit trail: a paged table of every write to this subject's document. */
-import type { StateSubjectRef, WriteEntry } from '@tai42/api-client';
+/**
+ * The write audit trail: a paged table of every write to this subject's document, newest first.
+ * One infinite query holds every loaded page, so an invalidation after a write refetches the
+ * trail from its first page and a new row shows on top however many pages are loaded.
+ */
+import type { StateSubjectRef } from '@tai42/api-client';
 import {
   Badge,
   Button,
@@ -17,8 +21,8 @@ import {
   TR,
   useApi,
 } from '@tai42/studio-sdk';
-import { useQuery } from '@tanstack/react-query';
-import { type ReactNode, useMemo, useState } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import { stateWritesKey } from './keys';
 
@@ -29,36 +33,34 @@ export interface WritesCardProps {
 
 export function WritesCard({ stateName, subject }: WritesCardProps): ReactNode {
   const api = useApi();
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
-  const [rows, setRows] = useState<WriteEntry[]>([]);
 
-  const query = useQuery({
-    queryKey: [...stateWritesKey(stateName, subject), cursor ?? 'first'],
-    queryFn: ({ signal }) =>
+  const query = useInfiniteQuery({
+    queryKey: stateWritesKey(stateName, subject),
+    queryFn: ({ pageParam, signal }) =>
       api.listStateWrites(
         stateName,
         subject,
-        cursor === undefined ? undefined : { cursor },
+        pageParam === undefined ? undefined : { cursor: pageParam },
         signal,
       ),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
 
-  const page = query.data;
-  const merged = useMemo(() => {
-    if (page === undefined) return rows;
-    const seen = new Set(rows.map((r) => r.seq));
-    return [...rows, ...page.items.filter((item) => !seen.has(item.seq))];
-  }, [page, rows]);
+  // The pages are disjoint keyset slices (each strictly older than the last row before it), so
+  // no row repeats. A row carries no unique field (`seq` is shared, e.g. every erase row reads
+  // 0), so its place in the trail is its identity.
+  const rows = query.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <Card>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
         <h3 style={{ margin: 0, fontSize: 'var(--tai-text-md)' }}>Writes</h3>
-        {query.isPending && rows.length === 0 ? (
+        {query.isPending ? (
           <Skeleton height={120} />
         ) : query.isError ? (
           <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
-        ) : merged.length === 0 ? (
+        ) : rows.length === 0 ? (
           <EmptyState title="No writes yet" description="No door has written this document." />
         ) : (
           <>
@@ -74,8 +76,8 @@ export function WritesCard({ stateName, subject }: WritesCardProps): ReactNode {
                 </TR>
               </THead>
               <TBody>
-                {merged.map((entry) => (
-                  <TR key={entry.seq}>
+                {rows.map((entry, index) => (
+                  <TR key={index}>
                     <TD>{entry.at}</TD>
                     <TD>
                       <Badge variant="neutral">{entry.origin.door}</Badge>
@@ -126,17 +128,16 @@ export function WritesCard({ stateName, subject }: WritesCardProps): ReactNode {
                 ))}
               </TBody>
             </Table>
-            {page?.next_cursor != null ? (
+            {query.hasNextPage ? (
               <div>
                 <Button
                   type="button"
                   onClick={() => {
-                    setRows(merged);
-                    setCursor(page.next_cursor ?? undefined);
+                    void query.fetchNextPage();
                   }}
-                  disabled={query.isFetching}
+                  disabled={query.isFetchingNextPage}
                 >
-                  {query.isFetching ? <Spinner label="Loading" /> : null}
+                  {query.isFetchingNextPage ? <Spinner label="Loading" /> : null}
                   Load more
                 </Button>
               </div>

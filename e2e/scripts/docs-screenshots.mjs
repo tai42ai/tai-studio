@@ -48,6 +48,9 @@
  *                  restore whose recycle roll stopped (a forced import response): the section
  *                  row, the workers the server names as still awaiting a restart, and the
  *                  recycle rows with the stop panel, captured as the whole Import card.
+ *   - backup-export-section-errors — the Backup tab's Export card after an export whose
+ *                  document names a failed section (a forced export answer): the file still
+ *                  downloads, and the warning names the section with its message.
  *   - settings-env-recycle — the Environment tab after a save that rolled a worker
  *                  recycle (a forced save response: the docs-demo stack runs bare): the
  *                  recycle rows, captured as the whole Environment variables card.
@@ -1105,6 +1108,16 @@ const BACKUP_RESTORE_STOPPED = {
   },
 };
 
+/** The forced export answer of the `backup-export-section-errors` scene: the document
+ * with one section exported and the `templates` section named, with its message, in its
+ * `errors` map (the docs-demo storage backend fails no read on demand). */
+const BACKUP_EXPORT_SECTION_ERRORS = {
+  version: 1,
+  created_at: '2026-01-01T00:00:00Z',
+  sections: { env: { TAI_BUS_HEARTBEAT_TTL: '20' } },
+  errors: { templates: 'storage read failed: connection refused' },
+};
+
 /** The forced response of a profile apply whose recycle roll stopped (the
  * `profile-apply-recycle-stopped` scene): one backend recycled, the roll stopped at the
  * next, and the server's verdict naming the workers still awaiting a restart. */
@@ -1577,6 +1590,34 @@ const AUTHED_PAGES = [
       page
         .locator('.tai-card')
         .filter({ has: page.getByRole('heading', { name: 'Import', level: 3 }) }),
+  },
+  {
+    // The Backup tab's Export card after an export whose document names a failed
+    // section: the file still downloads, and the warning under the section checklist
+    // names the `templates` section with its message. The export answer is the forced
+    // document above; the section checklist is live. The Export card is captured whole.
+    name: 'backup-export-section-errors',
+    path: '/settings',
+    wait: 'text=LoggingSettings',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/backup/export',
+        (route) => route.fulfill({ json: BACKUP_EXPORT_SECTION_ERRORS }),
+      );
+    },
+    action: async (page) => {
+      await page.getByRole('tab', { name: 'Backup' }).click();
+      const download = page.waitForEvent('download', { timeout: WAIT_TIMEOUT });
+      await page.getByRole('button', { name: 'Export backup' }).click();
+      await download;
+      await page
+        .locator('[data-testid="export-section-errors"]')
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+    },
+    frame: (page) =>
+      page
+        .locator('.tai-card')
+        .filter({ has: page.getByRole('heading', { name: 'Export', level: 3 }) }),
   },
   // The registered demo agent renders one row per agent (`data-testid`).
   { name: 'agents', path: '/agents', wait: '[data-testid="agent-row"]' },

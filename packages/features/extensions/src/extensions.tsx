@@ -1,9 +1,11 @@
 /**
- * The tool-extensions surface: a read-only catalog of the skeleton's
- * registered extensions. Data comes from `api.listExtensions()` through TanStack
- * Query; the catalog is grouped into per-tool FAMILIES and each entry shows its
- * `kind` as a Badge. All server-supplied strings render as text (React escapes
- * them) — there is no HTML sink here.
+ * The tool-extensions surface: the apply-an-extension panel above a read-only
+ * catalog of the skeleton's registered extensions, grouped by kind. Data comes
+ * from `api.listExtensions()` through TanStack Query; the catalog is grouped with
+ * the SDK's `groupByKind` (the same grouping the `ExtensionPicker` uses), one card
+ * per kind with the kind as a Badge heading, the member count and, for a kind the
+ * server serves as not `multiple`, the "one per tool" rule. All server-supplied
+ * strings render as text (React escapes them) — there is no HTML sink here.
  *
  * The four query states follow the convention: a <Skeleton> while loading, an
  * <EmptyState> when the catalog is empty, and a loud <ErrorState> on any failure
@@ -11,16 +13,15 @@
  * empty render).
  */
 import type { Extension } from '@tai42/api-client';
-import type { ExtensionFamily, PageProps } from '@tai42/studio-sdk';
+import type { ExtensionKindGroup, PageProps } from '@tai42/studio-sdk';
 import {
   AppLink,
   Badge,
   Card,
-  ChevronRightIcon,
   EmptyState,
   errorMessage,
   ErrorState,
-  groupIntoFamilies,
+  groupByKind,
   kindVariant,
   PageHeader,
   Skeleton,
@@ -34,7 +35,7 @@ import { extensionsQueryKey } from './keys';
 
 export { extensionsQueryKey } from './keys';
 
-const familyGridStyle: CSSProperties = {
+const cardColumnStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
   gap: 'var(--tai-space-4)',
@@ -49,13 +50,6 @@ const memberListStyle: CSSProperties = {
   gap: 'var(--tai-space-2)',
 };
 
-const memberRowStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 'var(--tai-space-3)',
-};
-
 const memberNameStyle: CSSProperties = {
   fontFamily: 'var(--tai-font-mono)',
   fontSize: 'var(--tai-text-md)',
@@ -63,63 +57,51 @@ const memberNameStyle: CSSProperties = {
   wordBreak: 'break-all',
 };
 
-// The family is keyed on its base TOOL name — a machine identifier, so mono.
-const familyHeadingStyle: CSSProperties = {
+// The kind heading row: the kind Badge, then the muted count and rule; wraps on
+// a narrow card.
+const kindHeadingStyle: CSSProperties = {
   margin: 0,
-  fontFamily: 'var(--tai-font-mono)',
+  display: 'flex',
+  alignItems: 'baseline',
+  gap: 'var(--tai-space-2)',
+  flexWrap: 'wrap',
   fontSize: 'var(--tai-text-lg)',
   color: 'var(--tai-color-text)',
 };
 
-const familyHeaderRowStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'baseline',
-  justifyContent: 'space-between',
-  gap: 'var(--tai-space-3)',
-  flexWrap: 'wrap',
-};
-
-const familyCountStyle: CSSProperties = {
-  marginLeft: 'var(--tai-space-2)',
+const kindMetaStyle: CSSProperties = {
   fontSize: 'var(--tai-text-sm)',
   color: 'var(--tai-color-text-muted)',
   fontWeight: 400,
 };
 
-/** A single extension entry: its (escaped) name and its `kind` Badge. */
+/** A single extension entry: its (escaped) registered name. */
 export function ExtensionEntry({ extension }: { extension: Extension }): ReactNode {
   return (
-    <li style={memberRowStyle}>
+    <li>
       <span style={memberNameStyle}>{extension.name}</span>
-      <Badge variant={kindVariant(extension.kind)}>{extension.kind}</Badge>
     </li>
   );
 }
 
-/** One base tool and its branch variants, rendered as a titled card. */
-export function ExtensionFamilyCard({ family }: { family: ExtensionFamily }): ReactNode {
+/**
+ * One extension kind and its registered extensions, rendered as a card headed by
+ * the kind Badge, the member count and — for a kind that is not `multiple` — the
+ * "one per tool" rule.
+ */
+export function ExtensionKindCard({ group }: { group: ExtensionKindGroup }): ReactNode {
+  const count = group.members.length;
   return (
     <Card>
-      <div style={familyHeaderRowStyle}>
-        <h2 style={familyHeadingStyle}>
-          {family.base}
-          <span style={familyCountStyle}>
-            {family.members.length === 1
-              ? '1 variant'
-              : `${String(family.members.length)} variants`}
-          </span>
-        </h2>
-        <AppLink
-          to="tools"
-          search={{ tool: family.base }}
-          aria-label={`Author ${family.base} extension sets on the tools page`}
-        >
-          Author extension sets
-          <ChevronRightIcon />
-        </AppLink>
-      </div>
+      <h3 style={kindHeadingStyle}>
+        <Badge variant={kindVariant(group.kind)}>{group.kind}</Badge>
+        <span style={kindMetaStyle}>
+          {count === 1 ? '1 extension' : `${String(count)} extensions`}
+        </span>
+        {group.multiple ? null : <span style={kindMetaStyle}>one per tool</span>}
+      </h3>
       <ul style={memberListStyle}>
-        {family.members.map((extension) => (
+        {group.members.map((extension) => (
           <ExtensionEntry key={extension.name} extension={extension} />
         ))}
       </ul>
@@ -127,10 +109,10 @@ export function ExtensionFamilyCard({ family }: { family: ExtensionFamily }): Re
   );
 }
 
-/** The loading placeholder: a few skeleton cards standing in for families. */
+/** The loading placeholder: a few skeleton cards standing in for kind cards. */
 function ExtensionsLoading(): ReactNode {
   return (
-    <div style={familyGridStyle} data-testid="extensions-loading">
+    <div style={cardColumnStyle} data-testid="extensions-loading">
       {[0, 1, 2].map((row) => (
         <Card key={row}>
           <Skeleton width="30%" height={20} />
@@ -180,11 +162,11 @@ export function ExtensionsPage(_props: PageProps<'extensions'>): ReactNode {
       />
     );
   } else {
-    const families = groupIntoFamilies(query.data);
+    const groups = groupByKind(query.data);
     body = (
-      <div style={familyGridStyle}>
-        {families.map((family) => (
-          <ExtensionFamilyCard key={family.base} family={family} />
+      <div style={cardColumnStyle}>
+        {groups.map((group) => (
+          <ExtensionKindCard key={group.kind} group={group} />
         ))}
       </div>
     );
@@ -196,7 +178,7 @@ export function ExtensionsPage(_props: PageProps<'extensions'>): ReactNode {
 
       <ApplyExtensionsPanel />
 
-      <div style={familyGridStyle}>
+      <div style={cardColumnStyle}>
         <h2 className="tai-section-title">Extension catalog</h2>
         {body}
       </div>

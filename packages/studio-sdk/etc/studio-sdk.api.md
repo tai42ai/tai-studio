@@ -5305,6 +5305,17 @@ const backupDocument: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public (undocumented)
+type BackupExportDocument = z.infer<typeof backupExportDocument>;
+
+// @public
+const backupExportDocument: z.ZodObject<{
+    created_at: z.ZodString;
+    errors: z.ZodRecord<z.ZodString, z.ZodString>;
+    sections: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    version: z.ZodNumber;
+}, z.core.$strip>;
+
+// @public (undocumented)
 type BackupImportReport = z.infer<typeof backupImportReport>;
 
 // @public (undocumented)
@@ -5514,9 +5525,6 @@ export interface BadgeProps {
 
 // @public
 export const BADGES_NOTE = "Declared capability labels \u2014 informational only. They describe what the tool touches; the server never enforces them.";
-
-// @public
-export function baseNameOf(name: string): string;
 
 // @public (undocumented)
 export function BindingJqField(input: BindingJqFieldProps): ReactNode;
@@ -13908,12 +13916,6 @@ export interface ExtensionComboBuilderProps {
 export function extensionElementName(element: PresetExtensionElement): string;
 
 // @public
-export interface ExtensionFamily {
-    readonly base: string;
-    readonly members: readonly Extension[];
-}
-
-// @public
 export interface ExtensionKindGroup {
     readonly kind: string;
     readonly members: readonly Extension[];
@@ -14596,9 +14598,6 @@ export const GridIcon: IconComponent;
 
 // @public
 export function groupByKind(extensions: readonly Extension[]): ExtensionKindGroup[];
-
-// @public
-export function groupIntoFamilies(extensions: readonly Extension[]): ExtensionFamily[];
 
 // @public
 export function GuardedTabs(input: {
@@ -19322,6 +19321,8 @@ declare namespace s {
         pinPublicResult,
         unpinPublicResult,
         backupSections,
+        backupExportDocument,
+        BackupExportDocument,
         backupDocument,
         BackupDocument,
         backupNewApiKeys,
