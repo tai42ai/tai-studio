@@ -89,8 +89,8 @@ jobs:
           pnpm --filter @tai42/api-client publish --access public --provenance --no-git-checks
 
   # Image refresh hook: a published Studio release pokes tai-distribution, whose
-  # refresh-studio-ref pipeline pins docker/STUDIO_REF to this commit and
-  # rebuilds the platform image. Fork runs carry no token and skip.
+  # image-input refresh pins docker/STUDIO_REF to the newest Studio release tag
+  # and rebuilds the platform image. Fork runs carry no token and skip.
   notify-distribution:
     needs: publish
     runs-on: ubuntu-latest
