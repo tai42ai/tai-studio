@@ -286,13 +286,13 @@ function turnsPerHourProperty(): JsonSchema {
   };
 }
 
-/** The `error_reply_text` property — the participant-facing reply on a failed turn. */
+/** The `error_reply_text` property — the participant-facing reply on a failed turn the target gave no reply for. */
 function errorReplyTextProperty(): JsonSchema {
   return {
     ...documentConstraints(API_VARIANT.properties.error_reply_text),
     title: 'Error reply text',
     description:
-      'The participant-facing reply sent when a turn fails; blank uses the built-in default.',
+      'The participant-facing reply sent when a turn fails and the target supplied no reply of its own; blank uses the built-in default.',
   };
 }
 
