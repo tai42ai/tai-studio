@@ -21,7 +21,7 @@ import { ObjectFields } from './object-fields';
 import { RecordField } from './record-field';
 import { scalarLabel } from './resolve';
 import { StringField } from './string-field';
-import type { JsonSchema, SchemaFormErrors } from './types';
+import type { FieldWords, JsonSchema, SchemaFormErrors } from './types';
 import { UnionField } from './union-field';
 
 interface FieldNodeProps {
@@ -43,13 +43,15 @@ interface FieldNodeProps {
   readonly errors: SchemaFormErrors | undefined;
   readonly idPrefix: string;
   /**
-   * Per-field picker placeholders keyed by property name, handed to an OBJECT node so
-   * its direct `enum`-select children draw their placeholder. Carried by the root form
-   * only; nested objects receive none.
+   * Per-field words keyed by property name, handed to an OBJECT node so its direct
+   * children draw them (an `enum` select's placeholder, a list's words). Carried by the
+   * root form only; nested objects receive none.
    */
-  readonly fieldWording?: Readonly<Record<string, { choiceLabel?: string; invalid?: string }>>;
+  readonly fieldWording?: Readonly<Record<string, FieldWords>>;
   /** This field's own picker placeholder, when it draws as an `enum` select. */
   readonly choiceLabel?: string;
+  /** This field's own list words, when it draws as a list. */
+  readonly listWords?: FieldWords;
 }
 
 function labelText(explicit: string | undefined, label: string | undefined): string {
@@ -84,6 +86,7 @@ function FieldNodeImpl(props: FieldNodeProps): ReactNode {
     idPrefix,
     fieldWording: props.fieldWording,
     choiceLabel: props.choiceLabel,
+    listWords: props.listWords,
   });
 }
 
@@ -101,8 +104,9 @@ interface RenderFieldArgs {
   readonly required: boolean;
   readonly errors: SchemaFormErrors | undefined;
   readonly idPrefix: string;
-  readonly fieldWording?: Readonly<Record<string, { choiceLabel?: string; invalid?: string }>>;
+  readonly fieldWording?: Readonly<Record<string, FieldWords>>;
   readonly choiceLabel?: string;
+  readonly listWords?: FieldWords;
 }
 
 /** Render the field component matching the classified model kind. */
@@ -220,6 +224,7 @@ function renderCompositeField(
           path={path}
           errors={errors}
           idPrefix={idPrefix}
+          words={args.listWords}
         />
       );
     case 'object':

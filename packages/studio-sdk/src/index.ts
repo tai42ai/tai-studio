@@ -421,6 +421,7 @@ export type {
   ExpressionFieldProps,
   ExpressionInputKey,
   ExpressionInputShape,
+  FieldWords,
   FormControl,
   FormInputMode,
   JsonSchema,
@@ -442,6 +443,7 @@ export {
   // as plain string inputs and stays free of the jq subgraph — the editor, its
   // worker, and its wasm — entirely.
   ExpressionFieldContext,
+  fieldDrawingOrder,
   isFieldVisible,
   RecordEntryRendererContext,
   resolveRef,

@@ -56,7 +56,7 @@ import {
 import { FieldNode } from './field-node';
 import { DEFAULT_MAX_UPLOAD_BYTES } from './media';
 import { stackClass } from './styles';
-import type { JsonSchema, SchemaFormErrors } from './types';
+import type { FieldWords, JsonSchema, SchemaFormErrors } from './types';
 
 // -- Public API --------------------------------------------------------------
 
@@ -96,15 +96,16 @@ export interface SchemaFormProps {
    */
   readonly expressionField?: ExpressionFieldComponent;
   /**
-   * Optional. Per-field picker placeholders, keyed by the root object's property
-   * name. A top-level `enum` field that draws as a select shows its entry's
-   * `choiceLabel` as the select placeholder (in place of the default `Select…`);
-   * other controls and nested fields are unaffected. A field with no entry draws
-   * its own default. The entry's `invalid` sentence is not read here: pass the same
-   * record to `validateAgainstSchema` as `fieldWording`, and the errors it returns
-   * carry that sentence.
+   * Optional. Per-field words, keyed by the root object's property name. A top-level
+   * `enum` field that draws as a select shows its entry's `choiceLabel` as the select
+   * placeholder (in place of the default `Select…`); a top-level list field draws its
+   * entry's `addItem`, `removeItem`, `itemLabel` (`{n}` the item's number) and `noItems`
+   * (in place of `Add item`, `Remove`, `Item {n}` and `No items`). Nested fields and
+   * other controls are unaffected, and a field with no entry draws the defaults. The
+   * entry's `invalid` and `required` sentences are not read here: pass the same record
+   * to `validateAgainstSchema` as `fieldWording`, and the errors it returns carry them.
    */
-  readonly fieldWording?: Readonly<Record<string, { choiceLabel?: string; invalid?: string }>>;
+  readonly fieldWording?: Readonly<Record<string, FieldWords>>;
 }
 
 /**

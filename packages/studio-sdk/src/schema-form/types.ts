@@ -116,6 +116,13 @@ export interface JsonSchema {
   readonly minDays?: number;
   readonly maxDays?: number;
   /**
+   * On a `string`/`format: time` property: the name of the range-end `date` property this
+   * is the time of. The time draws right after its date (inside the range group when the
+   * pair merges), and two ends on the same date are then ordered by their times. Absent =
+   * a time field of its own.
+   */
+  readonly timeOf?: string;
+  /**
    * A declarative visibility predicate on a property: the field shows only when the
    * predicate holds against the current form values. Static form description evaluated by
    * the renderer (never a consumer reaction); a hidden field is not rendered and not
@@ -146,3 +153,26 @@ export interface VisibleWhen {
  * each entry is a loud, human-readable message. Empty object = valid.
  */
 export type SchemaFormErrors = Readonly<Record<string, string>>;
+
+/**
+ * A form field's own words, keyed by the root object's property name in a form's
+ * `fieldWording`. Every member is optional; an unset one draws the SDK's own word.
+ *
+ * - `choiceLabel`: the placeholder of the field's `enum` select (in place of `Select…`).
+ * - `invalid`: the sentence that replaces every shape error on the field and anything
+ *   inside it (a format, pattern, length, bound, type or item error).
+ * - `required`: the sentence shown when the field's required value is missing, at the
+ *   field or anywhere inside it (in place of `"<name>" is required`).
+ * - `addItem` / `removeItem` / `itemLabel` / `noItems`: a list field's add button, each
+ *   item's remove button, each item's heading (its `{n}` token takes the item's number),
+ *   and the line shown while the list is empty.
+ */
+export interface FieldWords {
+  readonly choiceLabel?: string;
+  readonly invalid?: string;
+  readonly required?: string;
+  readonly addItem?: string;
+  readonly removeItem?: string;
+  readonly itemLabel?: string;
+  readonly noItems?: string;
+}

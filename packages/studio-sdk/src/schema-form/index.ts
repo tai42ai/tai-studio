@@ -39,7 +39,7 @@ export type {
 export { RecordEntryRendererContext } from './context';
 export { ExpressionFieldContext } from './context';
 export type { DateRangePair } from './date-range-field';
-export { dateRangePairs } from './date-range-field';
+export { dateRangePairs, fieldDrawingOrder } from './date-range-field';
 export { defaultValueForSchema } from './default-value';
 export { resolveRef } from './resolve';
 export type { CompletionProvider, SchemaFormProps } from './SchemaForm';
@@ -48,6 +48,7 @@ export type { SecretRef, SecretRefFieldProps } from './SecretRefField';
 export { SecretRefField } from './SecretRefField';
 export type {
   Discriminator,
+  FieldWords,
   FormControl,
   FormInputMode,
   JsonSchema,
