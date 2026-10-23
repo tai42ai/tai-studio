@@ -93,7 +93,7 @@ const adminRecord = {
   provider_message_id: 'wamid.1',
   callback_url: null,
   error: null,
-  outbound_message_ids: ['wamid.2'],
+  sends: [{ part: 0, chars: 19, provider_message_ids: ['wamid.2'] }],
   attempts: 1,
 };
 
@@ -131,12 +131,12 @@ describe('conversation routes transport', () => {
     await expect(client.listConversationRoutes()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 
-  it('defaults the row fields a stub payload omits (initial_mode, override, error text)', async () => {
+  it('defaults the row fields a stub payload omits (initial_mode, override, reply texts)', async () => {
     const { client } = harness(() => jsonResponse({ data: { items: [route], total: 1 } }));
     const out = await client.listConversationRoutes();
     expect(out.items[0]?.initial_mode).toBe('agent');
     expect(out.items[0]?.turns_per_hour_override).toBeNull();
-    expect(out.items[0]?.error_reply_text).toBeNull();
+    expect(out.items[0]?.reply_texts).toBeNull();
   });
 
   it('defaults the overlap policy a stub omits, and parses a supplied one', async () => {
@@ -184,7 +184,7 @@ describe('conversation route write transport', () => {
       our_identity: null,
       callback_url: 'https://sink.example/answers',
       turns_per_hour_override: null,
-      error_reply_text: null,
+      reply_texts: null,
     });
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/conversations/account');
@@ -214,7 +214,7 @@ describe('conversation route write transport', () => {
       our_identity: '+1',
       callback_url: null,
       turns_per_hour_override: null,
-      error_reply_text: null,
+      reply_texts: null,
       overlap: { running: 'cancel', deliver: 'all', settle_seconds: 5 },
     });
     expect(captured[0]?.body).toMatchObject({
@@ -239,7 +239,7 @@ describe('conversation route write transport', () => {
       our_identity: '+1',
       callback_url: null,
       turns_per_hour_override: null,
-      error_reply_text: null,
+      reply_texts: null,
     });
     expect(captured[0]?.url).toBe('/api/conversations/a%20b%2Fc');
   });
@@ -272,7 +272,7 @@ describe('conversation route write transport', () => {
         our_identity: '+1',
         callback_url: null,
         turns_per_hour_override: null,
-        error_reply_text: null,
+        reply_texts: null,
       }),
     ).rejects.toBeInstanceOf(ApiSchemaError);
   });
@@ -500,7 +500,9 @@ describe('thread transcript transport', () => {
     const { client } = harness(() => jsonResponse(transcriptPage([adminRecord], 'desc')));
     const out = await client.readConversationTranscript(transcriptQuery);
     expect(out.items[0]?.attempts).toBe(1);
-    expect(out.items[0]?.outbound_message_ids).toEqual(['wamid.2']);
+    expect(out.items[0]?.sends).toEqual([
+      { part: 0, chars: 19, provider_message_ids: ['wamid.2'] },
+    ]);
     expect(out.items[0]?.inbound_text).toBe('where is my request');
   });
 
@@ -925,18 +927,35 @@ describe('conversation thread delete transport', () => {
 describe('conversation person delete transport', () => {
   it('DELETEs the person door with the id on the PATH and unwraps the reply', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { person_id: 'p-123', removed: 4, erased: true, states_erased: 2 } }),
+      jsonResponse({
+        data: {
+          person_id: 'p-123',
+          removed: 4,
+          erased: true,
+          states_erased: 2,
+          absorbed_person_ids: ['p-456'],
+        },
+      }),
     );
     const out = await client.deleteConversationPerson('p-123');
     expect(captured[0]?.method).toBe('DELETE');
     expect(captured[0]?.url).toBe('/api/conversations/persons/p-123');
     expect(out.erased).toBe(true);
     expect(out.removed).toBe(4);
+    expect(out.absorbed_person_ids).toEqual(['p-456']);
   });
 
   it('answers erased=false on an already-gone person (a retry, never a 404)', async () => {
     const { client } = harness(() =>
-      jsonResponse({ data: { person_id: 'p-123', removed: 0, erased: false, states_erased: 0 } }),
+      jsonResponse({
+        data: {
+          person_id: 'p-123',
+          removed: 0,
+          erased: false,
+          states_erased: 0,
+          absorbed_person_ids: [],
+        },
+      }),
     );
     const out = await client.deleteConversationPerson('p-123');
     expect(out.erased).toBe(false);

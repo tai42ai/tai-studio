@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 import { Exchange } from './Exchange';
 import { makeMessage, renderWithProviders } from './test-utils';
 
-function bubble(speaker: 'visitor' | 'agent' | 'operator'): HTMLElement {
+function bubble(speaker: 'visitor' | 'agent' | 'operator' | 'send'): HTMLElement {
   const node = document.querySelector<HTMLElement>(`[data-speaker="${speaker}"]`);
   if (node === null) throw new Error(`no ${speaker} bubble`);
   return node;
@@ -60,6 +60,73 @@ describe('Exchange', () => {
     expect(document.querySelector('script')).toBeNull();
   });
 
+  it('draws no quote block when the visitor message quotes nothing', () => {
+    renderWithProviders(<Exchange record={makeMessage()} />, { client: {} });
+
+    expect(screen.queryByTestId('exchange-quote')).toBeNull();
+  });
+
+  it('draws the quoted text in full above the visitor message, verbatim and escaped', () => {
+    const quoted = '**Tuesday**\n  at <b>noon</b>';
+    renderWithProviders(
+      <Exchange
+        record={makeMessage({
+          inbound_text: 'that one please',
+          inbound_reply_to: { message_id: 'wamid.7', status: 'found', text: quoted },
+        })}
+      />,
+      { client: {} },
+    );
+
+    const quote = within(bubble('visitor')).getByTestId('exchange-quote');
+    expect(quote).toHaveAttribute('data-status', 'found');
+    expect(within(quote).getByText('Replying to')).toBeInTheDocument();
+    const text = within(quote).getByText(
+      (_, node) => node?.textContent === quoted && node.tagName === 'P',
+    );
+    expect(text.style.whiteSpace).toBe('pre-wrap');
+    expect(quote.querySelector('strong')).toBeNull();
+    expect(quote.querySelector('b')).toBeNull();
+    // The quote sits above the message it belongs to.
+    const message = within(bubble('visitor')).getByText('that one please');
+    expect(quote.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('says a quoted message the record does not hold is not shown, naming its id', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeMessage({
+          inbound_reply_to: { message_id: 'wamid.gone', status: 'not_found', text: null },
+        })}
+      />,
+      { client: {} },
+    );
+
+    const quote = screen.getByTestId('exchange-quote');
+    expect(quote).toHaveTextContent(
+      "Replying to a message this thread's record does not hold. It may be in an earlier thread of " +
+        'this conversation, whose text is not shown here, or it expired, was forgotten or was never ' +
+        'recorded.',
+    );
+    expect(within(quote).getByText('wamid.gone')).toHaveClass('tai-mono');
+    expect(quote).toHaveTextContent('Message id: wamid.gone');
+  });
+
+  it.each([
+    ['sensitive', 'Replying to an answer to a sensitive question. Its text is not kept.'],
+    ['no_text', 'Replying to a message with no text.'],
+  ] as const)('words a %s quote without any text', (status, copy) => {
+    renderWithProviders(
+      <Exchange
+        record={makeMessage({ inbound_reply_to: { message_id: 'q1', status, text: null } })}
+      />,
+      { client: {} },
+    );
+
+    expect(screen.getByTestId('exchange-quote')).toHaveTextContent(copy);
+    expect(screen.getByTestId('exchange-quote')).not.toHaveTextContent('q1');
+  });
+
   it('marks a failed delivery loudly: the error rule plus the worded danger chip', () => {
     renderWithProviders(
       <Exchange
@@ -105,7 +172,7 @@ describe('Exchange', () => {
           answer_status: 'error',
           error: 'ConnectionRefused: medium unreachable',
           attempts: 3,
-          outbound_message_ids: ['wamid.1'],
+          sends: [{ part: 0, chars: 22, provider_message_ids: ['wamid.1'] }],
         })}
       />,
       { client: {} },
@@ -113,28 +180,37 @@ describe('Exchange', () => {
 
     const detail = screen.getByTestId('exchange-admin-detail');
     expect(within(detail).getByText('Attempts: 3')).toBeInTheDocument();
-    expect(within(detail).getByText('wamid.1')).toBeInTheDocument();
+    expect(within(detail).getByText('Part 1 · 22 chars · wamid.1')).toBeInTheDocument();
     expect(detail).toHaveTextContent('ConnectionRefused: medium unreachable');
   });
 
   it('opens the disclosure for an admin record that recorded no error and no attempts', () => {
-    renderWithProviders(<Exchange record={makeMessage({ outbound_message_ids: ['wamid.7'] })} />, {
-      client: {},
-    });
+    renderWithProviders(
+      <Exchange
+        record={makeMessage({ sends: [{ part: 0, chars: 22, provider_message_ids: ['wamid.7'] }] })}
+      />,
+      { client: {} },
+    );
 
     const detail = screen.getByTestId('exchange-admin-detail');
-    expect(within(detail).getByText('wamid.7')).toBeInTheDocument();
+    expect(within(detail).getByText('Part 1 · 22 chars · wamid.7')).toBeInTheDocument();
     expect(within(detail).queryByText(/Attempts/)).toBeNull();
     expect(detail.querySelector('pre')).toBeNull();
   });
 
   it('states an empty provider-id list rather than rendering a blank cell', () => {
     renderWithProviders(
-      <Exchange record={makeMessage({ attempts: 0, outbound_message_ids: [], error: null })} />,
+      <Exchange
+        record={makeMessage({
+          attempts: 0,
+          error: null,
+          sends: [{ part: 0, chars: 22, provider_message_ids: [] }],
+        })}
+      />,
       { client: {} },
     );
 
-    expect(screen.getByText('No provider message id')).toBeInTheDocument();
+    expect(screen.getByText('Part 1 · 22 chars · No provider message id')).toBeInTheDocument();
   });
 
   it('renders an operator record as ONE labelled bubble on the agent side, no visitor bubble', () => {
@@ -208,6 +284,216 @@ describe('Exchange', () => {
 
     expect(screen.queryByText('Merged into')).toBeNull();
     expect(screen.queryByText('Superseded by')).toBeNull();
+  });
+});
+
+/** A send record: the platform's own outgoing message, with no visitor side. */
+function makeSend(overrides: Parameters<typeof makeMessage>[0] = {}): ConversationMessage {
+  return makeMessage({
+    message_id: 's1',
+    origin: 'send',
+    inbound_text: '',
+    answer: 'Your report is ready.',
+    answer_status: null,
+    sent_by: 'notify',
+    turn_message_id: null,
+    ...overrides,
+  });
+}
+
+describe('Exchange — send records', () => {
+  it('labels a notify send made inside a turn as the agent', () => {
+    renderWithProviders(<Exchange record={makeSend({ turn_message_id: 'm1' })} />, { client: {} });
+
+    expect(document.querySelector('[data-speaker="visitor"]')).toBeNull();
+    const agent = bubble('agent');
+    expect(within(agent).getByText('Agent')).toBeInTheDocument();
+    expect(within(agent).getByText('Your report is ready.')).toBeInTheDocument();
+  });
+
+  it('labels a notify send made outside any turn as a sent message, never as the agent', () => {
+    renderWithProviders(<Exchange record={makeSend()} />, { client: {} });
+
+    expect(document.querySelector('[data-speaker="agent"]')).toBeNull();
+    const send = bubble('send');
+    expect(within(send).getByText('Sent message')).toBeInTheDocument();
+    expect(within(send).getByText('Your report is ready.')).toBeInTheDocument();
+    expect(within(send).queryByText(/Agent/)).toBeNull();
+  });
+
+  it('labels an ask by whether it was asked inside a turn', () => {
+    const ask = { interaction_id: 'int-1', answer_format: 'text', sensitive: false };
+    const { unmount } = renderWithProviders(
+      <Exchange record={makeSend({ sent_by: 'ask', turn_message_id: 'm1', ask })} />,
+      { client: {} },
+    );
+    expect(within(bubble('agent')).getByText('Agent · question')).toBeInTheDocument();
+    unmount();
+
+    renderWithProviders(<Exchange record={makeSend({ sent_by: 'ask', ask })} />, { client: {} });
+    expect(within(bubble('send')).getByText('Question')).toBeInTheDocument();
+    expect(document.querySelector('[data-speaker="agent"]')).toBeNull();
+  });
+
+  it.each([
+    ['notice', 'Platform notice'],
+    ['channel', 'Channel notice'],
+  ] as const)('labels a %s send as a neutral %s', (sentBy, label) => {
+    renderWithProviders(
+      <Exchange record={makeSend({ sent_by: sentBy, turn_message_id: 'm1' })} />,
+      {
+        client: {},
+      },
+    );
+
+    expect(within(bubble('send')).getByText(label)).toBeInTheDocument();
+    expect(document.querySelector('[data-speaker="agent"]')).toBeNull();
+  });
+
+  it('draws the reply that came over the channel after the question', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeSend({
+          sent_by: 'ask',
+          answer: 'Which day suits you?',
+          ask: { interaction_id: 'int-1', answer_format: 'text', sensitive: false },
+          ask_reply: { answer: '**Tuesday**', answered_at: '2027-01-15T08:00:00Z' },
+        })}
+      />,
+      { client: {} },
+    );
+
+    const reply = bubble('visitor');
+    expect(within(reply).getByText('Visitor · reply')).toBeInTheDocument();
+    // The participant's reply is untrusted text: shown verbatim, never as markdown.
+    expect(within(reply).getByText('**Tuesday**')).toBeInTheDocument();
+    expect(reply.querySelector('strong')).toBeNull();
+  });
+
+  it('draws the message an ask reply quotes above the reply', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeSend({
+          sent_by: 'ask',
+          answer: 'Which day suits you?',
+          ask: { interaction_id: 'int-1', answer_format: 'text', sensitive: false },
+          ask_reply: {
+            answer: 'Tuesday',
+            answered_at: '2027-01-15T08:00:00Z',
+            reply_to: { message_id: 'ts.1', status: 'found', text: 'Which day suits you?' },
+          },
+        })}
+      />,
+      { client: {} },
+    );
+
+    const quote = within(bubble('visitor')).getByTestId('exchange-quote');
+    expect(within(quote).getByText('Which day suits you?')).toBeInTheDocument();
+    expect(within(bubble('visitor')).getByText('Tuesday')).toBeInTheDocument();
+  });
+
+  it('draws a structured reply as its JSON', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeSend({
+          sent_by: 'ask',
+          ask: { interaction_id: 'int-1', answer_format: 'form', sensitive: false },
+          ask_reply: { answer: { day: 'tuesday' }, answered_at: '2027-01-15T08:00:00Z' },
+        })}
+      />,
+      { client: {} },
+    );
+
+    expect(bubble('visitor')).toHaveTextContent('"day": "tuesday"');
+  });
+
+  it('draws a reply to a sensitive ask as received and not stored, with no body', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeSend({
+          sent_by: 'ask',
+          ask: { interaction_id: 'int-1', answer_format: 'text', sensitive: true },
+          ask_reply: { answer: null, answered_at: '2027-01-15T08:00:00Z' },
+        })}
+      />,
+      { client: {} },
+    );
+
+    const reply = bubble('visitor');
+    expect(within(reply).getByText('Reply received · not stored (sensitive)')).toBeInTheDocument();
+    expect(reply.querySelector('pre')).toBeNull();
+  });
+
+  it('shows the question alone when no reply came over the channel', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeSend({
+          sent_by: 'ask',
+          ask: { interaction_id: 'int-1', answer_format: 'text', sensitive: false },
+        })}
+      />,
+      { client: {} },
+    );
+
+    expect(document.querySelector('[data-speaker="visitor"]')).toBeNull();
+    expect(within(bubble('send')).getByText('Question')).toBeInTheDocument();
+  });
+
+  it('marks a send whose outcome is unknown loudly, worded, with its error', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeSend({
+          delivery_status: 'outcome_unknown',
+          error: 'TimeoutError: the medium did not answer',
+        })}
+      />,
+      { client: {} },
+    );
+
+    const exchange = screen.getByTestId('conversation-exchange');
+    expect(exchange).toHaveAttribute('data-failed');
+    expect(screen.getByText('Sent, outcome unknown')).toBeInTheDocument();
+    expect(screen.getByTestId('exchange-admin-detail')).toHaveTextContent(
+      'TimeoutError: the medium did not answer',
+    );
+  });
+
+  it('lists each sent part with its provider ids in the delivery detail', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeSend({
+          sends: [
+            { part: 0, chars: 1600, provider_message_ids: ['wamid.1', 'wamid.2'] },
+            { part: 1, chars: 12, provider_message_ids: ['wamid.3'] },
+          ],
+        })}
+      />,
+      { client: {} },
+    );
+
+    const detail = screen.getByTestId('exchange-admin-detail');
+    const parts = within(detail).getAllByTestId('exchange-sent-part');
+    expect(parts.map((part) => part.textContent)).toEqual([
+      'Part 1 · 1600 chars · wamid.1, wamid.2',
+      'Part 2 · 12 chars · wamid.3',
+    ]);
+  });
+
+  it('draws the sends made during a turn inside it, between the message and the answer', () => {
+    const midTurn = [
+      makeSend({ message_id: 's-mid', turn_message_id: 'm1', answer: 'Looking now.' }),
+    ];
+    renderWithProviders(<Exchange record={makeMessage()} midTurn={midTurn} />, { client: {} });
+
+    const speakers = [...document.querySelectorAll('[data-speaker]')].map((node) => [
+      node.getAttribute('data-speaker'),
+      node.textContent,
+    ]);
+    expect(speakers).toEqual([
+      ['visitor', 'Visitorwhere is my request'],
+      ['agent', 'AgentLooking now.'],
+      ['agent', 'AgentIt completes tomorrow.'],
+    ]);
   });
 });
 

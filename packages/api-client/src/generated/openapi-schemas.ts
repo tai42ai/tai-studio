@@ -79,7 +79,7 @@ export type AgentsEntriesAdd = z.infer<typeof agentsEntriesAdd>;
 export const answerFormat = z.enum(["text","confirm","select","form","external","free"]);
 export type AnswerFormat = z.infer<typeof answerFormat>;
 
-export const formPageWording = z.object({ "choose_one": z.string().nullable().default(null), "date_unavailable": z.string().nullable().default(null), "failed": z.string().nullable().default(null), "network_error": z.string().nullable().default(null), "update_failed": z.string().nullable().default(null) }).strict();
+export const formPageWording = z.object({ "choose_one": z.string().nullable().default(null), "date_unavailable": z.string().nullable().default(null), "failed": z.string().nullable().default(null), "network_error": z.string().nullable().default(null) }).strict();
 export type FormPageWording = z.infer<typeof formPageWording>;
 
 export const pageCopy = z.object({ "heading": z.string().nullable().default(null), "text": z.string().nullable().default(null) }).strict();
@@ -124,10 +124,10 @@ export type AnswerWording = z.infer<typeof answerWording>;
 export const choiceWording = z.object({ "group_label": z.string().nullable().default(null), "label": z.string().nullable().default(null), "reply_hint": z.string().nullable().default(null) }).strict();
 export type ChoiceWording = z.infer<typeof choiceWording>;
 
-export const fieldWording = z.object({ "choice_label": z.string().nullable().default(null), "invalid": z.string().nullable().default(null) }).strict();
+export const fieldWording = z.object({ "add_item": z.string().nullable().default(null), "choice_label": z.string().nullable().default(null), "false_label": z.string().nullable().default(null), "invalid": z.string().nullable().default(null), "item_label": z.string().nullable().default(null), "length_hint": z.string().nullable().default(null), "no_items": z.string().nullable().default(null), "remove_item": z.string().nullable().default(null), "required": z.string().nullable().default(null), "true_label": z.string().nullable().default(null) }).strict();
 export type FieldWording = z.infer<typeof fieldWording>;
 
-export const formWording = z.object({ "back": z.string().nullable().default(null), "cancel": z.string().nullable().default(null), "fields": z.record(z.string(), fieldWording).default({}), "open": z.string().nullable().default(null), "review_empty": z.string().nullable().default(null), "submit": z.string().nullable().default(null), "title": z.string().nullable().default(null) }).strict();
+export const formWording = z.object({ "back": z.string().nullable().default(null), "cancel": z.string().nullable().default(null), "error_line": z.string().nullable().default(null), "fields": z.record(z.string(), fieldWording).default({}), "open": z.string().nullable().default(null), "review_empty": z.string().nullable().default(null), "step_progress": z.string().nullable().default(null), "submit": z.string().nullable().default(null), "title": z.string().nullable().default(null), "update_failed": z.string().nullable().default(null) }).strict();
 export type FormWording = z.infer<typeof formWording>;
 
 export const lineWording = z.object({ "answer_link": z.string().nullable().default(null), "deadline": z.string().nullable().default(null), "options": z.string().nullable().default(null), "reply": z.string().nullable().default(null) }).strict();
@@ -148,10 +148,13 @@ export type AnswerPart = z.infer<typeof answerPart>;
 export const overlapPolicy = z.object({ "deliver": z.enum(["one","all"]).default("one"), "running": z.enum(["continue","cancel"]).default("continue"), "settle_seconds": z.number().int().gte(0).lte(30).default(0) });
 export type OverlapPolicy = z.infer<typeof overlapPolicy>;
 
-export const apiConversationRouteCreate = z.object({ "callback_url": z.string().regex(new RegExp("^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?#]|$)")).nullable().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.null().default(null), "door": z.literal("api"), "error_reply_text": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "execution_key": z.string().min(1), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.null().default(null), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
+export const replyTexts = z.object({ "error": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_code": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_code_invalid": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_link_unavailable": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_linked": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_not_linked": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_unlink_unavailable": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_unlinked": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_could_not_receive": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_too_large": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_unsupported_type": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "slow_down": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null) }).strict();
+export type ReplyTexts = z.infer<typeof replyTexts>;
+
+export const apiConversationRouteCreate = z.object({ "callback_url": z.string().regex(new RegExp("^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?#]|$)")).nullable().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.null().default(null), "door": z.literal("api"), "execution_key": z.string().min(1), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.null().default(null), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "reply_texts": replyTexts.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
 export type ApiConversationRouteCreate = z.infer<typeof apiConversationRouteCreate>;
 
-export const apiConversationRouteView = z.object({ "callback_url": z.string().regex(new RegExp("^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?#]|$)")).nullable().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.null().default(null), "door": z.literal("api"), "error_reply_text": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "execution_key": z.string().min(1), "execution_key_fingerprint": z.string(), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.null().default(null), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
+export const apiConversationRouteView = z.object({ "callback_url": z.string().regex(new RegExp("^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?#]|$)")).nullable().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.null().default(null), "door": z.literal("api"), "execution_key": z.string().min(1), "execution_key_fingerprint": z.string(), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.null().default(null), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "reply_texts": replyTexts.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
 export type ApiConversationRouteView = z.infer<typeof apiConversationRouteView>;
 
 export const apiKeyCreate = z.object({ "condition": templatedText.nullable().default(null), "description": z.string().min(1), "owner_user_id": z.string().nullable().default(null), "policy_data": z.record(z.string(), z.unknown()).nullable().default(null), "scopes": z.array(z.string()), "user_id": z.string().min(1) });
@@ -192,6 +195,18 @@ export type ApplyResponse = z.infer<typeof applyResponse>;
 
 export const applyResult = z.object({ "applied": z.boolean(), "data": z.record(z.string(), z.unknown()).nullable().default(null), "seq": z.number().nullable().default(null), "skipped": z.array(z.record(z.string(), z.unknown())).default([]) }).strict();
 export type ApplyResult = z.infer<typeof applyResult>;
+
+export const replyToStatus = z.enum(["found","not_found","sensitive","no_text"]);
+export type ReplyToStatus = z.infer<typeof replyToStatus>;
+
+export const replyTo = z.object({ "message_id": z.string(), "status": replyToStatus, "text": z.string().nullable() }).strict();
+export type ReplyTo = z.infer<typeof replyTo>;
+
+export const askReplyView = z.object({ "answer": z.unknown().nullable(), "answered_at": z.string().datetime({ offset: true }).nullable().default(null), "medium_message_id": z.string().nullable().default(null), "reply_to": replyTo.nullable().default(null) });
+export type AskReplyView = z.infer<typeof askReplyView>;
+
+export const askSendView = z.object({ "answer_format": z.string().nullable().default(null), "attempts": z.number().int().gte(0).nullable().default(null), "interaction_id": z.string().min(1).nullable().default(null), "sensitive": z.boolean(), "timed_out_attempts": z.array(z.number().int()).nullable().default(null) });
+export type AskSendView = z.infer<typeof askSendView>;
 
 export const stateSubject = z.object({ "key": z.string(), "kind": z.string(), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1) }).strict();
 export type StateSubject = z.infer<typeof stateSubject>;
@@ -241,10 +256,10 @@ export type ButtonMethod = z.infer<typeof buttonMethod>;
 export const cacheClearResult = z.object({ "cleared": z.boolean(), "fanout": fanoutSummary });
 export type CacheClearResult = z.infer<typeof cacheClearResult>;
 
-export const channelConversationRouteCreate = z.object({ "callback_url": z.null().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.string().regex(new RegExp("^[^:]*[^:\\s][^:]*$")), "door": z.literal("channel"), "error_reply_text": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "execution_key": z.string().min(1), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.string().regex(new RegExp("\\S")), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
+export const channelConversationRouteCreate = z.object({ "callback_url": z.null().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.string().regex(new RegExp("^[^:]*[^:\\s][^:]*$")), "door": z.literal("channel"), "execution_key": z.string().min(1), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.string().regex(new RegExp("\\S")), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "reply_texts": replyTexts.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
 export type ChannelConversationRouteCreate = z.infer<typeof channelConversationRouteCreate>;
 
-export const channelConversationRouteView = z.object({ "callback_url": z.null().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.string().regex(new RegExp("^[^:]*[^:\\s][^:]*$")), "door": z.literal("channel"), "error_reply_text": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "execution_key": z.string().min(1), "execution_key_fingerprint": z.string(), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.string().regex(new RegExp("\\S")), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
+export const channelConversationRouteView = z.object({ "callback_url": z.null().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.string().regex(new RegExp("^[^:]*[^:\\s][^:]*$")), "door": z.literal("channel"), "execution_key": z.string().min(1), "execution_key_fingerprint": z.string(), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.string().regex(new RegExp("\\S")), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "reply_texts": replyTexts.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
 export type ChannelConversationRouteView = z.infer<typeof channelConversationRouteView>;
 
 export const channelListing = z.object({ "channels": z.array(z.string()) });
@@ -325,13 +340,16 @@ export type ConversationEvent = z.infer<typeof conversationEvent>;
 export const conversationEventSubmission = z.object({ "address": z.string().nullable().default(null), "event": conversationEvent, "thread_id": z.string().nullable().default(null), "wait_seconds": z.number().int().gte(0).default(0) }).strict();
 export type ConversationEventSubmission = z.infer<typeof conversationEventSubmission>;
 
-export const conversationMessage = z.object({ "attachments": z.array(mediaItem).nullable().default(null), "external_user_id": z.string().min(1), "form": z.record(z.string(), z.unknown()).nullable().default(null), "form_tag": z.string().nullable().default(null), "locale": z.string().nullable().default(null), "location": locationElement.nullable().default(null), "params": z.record(z.string(), z.string()).nullable().default(null), "text": z.string().min(1), "wait_seconds": z.number().int().gte(0).nullable().default(null) });
+export const conversationMessage = z.object({ "attachments": z.array(mediaItem).nullable().default(null), "external_user_id": z.string().min(1), "form": z.record(z.string(), z.unknown()).nullable().default(null), "form_tag": z.string().nullable().default(null), "locale": z.string().nullable().default(null), "location": locationElement.nullable().default(null), "params": z.record(z.string(), z.string()).nullable().default(null), "reply_to_message_id": z.string().nullable().default(null), "text": z.string().min(1), "wait_seconds": z.number().int().gte(0).nullable().default(null) });
 export type ConversationMessage = z.infer<typeof conversationMessage>;
 
-export const deliveryStatus = z.enum(["accepted","pending_delivery","provisional","delivered","failed","shed","silent","merged","superseded"]);
+export const deliveryStatus = z.enum(["accepted","pending_delivery","provisional","delivered","failed","shed","silent","merged","superseded","sending","outcome_unknown"]);
 export type DeliveryStatus = z.infer<typeof deliveryStatus>;
 
-export const conversationRecordView = z.object({ "answer": z.string().nullable().default(null), "answer_parts": z.array(answerPart).nullable().default(null), "answer_status": z.enum(["answered","error","silent","merged","superseded"]).nullable().default(null), "attempts": z.number().int().nullable().default(null), "callback_url": z.string().nullable().default(null), "caller_principal": z.string().nullable().default(null), "channel": z.string().nullable().default(null), "client_address": z.string().min(1).max(256), "created_at": z.number(), "delivery_status": deliveryStatus.default("pending_delivery"), "door": z.enum(["api","channel"]), "error": z.string().nullable().default(null), "inbound_attachments": z.array(mediaItem).nullable().default(null), "inbound_event": z.record(z.string(), z.unknown()).nullable().default(null), "inbound_form": z.record(z.string(), z.unknown()).nullable().default(null), "inbound_form_tag": z.string().nullable().default(null), "inbound_kind": z.enum(["message","event"]).default("message"), "inbound_locale": z.string().nullable().default(null), "inbound_location": locationElement.nullable().default(null), "inbound_text": z.string(), "message_id": z.string().min(1), "operator_send": z.boolean().default(false), "origin": z.enum(["client","operator"]), "our_identity": z.string().nullable().default(null), "outbound_message_ids": z.array(z.string()).nullable().default(null), "pending_receipt": deliveryStatus.nullable().default(null), "provider_message_id": z.string().min(1).nullable().default(null), "route_missing": z.boolean().default(false), "route_name": z.string().min(1), "submitted_by": z.string().nullable().default(null), "successor_id": z.string().nullable().default(null), "thread_id": z.string().min(1), "updated_at": z.number() });
+export const sentMessage = z.object({ "chars": z.number().int().gte(0), "part": z.number().int().gte(0), "provider_message_ids": z.array(z.string()) });
+export type SentMessage = z.infer<typeof sentMessage>;
+
+export const conversationRecordView = z.object({ "answer": z.string().nullable().default(null), "answer_parts": z.array(answerPart).nullable().default(null), "answer_status": z.enum(["answered","error","silent","merged","superseded"]).nullable().default(null), "ask": askSendView.nullable().default(null), "ask_reply": askReplyView.nullable().default(null), "attempts": z.number().int().nullable().default(null), "callback_url": z.string().nullable().default(null), "caller_principal": z.string().nullable().default(null), "channel": z.string().nullable().default(null), "client_address": z.string().min(1).max(256), "created_at": z.number(), "delivery_status": deliveryStatus.default("pending_delivery"), "door": z.enum(["api","channel"]), "error": z.string().nullable().default(null), "inbound_attachments": z.array(mediaItem).nullable().default(null), "inbound_event": z.record(z.string(), z.unknown()).nullable().default(null), "inbound_form": z.record(z.string(), z.unknown()).nullable().default(null), "inbound_form_tag": z.string().nullable().default(null), "inbound_kind": z.enum(["message","event"]).default("message"), "inbound_locale": z.string().nullable().default(null), "inbound_location": locationElement.nullable().default(null), "inbound_message_id": z.string().nullable().default(null), "inbound_reply_to": replyTo.nullable().default(null), "inbound_text": z.string(), "message_id": z.string().min(1), "operator_send": z.boolean().default(false), "origin": z.enum(["client","operator","send"]), "our_identity": z.string().nullable().default(null), "pending_receipt": deliveryStatus.nullable().default(null), "provider_message_id": z.string().min(1).nullable().default(null), "route_missing": z.boolean().default(false), "route_name": z.string().min(1), "sends": z.array(sentMessage).default([]), "sent_by": z.enum(["notify","ask","notice","channel"]).nullable().default(null), "submitted_by": z.string().nullable().default(null), "successor_id": z.string().nullable().default(null), "thread_id": z.string().min(1), "turn_message_id": z.string().nullable().default(null), "updated_at": z.number() });
 export type ConversationRecordView = z.infer<typeof conversationRecordView>;
 
 export const conversationRouteCreateBody = z.discriminatedUnion("door", [apiConversationRouteCreate, channelConversationRouteCreate]);
@@ -438,6 +456,18 @@ export type HookListView = z.infer<typeof hookListView>;
 
 export const hookRegisterResult = z.object({ "name": z.string(), "registered": z.boolean() });
 export type HookRegisterResult = z.infer<typeof hookRegisterResult>;
+
+export const hookRunClaimIntentView = z.object({ "action": z.enum(["resume","take"]), "ids": z.array(z.string()) });
+export type HookRunClaimIntentView = z.infer<typeof hookRunClaimIntentView>;
+
+export const hookRunDiscarded = z.object({ "discarded": z.string() });
+export type HookRunDiscarded = z.infer<typeof hookRunDiscarded>;
+
+export const hookRunView = z.object({ "acted": z.enum(["","start","cancel","resume","take"]), "acted_ids": z.array(z.string()), "attempts": z.number().int(), "claim_intent": hookRunClaimIntentView.nullable(), "created_at": z.string().datetime({ offset: true }), "failed_at": z.string().datetime({ offset: true }).nullable(), "hook": z.string(), "id": z.string(), "last_error": z.string().nullable(), "last_error_kind": z.string().nullable(), "next_attempt_at": z.string().datetime({ offset: true }), "status": z.enum(["pending","running","failed"]), "topic": z.string() });
+export type HookRunView = z.infer<typeof hookRunView>;
+
+export const hookRunsPage = z.object({ "failed": z.number().int(), "items": z.array(hookRunView), "next_cursor": z.string().nullable(), "outstanding": z.number().int() });
+export type HookRunsPage = z.infer<typeof hookRunsPage>;
 
 export const previewItemRoute = z.object({ "full_path": z.string(), "methods": z.array(z.enum(["GET","POST","PUT","PATCH","DELETE"])), "path": z.string(), "public": z.boolean() });
 export type PreviewItemRoute = z.infer<typeof previewItemRoute>;
@@ -682,7 +712,7 @@ export type PersonAddress = z.infer<typeof personAddress>;
 export const person = z.object({ "addresses": z.array(personAddress).min(1), "created_at": z.string(), "locale": z.string().nullable().default(null), "person_id": z.string().min(1), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1) });
 export type Person = z.infer<typeof person>;
 
-export const personDeleteResult = z.object({ "erased": z.boolean(), "person_id": z.string(), "removed": z.number().int(), "states_erased": z.number().int() });
+export const personDeleteResult = z.object({ "absorbed_person_ids": z.array(z.string()), "erased": z.boolean(), "person_id": z.string(), "removed": z.number().int(), "states_erased": z.number().int() });
 export type PersonDeleteResult = z.infer<typeof personDeleteResult>;
 
 export const policyRollback = z.object({ "version": z.number().int() });
@@ -1325,6 +1355,7 @@ export const responseSchemas = {
   delete_api_conversations_persons_person_id: personDeleteResult,
   delete_api_conversations_route_name: routeRemoveResult,
   delete_api_conversations_route_name_thread: threadDeleteResult,
+  delete_api_hook_runs_id: hookRunDiscarded,
   delete_api_hooks_name: removedByName,
   delete_api_hooks_topics_topic_verifier: removedByTopic,
   delete_api_hooks_trigger_links_name: removedByName,
@@ -1382,6 +1413,7 @@ export const responseSchemas = {
   get_api_conversations_route_name_transcript: transcriptEnvelope,
   get_api_extensions: extensionListing,
   get_api_fleet_workers: workerListing,
+  get_api_hook_runs: hookRunsPage,
   get_api_hooks: hookListView,
   get_api_hooks_trigger_links: triggerLinkListView,
   get_api_hooks_verifiers: stringListResponse,
@@ -1486,6 +1518,7 @@ export const responseSchemas = {
   post_api_delete_template: templateDeleteResult,
   post_api_delete_template_dir: templateDeleteResult,
   post_api_fleet_reload_config: fleetResult,
+  post_api_hook_runs_id_retry: hookRunView,
   post_api_hooks: hookRegisterResult,
   post_api_hooks_trigger_links: triggerLinkCreated,
   post_api_interactions_callback_ticket: interactionCallbackAck,

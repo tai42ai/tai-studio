@@ -1,6 +1,7 @@
 /**
  * The contract's published `ConversationRouteCreate` document, read for the route form:
- * its two door variants, the overlap policy it references, and the validation constraints
+ * its two door variants, the overlap policy and the reply-text catalogue it references, and
+ * the validation constraints
  * of a document property in the form the SDK's `SchemaForm` validator reads.
  */
 import { servedDocumentsJson } from '@tai42/api-client';
@@ -14,6 +15,8 @@ export const API_VARIANT = ROUTE_DOCUMENT.$defs.ApiConversationRouteCreate;
 export const CHANNEL_VARIANT = ROUTE_DOCUMENT.$defs.ChannelConversationRouteCreate;
 /** The overlap policy both variants carry. */
 export const OVERLAP_POLICY = ROUTE_DOCUMENT.$defs.OverlapPolicy;
+/** The catalogue of the route's own words for the platform's fixed participant replies. */
+export const REPLY_TEXTS = ROUTE_DOCUMENT.$defs.ReplyTexts;
 
 /** A document property: a schema, or the `anyOf` of a schema and `null` an optional field is. */
 interface DocumentProperty {

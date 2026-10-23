@@ -16,6 +16,16 @@
  *     a normal answered one.
  *   - `conversation-inbound-attachments` — one thread's transcript whose visitor turn
  *     carries a served image inline and a document download chip beside its text.
+ *   - `conversation-inbound-reply-to` — one thread's transcript whose visitor turns quote
+ *     earlier messages: one quote the thread holds, drawn with its text, and one it does
+ *     not hold, drawn with the message id. It is captured as the whole transcript card.
+ *   - `conversation-transcript-sends` — one thread's transcript carrying send records: a
+ *     send made during a turn, drawn inside that turn's exchange; a sent message out of any
+ *     turn, its delivery detail open on the part it went out in; a question asked as
+ *     sensitive whose reply came over the channel and was not stored; a platform notice; a
+ *     channel notice whose send failed; and a send whose outcome is unknown, its delivery
+ *     detail open on the attempt and the error. It is captured as the whole transcript card,
+ *     which runs past the viewport.
  *   - `conversation-bulk-reset-select` — the thread list's multi-select surface: the
  *     per-row checkboxes, the header select-all ticked, and the "Reset selected (N)"
  *     danger action.
@@ -35,6 +45,7 @@
  */
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { crc32, deflateSync } from 'node:zlib';
 
 import { expect, type Locator, type Page } from '@playwright/test';
 
@@ -67,7 +78,7 @@ const ROUTE_BASE = {
   our_identity: '+10000000000',
   callback_url: null,
   turns_per_hour_override: null,
-  error_reply_text: null,
+  reply_texts: null,
   callback_secret: null,
   locale: null,
 } as const;
@@ -149,11 +160,40 @@ const TRANSCRIPT_RECORDS = [
 const ATTACHMENT_IMAGE_URL = `/api/interactions/media/${'b'.repeat(43)}`;
 const ATTACHMENT_DOCUMENT_URL = `/api/interactions/media/${'c'.repeat(43)}`;
 
-/** A 1×1 PNG, so the stubbed served-image loads to a real (if tiny) bitmap. */
-const PNG_1X1 = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-  'base64',
-);
+/** The stubbed served image: a small two-tone PNG (RGB, no filter) built from arithmetic
+ * only, so the inline image loads to the same visible picture on every run rather than a
+ * black block or a broken-load notice. */
+function placeholderPng(width: number, height: number): Buffer {
+  const chunk = (type: string, data: Buffer): Buffer => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([length, body, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8; // bit depth
+  header[9] = 2; // colour type: RGB
+  const raw = Buffer.alloc((width * 3 + 1) * height);
+  for (let y = 0; y < height; y += 1) {
+    const row = y * (width * 3 + 1);
+    for (let x = 0; x < width; x += 1) {
+      const light = Math.floor(((x + y) / (width + height)) * 4) % 2 === 0;
+      raw.set(light ? [203, 213, 225] : [148, 163, 184], row + 1 + x * 3);
+    }
+  }
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', header),
+    chunk('IDAT', deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+const ATTACHMENT_IMAGE_PNG = placeholderPng(240, 150);
 
 /** The transcript record the inbound-attachments frame captures: a visitor turn carrying
  * a byte-backed image and a document beside its text. */
@@ -171,6 +211,131 @@ const ATTACHMENT_RECORD = {
   delivery_status: 'delivered',
   created_at: 1_800_000_010,
 };
+
+/** The transcript records the inbound-reply-to frame captures: an answered turn, a turn
+ * quoting that answer (held, so its text shows), and a turn quoting a message the thread
+ * does not hold. */
+const REPLY_TO_ANSWER = 'There are two options: the daily digest or the weekly summary.';
+const REPLY_TO_RECORDS = [
+  {
+    ...RECORD_BASE,
+    message_id: 'm-301',
+    inbound_text: 'which reports can I get',
+    answer_status: 'answered',
+    answer: REPLY_TO_ANSWER,
+    successor_id: null,
+    delivery_status: 'delivered',
+    created_at: 1_800_000_020,
+  },
+  {
+    ...RECORD_BASE,
+    message_id: 'm-302',
+    inbound_text: 'the second one, please',
+    inbound_reply_to: { message_id: 'wamid.demo-301', status: 'found', text: REPLY_TO_ANSWER },
+    answer_status: 'answered',
+    answer: 'Done: the weekly summary is on.',
+    successor_id: null,
+    delivery_status: 'delivered',
+    created_at: 1_800_000_021,
+  },
+  {
+    ...RECORD_BASE,
+    message_id: 'm-303',
+    inbound_text: 'and is this one still right?',
+    inbound_reply_to: { message_id: 'wamid.demo-117', status: 'not_found', text: null },
+    answer_status: 'answered',
+    answer: 'I cannot see that earlier message here. Could you send it again?',
+    successor_id: null,
+    delivery_status: 'delivered',
+    created_at: 1_800_000_022,
+  },
+];
+
+/** The send records the sends frame captures, oldest first. */
+const SEND_BASE = {
+  ...RECORD_BASE,
+  origin: 'send',
+  inbound_text: '',
+  answer_status: null,
+  successor_id: null,
+  turn_message_id: null,
+} as const;
+
+const SENDS_RECORDS = [
+  {
+    ...RECORD_BASE,
+    message_id: 'm-301',
+    inbound_text: 'is the nightly export done',
+    answer_status: 'answered',
+    answer: 'Yes — the export finished at 02:10.',
+    successor_id: null,
+    delivery_status: 'delivered',
+    created_at: 1_800_000_020,
+  },
+  {
+    ...SEND_BASE,
+    message_id: 'm-302',
+    sent_by: 'notify',
+    turn_message_id: 'm-301',
+    answer: 'Checking the export log now.',
+    delivery_status: 'delivered',
+    sends: [{ part: 0, chars: 28, provider_message_ids: ['SM-302'] }],
+    created_at: 1_800_000_021,
+  },
+  {
+    ...SEND_BASE,
+    message_id: 'm-303',
+    sent_by: 'notify',
+    answer: 'Your weekly summary is ready.',
+    delivery_status: 'delivered',
+    sends: [{ part: 0, chars: 29, provider_message_ids: ['SM-303'] }],
+    created_at: 1_800_000_030,
+  },
+  {
+    ...SEND_BASE,
+    message_id: 'm-304',
+    sent_by: 'ask',
+    answer: 'Please reply with the one-time code from your account page.',
+    ask: { answer_format: 'text', attempts: 1, interaction_id: 'int-304', sensitive: true },
+    ask_reply: {
+      answer: null,
+      answered_at: '2027-01-15T08:00:45Z',
+      medium_message_id: 'SM-in-304',
+    },
+    delivery_status: 'delivered',
+    sends: [{ part: 0, chars: 59, provider_message_ids: ['SM-304'] }],
+    created_at: 1_800_000_040,
+  },
+  {
+    ...SEND_BASE,
+    message_id: 'm-305',
+    sent_by: 'notice',
+    answer: 'This conversation was linked to your other channel.',
+    delivery_status: 'delivered',
+    sends: [{ part: 0, chars: 51, provider_message_ids: ['SM-305'] }],
+    created_at: 1_800_000_050,
+  },
+  {
+    ...SEND_BASE,
+    message_id: 'm-306',
+    sent_by: 'channel',
+    answer: 'That form has closed.',
+    delivery_status: 'failed',
+    attempts: 1,
+    error: 'ChannelDeliveryError: the provider refused the recipient',
+    created_at: 1_800_000_060,
+  },
+  {
+    ...SEND_BASE,
+    message_id: 'm-307',
+    sent_by: 'notify',
+    answer: 'Your export link expires tomorrow.',
+    delivery_status: 'outcome_unknown',
+    attempts: 1,
+    error: 'the send did not answer within 30s; the outcome is unknown',
+    created_at: 1_800_000_070,
+  },
+];
 
 /** The route the bulk-reset frames drive their thread list on — one of the table
  * routes, so the `/api/conversations` stub already lists it and the list renders. */
@@ -243,6 +408,58 @@ function pageOf(items: readonly unknown[], extra: Record<string, unknown> = {}):
   };
 }
 
+const SENDS_URL = `/conversations?route=${encodeURIComponent(TRANSCRIPT_ROUTE)}&thread=${encodeURIComponent(TRANSCRIPT_THREAD)}`;
+
+/** Serve the transcript thread with `records` (oldest first) as its whole history. */
+async function stubSendsTranscript(
+  page: Page,
+  records: readonly (typeof SENDS_RECORDS)[number][],
+): Promise<void> {
+  const newest = records.at(-1);
+  if (newest === undefined) throw new Error('the sends transcript needs at least one record');
+  await stubGet(page, '/api/conversations', pageOf(TABLE_ROUTES));
+  await stubGet(
+    page,
+    `/api/conversations/${TRANSCRIPT_ROUTE}/threads`,
+    pageOf([
+      {
+        thread_id: TRANSCRIPT_THREAD,
+        client_address: TRANSCRIPT_ADDRESS,
+        last_activity_at: newest.created_at,
+        message_count: records.length,
+        last_delivery_status: newest.delivery_status,
+      },
+    ]),
+  );
+  await stubGet(page, `/api/conversations/${TRANSCRIPT_ROUTE}/thread/mode`, {
+    mode: 'agent',
+    source: 'route',
+  });
+  await stubGet(
+    page,
+    `/api/conversations/${TRANSCRIPT_ROUTE}/transcript`,
+    // The transcript reads newest first and reverses the page to reading order.
+    pageOf([...records].reverse(), { order: 'desc', person_id: null }),
+  );
+}
+
+/** Open the delivery detail of the exchange whose text includes `text`. */
+async function openDeliveryDetail(page: Page, text: string): Promise<void> {
+  await page
+    .getByTestId('conversation-exchange')
+    .filter({ hasText: text })
+    .getByTestId('exchange-admin-detail')
+    .locator('summary')
+    .click();
+}
+
+/** Scroll the page so `target` sits at the top of the viewport. */
+async function scrollToTop(target: Locator): Promise<void> {
+  await target.evaluate((element) => {
+    element.scrollIntoView({ block: 'start' });
+  });
+}
+
 interface Frame {
   readonly name: string;
   /** The landing URL (search included). Defaults to the bare monitor landing. */
@@ -253,6 +470,9 @@ interface Frame {
   readonly action: (page: Page) => Promise<void>;
   /** The POPULATED signal proving the intended state rendered. */
   readonly ready: (page: Page) => Locator;
+  /** The one element captured whole (it may run past the viewport); unset, the shot is the
+   * fixed viewport. */
+  readonly capture?: (page: Page) => Locator;
 }
 
 const FRAMES: readonly Frame[] = [
@@ -368,14 +588,79 @@ const FRAMES: readonly Frame[] = [
       await page.route(
         (url) => url.pathname.startsWith('/api/interactions/media/'),
         async (route) => {
-          await route.fulfill({ contentType: 'image/png', body: PNG_1X1 });
+          await route.fulfill({ contentType: 'image/png', body: ATTACHMENT_IMAGE_PNG });
         },
       );
     },
     action: async (page) => {
-      await page.getByRole('link', { name: 'report.pdf' }).scrollIntoViewIfNeeded();
+      const image = page.getByRole('img', { name: 'the layout' });
+      await expect
+        .poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth))
+        .toBe(240);
+      await scrollToTop(page.getByRole('heading', { name: TRANSCRIPT_ADDRESS }));
     },
     ready: (page) => page.getByRole('link', { name: 'report.pdf' }),
+  },
+  {
+    // One thread's transcript whose visitor turns quote earlier messages: a held quote with
+    // its text above the message, and a quote the thread does not hold, naming its id.
+    name: 'conversation-inbound-reply-to',
+    url: `/conversations?route=${encodeURIComponent(TRANSCRIPT_ROUTE)}&thread=${encodeURIComponent(TRANSCRIPT_THREAD)}`,
+    setup: async (page) => {
+      await stubGet(page, '/api/conversations', pageOf(TABLE_ROUTES));
+      await stubGet(
+        page,
+        `/api/conversations/${TRANSCRIPT_ROUTE}/threads`,
+        pageOf([
+          {
+            thread_id: TRANSCRIPT_THREAD,
+            client_address: TRANSCRIPT_ADDRESS,
+            last_activity_at: 1_800_000_022,
+            message_count: REPLY_TO_RECORDS.length,
+            last_delivery_status: 'delivered',
+          },
+        ]),
+      );
+      await stubGet(page, `/api/conversations/${TRANSCRIPT_ROUTE}/thread/mode`, {
+        mode: 'agent',
+        source: 'route',
+      });
+      await stubGet(
+        page,
+        `/api/conversations/${TRANSCRIPT_ROUTE}/transcript`,
+        pageOf([...REPLY_TO_RECORDS].reverse(), { order: 'desc', person_id: null }),
+      );
+    },
+    action: async (page) => {
+      await scrollToTop(page.getByRole('heading', { name: TRANSCRIPT_ADDRESS }));
+    },
+    ready: (page) => page.getByText('wamid.demo-117'),
+    capture: (page) =>
+      page
+        .locator('.tai-card')
+        .filter({ has: page.getByTestId('conversation-transcript') })
+        .last(),
+  },
+  {
+    // Every send kind on one thread: a turn with the send made during it inside its exchange,
+    // a sent message out of any turn and a send whose outcome is unknown with their delivery
+    // details open, a sensitive question's reply with no body, a platform notice and a failed
+    // channel notice.
+    name: 'conversation-transcript-sends',
+    url: SENDS_URL,
+    setup: async (page) => {
+      await stubSendsTranscript(page, SENDS_RECORDS);
+    },
+    action: async (page) => {
+      await openDeliveryDetail(page, 'Your weekly summary is ready.');
+      await openDeliveryDetail(page, 'Your export link expires tomorrow.');
+    },
+    ready: (page) => page.getByTestId('conversation-transcript').getByText('Sent, outcome unknown'),
+    capture: (page) =>
+      page
+        .locator('.tai-card')
+        .filter({ has: page.getByTestId('conversation-transcript') })
+        .last(),
   },
   {
     // The thread list's multi-select surface: the per-row checkboxes, the header
@@ -490,9 +775,11 @@ for (const theme of ['light', 'dark'] as const) {
         await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
         await expect(page.locator(ERROR_CARD)).toHaveCount(0);
 
-        // Let fonts + layout settle, then capture the fixed-viewport frame.
+        // Let fonts + layout settle, then capture the frame's element or the fixed viewport.
         await page.waitForTimeout(500);
-        await page.screenshot({ path: `${OUT_DIR}/${frame.name}-${theme}.png` });
+        const path = `${OUT_DIR}/${frame.name}-${theme}.png`;
+        if (frame.capture) await frame.capture(page).screenshot({ path });
+        else await page.screenshot({ path });
       });
     }
   });

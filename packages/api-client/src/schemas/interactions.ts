@@ -119,11 +119,26 @@ export type FormPages = z.infer<typeof formPages>;
  * One form field's platform-drawn words (`wording.form.fields[name]`): `choice_label` is
  * the placeholder of the field's picker (its empty-state prompt); `invalid` is the
  * sentence shown when the field's value does not have its declared shape (never for a
- * missing required value).
+ * missing required value: that is `required`); `required` is the sentence shown when the
+ * field's required value is missing (at the field or anywhere inside it); `true_label` /
+ * `false_label` are a boolean field's words for its two values; `length_hint` is the hint
+ * under a text control with a maximum length (its `{max}` token is the maximum);
+ * `add_item` / `remove_item` / `item_label` / `no_items` are a free-text list field's add
+ * button, each item's remove button, each item's label (its `{n}` token is the item's
+ * number) and its empty-list line. The inbox reads `choice_label`, `invalid`, `required`,
+ * the boolean words (in the readback) and the list words; `length_hint` parses unused.
  */
 export const fieldWording = z.object({
   choice_label: z.string().nullish(),
   invalid: z.string().nullish(),
+  required: z.string().nullish(),
+  true_label: z.string().nullish(),
+  false_label: z.string().nullish(),
+  length_hint: z.string().nullish(),
+  add_item: z.string().nullish(),
+  remove_item: z.string().nullish(),
+  item_label: z.string().nullish(),
+  no_items: z.string().nullish(),
 });
 export type FieldWording = z.infer<typeof fieldWording>;
 
@@ -131,9 +146,14 @@ export type FieldWording = z.infer<typeof fieldWording>;
  * A form's platform-drawn chrome (`wording.form`): `title` heads the form surface;
  * `open`/`cancel` label the buttons that open and close it; `back` the button that returns
  * to the previous step; `submit` the terminal button of a form with no pages;
- * `review_empty` the review step's line before anything is filled; `fields` carries
+ * `review_empty` the review step's line before anything is filled; `error_line` the one
+ * line shown above a refused form in place of a per-field summary; `update_failed` the
+ * sentence shown when the form could not update (its optional `{reason}` token is the
+ * reaction door's reason); `step_progress` a stepped form's progress line (its `{step}` and
+ * `{steps}` tokens are the current step's number and the step count); `fields` carries
  * per-field words keyed by property name. The inbox draws the form inline, so it reads
- * `back`, `submit` and `fields`; `title`/`open`/`cancel`/`review_empty` parse unused.
+ * `back`, `submit`, `update_failed`, `step_progress` and `fields`; `title`/`open`/`cancel`/
+ * `review_empty`/`error_line` parse unused (the inbox shows each error at its field).
  */
 export const formWording = z.object({
   title: z.string().nullish(),
@@ -142,6 +162,9 @@ export const formWording = z.object({
   back: z.string().nullish(),
   submit: z.string().nullish(),
   review_empty: z.string().nullish(),
+  error_line: z.string().nullish(),
+  update_failed: z.string().nullish(),
+  step_progress: z.string().nullish(),
   fields: z.record(z.string(), fieldWording).nullish(),
 });
 export type FormWording = z.infer<typeof formWording>;
@@ -201,15 +224,13 @@ export type PageCopy = z.infer<typeof pageCopy>;
 
 /**
  * The form page's own sentences (`wording.answer_page.form`): `failed` when a send did not
- * land, `network_error` when the browser could not reach the server, `update_failed` when a
- * reacting form could not refresh, `choose_one` for an empty required multi-choice, and
- * `date_unavailable` for a blocked date. Drawn by the callback form page; the inbox draws
+ * land, `network_error` when the browser could not reach the server, `choose_one` for an
+ * empty required multi-choice, and `date_unavailable` for a blocked date. Drawn by the callback form page; the inbox draws
  * none of them.
  */
 export const formPageWording = z.object({
   failed: z.string().nullish(),
   network_error: z.string().nullish(),
-  update_failed: z.string().nullish(),
   choose_one: z.string().nullish(),
   date_unavailable: z.string().nullish(),
 });

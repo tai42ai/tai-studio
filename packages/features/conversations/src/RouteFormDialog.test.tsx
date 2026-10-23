@@ -166,9 +166,43 @@ describe('RouteFormDialog — create', () => {
         our_identity: '+15550000000',
         callback_url: null,
         turns_per_hour_override: null,
-        error_reply_text: null,
+        reply_texts: null,
         locale: null,
       });
+    });
+  });
+
+  it('sends the reply texts the operator filled in, leaving every other reply built-in', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
+      created: true,
+      route_name: 'events',
+      route: makeRoute(),
+      callback_secret: null,
+    });
+    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
+      client: { createOrReplaceConversationRoute },
+    });
+
+    expect(screen.getByRole('group', { name: 'Reply texts' })).toBeInTheDocument();
+    await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'events');
+    await pickVariant(user, 'Target', 'agent');
+    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
+    await pickVariant(user, 'Door', 'api');
+    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-events');
+    await user.type(screen.getByRole('textbox', { name: /^Failed turn\b/ }), 'Please try again.');
+    await user.type(
+      screen.getByRole('textbox', { name: /^Pairing code(?! refused)/ }),
+      'Your code is {{pairing_code}.',
+    );
+    await user.click(screen.getByRole('button', { name: 'Create route' }));
+
+    await waitFor(() => {
+      expect(createOrReplaceConversationRoute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reply_texts: { error: 'Please try again.', pairing_code: 'Your code is {pairing_code}.' },
+        }),
+      );
     });
   });
 

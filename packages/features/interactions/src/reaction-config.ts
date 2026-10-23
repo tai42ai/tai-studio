@@ -58,15 +58,35 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** The loud message from a failed reaction response (`{error}`, else the status text). */
-async function reactionErrorMessage(response: Response): Promise<string> {
+/**
+ * A host door's refusal of a reaction: `message` is the response's `error` (else its status
+ * text), `reason` the response's own `reason` string when it sent one, else `null`. The
+ * form draws the caller's could-not-update line with `reason` in its `{reason}` token, and
+ * the surface's own line with `message`.
+ */
+export class FormReactionRequestError extends Error {
+  readonly reason: string | null;
+  constructor(message: string, reason: string | null) {
+    super(message);
+    this.name = 'FormReactionRequestError';
+    this.reason = reason;
+  }
+}
+
+/** The loud error of a failed reaction response (`{error, reason}`, else the status text). */
+async function reactionRequestError(response: Response): Promise<FormReactionRequestError> {
+  const fallback = response.statusText !== '' ? response.statusText : 'the reaction request failed';
   try {
     const body: unknown = await response.json();
-    if (isRecord(body) && typeof body.error === 'string') return body.error;
+    if (isRecord(body)) {
+      const message = typeof body.error === 'string' ? body.error : fallback;
+      const reason = typeof body.reason === 'string' ? body.reason : null;
+      return new FormReactionRequestError(message, reason);
+    }
   } catch {
     // Fall through to the status text — a non-JSON error body is itself the failure.
   }
-  return response.statusText !== '' ? response.statusText : 'the reaction request failed';
+  return new FormReactionRequestError(fallback, null);
 }
 
 /**
@@ -86,7 +106,7 @@ export async function postFormReaction(
     credentials: 'same-origin',
     body: JSON.stringify({ event, values }),
   });
-  if (!response.ok) throw new Error(await reactionErrorMessage(response));
+  if (!response.ok) throw await reactionRequestError(response);
   const body: unknown = await response.json();
   // Accept the platform's `{ data }` envelope or a bare update body.
   const payload = isRecord(body) && 'data' in body ? body.data : body;

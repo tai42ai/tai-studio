@@ -22,13 +22,18 @@ import {
   wordingOf,
 } from './answer-schema';
 import { DisplayBlocks, ReviewReadback } from './form-display';
+import {
+  FormStepStatus,
+  ReactionErrorNotice,
+  type ReactionFailure,
+  reactionFailure,
+} from './form-lines';
 import { MalformedPayload } from './malformed-payload';
 import {
   answerStackStyle,
   contextHeadingStyle,
   contextListStyle,
   formContextStyle,
-  malformedStyle,
   optionFieldStyle,
   optionRowStyle,
   optionValuesStyle,
@@ -109,8 +114,9 @@ export function FormAnswer({ interaction, onSubmit, disabled }: AnswerRendererPr
   const parsed = parseFormPayload(interaction.format_payload);
   if ('malformed' in parsed) return <MalformedPayload message={parsed.malformed} />;
   // The form's caller words off the one `wording` catalogue: `back` labels the stepped
-  // form's Back button, `submit` the single-page form's terminal button, and `fields`
-  // the per-field picker placeholders the SchemaForm draws.
+  // form's Back button, `submit` the single-page form's terminal button, `update_failed`
+  // the could-not-update line, `step_progress` the stepped form's progress line, and
+  // `fields` the per-field words the SchemaForm, the validator and the readback draw.
   const form = wordingOf(interaction.format_payload)?.form;
   return (
     <SchemaFormAnswer
@@ -122,6 +128,8 @@ export function FormAnswer({ interaction, onSubmit, disabled }: AnswerRendererPr
       reactions={parsed.reactions}
       backLabel={nonBlankString(form?.back)}
       submitLabel={nonBlankString(form?.submit)}
+      updateFailedLabel={nonBlankString(form?.update_failed)}
+      stepProgressLabel={nonBlankString(form?.step_progress)}
       fieldWording={formFieldWording(form?.fields)}
       onSubmit={onSubmit}
       disabled={disabled}
@@ -140,7 +148,17 @@ interface SchemaFormAnswerProps {
   readonly backLabel: string | undefined;
   /** The caller's single-page submit label (`wording.form.submit`); absent shows "Submit". */
   readonly submitLabel: string | undefined;
-  /** Per-field words (`wording.form.fields`): picker placeholders and invalid sentences. */
+  /**
+   * The caller's could-not-update line (`wording.form.update_failed`), its `{reason}` filled
+   * with the server door's reason; absent shows "The form could not update: <message>".
+   */
+  readonly updateFailedLabel: string | undefined;
+  /**
+   * The caller's progress line (`wording.form.step_progress`), its `{step}` / `{steps}`
+   * filled; absent shows "Step <step> of <steps>".
+   */
+  readonly stepProgressLabel: string | undefined;
+  /** Per-field words (`wording.form.fields`): the SDK's field words and the readback's. */
   readonly fieldWording: Readonly<Record<string, FormFieldWords>> | undefined;
   readonly onSubmit: (answer: unknown) => void;
   readonly disabled: boolean;
@@ -155,6 +173,8 @@ function SchemaFormAnswer({
   reactions,
   backLabel,
   submitLabel,
+  updateFailedLabel,
+  stepProgressLabel,
   fieldWording,
   onSubmit,
   disabled,
@@ -182,7 +202,7 @@ function SchemaFormAnswer({
   const [slots, setSlots] = useState<Record<string, unknown>>(() => ({ ...values }));
   const [step, setStep] = useState(0);
   const [reacting, setReacting] = useState(false);
-  const [reactionError, setReactionError] = useState<string | null>(null);
+  const [reactionError, setReactionError] = useState<ReactionFailure | null>(null);
   // Only the latest reaction's response is applied: a slow earlier round-trip must never
   // overwrite a later one (field changes can fire several in flight).
   const reactionSeq = useRef(0);
@@ -224,9 +244,7 @@ function SchemaFormAnswer({
       applyUpdate(update);
       return update;
     } catch (error) {
-      if (seq === reactionSeq.current) {
-        setReactionError(error instanceof Error ? error.message : String(error));
-      }
+      if (seq === reactionSeq.current) setReactionError(reactionFailure(error));
       return null;
     } finally {
       if (seq === reactionSeq.current) setReacting(false);
@@ -269,6 +287,7 @@ function SchemaFormAnswer({
         options={options}
         fieldWording={fieldWording}
         submitLabel={submitLabel}
+        updateFailedLabel={updateFailedLabel}
         reactionError={reactionError}
         busy={busy}
         onChange={handleChange}
@@ -317,6 +336,8 @@ function SchemaFormAnswer({
       options={options}
       slots={slots}
       backLabel={backLabel}
+      stepProgressLabel={stepProgressLabel}
+      updateFailedLabel={updateFailedLabel}
       fieldWording={fieldWording}
       reactionError={reactionError}
       busy={busy}
@@ -336,6 +357,7 @@ function SinglePageForm({
   options,
   fieldWording,
   submitLabel,
+  updateFailedLabel,
   reactionError,
   busy,
   onChange,
@@ -347,14 +369,15 @@ function SinglePageForm({
   readonly options: Record<string, readonly FormOption[]>;
   readonly fieldWording: Readonly<Record<string, FormFieldWords>> | undefined;
   readonly submitLabel: string | undefined;
-  readonly reactionError: string | null;
+  readonly updateFailedLabel: string | undefined;
+  readonly reactionError: ReactionFailure | null;
   readonly busy: boolean;
   readonly onChange: (value: unknown) => void;
   readonly onSubmit: () => void;
 }): ReactNode {
   return (
     <div style={answerStackStyle}>
-      <ReactionErrorNotice message={reactionError} />
+      <ReactionErrorNotice failure={reactionError} label={updateFailedLabel} />
       <SchemaForm
         schema={schema}
         value={value}
@@ -388,6 +411,8 @@ function SteppedForm({
   options,
   slots,
   backLabel,
+  stepProgressLabel,
+  updateFailedLabel,
   fieldWording,
   reactionError,
   busy,
@@ -408,8 +433,10 @@ function SteppedForm({
   readonly options: Record<string, readonly FormOption[]>;
   readonly slots: Record<string, unknown>;
   readonly backLabel: string | undefined;
+  readonly stepProgressLabel: string | undefined;
+  readonly updateFailedLabel: string | undefined;
   readonly fieldWording: Readonly<Record<string, FormFieldWords>> | undefined;
-  readonly reactionError: string | null;
+  readonly reactionError: ReactionFailure | null;
   readonly busy: boolean;
   readonly onChange: (value: unknown) => void;
   readonly onBack: () => void;
@@ -418,11 +445,11 @@ function SteppedForm({
 }): ReactNode {
   return (
     <div style={answerStackStyle}>
-      <FormStepStatus pages={pages} step={step} />
-      <ReactionErrorNotice message={reactionError} />
+      <FormStepStatus pages={pages} step={step} label={stepProgressLabel} />
+      <ReactionErrorNotice failure={reactionError} label={updateFailedLabel} />
       <DisplayBlocks blocks={currentPage.display} slots={slots} />
       {currentPage.kind === 'review' ? (
-        <ReviewReadback schema={schema} value={objectValue} />
+        <ReviewReadback schema={schema} value={objectValue} fieldWording={fieldWording} />
       ) : (
         <SchemaForm
           schema={pageSchema}
@@ -484,41 +511,6 @@ function pageInputSchema(schema: JsonSchema, page: FormPage): JsonSchema {
   );
   const required = (schema.required ?? []).filter((name) => page.fields.includes(name));
   return { ...schema, properties, required };
-}
-
-/** The current step as "Step N of M (title)" — a plain, live progress line. */
-function FormStepStatus({
-  pages,
-  step,
-}: {
-  readonly pages: readonly FormPage[];
-  readonly step: number;
-}): ReactNode {
-  const page = pages[step];
-  if (page === undefined) return null;
-  return (
-    <section style={formContextStyle} data-testid="form-step-status" aria-label="Step">
-      <p style={contextHeadingStyle}>
-        {`Step ${String(step + 1)} of ${String(pages.length)}`}
-        {page.title !== '' ? ` — ${page.title}` : ''}
-      </p>
-    </section>
-  );
-}
-
-/** A LOUD banner for a failed reaction round-trip — never a silent or stale value. */
-function ReactionErrorNotice({ message }: { readonly message: string | null }): ReactNode {
-  if (message === null) return null;
-  return (
-    <p
-      role="alert"
-      data-testid="form-reaction-error"
-      className="tai-field-error"
-      style={malformedStyle}
-    >
-      {`The form could not update: ${message}`}
-    </p>
-  );
 }
 
 /**

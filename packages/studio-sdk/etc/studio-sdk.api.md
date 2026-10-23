@@ -212,7 +212,6 @@ const answerPageWording: z.ZodObject<{
     form: z.ZodOptional<z.ZodNullable<z.ZodObject<{
         failed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         network_error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        update_failed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         choose_one: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         date_unavailable: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     }, z.core.$strip>>>;
@@ -255,7 +254,6 @@ const apiConversationRouteCreate: z.ZodObject<{
     }, z.core.$strict>>>;
     channel: z.ZodDefault<z.ZodNull>;
     door: z.ZodLiteral<"api">;
-    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     execution_key: z.ZodString;
     extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
@@ -283,6 +281,20 @@ const apiConversationRouteCreate: z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
     resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
@@ -1473,7 +1485,6 @@ kwargs?: Record<string, unknown> | undefined;
 } | null;
 channel: null;
 door: "api";
-error_reply_text: string | null;
 execution_key: string;
 execution_key_fingerprint: string;
 extras_expr: {
@@ -1493,6 +1504,20 @@ reply_expr: {
 content?: string | undefined;
 id?: string | undefined;
 kwargs?: Record<string, unknown> | undefined;
+} | null;
+reply_texts: {
+error: string | null;
+pairing_code: string | null;
+pairing_code_invalid: string | null;
+pairing_link_unavailable: string | null;
+pairing_linked: string | null;
+pairing_not_linked: string | null;
+pairing_unlink_unavailable: string | null;
+pairing_unlinked: string | null;
+rejected_could_not_receive: string | null;
+rejected_too_large: string | null;
+rejected_unsupported_type: string | null;
+slow_down: string | null;
 } | null;
 resume_expr: {
 content?: string | undefined;
@@ -1517,7 +1542,6 @@ kwargs?: Record<string, unknown> | undefined;
 } | null;
 channel: string;
 door: "channel";
-error_reply_text: string | null;
 execution_key: string;
 execution_key_fingerprint: string;
 extras_expr: {
@@ -1537,6 +1561,20 @@ reply_expr: {
 content?: string | undefined;
 id?: string | undefined;
 kwargs?: Record<string, unknown> | undefined;
+} | null;
+reply_texts: {
+error: string | null;
+pairing_code: string | null;
+pairing_code_invalid: string | null;
+pairing_link_unavailable: string | null;
+pairing_linked: string | null;
+pairing_not_linked: string | null;
+pairing_unlink_unavailable: string | null;
+pairing_unlinked: string | null;
+rejected_could_not_receive: string | null;
+rejected_too_large: string | null;
+rejected_unsupported_type: string | null;
+slow_down: string | null;
 } | null;
 resume_expr: {
 content?: string | undefined;
@@ -1568,7 +1606,6 @@ kwargs?: Record<string, unknown> | undefined;
 } | null;
 channel: null;
 door: "api";
-error_reply_text: string | null;
 execution_key: string;
 execution_key_fingerprint: string;
 extras_expr: {
@@ -1588,6 +1625,20 @@ reply_expr: {
 content?: string | undefined;
 id?: string | undefined;
 kwargs?: Record<string, unknown> | undefined;
+} | null;
+reply_texts: {
+error: string | null;
+pairing_code: string | null;
+pairing_code_invalid: string | null;
+pairing_link_unavailable: string | null;
+pairing_linked: string | null;
+pairing_not_linked: string | null;
+pairing_unlink_unavailable: string | null;
+pairing_unlinked: string | null;
+rejected_could_not_receive: string | null;
+rejected_too_large: string | null;
+rejected_unsupported_type: string | null;
+slow_down: string | null;
 } | null;
 resume_expr: {
 content?: string | undefined;
@@ -1612,7 +1663,6 @@ kwargs?: Record<string, unknown> | undefined;
 } | null;
 channel: string;
 door: "channel";
-error_reply_text: string | null;
 execution_key: string;
 execution_key_fingerprint: string;
 extras_expr: {
@@ -1632,6 +1682,20 @@ reply_expr: {
 content?: string | undefined;
 id?: string | undefined;
 kwargs?: Record<string, unknown> | undefined;
+} | null;
+reply_texts: {
+error: string | null;
+pairing_code: string | null;
+pairing_code_invalid: string | null;
+pairing_link_unavailable: string | null;
+pairing_linked: string | null;
+pairing_not_linked: string | null;
+pairing_unlink_unavailable: string | null;
+pairing_unlinked: string | null;
+rejected_could_not_receive: string | null;
+rejected_too_large: string | null;
+rejected_unsupported_type: string | null;
+slow_down: string | null;
 } | null;
 resume_expr: {
 content?: string | undefined;
@@ -1658,7 +1722,7 @@ readonly listConversationThreads: (routeName: string, page: number, pageSize: nu
 items: {
 client_address: string;
 last_activity_at: number;
-last_delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
+last_delivery_status: "superseded" | "failed" | "sending" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "outcome_unknown";
 message_count: number;
 thread_id: string;
 }[];
@@ -1768,7 +1832,6 @@ choose_one: string | null;
 date_unavailable: string | null;
 failed: string | null;
 network_error: string | null;
-update_failed: string | null;
 } | null;
 submitted: {
 heading: string | null;
@@ -1783,14 +1846,25 @@ reply_hint: string | null;
 form: {
 back: string | null;
 cancel: string | null;
+error_line: string | null;
 fields: Record<string, {
+add_item: string | null;
 choice_label: string | null;
+false_label: string | null;
 invalid: string | null;
+item_label: string | null;
+length_hint: string | null;
+no_items: string | null;
+remove_item: string | null;
+required: string | null;
+true_label: string | null;
 }>;
 open: string | null;
 review_empty: string | null;
+step_progress: string | null;
 submit: string | null;
 title: string | null;
+update_failed: string | null;
 } | null;
 lines: {
 answer_link: string | null;
@@ -1816,13 +1890,30 @@ unavailable: string | null;
 } | null;
 }[] | null;
 answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
+ask: {
+answer_format: string | null;
+attempts: number | null;
+interaction_id: string | null;
+sensitive: boolean;
+timed_out_attempts: number[] | null;
+} | null;
+ask_reply: {
+answer: unknown;
+answered_at: string | null;
+medium_message_id: string | null;
+reply_to: {
+message_id: string;
+status: "found" | "not_found" | "sensitive" | "no_text";
+text: string | null;
+} | null;
+} | null;
 attempts: number | null;
 callback_url: string | null;
 caller_principal: string | null;
 channel: string | null;
 client_address: string;
 created_at: number;
-delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
+delivery_status: "superseded" | "failed" | "sending" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "outcome_unknown";
 door: "channel" | "api";
 error: string | null;
 inbound_attachments: {
@@ -1842,19 +1933,31 @@ latitude: number;
 longitude: number;
 name: string | null;
 } | null;
+inbound_message_id: string | null;
+inbound_reply_to: {
+message_id: string;
+status: "found" | "not_found" | "sensitive" | "no_text";
+text: string | null;
+} | null;
 inbound_text: string;
 message_id: string;
 operator_send: boolean;
-origin: "operator" | "client";
+origin: "operator" | "client" | "send";
 our_identity: string | null;
-outbound_message_ids: string[] | null;
-pending_receipt: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | null;
+pending_receipt: "superseded" | "failed" | "sending" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "outcome_unknown" | null;
 provider_message_id: string | null;
 route_missing: boolean;
 route_name: string;
+sends: {
+chars: number;
+part: number;
+provider_message_ids: string[];
+}[];
+sent_by: "channel" | "ask" | "notify" | "notice" | null;
 submitted_by: string | null;
 successor_id: string | null;
 thread_id: string;
+turn_message_id: string | null;
 updated_at: number;
 }[];
 next_page: number | null;
@@ -1965,7 +2068,6 @@ choose_one: string | null;
 date_unavailable: string | null;
 failed: string | null;
 network_error: string | null;
-update_failed: string | null;
 } | null;
 submitted: {
 heading: string | null;
@@ -1980,14 +2082,25 @@ reply_hint: string | null;
 form: {
 back: string | null;
 cancel: string | null;
+error_line: string | null;
 fields: Record<string, {
+add_item: string | null;
 choice_label: string | null;
+false_label: string | null;
 invalid: string | null;
+item_label: string | null;
+length_hint: string | null;
+no_items: string | null;
+remove_item: string | null;
+required: string | null;
+true_label: string | null;
 }>;
 open: string | null;
 review_empty: string | null;
+step_progress: string | null;
 submit: string | null;
 title: string | null;
+update_failed: string | null;
 } | null;
 lines: {
 answer_link: string | null;
@@ -2013,13 +2126,30 @@ unavailable: string | null;
 } | null;
 }[] | null;
 answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
+ask: {
+answer_format: string | null;
+attempts: number | null;
+interaction_id: string | null;
+sensitive: boolean;
+timed_out_attempts: number[] | null;
+} | null;
+ask_reply: {
+answer: unknown;
+answered_at: string | null;
+medium_message_id: string | null;
+reply_to: {
+message_id: string;
+status: "found" | "not_found" | "sensitive" | "no_text";
+text: string | null;
+} | null;
+} | null;
 attempts: number | null;
 callback_url: string | null;
 caller_principal: string | null;
 channel: string | null;
 client_address: string;
 created_at: number;
-delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
+delivery_status: "superseded" | "failed" | "sending" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "outcome_unknown";
 door: "channel" | "api";
 error: string | null;
 inbound_attachments: {
@@ -2039,19 +2169,31 @@ latitude: number;
 longitude: number;
 name: string | null;
 } | null;
+inbound_message_id: string | null;
+inbound_reply_to: {
+message_id: string;
+status: "found" | "not_found" | "sensitive" | "no_text";
+text: string | null;
+} | null;
 inbound_text: string;
 message_id: string;
 operator_send: boolean;
-origin: "operator" | "client";
+origin: "operator" | "client" | "send";
 our_identity: string | null;
-outbound_message_ids: string[] | null;
-pending_receipt: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | null;
+pending_receipt: "superseded" | "failed" | "sending" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "outcome_unknown" | null;
 provider_message_id: string | null;
 route_missing: boolean;
 route_name: string;
+sends: {
+chars: number;
+part: number;
+provider_message_ids: string[];
+}[];
+sent_by: "channel" | "ask" | "notify" | "notice" | null;
 submitted_by: string | null;
 successor_id: string | null;
 thread_id: string;
+turn_message_id: string | null;
 updated_at: number;
 }[];
 next_page: number | null;
@@ -2333,7 +2475,6 @@ choose_one: string | null;
 date_unavailable: string | null;
 failed: string | null;
 network_error: string | null;
-update_failed: string | null;
 } | null;
 submitted: {
 heading: string | null;
@@ -2348,14 +2489,25 @@ reply_hint: string | null;
 form: {
 back: string | null;
 cancel: string | null;
+error_line: string | null;
 fields: Record<string, {
+add_item: string | null;
 choice_label: string | null;
+false_label: string | null;
 invalid: string | null;
+item_label: string | null;
+length_hint: string | null;
+no_items: string | null;
+remove_item: string | null;
+required: string | null;
+true_label: string | null;
 }>;
 open: string | null;
 review_empty: string | null;
+step_progress: string | null;
 submit: string | null;
 title: string | null;
+update_failed: string | null;
 } | null;
 lines: {
 answer_link: string | null;
@@ -2381,13 +2533,30 @@ unavailable: string | null;
 } | null;
 }[] | null;
 answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
+ask: {
+answer_format: string | null;
+attempts: number | null;
+interaction_id: string | null;
+sensitive: boolean;
+timed_out_attempts: number[] | null;
+} | null;
+ask_reply: {
+answer: unknown;
+answered_at: string | null;
+medium_message_id: string | null;
+reply_to: {
+message_id: string;
+status: "found" | "not_found" | "sensitive" | "no_text";
+text: string | null;
+} | null;
+} | null;
 attempts: number | null;
 callback_url: string | null;
 caller_principal: string | null;
 channel: string | null;
 client_address: string;
 created_at: number;
-delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
+delivery_status: "superseded" | "failed" | "sending" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "outcome_unknown";
 door: "channel" | "api";
 error: string | null;
 inbound_attachments: {
@@ -2407,19 +2576,31 @@ latitude: number;
 longitude: number;
 name: string | null;
 } | null;
+inbound_message_id: string | null;
+inbound_reply_to: {
+message_id: string;
+status: "found" | "not_found" | "sensitive" | "no_text";
+text: string | null;
+} | null;
 inbound_text: string;
 message_id: string;
 operator_send: boolean;
-origin: "operator" | "client";
+origin: "operator" | "client" | "send";
 our_identity: string | null;
-outbound_message_ids: string[] | null;
-pending_receipt: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | null;
+pending_receipt: "superseded" | "failed" | "sending" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "outcome_unknown" | null;
 provider_message_id: string | null;
 route_missing: boolean;
 route_name: string;
+sends: {
+chars: number;
+part: number;
+provider_message_ids: string[];
+}[];
+sent_by: "channel" | "ask" | "notify" | "notice" | null;
 submitted_by: string | null;
 successor_id: string | null;
 thread_id: string;
+turn_message_id: string | null;
 updated_at: number;
 }[];
 total: number;
@@ -2432,6 +2613,7 @@ states_erased: number;
 thread_id: string;
 }>;
 readonly deleteConversationPerson: (personId: string) => Promise<{
+absorbed_person_ids: string[];
 erased: boolean;
 person_id: string;
 removed: number;
@@ -4401,7 +4583,7 @@ id: string;
 last_error: string | null;
 run_id: string | null;
 states: string[];
-status: "running" | "failed" | "calls" | "pending";
+status: "running" | "failed" | "pending" | "calls";
 subjects: {
 state: string;
 subject: {
@@ -4418,7 +4600,7 @@ outstanding: number;
 readonly retryPendingSave: (id: string) => Promise<{
 id: string;
 last_error: string | null;
-status: "running" | "failed" | "applied" | "calls" | "pending";
+status: "running" | "failed" | "applied" | "pending" | "calls";
 }>;
 readonly discardPendingSave: (id: string) => Promise<{
 discarded: string;
@@ -4762,7 +4944,7 @@ format_payload: Record<string, unknown> | null;
 group_id: string | null;
 id: string;
 media: Record<string, unknown>[] | null;
-on_expiry: "kill" | "resume" | null;
+on_expiry: "resume" | "kill" | null;
 payload: Record<string, unknown> | null;
 question: string | null;
 recipient: string | null;
@@ -4887,7 +5069,7 @@ format_payload: Record<string, unknown> | null;
 group_id: string | null;
 id: string;
 media: Record<string, unknown>[] | null;
-on_expiry: "kill" | "resume" | null;
+on_expiry: "resume" | "kill" | null;
 payload: Record<string, unknown> | null;
 question: string | null;
 recipient: string | null;
@@ -5526,7 +5708,6 @@ const channelConversationRouteCreate: z.ZodObject<{
     }, z.core.$strict>>>;
     channel: z.ZodString;
     door: z.ZodLiteral<"channel">;
-    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     execution_key: z.ZodString;
     extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
@@ -5554,6 +5735,20 @@ const channelConversationRouteCreate: z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
     resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
@@ -6054,6 +6249,7 @@ type ConversationDeliveryStatus = z.infer<typeof conversationDeliveryStatus>;
 const conversationDeliveryStatus: z.ZodEnum<{
     superseded: "superseded";
     failed: "failed";
+    sending: "sending";
     silent: "silent";
     merged: "merged";
     accepted: "accepted";
@@ -6061,6 +6257,7 @@ const conversationDeliveryStatus: z.ZodEnum<{
     provisional: "provisional";
     delivered: "delivered";
     shed: "shed";
+    outcome_unknown: "outcome_unknown";
 }>;
 
 // @public (undocumented)
@@ -6194,7 +6391,6 @@ const conversationFailedMessages: z.ZodObject<{
                         date_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                         failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                         network_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                        update_failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     }, z.core.$strict>>>;
                     submitted: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -6209,14 +6405,25 @@ const conversationFailedMessages: z.ZodObject<{
                 form: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     back: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     cancel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    error_line: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     fields: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
+                        add_item: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                         choice_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        false_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                         invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        item_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        length_hint: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        no_items: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        remove_item: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        required: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        true_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     }, z.core.$strict>>>;
                     open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     review_empty: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    step_progress: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     submit: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     title: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    update_failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
                 lines: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     answer_link: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -6248,6 +6455,28 @@ const conversationFailedMessages: z.ZodObject<{
             silent: "silent";
             merged: "merged";
         }>>>;
+        ask: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            answer_format: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            attempts: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+            interaction_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            sensitive: z.ZodBoolean;
+            timed_out_attempts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodNumber>>>;
+        }, z.core.$strip>>>;
+        ask_reply: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            answer: z.ZodNullable<z.ZodUnknown>;
+            answered_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            medium_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            reply_to: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                message_id: z.ZodString;
+                status: z.ZodEnum<{
+                    found: "found";
+                    not_found: "not_found";
+                    sensitive: "sensitive";
+                    no_text: "no_text";
+                }>;
+                text: z.ZodNullable<z.ZodString>;
+            }, z.core.$strict>>>;
+        }, z.core.$strip>>>;
         attempts: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
         callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         caller_principal: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -6257,6 +6486,7 @@ const conversationFailedMessages: z.ZodObject<{
         delivery_status: z.ZodDefault<z.ZodEnum<{
             superseded: "superseded";
             failed: "failed";
+            sending: "sending";
             silent: "silent";
             merged: "merged";
             accepted: "accepted";
@@ -6264,6 +6494,7 @@ const conversationFailedMessages: z.ZodObject<{
             provisional: "provisional";
             delivered: "delivered";
             shed: "shed";
+            outcome_unknown: "outcome_unknown";
         }>>;
         door: z.ZodEnum<{
             channel: "channel";
@@ -6296,18 +6527,30 @@ const conversationFailedMessages: z.ZodObject<{
             longitude: z.ZodNumber;
             name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         }, z.core.$strict>>>;
+        inbound_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        inbound_reply_to: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            message_id: z.ZodString;
+            status: z.ZodEnum<{
+                found: "found";
+                not_found: "not_found";
+                sensitive: "sensitive";
+                no_text: "no_text";
+            }>;
+            text: z.ZodNullable<z.ZodString>;
+        }, z.core.$strict>>>;
         inbound_text: z.ZodString;
         message_id: z.ZodString;
         operator_send: z.ZodDefault<z.ZodBoolean>;
         origin: z.ZodEnum<{
             operator: "operator";
             client: "client";
+            send: "send";
         }>;
         our_identity: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        outbound_message_ids: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
         pending_receipt: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
             superseded: "superseded";
             failed: "failed";
+            sending: "sending";
             silent: "silent";
             merged: "merged";
             accepted: "accepted";
@@ -6315,13 +6558,26 @@ const conversationFailedMessages: z.ZodObject<{
             provisional: "provisional";
             delivered: "delivered";
             shed: "shed";
+            outcome_unknown: "outcome_unknown";
         }>>>;
         provider_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         route_missing: z.ZodDefault<z.ZodBoolean>;
         route_name: z.ZodString;
+        sends: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            chars: z.ZodNumber;
+            part: z.ZodNumber;
+            provider_message_ids: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>>>;
+        sent_by: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            channel: "channel";
+            ask: "ask";
+            notify: "notify";
+            notice: "notice";
+        }>>>;
         submitted_by: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         successor_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         thread_id: z.ZodString;
+        turn_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         updated_at: z.ZodNumber;
     }, z.core.$strip>>;
     total: z.ZodNumber;
@@ -6449,7 +6705,6 @@ const conversationMessage: z.ZodObject<{
                     date_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     network_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    update_failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
                 submitted: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -6464,14 +6719,25 @@ const conversationMessage: z.ZodObject<{
             form: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 back: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 cancel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                error_line: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 fields: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
+                    add_item: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     choice_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    false_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    item_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    length_hint: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    no_items: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    remove_item: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    required: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    true_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
                 open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 review_empty: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                step_progress: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 submit: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 title: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                update_failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             }, z.core.$strict>>>;
             lines: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                 answer_link: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -6503,6 +6769,28 @@ const conversationMessage: z.ZodObject<{
         silent: "silent";
         merged: "merged";
     }>>>;
+    ask: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        answer_format: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        attempts: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        interaction_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        sensitive: z.ZodBoolean;
+        timed_out_attempts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodNumber>>>;
+    }, z.core.$strip>>>;
+    ask_reply: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        answer: z.ZodNullable<z.ZodUnknown>;
+        answered_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        medium_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        reply_to: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            message_id: z.ZodString;
+            status: z.ZodEnum<{
+                found: "found";
+                not_found: "not_found";
+                sensitive: "sensitive";
+                no_text: "no_text";
+            }>;
+            text: z.ZodNullable<z.ZodString>;
+        }, z.core.$strict>>>;
+    }, z.core.$strip>>>;
     attempts: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     caller_principal: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -6512,6 +6800,7 @@ const conversationMessage: z.ZodObject<{
     delivery_status: z.ZodDefault<z.ZodEnum<{
         superseded: "superseded";
         failed: "failed";
+        sending: "sending";
         silent: "silent";
         merged: "merged";
         accepted: "accepted";
@@ -6519,6 +6808,7 @@ const conversationMessage: z.ZodObject<{
         provisional: "provisional";
         delivered: "delivered";
         shed: "shed";
+        outcome_unknown: "outcome_unknown";
     }>>;
     door: z.ZodEnum<{
         channel: "channel";
@@ -6551,18 +6841,30 @@ const conversationMessage: z.ZodObject<{
         longitude: z.ZodNumber;
         name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
+    inbound_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    inbound_reply_to: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        message_id: z.ZodString;
+        status: z.ZodEnum<{
+            found: "found";
+            not_found: "not_found";
+            sensitive: "sensitive";
+            no_text: "no_text";
+        }>;
+        text: z.ZodNullable<z.ZodString>;
+    }, z.core.$strict>>>;
     inbound_text: z.ZodString;
     message_id: z.ZodString;
     operator_send: z.ZodDefault<z.ZodBoolean>;
     origin: z.ZodEnum<{
         operator: "operator";
         client: "client";
+        send: "send";
     }>;
     our_identity: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    outbound_message_ids: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
     pending_receipt: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
         superseded: "superseded";
         failed: "failed";
+        sending: "sending";
         silent: "silent";
         merged: "merged";
         accepted: "accepted";
@@ -6570,13 +6872,26 @@ const conversationMessage: z.ZodObject<{
         provisional: "provisional";
         delivered: "delivered";
         shed: "shed";
+        outcome_unknown: "outcome_unknown";
     }>>>;
     provider_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     route_missing: z.ZodDefault<z.ZodBoolean>;
     route_name: z.ZodString;
+    sends: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        chars: z.ZodNumber;
+        part: z.ZodNumber;
+        provider_message_ids: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>>>;
+    sent_by: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+        channel: "channel";
+        ask: "ask";
+        notify: "notify";
+        notice: "notice";
+    }>>>;
     submitted_by: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     successor_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     thread_id: z.ZodString;
+    turn_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     updated_at: z.ZodNumber;
 }, z.core.$strip>;
 
@@ -6702,7 +7017,6 @@ const conversationMessageSearchPage: z.ZodObject<{
                         date_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                         failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                         network_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                        update_failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     }, z.core.$strict>>>;
                     submitted: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -6717,14 +7031,25 @@ const conversationMessageSearchPage: z.ZodObject<{
                 form: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     back: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     cancel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    error_line: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     fields: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
+                        add_item: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                         choice_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        false_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                         invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        item_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        length_hint: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        no_items: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        remove_item: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        required: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        true_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     }, z.core.$strict>>>;
                     open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     review_empty: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    step_progress: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     submit: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     title: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    update_failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
                 lines: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     answer_link: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -6756,6 +7081,28 @@ const conversationMessageSearchPage: z.ZodObject<{
             silent: "silent";
             merged: "merged";
         }>>>;
+        ask: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            answer_format: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            attempts: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+            interaction_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            sensitive: z.ZodBoolean;
+            timed_out_attempts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodNumber>>>;
+        }, z.core.$strip>>>;
+        ask_reply: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            answer: z.ZodNullable<z.ZodUnknown>;
+            answered_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            medium_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            reply_to: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                message_id: z.ZodString;
+                status: z.ZodEnum<{
+                    found: "found";
+                    not_found: "not_found";
+                    sensitive: "sensitive";
+                    no_text: "no_text";
+                }>;
+                text: z.ZodNullable<z.ZodString>;
+            }, z.core.$strict>>>;
+        }, z.core.$strip>>>;
         attempts: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
         callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         caller_principal: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -6765,6 +7112,7 @@ const conversationMessageSearchPage: z.ZodObject<{
         delivery_status: z.ZodDefault<z.ZodEnum<{
             superseded: "superseded";
             failed: "failed";
+            sending: "sending";
             silent: "silent";
             merged: "merged";
             accepted: "accepted";
@@ -6772,6 +7120,7 @@ const conversationMessageSearchPage: z.ZodObject<{
             provisional: "provisional";
             delivered: "delivered";
             shed: "shed";
+            outcome_unknown: "outcome_unknown";
         }>>;
         door: z.ZodEnum<{
             channel: "channel";
@@ -6804,18 +7153,30 @@ const conversationMessageSearchPage: z.ZodObject<{
             longitude: z.ZodNumber;
             name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         }, z.core.$strict>>>;
+        inbound_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        inbound_reply_to: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            message_id: z.ZodString;
+            status: z.ZodEnum<{
+                found: "found";
+                not_found: "not_found";
+                sensitive: "sensitive";
+                no_text: "no_text";
+            }>;
+            text: z.ZodNullable<z.ZodString>;
+        }, z.core.$strict>>>;
         inbound_text: z.ZodString;
         message_id: z.ZodString;
         operator_send: z.ZodDefault<z.ZodBoolean>;
         origin: z.ZodEnum<{
             operator: "operator";
             client: "client";
+            send: "send";
         }>;
         our_identity: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        outbound_message_ids: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
         pending_receipt: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
             superseded: "superseded";
             failed: "failed";
+            sending: "sending";
             silent: "silent";
             merged: "merged";
             accepted: "accepted";
@@ -6823,13 +7184,26 @@ const conversationMessageSearchPage: z.ZodObject<{
             provisional: "provisional";
             delivered: "delivered";
             shed: "shed";
+            outcome_unknown: "outcome_unknown";
         }>>>;
         provider_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         route_missing: z.ZodDefault<z.ZodBoolean>;
         route_name: z.ZodString;
+        sends: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            chars: z.ZodNumber;
+            part: z.ZodNumber;
+            provider_message_ids: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>>>;
+        sent_by: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            channel: "channel";
+            ask: "ask";
+            notify: "notify";
+            notice: "notice";
+        }>>>;
         submitted_by: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         successor_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         thread_id: z.ZodString;
+        turn_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         updated_at: z.ZodNumber;
     }, z.core.$strip>>;
     next_page: z.ZodNullable<z.ZodNumber>;
@@ -6866,6 +7240,7 @@ type ConversationPersonDeleted = z.infer<typeof conversationPersonDeleted>;
 
 // @public
 const conversationPersonDeleted: z.ZodObject<{
+    absorbed_person_ids: z.ZodArray<z.ZodString>;
     erased: z.ZodBoolean;
     person_id: z.ZodString;
     removed: z.ZodNumber;
@@ -6879,6 +7254,7 @@ type ConversationRecordOrigin = z.infer<typeof conversationRecordOrigin>;
 const conversationRecordOrigin: z.ZodEnum<{
     operator: "operator";
     client: "client";
+    send: "send";
 }>;
 
 // @public (undocumented)
@@ -6895,7 +7271,6 @@ const conversationRoute: z.ZodDiscriminatedUnion<[z.ZodObject<{
     }, z.core.$strict>>>;
     channel: z.ZodDefault<z.ZodNull>;
     door: z.ZodLiteral<"api">;
-    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     execution_key: z.ZodString;
     execution_key_fingerprint: z.ZodString;
     extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
@@ -6925,6 +7300,20 @@ const conversationRoute: z.ZodDiscriminatedUnion<[z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>>>;
+    reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strict>>>;
     resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
@@ -6952,7 +7341,6 @@ const conversationRoute: z.ZodDiscriminatedUnion<[z.ZodObject<{
     }, z.core.$strict>>>;
     channel: z.ZodString;
     door: z.ZodLiteral<"channel">;
-    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     execution_key: z.ZodString;
     execution_key_fingerprint: z.ZodString;
     extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
@@ -6981,6 +7369,20 @@ const conversationRoute: z.ZodDiscriminatedUnion<[z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
     resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
@@ -7014,7 +7416,6 @@ const conversationRouteCreate: z.ZodDiscriminatedUnion<[z.ZodObject<{
     }, z.core.$strict>>>;
     channel: z.ZodDefault<z.ZodNull>;
     door: z.ZodLiteral<"api">;
-    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     execution_key: z.ZodString;
     extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
@@ -7043,6 +7444,20 @@ const conversationRouteCreate: z.ZodDiscriminatedUnion<[z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>>>;
+    reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strict>>>;
     resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
@@ -7069,7 +7484,6 @@ const conversationRouteCreate: z.ZodDiscriminatedUnion<[z.ZodObject<{
     }, z.core.$strict>>>;
     channel: z.ZodString;
     door: z.ZodLiteral<"channel">;
-    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     execution_key: z.ZodString;
     extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
@@ -7097,6 +7511,20 @@ const conversationRouteCreate: z.ZodDiscriminatedUnion<[z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
     resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
@@ -7140,7 +7568,6 @@ const conversationRoutes: z.ZodObject<{
         }, z.core.$strict>>>;
         channel: z.ZodDefault<z.ZodNull>;
         door: z.ZodLiteral<"api">;
-        error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         execution_key: z.ZodString;
         execution_key_fingerprint: z.ZodString;
         extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
@@ -7170,6 +7597,20 @@ const conversationRoutes: z.ZodObject<{
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, z.core.$strict>>>;
+        reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strict>>>;
         resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
@@ -7196,7 +7637,6 @@ const conversationRoutes: z.ZodObject<{
         }, z.core.$strict>>>;
         channel: z.ZodString;
         door: z.ZodLiteral<"channel">;
-        error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         execution_key: z.ZodString;
         execution_key_fingerprint: z.ZodString;
         extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
@@ -7225,6 +7665,20 @@ const conversationRoutes: z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         }, z.core.$strict>>>;
         resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
@@ -7261,7 +7715,6 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
     }, z.core.$strict>>>;
     channel: z.ZodDefault<z.ZodNull>;
     door: z.ZodLiteral<"api">;
-    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     execution_key: z.ZodString;
     execution_key_fingerprint: z.ZodString;
     extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
@@ -7291,6 +7744,20 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>>>;
+    reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strict>>>;
     resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
@@ -7317,7 +7784,6 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
     }, z.core.$strict>>>;
     channel: z.ZodString;
     door: z.ZodLiteral<"channel">;
-    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     execution_key: z.ZodString;
     execution_key_fingerprint: z.ZodString;
     extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
@@ -7346,6 +7812,20 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
     resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
@@ -7382,7 +7862,6 @@ const conversationRouteWritten: z.ZodObject<{
         }, z.core.$strict>>>;
         channel: z.ZodDefault<z.ZodNull>;
         door: z.ZodLiteral<"api">;
-        error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         execution_key: z.ZodString;
         execution_key_fingerprint: z.ZodString;
         extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
@@ -7412,6 +7891,20 @@ const conversationRouteWritten: z.ZodObject<{
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, z.core.$strict>>>;
+        reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strict>>>;
         resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
@@ -7438,7 +7931,6 @@ const conversationRouteWritten: z.ZodObject<{
         }, z.core.$strict>>>;
         channel: z.ZodString;
         door: z.ZodLiteral<"channel">;
-        error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         execution_key: z.ZodString;
         execution_key_fingerprint: z.ZodString;
         extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
@@ -7467,6 +7959,20 @@ const conversationRouteWritten: z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         }, z.core.$strict>>>;
         resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
@@ -7511,6 +8017,7 @@ const conversationThread: z.ZodObject<{
     last_delivery_status: z.ZodEnum<{
         superseded: "superseded";
         failed: "failed";
+        sending: "sending";
         silent: "silent";
         merged: "merged";
         accepted: "accepted";
@@ -7518,6 +8025,7 @@ const conversationThread: z.ZodObject<{
         provisional: "provisional";
         delivered: "delivered";
         shed: "shed";
+        outcome_unknown: "outcome_unknown";
     }>;
     message_count: z.ZodNumber;
     thread_id: z.ZodString;
@@ -7596,6 +8104,7 @@ const conversationThreadsPage: z.ZodObject<{
         last_delivery_status: z.ZodEnum<{
             superseded: "superseded";
             failed: "failed";
+            sending: "sending";
             silent: "silent";
             merged: "merged";
             accepted: "accepted";
@@ -7603,6 +8112,7 @@ const conversationThreadsPage: z.ZodObject<{
             provisional: "provisional";
             delivered: "delivered";
             shed: "shed";
+            outcome_unknown: "outcome_unknown";
         }>;
         message_count: z.ZodNumber;
         thread_id: z.ZodString;
@@ -7737,7 +8247,6 @@ const conversationTranscriptPage: z.ZodObject<{
                         date_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                         failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                         network_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                        update_failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     }, z.core.$strict>>>;
                     submitted: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                         heading: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -7752,14 +8261,25 @@ const conversationTranscriptPage: z.ZodObject<{
                 form: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     back: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     cancel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    error_line: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     fields: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
+                        add_item: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                         choice_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        false_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                         invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        item_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        length_hint: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        no_items: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        remove_item: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        required: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                        true_label: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     }, z.core.$strict>>>;
                     open: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     review_empty: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    step_progress: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     submit: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                     title: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    update_failed: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 }, z.core.$strict>>>;
                 lines: z.ZodDefault<z.ZodNullable<z.ZodObject<{
                     answer_link: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -7791,6 +8311,28 @@ const conversationTranscriptPage: z.ZodObject<{
             silent: "silent";
             merged: "merged";
         }>>>;
+        ask: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            answer_format: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            attempts: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+            interaction_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            sensitive: z.ZodBoolean;
+            timed_out_attempts: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodNumber>>>;
+        }, z.core.$strip>>>;
+        ask_reply: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            answer: z.ZodNullable<z.ZodUnknown>;
+            answered_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            medium_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            reply_to: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                message_id: z.ZodString;
+                status: z.ZodEnum<{
+                    found: "found";
+                    not_found: "not_found";
+                    sensitive: "sensitive";
+                    no_text: "no_text";
+                }>;
+                text: z.ZodNullable<z.ZodString>;
+            }, z.core.$strict>>>;
+        }, z.core.$strip>>>;
         attempts: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
         callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         caller_principal: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -7800,6 +8342,7 @@ const conversationTranscriptPage: z.ZodObject<{
         delivery_status: z.ZodDefault<z.ZodEnum<{
             superseded: "superseded";
             failed: "failed";
+            sending: "sending";
             silent: "silent";
             merged: "merged";
             accepted: "accepted";
@@ -7807,6 +8350,7 @@ const conversationTranscriptPage: z.ZodObject<{
             provisional: "provisional";
             delivered: "delivered";
             shed: "shed";
+            outcome_unknown: "outcome_unknown";
         }>>;
         door: z.ZodEnum<{
             channel: "channel";
@@ -7839,18 +8383,30 @@ const conversationTranscriptPage: z.ZodObject<{
             longitude: z.ZodNumber;
             name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         }, z.core.$strict>>>;
+        inbound_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        inbound_reply_to: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            message_id: z.ZodString;
+            status: z.ZodEnum<{
+                found: "found";
+                not_found: "not_found";
+                sensitive: "sensitive";
+                no_text: "no_text";
+            }>;
+            text: z.ZodNullable<z.ZodString>;
+        }, z.core.$strict>>>;
         inbound_text: z.ZodString;
         message_id: z.ZodString;
         operator_send: z.ZodDefault<z.ZodBoolean>;
         origin: z.ZodEnum<{
             operator: "operator";
             client: "client";
+            send: "send";
         }>;
         our_identity: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        outbound_message_ids: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
         pending_receipt: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
             superseded: "superseded";
             failed: "failed";
+            sending: "sending";
             silent: "silent";
             merged: "merged";
             accepted: "accepted";
@@ -7858,13 +8414,26 @@ const conversationTranscriptPage: z.ZodObject<{
             provisional: "provisional";
             delivered: "delivered";
             shed: "shed";
+            outcome_unknown: "outcome_unknown";
         }>>>;
         provider_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         route_missing: z.ZodDefault<z.ZodBoolean>;
         route_name: z.ZodString;
+        sends: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            chars: z.ZodNumber;
+            part: z.ZodNumber;
+            provider_message_ids: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>>>;
+        sent_by: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            channel: "channel";
+            ask: "ask";
+            notify: "notify";
+            notice: "notice";
+        }>>>;
         submitted_by: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         successor_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         thread_id: z.ZodString;
+        turn_message_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         updated_at: z.ZodNumber;
     }, z.core.$strip>>;
     next_page: z.ZodNullable<z.ZodNumber>;
@@ -9089,7 +9658,6 @@ function createApiClient(config: ApiConfig): {
             } | null;
             channel: null;
             door: "api";
-            error_reply_text: string | null;
             execution_key: string;
             execution_key_fingerprint: string;
             extras_expr: {
@@ -9109,6 +9677,20 @@ function createApiClient(config: ApiConfig): {
                 content?: string | undefined;
                 id?: string | undefined;
                 kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            reply_texts: {
+                error: string | null;
+                pairing_code: string | null;
+                pairing_code_invalid: string | null;
+                pairing_link_unavailable: string | null;
+                pairing_linked: string | null;
+                pairing_not_linked: string | null;
+                pairing_unlink_unavailable: string | null;
+                pairing_unlinked: string | null;
+                rejected_could_not_receive: string | null;
+                rejected_too_large: string | null;
+                rejected_unsupported_type: string | null;
+                slow_down: string | null;
             } | null;
             resume_expr: {
                 content?: string | undefined;
@@ -9133,7 +9715,6 @@ function createApiClient(config: ApiConfig): {
             } | null;
             channel: string;
             door: "channel";
-            error_reply_text: string | null;
             execution_key: string;
             execution_key_fingerprint: string;
             extras_expr: {
@@ -9153,6 +9734,20 @@ function createApiClient(config: ApiConfig): {
                 content?: string | undefined;
                 id?: string | undefined;
                 kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            reply_texts: {
+                error: string | null;
+                pairing_code: string | null;
+                pairing_code_invalid: string | null;
+                pairing_link_unavailable: string | null;
+                pairing_linked: string | null;
+                pairing_not_linked: string | null;
+                pairing_unlink_unavailable: string | null;
+                pairing_unlinked: string | null;
+                rejected_could_not_receive: string | null;
+                rejected_too_large: string | null;
+                rejected_unsupported_type: string | null;
+                slow_down: string | null;
             } | null;
             resume_expr: {
                 content?: string | undefined;
@@ -9184,7 +9779,6 @@ function createApiClient(config: ApiConfig): {
             } | null;
             channel: null;
             door: "api";
-            error_reply_text: string | null;
             execution_key: string;
             execution_key_fingerprint: string;
             extras_expr: {
@@ -9204,6 +9798,20 @@ function createApiClient(config: ApiConfig): {
                 content?: string | undefined;
                 id?: string | undefined;
                 kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            reply_texts: {
+                error: string | null;
+                pairing_code: string | null;
+                pairing_code_invalid: string | null;
+                pairing_link_unavailable: string | null;
+                pairing_linked: string | null;
+                pairing_not_linked: string | null;
+                pairing_unlink_unavailable: string | null;
+                pairing_unlinked: string | null;
+                rejected_could_not_receive: string | null;
+                rejected_too_large: string | null;
+                rejected_unsupported_type: string | null;
+                slow_down: string | null;
             } | null;
             resume_expr: {
                 content?: string | undefined;
@@ -9228,7 +9836,6 @@ function createApiClient(config: ApiConfig): {
             } | null;
             channel: string;
             door: "channel";
-            error_reply_text: string | null;
             execution_key: string;
             execution_key_fingerprint: string;
             extras_expr: {
@@ -9248,6 +9855,20 @@ function createApiClient(config: ApiConfig): {
                 content?: string | undefined;
                 id?: string | undefined;
                 kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            reply_texts: {
+                error: string | null;
+                pairing_code: string | null;
+                pairing_code_invalid: string | null;
+                pairing_link_unavailable: string | null;
+                pairing_linked: string | null;
+                pairing_not_linked: string | null;
+                pairing_unlink_unavailable: string | null;
+                pairing_unlinked: string | null;
+                rejected_could_not_receive: string | null;
+                rejected_too_large: string | null;
+                rejected_unsupported_type: string | null;
+                slow_down: string | null;
             } | null;
             resume_expr: {
                 content?: string | undefined;
@@ -9274,7 +9895,7 @@ function createApiClient(config: ApiConfig): {
         items: {
             client_address: string;
             last_activity_at: number;
-            last_delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
+            last_delivery_status: "superseded" | "failed" | "sending" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "outcome_unknown";
             message_count: number;
             thread_id: string;
         }[];
@@ -9384,7 +10005,6 @@ function createApiClient(config: ApiConfig): {
                             date_unavailable: string | null;
                             failed: string | null;
                             network_error: string | null;
-                            update_failed: string | null;
                         } | null;
                         submitted: {
                             heading: string | null;
@@ -9399,14 +10019,25 @@ function createApiClient(config: ApiConfig): {
                     form: {
                         back: string | null;
                         cancel: string | null;
+                        error_line: string | null;
                         fields: Record<string, {
+                            add_item: string | null;
                             choice_label: string | null;
+                            false_label: string | null;
                             invalid: string | null;
+                            item_label: string | null;
+                            length_hint: string | null;
+                            no_items: string | null;
+                            remove_item: string | null;
+                            required: string | null;
+                            true_label: string | null;
                         }>;
                         open: string | null;
                         review_empty: string | null;
+                        step_progress: string | null;
                         submit: string | null;
                         title: string | null;
+                        update_failed: string | null;
                     } | null;
                     lines: {
                         answer_link: string | null;
@@ -9432,13 +10063,30 @@ function createApiClient(config: ApiConfig): {
                 } | null;
             }[] | null;
             answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
+            ask: {
+                answer_format: string | null;
+                attempts: number | null;
+                interaction_id: string | null;
+                sensitive: boolean;
+                timed_out_attempts: number[] | null;
+            } | null;
+            ask_reply: {
+                answer: unknown;
+                answered_at: string | null;
+                medium_message_id: string | null;
+                reply_to: {
+                    message_id: string;
+                    status: "found" | "not_found" | "sensitive" | "no_text";
+                    text: string | null;
+                } | null;
+            } | null;
             attempts: number | null;
             callback_url: string | null;
             caller_principal: string | null;
             channel: string | null;
             client_address: string;
             created_at: number;
-            delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
+            delivery_status: "superseded" | "failed" | "sending" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "outcome_unknown";
             door: "channel" | "api";
             error: string | null;
             inbound_attachments: {
@@ -9458,19 +10106,31 @@ function createApiClient(config: ApiConfig): {
                 longitude: number;
                 name: string | null;
             } | null;
+            inbound_message_id: string | null;
+            inbound_reply_to: {
+                message_id: string;
+                status: "found" | "not_found" | "sensitive" | "no_text";
+                text: string | null;
+            } | null;
             inbound_text: string;
             message_id: string;
             operator_send: boolean;
-            origin: "operator" | "client";
+            origin: "operator" | "client" | "send";
             our_identity: string | null;
-            outbound_message_ids: string[] | null;
-            pending_receipt: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | null;
+            pending_receipt: "superseded" | "failed" | "sending" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "outcome_unknown" | null;
             provider_message_id: string | null;
             route_missing: boolean;
             route_name: string;
+            sends: {
+                chars: number;
+                part: number;
+                provider_message_ids: string[];
+            }[];
+            sent_by: "channel" | "ask" | "notify" | "notice" | null;
             submitted_by: string | null;
             successor_id: string | null;
             thread_id: string;
+            turn_message_id: string | null;
             updated_at: number;
         }[];
         next_page: number | null;
@@ -9581,7 +10241,6 @@ function createApiClient(config: ApiConfig): {
                             date_unavailable: string | null;
                             failed: string | null;
                             network_error: string | null;
-                            update_failed: string | null;
                         } | null;
                         submitted: {
                             heading: string | null;
@@ -9596,14 +10255,25 @@ function createApiClient(config: ApiConfig): {
                     form: {
                         back: string | null;
                         cancel: string | null;
+                        error_line: string | null;
                         fields: Record<string, {
+                            add_item: string | null;
                             choice_label: string | null;
+                            false_label: string | null;
                             invalid: string | null;
+                            item_label: string | null;
+                            length_hint: string | null;
+                            no_items: string | null;
+                            remove_item: string | null;
+                            required: string | null;
+                            true_label: string | null;
                         }>;
                         open: string | null;
                         review_empty: string | null;
+                        step_progress: string | null;
                         submit: string | null;
                         title: string | null;
+                        update_failed: string | null;
                     } | null;
                     lines: {
                         answer_link: string | null;
@@ -9629,13 +10299,30 @@ function createApiClient(config: ApiConfig): {
                 } | null;
             }[] | null;
             answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
+            ask: {
+                answer_format: string | null;
+                attempts: number | null;
+                interaction_id: string | null;
+                sensitive: boolean;
+                timed_out_attempts: number[] | null;
+            } | null;
+            ask_reply: {
+                answer: unknown;
+                answered_at: string | null;
+                medium_message_id: string | null;
+                reply_to: {
+                    message_id: string;
+                    status: "found" | "not_found" | "sensitive" | "no_text";
+                    text: string | null;
+                } | null;
+            } | null;
             attempts: number | null;
             callback_url: string | null;
             caller_principal: string | null;
             channel: string | null;
             client_address: string;
             created_at: number;
-            delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
+            delivery_status: "superseded" | "failed" | "sending" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "outcome_unknown";
             door: "channel" | "api";
             error: string | null;
             inbound_attachments: {
@@ -9655,19 +10342,31 @@ function createApiClient(config: ApiConfig): {
                 longitude: number;
                 name: string | null;
             } | null;
+            inbound_message_id: string | null;
+            inbound_reply_to: {
+                message_id: string;
+                status: "found" | "not_found" | "sensitive" | "no_text";
+                text: string | null;
+            } | null;
             inbound_text: string;
             message_id: string;
             operator_send: boolean;
-            origin: "operator" | "client";
+            origin: "operator" | "client" | "send";
             our_identity: string | null;
-            outbound_message_ids: string[] | null;
-            pending_receipt: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | null;
+            pending_receipt: "superseded" | "failed" | "sending" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "outcome_unknown" | null;
             provider_message_id: string | null;
             route_missing: boolean;
             route_name: string;
+            sends: {
+                chars: number;
+                part: number;
+                provider_message_ids: string[];
+            }[];
+            sent_by: "channel" | "ask" | "notify" | "notice" | null;
             submitted_by: string | null;
             successor_id: string | null;
             thread_id: string;
+            turn_message_id: string | null;
             updated_at: number;
         }[];
         next_page: number | null;
@@ -9949,7 +10648,6 @@ function createApiClient(config: ApiConfig): {
                             date_unavailable: string | null;
                             failed: string | null;
                             network_error: string | null;
-                            update_failed: string | null;
                         } | null;
                         submitted: {
                             heading: string | null;
@@ -9964,14 +10662,25 @@ function createApiClient(config: ApiConfig): {
                     form: {
                         back: string | null;
                         cancel: string | null;
+                        error_line: string | null;
                         fields: Record<string, {
+                            add_item: string | null;
                             choice_label: string | null;
+                            false_label: string | null;
                             invalid: string | null;
+                            item_label: string | null;
+                            length_hint: string | null;
+                            no_items: string | null;
+                            remove_item: string | null;
+                            required: string | null;
+                            true_label: string | null;
                         }>;
                         open: string | null;
                         review_empty: string | null;
+                        step_progress: string | null;
                         submit: string | null;
                         title: string | null;
+                        update_failed: string | null;
                     } | null;
                     lines: {
                         answer_link: string | null;
@@ -9997,13 +10706,30 @@ function createApiClient(config: ApiConfig): {
                 } | null;
             }[] | null;
             answer_status: "error" | "superseded" | "answered" | "silent" | "merged" | null;
+            ask: {
+                answer_format: string | null;
+                attempts: number | null;
+                interaction_id: string | null;
+                sensitive: boolean;
+                timed_out_attempts: number[] | null;
+            } | null;
+            ask_reply: {
+                answer: unknown;
+                answered_at: string | null;
+                medium_message_id: string | null;
+                reply_to: {
+                    message_id: string;
+                    status: "found" | "not_found" | "sensitive" | "no_text";
+                    text: string | null;
+                } | null;
+            } | null;
             attempts: number | null;
             callback_url: string | null;
             caller_principal: string | null;
             channel: string | null;
             client_address: string;
             created_at: number;
-            delivery_status: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed";
+            delivery_status: "superseded" | "failed" | "sending" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "outcome_unknown";
             door: "channel" | "api";
             error: string | null;
             inbound_attachments: {
@@ -10023,19 +10749,31 @@ function createApiClient(config: ApiConfig): {
                 longitude: number;
                 name: string | null;
             } | null;
+            inbound_message_id: string | null;
+            inbound_reply_to: {
+                message_id: string;
+                status: "found" | "not_found" | "sensitive" | "no_text";
+                text: string | null;
+            } | null;
             inbound_text: string;
             message_id: string;
             operator_send: boolean;
-            origin: "operator" | "client";
+            origin: "operator" | "client" | "send";
             our_identity: string | null;
-            outbound_message_ids: string[] | null;
-            pending_receipt: "superseded" | "failed" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | null;
+            pending_receipt: "superseded" | "failed" | "sending" | "silent" | "merged" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "outcome_unknown" | null;
             provider_message_id: string | null;
             route_missing: boolean;
             route_name: string;
+            sends: {
+                chars: number;
+                part: number;
+                provider_message_ids: string[];
+            }[];
+            sent_by: "channel" | "ask" | "notify" | "notice" | null;
             submitted_by: string | null;
             successor_id: string | null;
             thread_id: string;
+            turn_message_id: string | null;
             updated_at: number;
         }[];
         total: number;
@@ -10048,6 +10786,7 @@ function createApiClient(config: ApiConfig): {
         thread_id: string;
     }>;
     readonly deleteConversationPerson: (personId: string) => Promise<{
+        absorbed_person_ids: string[];
         erased: boolean;
         person_id: string;
         removed: number;
@@ -12017,7 +12756,7 @@ function createApiClient(config: ApiConfig): {
             last_error: string | null;
             run_id: string | null;
             states: string[];
-            status: "running" | "failed" | "calls" | "pending";
+            status: "running" | "failed" | "pending" | "calls";
             subjects: {
                 state: string;
                 subject: {
@@ -12034,7 +12773,7 @@ function createApiClient(config: ApiConfig): {
     readonly retryPendingSave: (id: string) => Promise<{
         id: string;
         last_error: string | null;
-        status: "running" | "failed" | "applied" | "calls" | "pending";
+        status: "running" | "failed" | "applied" | "pending" | "calls";
     }>;
     readonly discardPendingSave: (id: string) => Promise<{
         discarded: string;
@@ -12378,7 +13117,7 @@ function createApiClient(config: ApiConfig): {
             group_id: string | null;
             id: string;
             media: Record<string, unknown>[] | null;
-            on_expiry: "kill" | "resume" | null;
+            on_expiry: "resume" | "kill" | null;
             payload: Record<string, unknown> | null;
             question: string | null;
             recipient: string | null;
@@ -12503,7 +13242,7 @@ function createApiClient(config: ApiConfig): {
                 group_id: string | null;
                 id: string;
                 media: Record<string, unknown>[] | null;
-                on_expiry: "kill" | "resume" | null;
+                on_expiry: "resume" | "kill" | null;
                 payload: Record<string, unknown> | null;
                 question: string | null;
                 recipient: string | null;
@@ -13299,6 +14038,14 @@ type FieldWording = z.infer<typeof fieldWording>;
 const fieldWording: z.ZodObject<{
     choice_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     invalid: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    required: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    true_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    false_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    length_hint: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    add_item: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    remove_item: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    item_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    no_items: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>;
 
 // @public
@@ -13763,7 +14510,6 @@ type FormPageWording = z.infer<typeof formPageWording>;
 const formPageWording: z.ZodObject<{
     failed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     network_error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    update_failed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     choose_one: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     date_unavailable: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>;
@@ -13805,9 +14551,20 @@ const formWording: z.ZodObject<{
     back: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     submit: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     review_empty: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    error_line: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    update_failed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    step_progress: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     fields: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
         choice_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         invalid: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        required: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        true_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        false_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        length_hint: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        add_item: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        remove_item: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        item_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        no_items: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     }, z.core.$strip>>>>;
 }, z.core.$strip>;
 
@@ -16313,8 +17070,8 @@ const parkedCallerAsk: z.ZodObject<{
     id: z.ZodString;
     media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>>;
     on_expiry: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
-        kill: "kill";
         resume: "resume";
+        kill: "kill";
     }>>>;
     payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
     question: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -16466,8 +17223,8 @@ const pendingSave: z.ZodObject<{
     status: z.ZodEnum<{
         running: "running";
         failed: "failed";
-        calls: "calls";
         pending: "pending";
+        calls: "calls";
     }>;
     subjects: z.ZodArray<z.ZodObject<{
         state: z.ZodString;
@@ -16499,8 +17256,8 @@ const pendingSaveRetried: z.ZodObject<{
         running: "running";
         failed: "failed";
         applied: "applied";
-        calls: "calls";
         pending: "pending";
+        calls: "calls";
     }>;
 }, z.core.$strip>;
 
@@ -16529,8 +17286,8 @@ const pendingSavesPage: z.ZodObject<{
         status: z.ZodEnum<{
             running: "running";
             failed: "failed";
-            calls: "calls";
             pending: "pending";
+            calls: "calls";
         }>;
         subjects: z.ZodArray<z.ZodObject<{
             state: z.ZodString;
@@ -16556,8 +17313,8 @@ type PendingSaveStatus = z.infer<typeof pendingSaveStatus>;
 const pendingSaveStatus: z.ZodEnum<{
     running: "running";
     failed: "failed";
-    calls: "calls";
     pending: "pending";
+    calls: "calls";
 }>;
 
 // @public
@@ -18260,8 +19017,8 @@ const runAnswer: z.ZodDiscriminatedUnion<[z.ZodObject<{
         id: z.ZodString;
         media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>>;
         on_expiry: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
-            kill: "kill";
             resume: "resume";
+            kill: "kill";
         }>>>;
         payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
         question: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -18434,8 +19191,8 @@ const runToolResult: z.ZodDiscriminatedUnion<[z.ZodObject<{
         id: z.ZodString;
         media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>>;
         on_expiry: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
-            kill: "kill";
             resume: "resume";
+            kill: "kill";
         }>>>;
         payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
         question: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -19833,18 +20590,6 @@ const servedDocumentsJson: {
                         readonly title: "Door";
                         readonly type: "string";
                     };
-                    readonly error_reply_text: {
-                        readonly anyOf: readonly [{
-                            readonly maxLength: 2000;
-                            readonly minLength: 1;
-                            readonly pattern: "\\S";
-                            readonly type: "string";
-                        }, {
-                            readonly type: "null";
-                        }];
-                        readonly default: null;
-                        readonly title: "Error Reply Text";
-                    };
                     readonly execution_key: {
                         readonly description: "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.";
                         readonly minLength: 1;
@@ -19925,14 +20670,25 @@ const servedDocumentsJson: {
                             readonly language: "jq";
                             readonly returns: "the reply: null (silent), a string, or a list of answer parts";
                             readonly variables: readonly [{
-                                readonly blurb: "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out";
+                                readonly blurb: "the turn this reply answers ({id, inbound, subject, reply_window}); reply_window {state, closes_at} is read when the turn starts, or at delivery for a late reply: open until closes_at, closed, or none; null when an out-of-band delivery's originating record has aged out";
                                 readonly name: "turn";
                                 readonly sample: {
                                     readonly id: "m-1";
                                     readonly inbound: {
                                         readonly id: "i-1";
                                         readonly kind: "message";
-                                        readonly source: "api";
+                                        readonly source: "chat-line";
+                                    };
+                                    readonly reply_window: {
+                                        readonly closes_at: "2026-01-02T09:30:00Z";
+                                        readonly state: "open";
+                                    };
+                                    readonly subject: {
+                                        readonly locale: null;
+                                        readonly person: null;
+                                        readonly target_kind: "agent";
+                                        readonly target_name: "assistant";
+                                        readonly thread: "t-1";
                                     };
                                 };
                             }, {
@@ -19957,6 +20713,14 @@ const servedDocumentsJson: {
                                 }];
                             }];
                         };
+                    };
+                    readonly reply_texts: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/ReplyTexts";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
                     };
                     readonly resume_expr: {
                         readonly anyOf: readonly [{
@@ -20039,13 +20803,16 @@ const servedDocumentsJson: {
                                 readonly gloss: "a geographic point the participant shared, present only when the inbound carried one";
                                 readonly name: "location";
                             }, {
-                                readonly gloss: "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)";
+                                readonly gloss: "the earlier message this one replies to, {message_id, status, text}; present only when the inbound quoted one";
+                                readonly name: "reply_to";
+                            }, {
+                                readonly gloss: "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location/reply_to when that message carried them)";
                                 readonly name: "messages";
                             }, {
                                 readonly gloss: "overlap deliver=all: messages dropped in favour of this turn, in the same shape; present only when non-empty";
                                 readonly name: "superseded";
                             }, {
-                                readonly gloss: "the turn ids: {id, inbound: {id, kind, source}}";
+                                readonly gloss: "the turn: {id, inbound: {id, kind, source}, subject: {target_kind, target_name, person, thread, locale}, reply_window: {state, closes_at}}; reply_window.state is open (a free-form reply is allowed until closes_at), closed, or none (no window on this channel or address)";
                                 readonly name: "turn";
                             }, {
                                 readonly gloss: "an event turn's structured payload {id, kind, payload}; absent on a message turn";
@@ -20144,18 +20911,6 @@ const servedDocumentsJson: {
                         readonly title: "Door";
                         readonly type: "string";
                     };
-                    readonly error_reply_text: {
-                        readonly anyOf: readonly [{
-                            readonly maxLength: 2000;
-                            readonly minLength: 1;
-                            readonly pattern: "\\S";
-                            readonly type: "string";
-                        }, {
-                            readonly type: "null";
-                        }];
-                        readonly default: null;
-                        readonly title: "Error Reply Text";
-                    };
                     readonly execution_key: {
                         readonly description: "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.";
                         readonly minLength: 1;
@@ -20236,14 +20991,25 @@ const servedDocumentsJson: {
                             readonly language: "jq";
                             readonly returns: "the reply: null (silent), a string, or a list of answer parts";
                             readonly variables: readonly [{
-                                readonly blurb: "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out";
+                                readonly blurb: "the turn this reply answers ({id, inbound, subject, reply_window}); reply_window {state, closes_at} is read when the turn starts, or at delivery for a late reply: open until closes_at, closed, or none; null when an out-of-band delivery's originating record has aged out";
                                 readonly name: "turn";
                                 readonly sample: {
                                     readonly id: "m-1";
                                     readonly inbound: {
                                         readonly id: "i-1";
                                         readonly kind: "message";
-                                        readonly source: "api";
+                                        readonly source: "chat-line";
+                                    };
+                                    readonly reply_window: {
+                                        readonly closes_at: "2026-01-02T09:30:00Z";
+                                        readonly state: "open";
+                                    };
+                                    readonly subject: {
+                                        readonly locale: null;
+                                        readonly person: null;
+                                        readonly target_kind: "agent";
+                                        readonly target_name: "assistant";
+                                        readonly thread: "t-1";
                                     };
                                 };
                             }, {
@@ -20268,6 +21034,14 @@ const servedDocumentsJson: {
                                 }];
                             }];
                         };
+                    };
+                    readonly reply_texts: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/ReplyTexts";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
                     };
                     readonly resume_expr: {
                         readonly anyOf: readonly [{
@@ -20350,13 +21124,16 @@ const servedDocumentsJson: {
                                 readonly gloss: "a geographic point the participant shared, present only when the inbound carried one";
                                 readonly name: "location";
                             }, {
-                                readonly gloss: "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)";
+                                readonly gloss: "the earlier message this one replies to, {message_id, status, text}; present only when the inbound quoted one";
+                                readonly name: "reply_to";
+                            }, {
+                                readonly gloss: "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location/reply_to when that message carried them)";
                                 readonly name: "messages";
                             }, {
                                 readonly gloss: "overlap deliver=all: messages dropped in favour of this turn, in the same shape; present only when non-empty";
                                 readonly name: "superseded";
                             }, {
-                                readonly gloss: "the turn ids: {id, inbound: {id, kind, source}}";
+                                readonly gloss: "the turn: {id, inbound: {id, kind, source}, subject: {target_kind, target_name, person, thread, locale}, reply_window: {state, closes_at}}; reply_window.state is open (a free-form reply is allowed until closes_at), closed, or none (no window on this channel or address)";
                                 readonly name: "turn";
                             }, {
                                 readonly gloss: "an event turn's structured payload {id, kind, payload}; absent on a message turn";
@@ -20430,6 +21207,158 @@ const servedDocumentsJson: {
                     };
                 };
                 readonly title: "OverlapPolicy";
+                readonly type: "object";
+            };
+            readonly ReplyTexts: {
+                readonly additionalProperties: false;
+                readonly description: "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` are the notices for an inbound message the channel cannot\nbridge, a file over the cap, and a file the channel could not fetch. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.";
+                readonly properties: {
+                    readonly error: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Error";
+                    };
+                    readonly pairing_code: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Pairing Code";
+                    };
+                    readonly pairing_code_invalid: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Pairing Code Invalid";
+                    };
+                    readonly pairing_link_unavailable: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Pairing Link Unavailable";
+                    };
+                    readonly pairing_linked: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Pairing Linked";
+                    };
+                    readonly pairing_not_linked: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Pairing Not Linked";
+                    };
+                    readonly pairing_unlink_unavailable: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Pairing Unlink Unavailable";
+                    };
+                    readonly pairing_unlinked: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Pairing Unlinked";
+                    };
+                    readonly rejected_could_not_receive: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Rejected Could Not Receive";
+                    };
+                    readonly rejected_too_large: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Rejected Too Large";
+                    };
+                    readonly rejected_unsupported_type: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Rejected Unsupported Type";
+                    };
+                    readonly slow_down: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Slow Down";
+                    };
+                };
+                readonly title: "ReplyTexts";
                 readonly type: "object";
             };
             readonly TemplatedText: {
@@ -20534,18 +21463,6 @@ const servedDocumentsJson: {
                         readonly title: "Door";
                         readonly type: "string";
                     };
-                    readonly error_reply_text: {
-                        readonly anyOf: readonly [{
-                            readonly maxLength: 2000;
-                            readonly minLength: 1;
-                            readonly pattern: "\\S";
-                            readonly type: "string";
-                        }, {
-                            readonly type: "null";
-                        }];
-                        readonly default: null;
-                        readonly title: "Error Reply Text";
-                    };
                     readonly execution_key: {
                         readonly description: "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.";
                         readonly minLength: 1;
@@ -20620,14 +21537,25 @@ const servedDocumentsJson: {
                             readonly language: "jq";
                             readonly returns: "the reply: null (silent), a string, or a list of answer parts";
                             readonly variables: readonly [{
-                                readonly blurb: "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out";
+                                readonly blurb: "the turn this reply answers ({id, inbound, subject, reply_window}); reply_window {state, closes_at} is read when the turn starts, or at delivery for a late reply: open until closes_at, closed, or none; null when an out-of-band delivery's originating record has aged out";
                                 readonly name: "turn";
                                 readonly sample: {
                                     readonly id: "m-1";
                                     readonly inbound: {
                                         readonly id: "i-1";
                                         readonly kind: "message";
-                                        readonly source: "api";
+                                        readonly source: "chat-line";
+                                    };
+                                    readonly reply_window: {
+                                        readonly closes_at: "2026-01-02T09:30:00Z";
+                                        readonly state: "open";
+                                    };
+                                    readonly subject: {
+                                        readonly locale: null;
+                                        readonly person: null;
+                                        readonly target_kind: "agent";
+                                        readonly target_name: "assistant";
+                                        readonly thread: "t-1";
                                     };
                                 };
                             }, {
@@ -20652,6 +21580,14 @@ const servedDocumentsJson: {
                                 }];
                             }];
                         };
+                    };
+                    readonly reply_texts: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/ReplyTexts";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
                     };
                     readonly resume_expr: {
                         readonly anyOf: readonly [{
@@ -20734,13 +21670,16 @@ const servedDocumentsJson: {
                                 readonly gloss: "a geographic point the participant shared, present only when the inbound carried one";
                                 readonly name: "location";
                             }, {
-                                readonly gloss: "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)";
+                                readonly gloss: "the earlier message this one replies to, {message_id, status, text}; present only when the inbound quoted one";
+                                readonly name: "reply_to";
+                            }, {
+                                readonly gloss: "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location/reply_to when that message carried them)";
                                 readonly name: "messages";
                             }, {
                                 readonly gloss: "overlap deliver=all: messages dropped in favour of this turn, in the same shape; present only when non-empty";
                                 readonly name: "superseded";
                             }, {
-                                readonly gloss: "the turn ids: {id, inbound: {id, kind, source}}";
+                                readonly gloss: "the turn: {id, inbound: {id, kind, source}, subject: {target_kind, target_name, person, thread, locale}, reply_window: {state, closes_at}}; reply_window.state is open (a free-form reply is allowed until closes_at), closed, or none (no window on this channel or address)";
                                 readonly name: "turn";
                             }, {
                                 readonly gloss: "an event turn's structured payload {id, kind, payload}; absent on a message turn";
@@ -20834,18 +21773,6 @@ const servedDocumentsJson: {
                         readonly title: "Door";
                         readonly type: "string";
                     };
-                    readonly error_reply_text: {
-                        readonly anyOf: readonly [{
-                            readonly maxLength: 2000;
-                            readonly minLength: 1;
-                            readonly pattern: "\\S";
-                            readonly type: "string";
-                        }, {
-                            readonly type: "null";
-                        }];
-                        readonly default: null;
-                        readonly title: "Error Reply Text";
-                    };
                     readonly execution_key: {
                         readonly description: "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.";
                         readonly minLength: 1;
@@ -20920,14 +21847,25 @@ const servedDocumentsJson: {
                             readonly language: "jq";
                             readonly returns: "the reply: null (silent), a string, or a list of answer parts";
                             readonly variables: readonly [{
-                                readonly blurb: "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out";
+                                readonly blurb: "the turn this reply answers ({id, inbound, subject, reply_window}); reply_window {state, closes_at} is read when the turn starts, or at delivery for a late reply: open until closes_at, closed, or none; null when an out-of-band delivery's originating record has aged out";
                                 readonly name: "turn";
                                 readonly sample: {
                                     readonly id: "m-1";
                                     readonly inbound: {
                                         readonly id: "i-1";
                                         readonly kind: "message";
-                                        readonly source: "api";
+                                        readonly source: "chat-line";
+                                    };
+                                    readonly reply_window: {
+                                        readonly closes_at: "2026-01-02T09:30:00Z";
+                                        readonly state: "open";
+                                    };
+                                    readonly subject: {
+                                        readonly locale: null;
+                                        readonly person: null;
+                                        readonly target_kind: "agent";
+                                        readonly target_name: "assistant";
+                                        readonly thread: "t-1";
                                     };
                                 };
                             }, {
@@ -20952,6 +21890,14 @@ const servedDocumentsJson: {
                                 }];
                             }];
                         };
+                    };
+                    readonly reply_texts: {
+                        readonly anyOf: readonly [{
+                            readonly $ref: "#/$defs/ReplyTexts";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
                     };
                     readonly resume_expr: {
                         readonly anyOf: readonly [{
@@ -21034,13 +21980,16 @@ const servedDocumentsJson: {
                                 readonly gloss: "a geographic point the participant shared, present only when the inbound carried one";
                                 readonly name: "location";
                             }, {
-                                readonly gloss: "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)";
+                                readonly gloss: "the earlier message this one replies to, {message_id, status, text}; present only when the inbound quoted one";
+                                readonly name: "reply_to";
+                            }, {
+                                readonly gloss: "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location/reply_to when that message carried them)";
                                 readonly name: "messages";
                             }, {
                                 readonly gloss: "overlap deliver=all: messages dropped in favour of this turn, in the same shape; present only when non-empty";
                                 readonly name: "superseded";
                             }, {
-                                readonly gloss: "the turn ids: {id, inbound: {id, kind, source}}";
+                                readonly gloss: "the turn: {id, inbound: {id, kind, source}, subject: {target_kind, target_name, person, thread, locale}, reply_window: {state, closes_at}}; reply_window.state is open (a free-form reply is allowed until closes_at), closed, or none (no window on this channel or address)";
                                 readonly name: "turn";
                             }, {
                                 readonly gloss: "an event turn's structured payload {id, kind, payload}; absent on a message turn";
@@ -21114,6 +22063,158 @@ const servedDocumentsJson: {
                     };
                 };
                 readonly title: "OverlapPolicy";
+                readonly type: "object";
+            };
+            readonly ReplyTexts: {
+                readonly additionalProperties: false;
+                readonly description: "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` are the notices for an inbound message the channel cannot\nbridge, a file over the cap, and a file the channel could not fetch. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.";
+                readonly properties: {
+                    readonly error: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Error";
+                    };
+                    readonly pairing_code: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Pairing Code";
+                    };
+                    readonly pairing_code_invalid: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Pairing Code Invalid";
+                    };
+                    readonly pairing_link_unavailable: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Pairing Link Unavailable";
+                    };
+                    readonly pairing_linked: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Pairing Linked";
+                    };
+                    readonly pairing_not_linked: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Pairing Not Linked";
+                    };
+                    readonly pairing_unlink_unavailable: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Pairing Unlink Unavailable";
+                    };
+                    readonly pairing_unlinked: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Pairing Unlinked";
+                    };
+                    readonly rejected_could_not_receive: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Rejected Could Not Receive";
+                    };
+                    readonly rejected_too_large: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Rejected Too Large";
+                    };
+                    readonly rejected_unsupported_type: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Rejected Unsupported Type";
+                    };
+                    readonly slow_down: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Slow Down";
+                    };
+                };
+                readonly title: "ReplyTexts";
                 readonly type: "object";
             };
             readonly TemplatedText: {
@@ -27769,8 +28870,8 @@ const toolRunRecord: z.ZodDiscriminatedUnion<[z.ZodObject<{
             id: z.ZodString;
             media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>>;
             on_expiry: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
-                kill: "kill";
                 resume: "resume";
+                kill: "kill";
             }>>>;
             payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
             question: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -28292,8 +29393,8 @@ const visitOutcome: z.ZodObject<{
         id: z.ZodString;
         media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>>;
         on_expiry: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
-            kill: "kill";
             resume: "resume";
+            kill: "kill";
         }>>>;
         payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
         question: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -28325,9 +29426,20 @@ const wording: z.ZodObject<{
         back: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         submit: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         review_empty: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        error_line: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        update_failed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        step_progress: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         fields: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
             choice_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
             invalid: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            required: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            true_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            false_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            length_hint: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            add_item: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            remove_item: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            item_label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            no_items: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         }, z.core.$strip>>>>;
     }, z.core.$strip>>>;
     choice: z.ZodOptional<z.ZodNullable<z.ZodObject<{
@@ -28370,7 +29482,6 @@ const wording: z.ZodObject<{
         form: z.ZodOptional<z.ZodNullable<z.ZodObject<{
             failed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
             network_error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-            update_failed: z.ZodOptional<z.ZodNullable<z.ZodString>>;
             choose_one: z.ZodOptional<z.ZodNullable<z.ZodString>>;
             date_unavailable: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         }, z.core.$strip>>>;

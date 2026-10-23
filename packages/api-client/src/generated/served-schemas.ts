@@ -15,19 +15,22 @@ export type AccessPolicy = z.infer<typeof accessPolicy>;
 export const overlapPolicy = z.object({ "deliver": z.enum(["one","all"]).default("one"), "running": z.enum(["continue","cancel"]).default("continue"), "settle_seconds": z.number().int().gte(0).lte(30).default(0) });
 export type OverlapPolicy = z.infer<typeof overlapPolicy>;
 
-export const apiConversationRoute = z.object({ "callback_secret": z.string().nullable().default(null), "callback_url": z.string().regex(new RegExp("^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?#]|$)")).nullable().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.null().default(null), "door": z.literal("api"), "error_reply_text": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "execution_key": z.string().min(1), "execution_key_fingerprint": z.string().min(1), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.null().default(null), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
+export const replyTexts = z.object({ "error": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_code": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_code_invalid": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_link_unavailable": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_linked": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_not_linked": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_unlink_unavailable": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_unlinked": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_could_not_receive": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_too_large": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_unsupported_type": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "slow_down": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null) }).strict();
+export type ReplyTexts = z.infer<typeof replyTexts>;
+
+export const apiConversationRoute = z.object({ "callback_secret": z.string().nullable().default(null), "callback_url": z.string().regex(new RegExp("^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?#]|$)")).nullable().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.null().default(null), "door": z.literal("api"), "execution_key": z.string().min(1), "execution_key_fingerprint": z.string().min(1), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.null().default(null), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "reply_texts": replyTexts.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
 export type ApiConversationRoute = z.infer<typeof apiConversationRoute>;
 
-export const apiConversationRouteCreate = z.object({ "callback_url": z.string().regex(new RegExp("^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?#]|$)")).nullable().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.null().default(null), "door": z.literal("api"), "error_reply_text": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "execution_key": z.string().min(1), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.null().default(null), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
+export const apiConversationRouteCreate = z.object({ "callback_url": z.string().regex(new RegExp("^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?#]|$)")).nullable().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.null().default(null), "door": z.literal("api"), "execution_key": z.string().min(1), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.null().default(null), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "reply_texts": replyTexts.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
 export type ApiConversationRouteCreate = z.infer<typeof apiConversationRouteCreate>;
 
 export const callbackSchema = z.object({ "carried_kwargs": z.record(z.string(), z.unknown()).default({}), "condition": templatedText.nullable().default(null), "expr": templatedText.nullable().default(null), "tool": z.string().default("") });
 export type CallbackSchema = z.infer<typeof callbackSchema>;
 
-export const channelConversationRoute = z.object({ "callback_secret": z.null().default(null), "callback_url": z.null().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.string().regex(new RegExp("^[^:]*[^:\\s][^:]*$")), "door": z.literal("channel"), "error_reply_text": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "execution_key": z.string().min(1), "execution_key_fingerprint": z.string().min(1), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.string().regex(new RegExp("\\S")), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
+export const channelConversationRoute = z.object({ "callback_secret": z.null().default(null), "callback_url": z.null().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.string().regex(new RegExp("^[^:]*[^:\\s][^:]*$")), "door": z.literal("channel"), "execution_key": z.string().min(1), "execution_key_fingerprint": z.string().min(1), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.string().regex(new RegExp("\\S")), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "reply_texts": replyTexts.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
 export type ChannelConversationRoute = z.infer<typeof channelConversationRoute>;
 
-export const channelConversationRouteCreate = z.object({ "callback_url": z.null().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.string().regex(new RegExp("^[^:]*[^:\\s][^:]*$")), "door": z.literal("channel"), "error_reply_text": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "execution_key": z.string().min(1), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.string().regex(new RegExp("\\S")), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
+export const channelConversationRouteCreate = z.object({ "callback_url": z.null().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.string().regex(new RegExp("^[^:]*[^:\\s][^:]*$")), "door": z.literal("channel"), "execution_key": z.string().min(1), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.string().regex(new RegExp("\\S")), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "reply_texts": replyTexts.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
 export type ChannelConversationRouteCreate = z.infer<typeof channelConversationRouteCreate>;
 
 export const channelTemplate = z.object({ "language": z.string(), "name": z.string(), "parameters": z.record(z.string(), z.unknown()).nullable().default(null) }).strict();
@@ -563,21 +566,6 @@ export const servedDocumentsJson = {
             "title": "Door",
             "type": "string"
           },
-          "error_reply_text": {
-            "anyOf": [
-              {
-                "maxLength": 2000,
-                "minLength": 1,
-                "pattern": "\\S",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Error Reply Text"
-          },
           "execution_key": {
             "description": "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.",
             "minLength": 1,
@@ -677,14 +665,25 @@ export const servedDocumentsJson = {
               "returns": "the reply: null (silent), a string, or a list of answer parts",
               "variables": [
                 {
-                  "blurb": "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out",
+                  "blurb": "the turn this reply answers ({id, inbound, subject, reply_window}); reply_window {state, closes_at} is read when the turn starts, or at delivery for a late reply: open until closes_at, closed, or none; null when an out-of-band delivery's originating record has aged out",
                   "name": "turn",
                   "sample": {
                     "id": "m-1",
                     "inbound": {
                       "id": "i-1",
                       "kind": "message",
-                      "source": "api"
+                      "source": "chat-line"
+                    },
+                    "reply_window": {
+                      "closes_at": "2026-01-02T09:30:00Z",
+                      "state": "open"
+                    },
+                    "subject": {
+                      "locale": null,
+                      "person": null,
+                      "target_kind": "agent",
+                      "target_name": "assistant",
+                      "thread": "t-1"
                     }
                   }
                 },
@@ -718,6 +717,17 @@ export const servedDocumentsJson = {
                 }
               ]
             }
+          },
+          "reply_texts": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ReplyTexts"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           },
           "resume_expr": {
             "anyOf": [
@@ -826,7 +836,11 @@ export const servedDocumentsJson = {
                   "name": "location"
                 },
                 {
-                  "gloss": "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)",
+                  "gloss": "the earlier message this one replies to, {message_id, status, text}; present only when the inbound quoted one",
+                  "name": "reply_to"
+                },
+                {
+                  "gloss": "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location/reply_to when that message carried them)",
                   "name": "messages"
                 },
                 {
@@ -834,7 +848,7 @@ export const servedDocumentsJson = {
                   "name": "superseded"
                 },
                 {
-                  "gloss": "the turn ids: {id, inbound: {id, kind, source}}",
+                  "gloss": "the turn: {id, inbound: {id, kind, source}, subject: {target_kind, target_name, person, thread, locale}, reply_window: {state, closes_at}}; reply_window.state is open (a free-form reply is allowed until closes_at), closed, or none (no window on this channel or address)",
                   "name": "turn"
                 },
                 {
@@ -963,21 +977,6 @@ export const servedDocumentsJson = {
             "title": "Door",
             "type": "string"
           },
-          "error_reply_text": {
-            "anyOf": [
-              {
-                "maxLength": 2000,
-                "minLength": 1,
-                "pattern": "\\S",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Error Reply Text"
-          },
           "execution_key": {
             "description": "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.",
             "minLength": 1,
@@ -1077,14 +1076,25 @@ export const servedDocumentsJson = {
               "returns": "the reply: null (silent), a string, or a list of answer parts",
               "variables": [
                 {
-                  "blurb": "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out",
+                  "blurb": "the turn this reply answers ({id, inbound, subject, reply_window}); reply_window {state, closes_at} is read when the turn starts, or at delivery for a late reply: open until closes_at, closed, or none; null when an out-of-band delivery's originating record has aged out",
                   "name": "turn",
                   "sample": {
                     "id": "m-1",
                     "inbound": {
                       "id": "i-1",
                       "kind": "message",
-                      "source": "api"
+                      "source": "chat-line"
+                    },
+                    "reply_window": {
+                      "closes_at": "2026-01-02T09:30:00Z",
+                      "state": "open"
+                    },
+                    "subject": {
+                      "locale": null,
+                      "person": null,
+                      "target_kind": "agent",
+                      "target_name": "assistant",
+                      "thread": "t-1"
                     }
                   }
                 },
@@ -1118,6 +1128,17 @@ export const servedDocumentsJson = {
                 }
               ]
             }
+          },
+          "reply_texts": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ReplyTexts"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           },
           "resume_expr": {
             "anyOf": [
@@ -1226,7 +1247,11 @@ export const servedDocumentsJson = {
                   "name": "location"
                 },
                 {
-                  "gloss": "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)",
+                  "gloss": "the earlier message this one replies to, {message_id, status, text}; present only when the inbound quoted one",
+                  "name": "reply_to"
+                },
+                {
+                  "gloss": "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location/reply_to when that message carried them)",
                   "name": "messages"
                 },
                 {
@@ -1234,7 +1259,7 @@ export const servedDocumentsJson = {
                   "name": "superseded"
                 },
                 {
-                  "gloss": "the turn ids: {id, inbound: {id, kind, source}}",
+                  "gloss": "the turn: {id, inbound: {id, kind, source}, subject: {target_kind, target_name, person, thread, locale}, reply_window: {state, closes_at}}; reply_window.state is open (a free-form reply is allowed until closes_at), closed, or none (no window on this channel or address)",
                   "name": "turn"
                 },
                 {
@@ -1337,6 +1362,194 @@ export const servedDocumentsJson = {
           }
         },
         "title": "OverlapPolicy",
+        "type": "object"
+      },
+      "ReplyTexts": {
+        "additionalProperties": false,
+        "description": "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` are the notices for an inbound message the channel cannot\nbridge, a file over the cap, and a file the channel could not fetch. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          },
+          "pairing_code": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pairing Code"
+          },
+          "pairing_code_invalid": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pairing Code Invalid"
+          },
+          "pairing_link_unavailable": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pairing Link Unavailable"
+          },
+          "pairing_linked": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pairing Linked"
+          },
+          "pairing_not_linked": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pairing Not Linked"
+          },
+          "pairing_unlink_unavailable": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pairing Unlink Unavailable"
+          },
+          "pairing_unlinked": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pairing Unlinked"
+          },
+          "rejected_could_not_receive": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rejected Could Not Receive"
+          },
+          "rejected_too_large": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rejected Too Large"
+          },
+          "rejected_unsupported_type": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rejected Unsupported Type"
+          },
+          "slow_down": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Slow Down"
+          }
+        },
+        "title": "ReplyTexts",
         "type": "object"
       },
       "TemplatedText": {
@@ -1462,21 +1675,6 @@ export const servedDocumentsJson = {
             "title": "Door",
             "type": "string"
           },
-          "error_reply_text": {
-            "anyOf": [
-              {
-                "maxLength": 2000,
-                "minLength": 1,
-                "pattern": "\\S",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Error Reply Text"
-          },
           "execution_key": {
             "description": "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.",
             "minLength": 1,
@@ -1570,14 +1768,25 @@ export const servedDocumentsJson = {
               "returns": "the reply: null (silent), a string, or a list of answer parts",
               "variables": [
                 {
-                  "blurb": "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out",
+                  "blurb": "the turn this reply answers ({id, inbound, subject, reply_window}); reply_window {state, closes_at} is read when the turn starts, or at delivery for a late reply: open until closes_at, closed, or none; null when an out-of-band delivery's originating record has aged out",
                   "name": "turn",
                   "sample": {
                     "id": "m-1",
                     "inbound": {
                       "id": "i-1",
                       "kind": "message",
-                      "source": "api"
+                      "source": "chat-line"
+                    },
+                    "reply_window": {
+                      "closes_at": "2026-01-02T09:30:00Z",
+                      "state": "open"
+                    },
+                    "subject": {
+                      "locale": null,
+                      "person": null,
+                      "target_kind": "agent",
+                      "target_name": "assistant",
+                      "thread": "t-1"
                     }
                   }
                 },
@@ -1611,6 +1820,17 @@ export const servedDocumentsJson = {
                 }
               ]
             }
+          },
+          "reply_texts": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ReplyTexts"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           },
           "resume_expr": {
             "anyOf": [
@@ -1719,7 +1939,11 @@ export const servedDocumentsJson = {
                   "name": "location"
                 },
                 {
-                  "gloss": "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)",
+                  "gloss": "the earlier message this one replies to, {message_id, status, text}; present only when the inbound quoted one",
+                  "name": "reply_to"
+                },
+                {
+                  "gloss": "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location/reply_to when that message carried them)",
                   "name": "messages"
                 },
                 {
@@ -1727,7 +1951,7 @@ export const servedDocumentsJson = {
                   "name": "superseded"
                 },
                 {
-                  "gloss": "the turn ids: {id, inbound: {id, kind, source}}",
+                  "gloss": "the turn: {id, inbound: {id, kind, source}, subject: {target_kind, target_name, person, thread, locale}, reply_window: {state, closes_at}}; reply_window.state is open (a free-form reply is allowed until closes_at), closed, or none (no window on this channel or address)",
                   "name": "turn"
                 },
                 {
@@ -1850,21 +2074,6 @@ export const servedDocumentsJson = {
             "title": "Door",
             "type": "string"
           },
-          "error_reply_text": {
-            "anyOf": [
-              {
-                "maxLength": 2000,
-                "minLength": 1,
-                "pattern": "\\S",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Error Reply Text"
-          },
           "execution_key": {
             "description": "The api-key ``user_id`` the turn runs AS; its live stored grants authorize the agent run or tool dispatch and every tool call the turn makes.",
             "minLength": 1,
@@ -1958,14 +2167,25 @@ export const servedDocumentsJson = {
               "returns": "the reply: null (silent), a string, or a list of answer parts",
               "variables": [
                 {
-                  "blurb": "the turn ids and subject this reply answers ({id, inbound, subject}); null when an out-of-band delivery's originating record has aged out",
+                  "blurb": "the turn this reply answers ({id, inbound, subject, reply_window}); reply_window {state, closes_at} is read when the turn starts, or at delivery for a late reply: open until closes_at, closed, or none; null when an out-of-band delivery's originating record has aged out",
                   "name": "turn",
                   "sample": {
                     "id": "m-1",
                     "inbound": {
                       "id": "i-1",
                       "kind": "message",
-                      "source": "api"
+                      "source": "chat-line"
+                    },
+                    "reply_window": {
+                      "closes_at": "2026-01-02T09:30:00Z",
+                      "state": "open"
+                    },
+                    "subject": {
+                      "locale": null,
+                      "person": null,
+                      "target_kind": "agent",
+                      "target_name": "assistant",
+                      "thread": "t-1"
                     }
                   }
                 },
@@ -1999,6 +2219,17 @@ export const servedDocumentsJson = {
                 }
               ]
             }
+          },
+          "reply_texts": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ReplyTexts"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           },
           "resume_expr": {
             "anyOf": [
@@ -2107,7 +2338,11 @@ export const servedDocumentsJson = {
                   "name": "location"
                 },
                 {
-                  "gloss": "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location when that message carried them)",
+                  "gloss": "the earlier message this one replies to, {message_id, status, text}; present only when the inbound quoted one",
+                  "name": "reply_to"
+                },
+                {
+                  "gloss": "overlap deliver=all: the batch carried into this turn, in acceptance order, each {id, text, accepted_at} (+ form/form_tag/attachments/location/reply_to when that message carried them)",
                   "name": "messages"
                 },
                 {
@@ -2115,7 +2350,7 @@ export const servedDocumentsJson = {
                   "name": "superseded"
                 },
                 {
-                  "gloss": "the turn ids: {id, inbound: {id, kind, source}}",
+                  "gloss": "the turn: {id, inbound: {id, kind, source}, subject: {target_kind, target_name, person, thread, locale}, reply_window: {state, closes_at}}; reply_window.state is open (a free-form reply is allowed until closes_at), closed, or none (no window on this channel or address)",
                   "name": "turn"
                 },
                 {
@@ -2217,6 +2452,194 @@ export const servedDocumentsJson = {
           }
         },
         "title": "OverlapPolicy",
+        "type": "object"
+      },
+      "ReplyTexts": {
+        "additionalProperties": false,
+        "description": "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` are the notices for an inbound message the channel cannot\nbridge, a file over the cap, and a file the channel could not fetch. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.",
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          },
+          "pairing_code": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pairing Code"
+          },
+          "pairing_code_invalid": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pairing Code Invalid"
+          },
+          "pairing_link_unavailable": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pairing Link Unavailable"
+          },
+          "pairing_linked": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pairing Linked"
+          },
+          "pairing_not_linked": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pairing Not Linked"
+          },
+          "pairing_unlink_unavailable": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pairing Unlink Unavailable"
+          },
+          "pairing_unlinked": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Pairing Unlinked"
+          },
+          "rejected_could_not_receive": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rejected Could Not Receive"
+          },
+          "rejected_too_large": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rejected Too Large"
+          },
+          "rejected_unsupported_type": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rejected Unsupported Type"
+          },
+          "slow_down": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Slow Down"
+          }
+        },
+        "title": "ReplyTexts",
         "type": "object"
       },
       "TemplatedText": {
