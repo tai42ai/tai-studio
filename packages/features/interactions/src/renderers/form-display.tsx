@@ -10,7 +10,7 @@
  */
 import type { DisplayBlock } from '@tai42/api-client';
 import type { JsonSchema } from '@tai42/studio-sdk';
-import { isFieldVisible, MediaImage } from '@tai42/studio-sdk';
+import { fieldDrawingOrder, isFieldVisible, MediaImage } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
 import {
@@ -83,7 +83,7 @@ function slotValueText(value: unknown): string | undefined {
 
 /**
  * A review step's generic readback: each visible top-level field's label and the value
- * entered for it. A field hidden by its `visibleWhen` predicate is absent from
+ * entered for it, in drawing order (each `timeOf` time right after its date). A field hidden by its `visibleWhen` predicate is absent from
  * the readback, since it is absent from the answer the consumer receives.
  */
 export function ReviewReadback({
@@ -93,9 +93,11 @@ export function ReviewReadback({
   readonly schema: JsonSchema;
   readonly value: Record<string, unknown>;
 }): ReactNode {
-  const rows = Object.entries(schema.properties ?? {}).filter(([, prop]) =>
-    isFieldVisible(prop, value),
-  );
+  const properties = schema.properties ?? {};
+  const rows = fieldDrawingOrder(Object.keys(properties), properties)
+    .map((name) => [name, properties[name]] as const)
+    .filter((row): row is readonly [string, JsonSchema] => row[1] !== undefined)
+    .filter(([, prop]) => isFieldVisible(prop, value));
   if (rows.length === 0) return null;
   return (
     <dl style={reviewListStyle} data-testid="form-review">

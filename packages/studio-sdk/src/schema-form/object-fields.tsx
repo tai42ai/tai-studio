@@ -7,10 +7,10 @@
 import type { ReactNode } from 'react';
 
 import { ownValue } from '../guards';
-import { DateRangeField, dateRangePairs } from './date-range-field';
+import { DateRangeField, dateRangePairs, fieldDrawingOrder } from './date-range-field';
 import { FieldNode } from './field-node';
 import { useKeyedCallbacks } from './keyed-callbacks';
-import type { JsonSchema, SchemaFormErrors } from './types';
+import type { FieldWords, JsonSchema, SchemaFormErrors } from './types';
 import { isFieldVisible } from './visibility';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -42,11 +42,12 @@ export function ObjectFields({
   /** Mark each required property's label with the DS required marker. */
   markRequired?: boolean;
   /**
-   * Per-property picker placeholders, keyed by property name. Handed to the root form's
-   * object only; a property whose `enum` draws as a select shows its entry's
-   * `choiceLabel` as the select placeholder. Absent for nested objects.
+   * Per-property words, keyed by property name. Handed to the root form's object only;
+   * a property whose `enum` draws as a select shows its entry's `choiceLabel` as the
+   * select placeholder, and a list property draws its entry's list words. Absent for
+   * nested objects.
    */
-  fieldWording?: Readonly<Record<string, { choiceLabel?: string; invalid?: string }>>;
+  fieldWording?: Readonly<Record<string, FieldWords>>;
 }): ReactNode {
   const obj = isPlainObject(value) ? value : {};
   const changeFor = useKeyedCallbacks<string, unknown>(
@@ -58,15 +59,49 @@ export function ObjectFields({
   // A drawable date-range pair renders as ONE DateRangeField at the START's slot; the
   // END is skipped. The pairing is `dateRangePairs`, the one definition every surface
   // shares. Properties here are one page's, so the "same page" rule holds by construction.
+  // A pair's `timeOf` times draw inside its group, so they are skipped too. The fields
+  // walk in `fieldDrawingOrder`: each time right after its date, wherever it is declared.
   const pairs = dateRangePairs(properties);
   const pairByStart = new Map(pairs.map((pair) => [pair.startName, pair]));
-  const skippedEnds = new Set(pairs.map((pair) => pair.endName));
+  const skipped = new Set(
+    pairs.flatMap((pair) =>
+      [pair.endName, pair.startTimeName, pair.endTimeName].filter(
+        (name): name is string => name !== undefined,
+      ),
+    ),
+  );
+  const schemaByName = new Map(properties);
+  const drawn = fieldDrawingOrder(
+    properties.map(([name]) => name),
+    Object.fromEntries(properties),
+  );
   const childPathOf = (name: string): string => (path === '' ? name : `${path}.${name}`);
+  const fieldOf = (name: string, propSchema: JsonSchema): ReactNode => (
+    <FieldNode
+      key={name}
+      schema={propSchema}
+      root={root}
+      value={ownValue(obj, name)}
+      onChange={changeFor(name)}
+      path={childPathOf(name)}
+      label={name}
+      required={requiredKeys.has(name)}
+      markRequired={markRequired}
+      errors={errors}
+      idPrefix={idPrefix}
+      choiceLabel={ownValue(fieldWording, name)?.choiceLabel}
+      listWords={ownValue(fieldWording, name)}
+    />
+  );
+  const timeOf = (name: string | undefined, propSchema: JsonSchema | undefined): ReactNode =>
+    name === undefined || propSchema === undefined ? null : fieldOf(name, propSchema);
   return (
     <>
-      {properties.map(([name, propSchema]) => {
+      {drawn.map((name) => {
+        const propSchema = schemaByName.get(name);
+        if (propSchema === undefined) return null;
         if (skip !== undefined && name === skip) return null;
-        if (skippedEnds.has(name)) return null;
+        if (skipped.has(name)) return null;
         // A field hidden by its `visibleWhen` predicate is not rendered; the
         // validator skips it in step, so a hidden field is neither shown nor required.
         if (!isFieldVisible(propSchema, obj)) return null;
@@ -85,25 +120,12 @@ export function ObjectFields({
               endError={ownValue(errors, childPathOf(pair.endName))}
               onChangeStart={changeFor(pair.startName)}
               onChangeEnd={changeFor(pair.endName)}
+              startTime={timeOf(pair.startTimeName, pair.startTimeSchema)}
+              endTime={timeOf(pair.endTimeName, pair.endTimeSchema)}
             />
           );
         }
-        return (
-          <FieldNode
-            key={name}
-            schema={propSchema}
-            root={root}
-            value={ownValue(obj, name)}
-            onChange={changeFor(name)}
-            path={childPathOf(name)}
-            label={name}
-            required={requiredKeys.has(name)}
-            markRequired={markRequired}
-            errors={errors}
-            idPrefix={idPrefix}
-            choiceLabel={fieldWording?.[name]?.choiceLabel}
-          />
-        );
+        return fieldOf(name, propSchema);
       })}
     </>
   );

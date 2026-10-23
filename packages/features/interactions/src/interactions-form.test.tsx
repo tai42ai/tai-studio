@@ -1656,3 +1656,87 @@ describe('Form answer — caller-set invalid sentence per field', () => {
     expect(answer).not.toHaveBeenCalled();
   });
 });
+
+describe('InteractionsPage — form preview: a date range with a time on each end', () => {
+  // The times are declared LAST; each draws and reads back right after its own date.
+  const timedSchema = {
+    type: 'object',
+    properties: {
+      from: { type: 'string', format: 'date', title: 'From' },
+      to: { type: 'string', format: 'date', title: 'To', rangeStart: 'from' },
+      note: { type: 'string', title: 'Note' },
+      from_time: { type: 'string', format: 'time', title: 'From time', timeOf: 'from' },
+      to_time: { type: 'string', format: 'time', title: 'To time', timeOf: 'to' },
+    },
+  };
+
+  it('draws each time under its date in the range group and refuses an earlier same-day end time', async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn().mockResolvedValue(undefined);
+    const { channel } = renderInbox(answer);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-timed-range',
+        format: 'form',
+        prompt: 'Pick a slot',
+        format_payload: {
+          schema: timedSchema,
+          data: {
+            values: { from: '2026-03-01', to: '2026-03-01', from_time: '10:00', to_time: '09:00' },
+          },
+        },
+      }),
+    );
+
+    const group = await screen.findByRole('group', { name: 'From – To' });
+    const labels = Array.from(group.querySelectorAll('input')).map(
+      (input) => input.labels?.[0]?.textContent,
+    );
+    expect(labels).toEqual(['From', 'From time', 'To', 'To time']);
+    expect(within(group).getByLabelText('From time')).toHaveAttribute('type', 'time');
+
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(await screen.findByText('must be on or after the start time')).toBeInTheDocument();
+    expect(screen.getByLabelText('To time')).toHaveAccessibleDescription(
+      'must be on or after the start time',
+    );
+    expect(answer).not.toHaveBeenCalled();
+  });
+
+  it('reads each time back right after its date on a review page', async () => {
+    const user = userEvent.setup();
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-timed-review',
+        format: 'form',
+        prompt: 'Pick a slot',
+        format_payload: {
+          schema: timedSchema,
+          data: {
+            values: { from: '2026-03-01', to: '2026-03-02', from_time: '10:00', to_time: '09:00' },
+          },
+          pages: [
+            { title: 'When', fields: ['from', 'to', 'note', 'from_time', 'to_time'] },
+            { title: 'Review', fields: [], kind: 'review' },
+          ],
+        },
+      }),
+    );
+
+    await screen.findByRole('group', { name: 'From – To' });
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    const review = await screen.findByTestId('form-review');
+    expect(Array.from(review.querySelectorAll('dt')).map((term) => term.textContent)).toEqual([
+      'From',
+      'From time',
+      'To',
+      'To time',
+      'Note',
+    ]);
+  });
+});

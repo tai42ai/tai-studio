@@ -17,10 +17,16 @@ export interface DateRangePair {
     readonly endName: string;
     // (undocumented)
     readonly endSchema: JsonSchema;
+    readonly endTimeName?: string;
+    // (undocumented)
+    readonly endTimeSchema?: JsonSchema;
     // (undocumented)
     readonly startName: string;
     // (undocumented)
     readonly startSchema: JsonSchema;
+    readonly startTimeName?: string;
+    // (undocumented)
+    readonly startTimeSchema?: JsonSchema;
 }
 
 // @public
@@ -86,6 +92,27 @@ interface ExpressionInputVariable {
     readonly keys: readonly ExpressionInputKey[];
     readonly name: string;
     readonly sample?: unknown;
+}
+
+// @public
+export function fieldDrawingOrder(names: readonly string[], properties: Readonly<Record<string, JsonSchema>>): string[];
+
+// @public
+export interface FieldWords {
+    // (undocumented)
+    readonly addItem?: string;
+    // (undocumented)
+    readonly choiceLabel?: string;
+    // (undocumented)
+    readonly invalid?: string;
+    // (undocumented)
+    readonly itemLabel?: string;
+    // (undocumented)
+    readonly noItems?: string;
+    // (undocumented)
+    readonly removeItem?: string;
+    // (undocumented)
+    readonly required?: string;
 }
 
 // @public
@@ -163,6 +190,7 @@ export interface JsonSchema {
     readonly rangeStart?: string;
     // (undocumented)
     readonly required?: readonly string[];
+    readonly timeOf?: string;
     // (undocumented)
     readonly title?: string;
     // (undocumented)
@@ -208,10 +236,7 @@ export interface SchemaFormProps {
     // (undocumented)
     readonly errors?: SchemaFormErrors;
     readonly expressionField?: ExpressionFieldComponent;
-    readonly fieldWording?: Readonly<Record<string, {
-        choiceLabel?: string;
-        invalid?: string;
-    }>>;
+    readonly fieldWording?: Readonly<Record<string, FieldWords>>;
     // (undocumented)
     readonly idPrefix?: string;
     readonly maxUploadBytes?: number;
@@ -253,9 +278,7 @@ export function validateAgainstSchema(schema: JsonSchema, value: unknown, option
 
 // @public
 interface ValidateOptions {
-    readonly fieldWording?: Readonly<Record<string, {
-        invalid?: string;
-    }>>;
+    readonly fieldWording?: Readonly<Record<string, FieldWords>>;
     readonly maxUploadBytes?: number;
 }
 

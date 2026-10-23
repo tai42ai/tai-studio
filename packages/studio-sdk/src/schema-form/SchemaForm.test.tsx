@@ -388,7 +388,7 @@ describe('SchemaForm — composite', () => {
     await user.type(screen.getByRole('textbox', { name: 'Item 1' }), 'z');
     expect(emitted()).toBe('{"tags":["z"]}');
 
-    await user.click(screen.getByRole('button', { name: 'Remove item 1' }));
+    await user.click(screen.getByRole('button', { name: 'Remove Item 1' }));
     expect(emitted()).toBe('{"tags":[]}');
   });
 });
@@ -1450,7 +1450,7 @@ describe('SchemaForm — design system', () => {
     };
     render(<Harness schema={schema} initial={{ tags: ['a'] }} />);
 
-    const remove = screen.getByRole('button', { name: 'Remove item 1' });
+    const remove = screen.getByRole('button', { name: 'Remove Item 1' });
     expect(remove).toHaveClass('tai-btn', 'tai-btn-secondary');
     // The mark accompanies the word; no Unicode glyph stands in for either.
     expect(remove.querySelector('svg')).toHaveClass('tai-icon');
@@ -1894,6 +1894,136 @@ describe('SchemaForm — date range pair', () => {
     expect(screen.queryByRole('group', { name: /From.*To/ })).not.toBeInTheDocument();
     expect(screen.getByLabelText('From')).toHaveAttribute('type', 'date');
     expect(screen.getByLabelText('To')).toHaveAttribute('type', 'date');
+  });
+});
+
+describe('SchemaForm — a date range with a time on each end', () => {
+  // The times are declared LAST; each draws inside the range group, under its own date.
+  const timed: JsonSchema = {
+    type: 'object',
+    properties: {
+      from: { type: 'string', format: 'date', title: 'From' },
+      to: { type: 'string', format: 'date', title: 'To', rangeStart: 'from' },
+      note: { type: 'string', title: 'Note' },
+      from_time: { type: 'string', format: 'time', title: 'From time', timeOf: 'from' },
+      to_time: { type: 'string', format: 'time', title: 'To time', timeOf: 'to' },
+    },
+  };
+
+  function drawnLabels(container: HTMLElement): string[] {
+    return Array.from(container.querySelectorAll('input')).map(
+      (input) => input.labels?.[0]?.textContent ?? '',
+    );
+  }
+
+  it('draws the four controls in the group, each time under its date, and emits four strings', () => {
+    render(<Harness schema={timed} initial={{}} />);
+    const group = screen.getByRole('group', { name: /From.*To/ });
+    expect(drawnLabels(group)).toEqual(['From', 'From time', 'To', 'To time']);
+    const fromTime = within(group).getByLabelText('From time');
+    expect(fromTime).toHaveAttribute('type', 'time');
+    // Each time draws once: inside the group, never again as its own row.
+    expect(screen.getAllByLabelText('From time')).toHaveLength(1);
+    expect(screen.getAllByLabelText('To time')).toHaveLength(1);
+
+    fireEvent.change(within(group).getByLabelText('From'), { target: { value: '2026-03-01' } });
+    fireEvent.change(fromTime, { target: { value: '09:00' } });
+    fireEvent.change(within(group).getByLabelText('To'), { target: { value: '2026-03-01' } });
+    fireEvent.change(within(group).getByLabelText('To time'), { target: { value: '10:00' } });
+    expect(JSON.parse(emitted())).toEqual({
+      from: '2026-03-01',
+      from_time: '09:00',
+      to: '2026-03-01',
+      to_time: '10:00',
+    });
+  });
+
+  it("shows the order error under the end time's own control", () => {
+    const value = { from: '2026-03-01', to: '2026-03-01', from_time: '10:00', to_time: '09:00' };
+    render(
+      <SchemaForm
+        schema={timed}
+        value={value}
+        onChange={vi.fn()}
+        errors={validateAgainstSchema(timed, value)}
+      />,
+    );
+    expect(screen.getByLabelText('To time')).toHaveAccessibleDescription(
+      'must be on or after the start time',
+    );
+    expect(screen.getByLabelText('To')).not.toHaveAccessibleDescription(
+      'must be on or after the start time',
+    );
+  });
+
+  it('draws each time right after its date when the pair does not merge', () => {
+    const unmerged: JsonSchema = {
+      ...timed,
+      properties: {
+        ...timed.properties,
+        note: { type: 'string', title: 'Note', visibleWhen: { field: 'to', notEmpty: true } },
+      },
+    };
+    const { container } = render(<Harness schema={unmerged} initial={{ to: '2026-03-01' }} />);
+    expect(screen.queryByRole('group', { name: /From.*To/ })).not.toBeInTheDocument();
+    expect(drawnLabels(container)).toEqual(['From', 'From time', 'To', 'To time', 'Note']);
+  });
+});
+
+describe("SchemaForm — fieldWording (a list field's words)", () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: { tags: { type: 'array', items: { type: 'string' }, title: 'Tags' } },
+  };
+  const words = {
+    tags: {
+      addItem: 'Add a tag',
+      removeItem: 'Drop',
+      itemLabel: 'Tag {n}',
+      noItems: 'No tags yet',
+    },
+  };
+
+  function ListHarness({ initial }: { readonly initial: unknown }) {
+    const [value, setValue] = useState<unknown>(initial);
+    return <SchemaForm schema={schema} value={value} onChange={setValue} fieldWording={words} />;
+  }
+
+  it("draws the list's add, remove, item and empty words", async () => {
+    const user = userEvent.setup();
+    render(<ListHarness initial={{}} />);
+    expect(screen.getByText('No tags yet')).toHaveClass('tai-field-hint');
+
+    await user.click(screen.getByRole('button', { name: 'Add a tag' }));
+
+    expect(screen.getByRole('textbox', { name: 'Tag 1' })).toBeInTheDocument();
+    const remove = screen.getByRole('button', { name: 'Drop Tag 1' });
+    expect(remove).toHaveTextContent('Drop');
+    expect(screen.queryByText('No tags yet')).not.toBeInTheDocument();
+  });
+
+  it('keeps the built-in words for a field with none and for a nested list', () => {
+    const nested: JsonSchema = {
+      type: 'object',
+      properties: {
+        group: {
+          type: 'object',
+          title: 'Group',
+          properties: { tags: { type: 'array', items: { type: 'string' }, title: 'Tags' } },
+        },
+      },
+    };
+    render(
+      <SchemaForm
+        schema={nested}
+        value={{ group: { tags: ['a'] } }}
+        onChange={vi.fn()}
+        fieldWording={words}
+      />,
+    );
+    expect(screen.getByRole('textbox', { name: 'Item 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove Item 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add item' })).toBeInTheDocument();
   });
 });
 

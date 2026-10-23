@@ -10,7 +10,7 @@ import { classifySchema } from './classify';
 import type { DateConstraints, FieldModel } from './field-model';
 import { decodedByteSize, effectiveMaxBytes, overCapMessage } from './media';
 import { resolveRef, scalarLabel } from './resolve';
-import type { JsonSchema, SchemaFormErrors } from './types';
+import type { FieldWords, JsonSchema, SchemaFormErrors } from './types';
 import { activeVariantIndex } from './union';
 import { isFieldVisible } from './visibility';
 
@@ -26,11 +26,13 @@ export interface ValidateOptions {
    * Per-field words, keyed by the root object's exact property name. A field's
    * `invalid` sentence replaces every shape error on that field and anything inside
    * it (a format, pattern, length, bound, type or item error). A missing required
-   * value keeps its own required message, and a `pattern` that cannot compile keeps
-   * its own message, since that is a defect of the schema, not of the value. A field
-   * with no `invalid` sentence keeps the SDK's word for the failing shape.
+   * value at the field or anywhere inside it shows the field's `required` sentence
+   * when set, else the SDK's own required message; `invalid` never covers it. A
+   * `pattern` that cannot compile keeps its own message, since that is a defect of the
+   * schema, not of the value. A field with no `invalid` sentence keeps the SDK's word
+   * for the failing shape.
    */
-  readonly fieldWording?: Readonly<Record<string, { invalid?: string }>>;
+  readonly fieldWording?: Readonly<Record<string, FieldWords>>;
 }
 
 /** The invariants every per-node validator shares while walking one value tree. */
@@ -54,6 +56,11 @@ interface ValidateCtx {
    * each mapped to the root property it lies inside.
    */
   readonly shapeErrorFields: Map<string, string>;
+  /**
+   * The paths whose error is a missing required value a field's `required` sentence
+   * may replace, each mapped to the root property it lies inside.
+   */
+  readonly requiredFields: Map<string, string>;
 }
 
 /**
@@ -62,6 +69,7 @@ interface ValidateCtx {
  */
 function shapeError(ctx: ValidateCtx, path: string, message: string): void {
   ctx.errors[path] = message;
+  ctx.requiredFields.delete(path);
   if (ctx.field === undefined) ctx.shapeErrorFields.delete(path);
   else ctx.shapeErrorFields.set(path, ctx.field);
 }
@@ -73,6 +81,7 @@ function shapeError(ctx: ValidateCtx, path: string, message: string): void {
 function keptError(ctx: ValidateCtx, path: string, message: string): void {
   ctx.errors[path] = message;
   ctx.shapeErrorFields.delete(path);
+  ctx.requiredFields.delete(path);
 }
 
 /** The context for the child `name` of the value at `path`: a root child is its own field. */
@@ -250,7 +259,7 @@ function validateObject(
     const childPath = joinPath(path, name);
     const childValue = ownValue(value, name);
     if (childValue === undefined) {
-      if (model.required.has(name)) markRequired(childPath, name, ctx);
+      if (model.required.has(name)) markRequired(childPath, name, childCtx(ctx, path, name));
       continue;
     }
     walk(propSchema, childValue, childPath, childCtx(ctx, path, name));
@@ -258,15 +267,20 @@ function validateObject(
   // Required keys naming a property that somehow isn't declared still count.
   for (const name of model.required) {
     if (!propMap.has(name) && ownValue(value, name) === undefined) {
-      markRequired(joinPath(path, name), name, ctx);
+      markRequired(joinPath(path, name), name, childCtx(ctx, path, name));
     }
   }
   validateDateRanges(model, value, path, ctx);
 }
 
-/** Record a missing required value at `path`, the one error a field's words never replace. */
+/**
+ * Record a missing required value at `path`. `ctx` is the missing child's own context,
+ * so inside a root property the field's `required` sentence may replace the message
+ * (never its `invalid` sentence).
+ */
 function markRequired(path: string, name: string, ctx: ValidateCtx): void {
   keptError(ctx, path, `"${name}" is required`);
+  if (ctx.field !== undefined) ctx.requiredFields.set(path, ctx.field);
 }
 
 /** Days from `start` to `end` inclusive (both `YYYY-MM-DD`); 1 when they are equal. */
@@ -274,11 +288,51 @@ function inclusiveDayCount(start: string, end: string): number {
   return Math.round((Date.parse(end) - Date.parse(start)) / 86_400_000) + 1;
 }
 
+const WRITTEN_DATE_RE = /^(\d{4}-\d{2}-\d{2})[Tt]/;
+const TIME_RE = /^(\d{2}):(\d{2})(?::(\d{2}))?$/;
+
 /**
- * Enforce a date RANGE declared on an END field: the end is on or after its
- * named `rangeStart` field, and the inclusive day span is within `minDays`/`maxDays`.
- * Read from the two plain date values — nothing recombined. A missing or not-yet-valid
- * endpoint is left to that field's own validation; a hidden end field is skipped.
+ * The written `YYYY-MM-DD` date of a range end's value: a `date` value as is, a
+ * `date-time` value's leading date. `undefined` when the value does not pass its own
+ * format check (that field's own validation reports it).
+ */
+function writtenDate(schema: JsonSchema, value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  if (schema.format === 'date') return formatError('date', value) === undefined ? value : undefined;
+  if (schema.format === 'date-time' && formatError('date-time', value) === undefined) {
+    return WRITTEN_DATE_RE.exec(value)?.[1];
+  }
+  return undefined;
+}
+
+/** The seconds into the day a `HH:MM[:SS]` value names, or `undefined` when it is not a real time. */
+function secondsOfDay(value: unknown): number | undefined {
+  if (typeof value !== 'string') return undefined;
+  const match = TIME_RE.exec(value);
+  if (match === null) return undefined;
+  const [hours, minutes, seconds] = [match[1], match[2], match[3] ?? '0'].map(Number);
+  if (hours === undefined || minutes === undefined || seconds === undefined) return undefined;
+  if (hours > 23 || minutes > 59 || seconds > 59) return undefined;
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+/** The `timeOf` time property paired with the date `dateName`, if any. */
+function pairedTimeName(
+  dateName: string,
+  properties: readonly (readonly [string, JsonSchema])[],
+): string | undefined {
+  return properties.find(([name, schema]) => schema.timeOf === dateName && name !== dateName)?.[0];
+}
+
+/**
+ * Enforce a date RANGE declared on an END field: the end is on or after its named
+ * `rangeStart` field, and the inclusive day span is within `minDays`/`maxDays`. Each end is
+ * read by its written date (a `date-time` end by its leading `YYYY-MM-DD`), so a mixed
+ * `date`/`date-time` pair is ordered by date; a pair of two `date-time` ends is left to
+ * the answer door, which orders it by instant. Two ends on the same date that each carry
+ * a readable `timeOf` time are then ordered by those times, the error on the END's time.
+ * Nothing is recombined. A missing or not-yet-valid endpoint is left to that field's own
+ * validation; a hidden end field is skipped.
  */
 function validateDateRanges(
   model: ModelOf<'object'>,
@@ -286,19 +340,53 @@ function validateDateRanges(
   path: string,
   ctx: ValidateCtx,
 ): void {
+  const propMap = new Map(model.properties);
   for (const [name, propSchema] of model.properties) {
     if (!isFieldVisible(propSchema, value)) continue;
     const resolved = resolveRef(propSchema, ctx.root);
-    if (typeof resolved.rangeStart !== 'string') continue;
-    const endValue = ownValue(value, name);
-    const startValue = ownValue(value, resolved.rangeStart);
-    if (typeof endValue !== 'string' || typeof startValue !== 'string') continue;
-    if (!DATE_RE.test(endValue) || !DATE_RE.test(startValue)) continue;
+    const startName = resolved.rangeStart;
+    if (typeof startName !== 'string') continue;
+    const startDeclared = propMap.get(startName);
+    if (startDeclared === undefined) continue;
+    const startSchema = resolveRef(startDeclared, ctx.root);
+    if (resolved.format === 'date-time' && startSchema.format === 'date-time') continue;
+    const endDate = writtenDate(resolved, ownValue(value, name));
+    const startDate = writtenDate(startSchema, ownValue(value, startName));
+    if (endDate === undefined || startDate === undefined) continue;
     const childPath = joinPath(path, name);
     if (ctx.errors[childPath] !== undefined) continue;
-    const message = dateRangeMessage(resolved, startValue, endValue);
+    if (endDate === startDate && timeOrderError(model, value, path, ctx, startName, name)) continue;
+    const message = dateRangeMessage(resolved, startDate, endDate);
     if (message !== undefined) shapeError(childCtx(ctx, path, name), childPath, message);
   }
+}
+
+/**
+ * Record the order error on the END's time when two same-date ends each carry a readable
+ * `timeOf` time and the END's is earlier; `true` when it was recorded. An absent or
+ * unreadable time leaves the dates to decide.
+ */
+function timeOrderError(
+  model: ModelOf<'object'>,
+  value: Record<string, unknown>,
+  path: string,
+  ctx: ValidateCtx,
+  startName: string,
+  endName: string,
+): boolean {
+  const startTimeName = pairedTimeName(startName, model.properties);
+  const endTimeName = pairedTimeName(endName, model.properties);
+  if (startTimeName === undefined || endTimeName === undefined) return false;
+  const startSeconds = secondsOfDay(ownValue(value, startTimeName));
+  const endSeconds = secondsOfDay(ownValue(value, endTimeName));
+  if (startSeconds === undefined || endSeconds === undefined || endSeconds >= startSeconds) {
+    return false;
+  }
+  const timePath = joinPath(path, endTimeName);
+  if (ctx.errors[timePath] === undefined) {
+    shapeError(childCtx(ctx, path, endTimeName), timePath, 'must be on or after the start time');
+  }
+  return true;
 }
 
 /** The ordering/span violation on a range END field, or `undefined` when it holds. */
@@ -489,17 +577,23 @@ function dispatchKind(model: FieldModel, value: unknown, path: string, ctx: Vali
 
 /**
  * Replace each shape error inside a root property whose words carry an `invalid`
- * sentence with that sentence; every other error keeps its own message.
+ * sentence with that sentence, and each missing required value inside a root property
+ * whose words carry a `required` sentence with that one; every other error keeps its
+ * own message.
  */
 function applyFieldWording(
-  fieldWording: Readonly<Record<string, { invalid?: string }>>,
+  fieldWording: Readonly<Record<string, FieldWords>>,
   errors: Record<string, string>,
   shapeErrorFields: ReadonlyMap<string, string>,
+  requiredFields: ReadonlyMap<string, string>,
 ): void {
   for (const [path, field] of shapeErrorFields) {
-    if (!Object.hasOwn(fieldWording, field)) continue;
-    const invalid = fieldWording[field]?.invalid;
+    const invalid = ownValue(fieldWording, field)?.invalid;
     if (invalid !== undefined) errors[path] = invalid;
+  }
+  for (const [path, field] of requiredFields) {
+    const required = ownValue(fieldWording, field)?.required;
+    if (required !== undefined) errors[path] = required;
   }
 }
 
@@ -509,7 +603,8 @@ function applyFieldWording(
  * `SchemaForm` for display. `options.maxUploadBytes` mirrors the renderer's
  * `maxUploadBytes` prop so a media field's byte cap is enforced identically here;
  * `options.fieldWording` puts a field's own `invalid` sentence in place of the
- * SDK's word for any shape error on that field.
+ * SDK's word for any shape error on that field, and its own `required` sentence in
+ * place of the SDK's message for a missing required value at or inside that field.
  */
 export function validateAgainstSchema(
   schema: JsonSchema,
@@ -518,15 +613,17 @@ export function validateAgainstSchema(
 ): SchemaFormErrors {
   const errors = Object.create(null) as Record<string, string>;
   const shapeErrorFields = new Map<string, string>();
+  const requiredFields = new Map<string, string>();
   walk(schema, value, '', {
     root: schema,
     errors,
     maxUploadBytes: options?.maxUploadBytes,
     field: undefined,
     shapeErrorFields,
+    requiredFields,
   });
   if (options?.fieldWording !== undefined) {
-    applyFieldWording(options.fieldWording, errors, shapeErrorFields);
+    applyFieldWording(options.fieldWording, errors, shapeErrorFields, requiredFields);
   }
   // Hand back an ordinary object; its entries are defined as own keys, so a path such as
   // `__proto__` stays an entry of the result.

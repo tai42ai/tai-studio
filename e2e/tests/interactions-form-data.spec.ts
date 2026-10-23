@@ -636,3 +636,117 @@ test("a form field's caller sentence replaces the shape error, never the require
   await expect(code).toHaveAccessibleDescription('Use three capital letters');
   await expect(note).toHaveAccessibleDescription('must match the required pattern');
 });
+
+/** One pending form ask with a range whose two `date` ends each have a `timeOf` time, the
+ * times declared after both dates. */
+const TIMED_RANGE_PAGE = {
+  data: {
+    items: [
+      {
+        interaction_id: 'tr-1',
+        group_id: 'tr-1',
+        sensitive: false,
+        answer_format: 'form',
+        question: 'Pick the dates and times',
+        created_at: '2026-08-01T00:00:00.000Z',
+        timeout_at: '2026-08-09T00:00:00.000Z',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: {
+              start: { type: 'string', format: 'date', title: 'From' },
+              end: { type: 'string', format: 'date', title: 'To', rangeStart: 'start' },
+              start_time: { type: 'string', format: 'time', title: 'From time', timeOf: 'start' },
+              end_time: { type: 'string', format: 'time', title: 'To time', timeOf: 'end' },
+            },
+            required: ['start', 'end'],
+          },
+        },
+      },
+    ],
+    total: 1,
+    page: 1,
+    page_size: 50,
+    next_page: null,
+    truncated: false,
+  },
+};
+
+/** Fill the timed range with the same date and an end time before the start time. */
+async function fillEarlierEndTime(card: ReturnType<Page['getByTestId']>): Promise<void> {
+  await card.getByLabel('From', { exact: true }).fill('2026-05-01');
+  await card.getByLabel('To', { exact: true }).fill('2026-05-01');
+  await card.getByLabel('From time', { exact: true }).fill('10:00');
+  await card.getByLabel('To time', { exact: true }).fill('09:00');
+}
+
+test('a timed range draws each time under its date in the range group and stops an earlier end time', async ({
+  page,
+}) => {
+  await stubInbox(page, TIMED_RANGE_PAGE);
+  const answers: unknown[] = [];
+  await page.route(
+    (url) => url.pathname === '/api/interactions/tr-1/answer',
+    async (route) => {
+      answers.push(route.request().postDataJSON());
+      await route.fulfill({
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ data: { interaction_id: 'tr-1', status: 'answered' } }),
+      });
+    },
+  );
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto('/interactions');
+
+  const card = page.getByTestId('interaction-card').filter({ hasText: 'Pick the dates and times' });
+  await expect(card).toBeVisible();
+
+  // ONE range group holds all four controls, each end's time right after its date, whatever
+  // order the schema declares them in.
+  const range = card.getByRole('group', { name: 'From – To' });
+  await expect(range).toBeVisible();
+  const drawn = await range
+    .locator('input')
+    .evaluateAll((els) =>
+      (els as HTMLInputElement[]).map((el) => [el.type, el.labels?.[0]?.textContent.trim()]),
+    );
+  expect(drawn).toEqual([
+    ['date', 'From'],
+    ['time', 'From time'],
+    ['date', 'To'],
+    ['time', 'To time'],
+  ]);
+
+  // The same date with an earlier end time is held back, the sentence under the end time.
+  const endTime = card.getByLabel('To time', { exact: true });
+  const submit = card.getByRole('button', { name: 'Submit' });
+  await fillEarlierEndTime(card);
+  await submit.click();
+  await expect(endTime).toHaveAccessibleDescription('must be on or after the start time');
+  expect(answers).toEqual([]);
+
+  // Both themes, each a genuine first paint (see the form preview test for why a reload).
+  await mkdir(OUT_DIR, { recursive: true });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await card.screenshot({ path: `${OUT_DIR}/form-range-times-light.png` });
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.reload();
+  await expect(card).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await fillEarlierEndTime(card);
+  await submit.click();
+  await expect(endTime).toHaveAccessibleDescription('must be on or after the start time');
+  await card.screenshot({ path: `${OUT_DIR}/form-range-times-dark.png` });
+
+  // A later end time sends the four strings as entered.
+  await endTime.fill('11:30');
+  await submit.click();
+  await expect
+    .poll(() => answers)
+    .toEqual([
+      {
+        answer: { start: '2026-05-01', end: '2026-05-01', start_time: '10:00', end_time: '11:30' },
+      },
+    ]);
+});

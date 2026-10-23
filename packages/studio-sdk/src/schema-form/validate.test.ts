@@ -468,6 +468,66 @@ describe('validateAgainstSchema — per-field invalid wording', () => {
   });
 });
 
+describe('validateAgainstSchema — per-field required wording', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      email: { type: 'string' },
+      code: { type: 'string', pattern: '^[A-Z]{3}$' },
+      address: {
+        type: 'object',
+        properties: { street: { type: 'string' } },
+        required: ['street'],
+      },
+      note: { type: 'string' },
+    },
+    required: ['email', 'code', 'address', 'note'],
+  };
+
+  it("shows the field's required sentence for its missing value, at the field or inside it", () => {
+    const errors = validateAgainstSchema(
+      schema,
+      { address: {} },
+      {
+        fieldWording: {
+          email: { required: 'Your email, please' },
+          address: { required: 'Fill in the address' },
+        },
+      },
+    );
+    expect(errors.email).toBe('Your email, please');
+    expect(errors['address.street']).toBe('Fill in the address');
+  });
+
+  it('keeps the SDK message for a field with no required sentence', () => {
+    const errors = validateAgainstSchema(
+      schema,
+      {},
+      { fieldWording: { email: { required: 'Your email, please' } } },
+    );
+    expect(errors.note).toBe('"note" is required');
+  });
+
+  it("never covers a missing value with the field's invalid sentence", () => {
+    const errors = validateAgainstSchema(
+      schema,
+      { code: 'abc' },
+      { fieldWording: { code: { required: 'Enter a code' }, email: { invalid: 'Not an email' } } },
+    );
+    expect(errors.email).toBe('"email" is required');
+    expect(errors.code).toBe('must match the required pattern');
+  });
+
+  it('reads only a root property named exactly like the field', () => {
+    const errors = validateAgainstSchema(
+      schema,
+      { email: 'a@b.co', code: 'ABC', note: 'x', address: {} },
+      { fieldWording: { street: { required: 'Not this one' } } },
+    );
+    expect(errors['address.street']).toBe('"street" is required');
+  });
+});
+
 describe('validateAgainstSchema — a property named like a built-in object member', () => {
   it('checks the bounds of a field named toString', () => {
     const field: JsonSchema = { type: 'string', minLength: 3 };
@@ -595,5 +655,106 @@ describe('validateAgainstSchema — a property named like a built-in object memb
       { a: 1 },
     );
     expect(Object.getPrototypeOf(errors)).toBe(Object.prototype);
+  });
+});
+
+describe('validateAgainstSchema — a range with times and a mixed range', () => {
+  const timed: JsonSchema = {
+    type: 'object',
+    properties: {
+      start: { type: 'string', format: 'date' },
+      end: { type: 'string', format: 'date', rangeStart: 'start' },
+      start_time: { type: 'string', format: 'time', timeOf: 'start' },
+      end_time: { type: 'string', format: 'time', timeOf: 'end' },
+    },
+  };
+  const sameDay = { start: '2026-03-01', end: '2026-03-01' };
+
+  it('refuses a same-day earlier end time on the end time', () => {
+    expect(
+      validateAgainstSchema(timed, { ...sameDay, start_time: '10:00', end_time: '09:00' }),
+    ).toEqual({ end_time: 'must be on or after the start time' });
+  });
+
+  it('compares the times as times, seconds included', () => {
+    expect(
+      validateAgainstSchema(timed, { ...sameDay, start_time: '09:00:30', end_time: '09:00:10' }),
+    ).toEqual({ end_time: 'must be on or after the start time' });
+    expect(
+      validateAgainstSchema(timed, { ...sameDay, start_time: '09:00:00', end_time: '09:00' }),
+    ).toEqual({});
+  });
+
+  it('leaves an earlier end time on a later end date alone', () => {
+    expect(
+      validateAgainstSchema(timed, {
+        start: '2026-03-01',
+        end: '2026-03-02',
+        start_time: '10:00',
+        end_time: '09:00',
+      }),
+    ).toEqual({});
+  });
+
+  it('lets the dates decide when a time is absent', () => {
+    expect(validateAgainstSchema(timed, { ...sameDay, start_time: '10:00' })).toEqual({});
+  });
+
+  it("replaces the time order error with the end time's own words", () => {
+    const wording = { fieldWording: { end_time: { invalid: 'Pick a later end time' } } };
+    expect(
+      validateAgainstSchema(timed, { ...sameDay, start_time: '10:00', end_time: '09:00' }, wording),
+    ).toEqual({ end_time: 'Pick a later end time' });
+  });
+
+  it('orders a date start and a date-time end by their written dates', () => {
+    const mixed: JsonSchema = {
+      type: 'object',
+      properties: {
+        start: { type: 'string', format: 'date' },
+        end: { type: 'string', format: 'date-time', rangeStart: 'start', maxDays: 2 },
+      },
+    };
+    expect(
+      validateAgainstSchema(mixed, { start: '2026-03-02', end: '2026-03-01T23:00:00Z' }),
+    ).toEqual({ end: 'must be on or after the start date' });
+    expect(
+      validateAgainstSchema(mixed, { start: '2026-03-01', end: '2026-03-05T08:00:00Z' }),
+    ).toEqual({ end: 'must span at most 2 day(s)' });
+    expect(
+      validateAgainstSchema(mixed, { start: '2026-03-01', end: '2026-03-02T08:00:00Z' }),
+    ).toEqual({});
+  });
+
+  it('holds a date-time start and a date end on the same written date', () => {
+    const mixed: JsonSchema = {
+      type: 'object',
+      properties: {
+        start: { type: 'string', format: 'date-time' },
+        end: { type: 'string', format: 'date', rangeStart: 'start' },
+      },
+    };
+    expect(
+      validateAgainstSchema(mixed, { start: '2026-03-01T18:00:00+02:00', end: '2026-03-01' }),
+    ).toEqual({});
+    expect(
+      validateAgainstSchema(mixed, { start: '2026-03-02T01:00:00+02:00', end: '2026-03-01' }),
+    ).toEqual({ end: 'must be on or after the start date' });
+  });
+
+  it('leaves a pair of two date-time ends to the answer door', () => {
+    const instants: JsonSchema = {
+      type: 'object',
+      properties: {
+        start: { type: 'string', format: 'date-time' },
+        end: { type: 'string', format: 'date-time', rangeStart: 'start' },
+      },
+    };
+    expect(
+      validateAgainstSchema(instants, {
+        start: '2026-03-02T10:00:00Z',
+        end: '2026-03-01T09:00:00Z',
+      }),
+    ).toEqual({});
   });
 });
