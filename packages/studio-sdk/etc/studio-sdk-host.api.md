@@ -28,7 +28,6 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
     }, z.core.$strict>>>;
     channel: z.ZodDefault<z.ZodNull>;
     door: z.ZodLiteral<"api">;
-    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     execution_key: z.ZodString;
     execution_key_fingerprint: z.ZodString;
     extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
@@ -58,6 +57,20 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>>>;
+    reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strict>>>;
     resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
@@ -84,7 +97,6 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
     }, z.core.$strict>>>;
     channel: z.ZodString;
     door: z.ZodLiteral<"channel">;
-    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     execution_key: z.ZodString;
     execution_key_fingerprint: z.ZodString;
     extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
@@ -113,6 +125,20 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
     resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;

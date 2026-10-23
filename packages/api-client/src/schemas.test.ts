@@ -214,6 +214,83 @@ describe('attachmentMediaItem schema — applied per item by the transcript rend
   });
 });
 
+describe('conversationMessage schema — an ask send record', () => {
+  const base = {
+    message_id: 's1',
+    route_name: 'chat',
+    door: 'channel',
+    thread_id: 'chat/+1',
+    client_address: '+1',
+    caller_principal: null,
+    origin: 'send',
+    sent_by: 'ask',
+    inbound_text: '',
+    answer_status: 'answered',
+    answer: 'proceed?',
+    delivery_status: 'delivered',
+    created_at: 1,
+    updated_at: 2,
+  };
+
+  it('decodes the caller-scoped read, which carries only the ask flag, the reply answer and its quote', () => {
+    const parsed = schemas.conversationMessage.parse({
+      ...base,
+      ask: { sensitive: false },
+      ask_reply: { answer: 'yes', reply_to: null },
+    });
+    expect(parsed.ask).toEqual({
+      sensitive: false,
+      interaction_id: null,
+      answer_format: null,
+      attempts: null,
+      timed_out_attempts: null,
+    });
+    expect(parsed.ask_reply).toEqual({
+      answer: 'yes',
+      medium_message_id: null,
+      answered_at: null,
+      reply_to: null,
+    });
+  });
+
+  it('decodes the quote an ask reply carries', () => {
+    const parsed = schemas.conversationMessage.parse({
+      ...base,
+      ask_reply: {
+        answer: 'yes',
+        reply_to: { message_id: 'wamid.1', status: 'found', text: 'proceed?' },
+      },
+    });
+    expect(parsed.ask_reply?.reply_to).toEqual({
+      message_id: 'wamid.1',
+      status: 'found',
+      text: 'proceed?',
+    });
+  });
+
+  it('decodes the admin read with every ask field', () => {
+    const parsed = schemas.conversationMessage.parse({
+      ...base,
+      ask: {
+        sensitive: true,
+        interaction_id: 'i-1',
+        answer_format: 'text',
+        attempts: 2,
+        timed_out_attempts: [1],
+      },
+      ask_reply: { answer: null, medium_message_id: 'r-1', answered_at: '2027-01-15T08:00:00Z' },
+    });
+    expect(parsed.ask?.interaction_id).toBe('i-1');
+    expect(parsed.ask_reply?.answered_at).toBe('2027-01-15T08:00:00Z');
+  });
+
+  it('refuses a mistyped admin ask field', () => {
+    expect(() =>
+      schemas.conversationMessage.parse({ ...base, ask: { sensitive: false, attempts: 'two' } }),
+    ).toThrow();
+  });
+});
+
 describe('conversationMessage schema — inbound_attachments', () => {
   const base = {
     message_id: 'm1',
@@ -1066,5 +1143,50 @@ describe('backupDocument schema — the import door rule a picked file is checke
 
   it('refuses a document version the import door refuses', () => {
     expect(schemas.backupDocument.safeParse({ ...exported, version: 2 }).success).toBe(false);
+  });
+});
+
+describe('conversationMessage schema — the message an inbound quotes', () => {
+  const base = {
+    message_id: 'm1',
+    route_name: 'chat',
+    door: 'channel',
+    thread_id: 'chat/+1',
+    client_address: '+1',
+    caller_principal: null,
+    origin: 'client',
+    inbound_text: 'yes',
+    created_at: 1,
+    updated_at: 2,
+  };
+
+  it('defaults an absent quote to null', () => {
+    expect(schemas.conversationMessage.parse(base).inbound_reply_to).toBeNull();
+  });
+
+  it.each([
+    { message_id: 'wamid.1', status: 'found', text: 'Line one\nline two' },
+    { message_id: 'wamid.2', status: 'not_found', text: null },
+    { message_id: 'wamid.3', status: 'sensitive', text: null },
+    { message_id: 'wamid.4', status: 'no_text', text: null },
+  ])('decodes a $status quote', (quote) => {
+    expect(
+      schemas.conversationMessage.parse({ ...base, inbound_reply_to: quote }).inbound_reply_to,
+    ).toEqual(quote);
+  });
+
+  it('rejects an unknown status and an unknown key', () => {
+    expect(() =>
+      schemas.conversationMessage.parse({
+        ...base,
+        inbound_reply_to: { message_id: 'wamid.1', status: 'deleted', text: null },
+      }),
+    ).toThrow();
+    expect(() =>
+      schemas.conversationMessage.parse({
+        ...base,
+        inbound_reply_to: { message_id: 'wamid.1', status: 'found', text: 'x', extra: 1 },
+      }),
+    ).toThrow();
   });
 });

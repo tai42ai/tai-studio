@@ -2,6 +2,10 @@
  * The transcript body: the loading skeleton, the initial-load failure, the empty
  * states (filtered vs whole thread), or the ordered list of exchanges with its
  * "Load older messages" control and per-page error.
+ *
+ * A send made during a turn (`turn_message_id`) is drawn inside that turn's
+ * exchange when the turn is on the page, in the order it was sent; otherwise it is
+ * an exchange of its own.
  */
 import type { ConversationMessage } from '@tai42/api-client';
 import { Button, EmptyState, errorMessage, Skeleton } from '@tai42/studio-sdk';
@@ -9,6 +13,35 @@ import type { ReactNode, RefObject } from 'react';
 
 import { Exchange } from './Exchange';
 import { ReadFailure } from './read-states';
+
+/** The page's records as exchanges, each turn with the sends made during it. */
+function groupMidTurnSends(
+  items: readonly ConversationMessage[],
+): { record: ConversationMessage; midTurn: ConversationMessage[] }[] {
+  const turns = new Set(
+    items.filter((record) => record.origin !== 'send').map((record) => record.message_id),
+  );
+  const midTurn = new Map<string, ConversationMessage[]>();
+  for (const record of items) {
+    const turn = record.origin === 'send' ? record.turn_message_id : null;
+    if (turn !== null && turns.has(turn)) {
+      midTurn.set(turn, [...(midTurn.get(turn) ?? []), record]);
+    }
+  }
+  return items
+    .filter(
+      (record) =>
+        record.origin !== 'send' ||
+        record.turn_message_id === null ||
+        !turns.has(record.turn_message_id),
+    )
+    .map((record) => ({
+      record,
+      midTurn: (midTurn.get(record.message_id) ?? []).sort(
+        (left, right) => left.created_at - right.created_at,
+      ),
+    }));
+}
 
 export function TranscriptBody({
   isPending,
@@ -85,8 +118,8 @@ export function TranscriptBody({
         data-testid="conversation-transcript"
         style={{ listStyle: 'none', margin: 0, padding: 0 }}
       >
-        {items.map((record) => (
-          <Exchange key={record.message_id} record={record} now={now} />
+        {groupMidTurnSends(items).map(({ record, midTurn }) => (
+          <Exchange key={record.message_id} record={record} midTurn={midTurn} now={now} />
         ))}
       </ol>
     </div>

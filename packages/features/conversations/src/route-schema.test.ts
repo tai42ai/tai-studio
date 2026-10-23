@@ -18,6 +18,22 @@ import {
 } from './route-schema';
 import { makeRoute } from './test-utils';
 
+/** A stored catalogue with every member unset, as the server returns it. */
+const NO_REPLY_TEXTS = {
+  error: null,
+  slow_down: null,
+  pairing_code: null,
+  pairing_code_invalid: null,
+  pairing_linked: null,
+  pairing_unlinked: null,
+  pairing_not_linked: null,
+  pairing_link_unavailable: null,
+  pairing_unlink_unavailable: null,
+  rejected_unsupported_type: null,
+  rejected_too_large: null,
+  rejected_could_not_receive: null,
+};
+
 describe('routeFormSchema', () => {
   it('makes route_name an editable string on create', () => {
     const props = routeFormSchema().properties;
@@ -114,7 +130,7 @@ describe('routeToFormValue', () => {
         reply_expr: { content: '.result' },
         initial_mode: 'manual',
         turns_per_hour_override: 30,
-        error_reply_text: 'sorry',
+        reply_texts: { ...NO_REPLY_TEXTS, error: 'sorry', slow_down: 'One moment.' },
       }),
     );
     expect(value).toEqual({
@@ -123,7 +139,7 @@ describe('routeToFormValue', () => {
       initial_mode: 'manual',
       overlap: { running: 'continue', deliver: 'one', settle_seconds: 0 },
       turns_per_hour_override: 30,
-      error_reply_text: 'sorry',
+      reply_texts: { error: 'sorry', slow_down: 'One moment.' },
       target: {
         target_kind: 'tool',
         target_name: 'lookup',
@@ -145,13 +161,13 @@ describe('routeToFormValue', () => {
         channel: 'sms',
         our_identity: '+1555',
         turns_per_hour_override: null,
-        error_reply_text: null,
+        reply_texts: null,
       }),
     );
     expect(value.target).toEqual({ target_kind: 'agent', target_name: 'assistant' });
     expect(value.delivery).toEqual({ door: 'channel', channel: 'sms', our_identity: '+1555' });
     expect(value.turns_per_hour_override).toBeUndefined();
-    expect(value.error_reply_text).toBeUndefined();
+    expect(value.reply_texts).toBeUndefined();
   });
 });
 
@@ -170,7 +186,7 @@ describe('formValueToBody', () => {
       execution_key: 'svc',
       initial_mode: 'agent',
       turns_per_hour_override: 12,
-      error_reply_text: 'oops',
+      reply_texts: { error: 'oops', pairing_code: 'Your code: {pairing_code}', slow_down: '  ' },
     });
     expect(body).toEqual({
       route_name: 'events',
@@ -188,7 +204,7 @@ describe('formValueToBody', () => {
       our_identity: '+1',
       callback_url: null,
       turns_per_hour_override: 12,
-      error_reply_text: 'oops',
+      reply_texts: { error: 'oops', pairing_code: 'Your code: {pairing_code}' },
       locale: null,
     });
   });
@@ -213,7 +229,7 @@ describe('formValueToBody', () => {
       channel: null,
       our_identity: null,
       turns_per_hour_override: null,
-      error_reply_text: null,
+      reply_texts: null,
     });
   });
 
@@ -235,7 +251,7 @@ describe('formValueToBody', () => {
       our_identity: null,
       callback_url: null,
       turns_per_hour_override: null,
-      error_reply_text: null,
+      reply_texts: null,
       locale: null,
     });
   });
@@ -446,16 +462,21 @@ describe('routeFormErrors', () => {
     expect(withChannel('whatsapp')).toBeUndefined();
   });
 
-  it('shows the error-reply bound as its field text and accepts a blank reply', () => {
-    const withReply = (error_reply_text: string): string | undefined =>
+  it('shows a reply text bound as its field text and accepts a blank reply', () => {
+    const withReply = (member: string, text: string): string | undefined =>
       routeFormErrors(
         routeFormSchema(),
-        { ...apiRoute('https://sink.example/cb'), error_reply_text },
+        { ...apiRoute('https://sink.example/cb'), reply_texts: { [member]: text } },
         false,
-      ).error_reply_text;
-    expect(withReply('x'.repeat(2001))).toBe('Enter the reply text (up to 2,000 characters).');
-    expect(withReply('   ')).toBeUndefined();
-    expect(withReply('Sorry, try again.')).toBeUndefined();
+      )[`reply_texts.${member}`];
+    expect(withReply('error', 'x'.repeat(2001))).toBe(
+      'Enter the reply text (up to 2,000 characters).',
+    );
+    expect(withReply('pairing_code', 'x'.repeat(2001))).toBe(
+      'Enter the reply text (up to 2,000 characters).',
+    );
+    expect(withReply('error', '   ')).toBeUndefined();
+    expect(withReply('slow_down', 'One moment.')).toBeUndefined();
   });
 
   it('reads the route-name slug and the door rules from the contract document', () => {
@@ -479,5 +500,59 @@ describe('routeFormErrors', () => {
         false,
       ),
     ).toEqual({});
+  });
+});
+
+describe('reply texts', () => {
+  const apiRoute = (callback_url: string): RouteFormValue => ({
+    route_name: 'ok',
+    execution_key: 'svc',
+    target: { target_kind: 'agent', target_name: 'assistant' },
+    delivery: { door: 'api', callback_url },
+  });
+
+  it('groups one optional text field per contract member, each with the document bounds', () => {
+    const group = routeFormSchema().properties?.reply_texts;
+    expect(group).toMatchObject({ type: 'object', title: 'Reply texts' });
+    expect(group?.required).toBeUndefined();
+    expect(Object.keys(group?.properties ?? {}).sort()).toEqual(Object.keys(NO_REPLY_TEXTS).sort());
+    for (const field of Object.values(group?.properties ?? {})) {
+      expect(field).toMatchObject({
+        type: ['string', 'null'],
+        minLength: 1,
+        maxLength: 2000,
+        pattern: '\\S',
+      });
+      expect(field.title).toEqual(expect.any(String));
+      expect(field.description).toEqual(expect.any(String));
+    }
+  });
+
+  it("names the pairing-code reply's two tokens", () => {
+    const field = routeFormSchema().properties?.reply_texts?.properties?.pairing_code;
+    expect(field?.description).toContain('{pairing_code}');
+    expect(field?.description).toContain('{expires_at}');
+  });
+
+  it('places the group last, after the turn-rate override', () => {
+    const keys = Object.keys(routeFormSchema().properties ?? {});
+    expect(keys.at(-1)).toBe('reply_texts');
+  });
+
+  it('sends an all-blank catalogue as null, never an empty object', () => {
+    const body = formValueToBody({
+      ...apiRoute('https://sink.example/cb'),
+      reply_texts: { error: ' ', slow_down: '' },
+    });
+    expect(body.reply_texts).toBeNull();
+  });
+
+  it('round-trips a stored catalogue through the form unchanged', () => {
+    const stored = { ...NO_REPLY_TEXTS, pairing_linked: 'Linked.', rejected_too_large: 'Too big.' };
+    const value = routeToFormValue(makeRoute({ reply_texts: stored }));
+    expect(formValueToBody(value).reply_texts).toEqual({
+      pairing_linked: 'Linked.',
+      rejected_too_large: 'Too big.',
+    });
   });
 });

@@ -299,27 +299,56 @@ const LABELS_PAGE = {
 /** One page-less pending `form` whose required `code` field carries a `pattern` and the
  * caller's `wording.form.fields.code.invalid` sentence; the optional `note` field carries a
  * `pattern` and no sentence, so it keeps the surface's own word. */
+const INVALID_WORDING_ITEM = {
+  interaction_id: 'iw-1',
+  group_id: 'iw-1',
+  sensitive: false,
+  answer_format: 'form',
+  question: 'Enter a code',
+  created_at: '2026-08-01T00:00:00.000Z',
+  timeout_at: '2026-08-09T00:00:00.000Z',
+  format_payload: {
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', pattern: '^[A-Z]{3}$', title: 'Code' },
+        note: { type: 'string', pattern: '^[a-z]+$', title: 'Note' },
+      },
+      required: ['code'],
+    },
+    wording: { form: { fields: { code: { invalid: 'Use three capital letters' } } } },
+  },
+};
+
+/** The inbox page holding that one ask. */
 const INVALID_WORDING_PAGE = {
+  data: {
+    items: [INVALID_WORDING_ITEM],
+    total: 1,
+    page: 1,
+    page_size: 50,
+    next_page: null,
+    truncated: false,
+  },
+};
+
+/** The same form ask with a caller `required` sentence on its required field. */
+const REQUIRED_WORDING_PAGE = {
   data: {
     items: [
       {
-        interaction_id: 'iw-1',
-        group_id: 'iw-1',
-        sensitive: false,
-        answer_format: 'form',
-        question: 'Enter a code',
-        created_at: '2026-08-01T00:00:00.000Z',
-        timeout_at: '2026-08-09T00:00:00.000Z',
+        ...INVALID_WORDING_ITEM,
+        interaction_id: 'rw-1',
+        group_id: 'rw-1',
         format_payload: {
-          schema: {
-            type: 'object',
-            properties: {
-              code: { type: 'string', pattern: '^[A-Z]{3}$', title: 'Code' },
-              note: { type: 'string', pattern: '^[a-z]+$', title: 'Note' },
+          ...INVALID_WORDING_ITEM.format_payload,
+          wording: {
+            form: {
+              fields: {
+                code: { invalid: 'Use three capital letters', required: 'Enter the code first' },
+              },
             },
-            required: ['code'],
           },
-          wording: { form: { fields: { code: { invalid: 'Use three capital letters' } } } },
         },
       },
     ],
@@ -635,6 +664,20 @@ test("a form field's caller sentence replaces the shape error, never the require
   await submit.click();
   await expect(code).toHaveAccessibleDescription('Use three capital letters');
   await expect(note).toHaveAccessibleDescription('must match the required pattern');
+});
+
+test("a form field's caller required sentence replaces the required message", async ({ page }) => {
+  await stubInbox(page, REQUIRED_WORDING_PAGE);
+  await page.goto('/interactions');
+  await expect(page.getByRole('heading', { name: 'Interactions' })).toBeVisible();
+
+  const formCard = page.getByTestId('interaction-card').filter({ hasText: 'Enter a code' });
+  const code = formCard.getByRole('textbox', { name: 'Code' });
+
+  // A missing required value shows the caller's `wording.form.fields.code.required`.
+  await formCard.getByRole('button', { name: 'Submit' }).click();
+  await expect(code).toHaveAccessibleDescription('Enter the code first');
+  await expect(formCard.getByText('"code" is required')).toHaveCount(0);
 });
 
 /** One pending form ask with a range whose two `date` ends each have a `timeOf` time, the

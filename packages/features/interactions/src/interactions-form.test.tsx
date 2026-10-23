@@ -1,3 +1,4 @@
+import { ApiError } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -1738,5 +1739,251 @@ describe('InteractionsPage — form preview: a date range with a time on each en
       'To time',
       'Note',
     ]);
+  });
+});
+
+describe("Form answer — the caller's could-not-update line", () => {
+  /** A reacting one-field form carrying `wording.form.update_failed`. */
+  const reactingForm = (interactionId: string, updateFailed?: string): string =>
+    interactionJson({
+      interaction_id: interactionId,
+      format: 'form',
+      prompt: 'Pick',
+      format_payload: {
+        schema: { type: 'object', properties: { p: { type: 'string', enum: ['a', 'b'] } } },
+        reactions: { field_changed: ['p'] },
+        ...(updateFailed !== undefined
+          ? { wording: { form: { update_failed: updateFailed } } }
+          : {}),
+      },
+    });
+
+  it("draws the caller's line with the in-app door's own reason", async () => {
+    const user = userEvent.setup();
+    const react = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError('p is odd', 400, undefined, undefined, { error: 'p is odd' }),
+      );
+    const { channel } = renderInbox(undefined, undefined, '', react);
+    await emitFrame(channel, 'interaction.add', reactingForm('q-uf-app', 'No update ({reason})'));
+
+    await user.click(await screen.findByRole('radio', { name: 'b' }));
+    const notice = await screen.findByTestId('form-reaction-error');
+    expect(notice).toHaveAttribute('role', 'alert');
+    expect(notice).toHaveTextContent(/^No update \(p is odd\)$/);
+  });
+
+  it('fills {reason} with nothing when the failure carries no server reason', async () => {
+    const user = userEvent.setup();
+    const react = vi.fn().mockRejectedValue(new Error('network down'));
+    const { channel } = renderInbox(undefined, undefined, '', react);
+    await emitFrame(channel, 'interaction.add', reactingForm('q-uf-none', 'No update.{reason}'));
+
+    await user.click(await screen.findByRole('radio', { name: 'b' }));
+    expect(await screen.findByTestId('form-reaction-error')).toHaveTextContent(/^No update\.$/);
+  });
+
+  it("draws the caller's line with the host door's reason", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: 'the reaction was refused', reason: 'p is odd' }), {
+          status: 400,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    );
+    try {
+      const { channel } = renderInbox(undefined, undefined, '', undefined, '/web/channel/react');
+      await emitFrame(
+        channel,
+        'interaction.add',
+        reactingForm('q-uf-host', 'No update ({reason})'),
+      );
+
+      await user.click(await screen.findByRole('radio', { name: 'b' }));
+      expect(await screen.findByTestId('form-reaction-error')).toHaveTextContent(
+        /^No update \(p is odd\)$/,
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("never fills {reason} with the host door's message", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: 'the channel session expired' }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    );
+    try {
+      const { channel } = renderInbox(undefined, undefined, '', undefined, '/web/channel/react');
+      await emitFrame(
+        channel,
+        'interaction.add',
+        reactingForm('q-uf-host-none', 'No update.{reason}'),
+      );
+
+      await user.click(await screen.findByRole('radio', { name: 'b' }));
+      expect(await screen.findByTestId('form-reaction-error')).toHaveTextContent(/^No update\.$/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe("Form answer — the caller's step-progress line", () => {
+  const stepped = (interactionId: string, stepProgress?: string): string =>
+    interactionJson({
+      interaction_id: interactionId,
+      format: 'form',
+      prompt: 'Steps',
+      format_payload: {
+        schema: { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } } },
+        pages: [
+          { title: 'One', fields: ['a'] },
+          { title: 'Two', fields: ['b'] },
+        ],
+        ...(stepProgress !== undefined
+          ? { wording: { form: { step_progress: stepProgress } } }
+          : {}),
+      },
+    });
+
+  it("draws the caller's line with {step} and {steps} filled, then the page title", async () => {
+    const user = userEvent.setup();
+    const { channel } = renderInbox();
+    await emitFrame(channel, 'interaction.add', stepped('q-sp-set', 'Page {step}/{steps}'));
+
+    const status = await screen.findByTestId('form-step-status');
+    expect(status).toHaveTextContent(/^Page 1\/2 — One$/);
+    expect(screen.getByRole('region', { name: 'Page 1/2 — One' })).toBe(status);
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByTestId('form-step-status')).toHaveTextContent(/^Page 2\/2 — Two$/);
+  });
+
+  it("names the section by the surface's own line when the send set none", async () => {
+    const { channel } = renderInbox();
+    await emitFrame(channel, 'interaction.add', stepped('q-sp-unset'));
+
+    const status = await screen.findByTestId('form-step-status');
+    expect(screen.getByRole('region', { name: 'Step 1 of 2 — One' })).toBe(status);
+  });
+});
+
+describe("Form answer — the field's own words", () => {
+  it('reads a yes/no value back in the field words', async () => {
+    const user = userEvent.setup();
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-bool-words',
+        format: 'form',
+        prompt: 'Review',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: { agree: { type: 'boolean' }, news: { type: 'boolean' } },
+          },
+          data: { values: { agree: true, news: false } },
+          pages: [
+            { title: 'Pick', fields: ['agree', 'news'] },
+            { title: 'Review', fields: [], kind: 'review' },
+          ],
+          wording: {
+            form: {
+              fields: {
+                agree: { true_label: 'Agreed', false_label: 'Declined' },
+                news: { true_label: 'Subscribed', false_label: 'Not subscribed' },
+              },
+            },
+          },
+        },
+      }),
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
+    const review = await screen.findByTestId('form-review');
+    expect(Array.from(review.querySelectorAll('dd')).map((cell) => cell.textContent)).toEqual([
+      'Agreed',
+      'Not subscribed',
+    ]);
+  });
+
+  it("shows the field's required sentence for a missing value", async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn().mockResolvedValue(undefined);
+    const { channel } = renderInbox(answer);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-required-words',
+        format: 'form',
+        prompt: 'Codes',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: { code: { type: 'string', title: 'Code' } },
+            required: ['code'],
+          },
+          wording: { form: { fields: { code: { required: 'Enter a code first' } } } },
+        },
+      }),
+    );
+
+    await screen.findByLabelText(/Code/);
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(await screen.findByText('Enter a code first')).toBeInTheDocument();
+    expect(screen.queryByText(/"code" is required/)).not.toBeInTheDocument();
+    expect(answer).not.toHaveBeenCalled();
+  });
+
+  it("draws a list field's add, remove, item and empty words", async () => {
+    const user = userEvent.setup();
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-list-words',
+        format: 'form',
+        prompt: 'Tags',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: { tags: { type: 'array', items: { type: 'string' }, title: 'Tags' } },
+          },
+          wording: {
+            form: {
+              fields: {
+                tags: {
+                  add_item: 'Add a tag',
+                  remove_item: 'Drop',
+                  item_label: 'Tag {n}',
+                  no_items: 'No tags yet',
+                },
+              },
+            },
+          },
+        },
+      }),
+    );
+
+    expect(await screen.findByText('No tags yet')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add a tag' }));
+    expect(screen.getByRole('textbox', { name: /^Tag 1/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Drop Tag 1' })).toBeInTheDocument();
+    expect(screen.queryByText('No tags yet')).not.toBeInTheDocument();
   });
 });

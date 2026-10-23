@@ -5,7 +5,7 @@
  */
 import type { FormOption, FormWording, Interaction, Wording } from '@tai42/api-client';
 import { schemas } from '@tai42/api-client';
-import type { JsonSchema } from '@tai42/studio-sdk';
+import type { FieldWords, JsonSchema } from '@tai42/studio-sdk';
 import { defaultValueForSchema } from '@tai42/studio-sdk';
 
 /** Props every submittable renderer takes. `onSubmit` emits the format's answer. */
@@ -36,32 +36,55 @@ export function wordingOf(payload: Record<string, unknown>): Wording | undefined
   return parsed.success ? parsed.data : undefined;
 }
 
-/** One field's caller words in the SDK's `fieldWording` shape. */
-export interface FormFieldWords {
-  readonly choiceLabel?: string;
-  readonly invalid?: string;
+/**
+ * One field's caller words: the SDK's `FieldWords` the `SchemaForm` and
+ * `validateAgainstSchema` read, plus the boolean words the review readback reads.
+ */
+export interface FormFieldWords extends FieldWords {
+  /** The readback's word for a boolean field's true value; absent reads "Yes". */
+  readonly trueLabel?: string;
+  /** The readback's word for a boolean field's false value; absent reads "No". */
+  readonly falseLabel?: string;
 }
 
+/** The camel-cased word each `wording.form.fields` entry member maps to. */
+const FIELD_WORD_MEMBERS = [
+  ['choice_label', 'choiceLabel'],
+  ['invalid', 'invalid'],
+  ['required', 'required'],
+  ['add_item', 'addItem'],
+  ['remove_item', 'removeItem'],
+  ['item_label', 'itemLabel'],
+  ['no_items', 'noItems'],
+  ['true_label', 'trueLabel'],
+  ['false_label', 'falseLabel'],
+] as const;
+
 /**
- * The per-field words of `wording.form.fields`, mapped to the SDK's `fieldWording` shape
- * (`{ choiceLabel, invalid }`) and keyed by property name: `choiceLabel` is the field
- * picker's placeholder the SchemaForm draws, `invalid` the sentence `validateAgainstSchema`
- * shows in place of the field's shape errors. Only non-blank words are carried, and only a
- * field with at least one is listed; `undefined` when none apply, so the form draws its own
- * default words.
+ * The per-field words of `wording.form.fields`, keyed by property name, in the SDK's
+ * `FieldWords` shape plus the readback's boolean words: `choiceLabel` the field picker's
+ * placeholder, `invalid` the sentence shown in place of the field's shape errors,
+ * `required` the sentence shown for its missing required value, `addItem` / `removeItem`
+ * / `itemLabel` / `noItems` a list field's words, and `trueLabel` / `falseLabel` the
+ * readback's words for a boolean value. Only non-blank words are carried, and only a
+ * field with at least one is listed; `undefined` when none apply, so the form draws its
+ * own default words. `length_hint` has no control here and is not carried.
  */
 export function formFieldWording(
   fields: FormWording['fields'],
 ): Readonly<Record<string, FormFieldWords>> | undefined {
   if (fields == null) return undefined;
-  const entries: Record<string, FormFieldWords> = {};
-  for (const [name, entry] of Object.entries(fields)) {
-    const choiceLabel = nonBlankString(entry.choice_label);
-    const invalid = nonBlankString(entry.invalid);
-    if (choiceLabel === undefined && invalid === undefined) continue;
-    entries[name] = { choiceLabel, invalid };
-  }
-  return Object.keys(entries).length > 0 ? entries : undefined;
+  const entries = Object.entries(fields).flatMap(([name, entry]) => {
+    const words = Object.fromEntries(
+      FIELD_WORD_MEMBERS.flatMap(([member, word]) => {
+        const text = nonBlankString(entry[member]);
+        return text === undefined ? [] : [[word, text] as const];
+      }),
+    ) as FormFieldWords;
+    return Object.keys(words).length > 0 ? [[name, words] as const] : [];
+  });
+  // Built from entries so every field name, `__proto__` included, lands as an own key.
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
 /** `value` as a `string[]`, or `null` when it is not an array of only strings. */

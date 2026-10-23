@@ -13,6 +13,7 @@ import type { JsonSchema } from '@tai42/studio-sdk';
 import { fieldDrawingOrder, isFieldVisible, MediaImage } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
+import type { FormFieldWords } from './answer-schema';
 import {
   displayBodyStyle,
   displayHeadingStyle,
@@ -84,14 +85,17 @@ function slotValueText(value: unknown): string | undefined {
 /**
  * A review step's generic readback: each visible top-level field's label and the value
  * entered for it, in drawing order (each `timeOf` time right after its date). A field hidden by its `visibleWhen` predicate is absent from
- * the readback, since it is absent from the answer the consumer receives.
+ * the readback, since it is absent from the answer the consumer receives. A yes/no value
+ * reads in the field's own `trueLabel` / `falseLabel` words, else "Yes" / "No".
  */
 export function ReviewReadback({
   schema,
   value,
+  fieldWording,
 }: {
   readonly schema: JsonSchema;
   readonly value: Record<string, unknown>;
+  readonly fieldWording: Readonly<Record<string, FormFieldWords>> | undefined;
 }): ReactNode {
   const properties = schema.properties ?? {};
   const rows = fieldDrawingOrder(Object.keys(properties), properties)
@@ -105,7 +109,12 @@ export function ReviewReadback({
         <div key={name} style={reviewRowStyle}>
           <dt style={reviewTermStyle}>{typeof prop.title === 'string' ? prop.title : name}</dt>
           <dd style={reviewValueStyle}>
-            {formatReadbackValue(Object.hasOwn(value, name) ? value[name] : undefined)}
+            {formatReadbackValue(
+              Object.hasOwn(value, name) ? value[name] : undefined,
+              fieldWording !== undefined && Object.hasOwn(fieldWording, name)
+                ? fieldWording[name]
+                : undefined,
+            )}
           </dd>
         </div>
       ))}
@@ -113,11 +122,15 @@ export function ReviewReadback({
   );
 }
 
-/** One answered value rendered for the review readback; an empty value reads as "—". */
-function formatReadbackValue(value: unknown): string {
+/**
+ * One answered value rendered for the review readback; an empty value reads as "—", a
+ * yes/no value as the field's own words, else "Yes" / "No".
+ */
+function formatReadbackValue(value: unknown, words: FormFieldWords | undefined): string {
   if (value === undefined || value === null || value === '') return '—';
   if (Array.isArray(value)) return value.length === 0 ? '—' : value.map(toText).join(', ');
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (typeof value === 'boolean')
+    return value ? (words?.trueLabel ?? 'Yes') : (words?.falseLabel ?? 'No');
   return toText(value);
 }
 

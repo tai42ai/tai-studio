@@ -34,6 +34,12 @@ export type ConversationMode = z.infer<typeof conversationMode>;
  * never send. `merged` and `superseded` are the overlap-policy outcomes: this
  * record's text was carried into (`merged`) or dropped in favour of (`superseded`)
  * a later turn, named by `successor_id`; both are terminal and never send.
+ * A send record starts `sending` once it is written and its send has begun, and
+ * becomes `outcome_unknown` when the send never reported an outcome (it passed its
+ * bound, it was cancelled mid-call, or the process stopped), so the message may or may
+ * not have reached the participant; `outcome_unknown` is terminal, never re-sent, and
+ * surfaced as loudly as `failed`. A `sending` record is not in the thread index, so no transcript, thread
+ * list or search ever shows one.
  */
 export const conversationDeliveryStatus = openapi.deliveryStatus;
 export type ConversationDeliveryStatus = z.infer<typeof conversationDeliveryStatus>;
@@ -46,8 +52,10 @@ export type ConversationAnswerStatus = z.infer<typeof conversationAnswerStatus>;
 
 /**
  * Who authored a record's outgoing side. `client` is the ordinary turn the flow
- * answered; `operator` is a message a human sent into the thread, whose text
- * rides `answer` (its `inbound_text` is empty).
+ * answered; `operator` is a message a human sent into the thread; `send` is a
+ * message the platform sent on its own (a notification, an ask, a notice), named
+ * by `sent_by`. An `operator` or `send` record answers no message: its text rides
+ * `answer` and its `inbound_text` is empty.
  */
 export const conversationRecordOrigin = openapi.conversationRecordView.shape.origin;
 export type ConversationRecordOrigin = z.infer<typeof conversationRecordOrigin>;
@@ -90,13 +98,20 @@ export const conversationThreadsPage = openapi.threadSummaryEnvelope;
 export type ConversationThreadsPage = z.infer<typeof conversationThreadsPage>;
 
 /**
- * One exchange: the visitor's `inbound_text` — every record answers a message, so
- * both projections always carry it — and the agent's `answer`, plus where that
- * answer's delivery stands. `successor_id` names the later turn a `merged` or
- * `superseded` record was folded into, `null` on every other outcome. The delivery
- * bookkeeping fields (`channel`, `our_identity`, `provider_message_id`, `callback_url`,
- * `error`, `outbound_message_ids`, `attempts`) are ADMIN ONLY — the same door serves a
- * caller-scoped projection that withholds them, read here as `null`.
+ * One exchange: the visitor's `inbound_text` and the agent's `answer`, plus where
+ * that answer's delivery stands. An `operator` or `send` record answers no message,
+ * so its `inbound_text` is empty and its text rides `answer`. A send record names
+ * what sent it in `sent_by`, and carries `turn_message_id` when it was sent during a
+ * turn to that turn's own participant; an ask's send record carries `ask`, and the
+ * participant's reply over the channel in `ask_reply`, whose `answer` is `null` for a
+ * sensitive ask. `inbound_reply_to` and `ask_reply.reply_to` name the earlier message
+ * the visitor's message or the reply quotes, with its text when the thread holds it.
+ * `successor_id` names the later turn a `merged` or `superseded` record was folded
+ * into, `null` on every other outcome. The delivery bookkeeping fields (`channel`,
+ * `our_identity`, `provider_message_id`, `callback_url`, `error`, `attempts`, the
+ * per-part `sends`, every `ask` field but `sensitive` and every `ask_reply` field but
+ * `answer` and `reply_to`) are ADMIN ONLY — the same door serves a caller-scoped
+ * projection that withholds them, read here as `null` (`sends` as an empty list).
  */
 export const conversationMessage = openapi.conversationRecordView;
 export type ConversationMessage = z.infer<typeof conversationMessage>;

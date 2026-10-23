@@ -3,12 +3,17 @@
  * their chip paint and label. `delivery_status` is where the answer sits in the
  * send machine; `answer_status` is the nature of the turn's outcome.
  *
- * A failure never reads as an ordinary row: `failed` takes the danger tint, and
- * every chip pairs its tint with a WORD, so colour is never the only carrier.
+ * A failure never reads as an ordinary row: `failed` and `outcome_unknown` take the
+ * danger tint, and every chip pairs its tint with a WORD, so colour is never the only
+ * carrier.
  */
 import type { ConversationAnswerStatus, ConversationDeliveryStatus } from '@tai42/api-client';
 
-/** The delivery statuses in send-machine order — the status filter's option order. */
+/**
+ * The delivery statuses in send-machine order — the status filter's option order.
+ * `sending` is not among them: a record in it is not in the thread index, so no
+ * thread could ever match it.
+ */
 export const DELIVERY_STATUSES: readonly ConversationDeliveryStatus[] = [
   'accepted',
   'pending_delivery',
@@ -19,6 +24,7 @@ export const DELIVERY_STATUSES: readonly ConversationDeliveryStatus[] = [
   'silent',
   'merged',
   'superseded',
+  'outcome_unknown',
 ];
 
 export const DELIVERY_VARIANT: Record<ConversationDeliveryStatus, string> = {
@@ -31,6 +37,8 @@ export const DELIVERY_VARIANT: Record<ConversationDeliveryStatus, string> = {
   silent: 'neutral',
   merged: 'neutral',
   superseded: 'neutral',
+  sending: 'neutral',
+  outcome_unknown: 'danger',
 };
 
 export const DELIVERY_LABEL: Record<ConversationDeliveryStatus, string> = {
@@ -43,6 +51,8 @@ export const DELIVERY_LABEL: Record<ConversationDeliveryStatus, string> = {
   silent: 'Silent',
   merged: 'Merged',
   superseded: 'Superseded',
+  sending: 'Sending',
+  outcome_unknown: 'Sent, outcome unknown',
 };
 
 export const ANSWER_VARIANT: Record<ConversationAnswerStatus, string> = {
@@ -63,5 +73,5 @@ export const ANSWER_LABEL: Record<ConversationAnswerStatus, string> = {
 
 /** The statuses an operator is meant to NOTICE — surfaced loudly wherever they appear. */
 export function isLoudDelivery(status: ConversationDeliveryStatus): boolean {
-  return status === 'failed';
+  return status === 'failed' || status === 'outcome_unknown';
 }

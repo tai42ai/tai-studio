@@ -6,7 +6,7 @@
  *
  * The document's own constraints — the route-name slug, each door's delivery fields (an
  * `api` door's optional absolute-https `callback_url`; a `channel` door's `:`-free
- * `channel` and its non-blank `our_identity`), the error-reply text bounds, the positive
+ * `channel` and its non-blank `our_identity`), the reply-text bounds, the positive
  * turn rate and the overlap policy's bounds — are read from it, so the SDK validator
  * refuses what the server refuses, in-form. The two discriminated unions keep an invalid
  * target-kind/door combination unauthorable:
@@ -45,6 +45,14 @@ import {
   RESUME_EXPR_ANNOTATION,
   START_EXPR_ANNOTATION,
 } from './route-jq-annotations';
+import {
+  REPLY_TEXT_MEMBERS,
+  replyTextPath,
+  replyTextsBody,
+  replyTextsProperty,
+  type ReplyTextsValue,
+  replyTextsValue,
+} from './route-reply-texts';
 
 /** Whether a required string field is unset or whitespace-only. */
 function blank(candidate: string | undefined): boolean {
@@ -286,16 +294,6 @@ function turnsPerHourProperty(): JsonSchema {
   };
 }
 
-/** The `error_reply_text` property — the participant-facing reply on a failed turn the target gave no reply for. */
-function errorReplyTextProperty(): JsonSchema {
-  return {
-    ...documentConstraints(API_VARIANT.properties.error_reply_text),
-    title: 'Error reply text',
-    description:
-      'The participant-facing reply sent when a turn fails and the target supplied no reply of its own; blank uses the built-in default.',
-  };
-}
-
 /**
  * The route form's schema. `fixedRouteName` pins `route_name` to a read-only value
  * for the edit path (the name IS the route's identity and its URL key, so a rename
@@ -314,7 +312,7 @@ export function routeFormSchema(fixedRouteName?: string): JsonSchema {
       execution_key: executionKeyProperty(),
       initial_mode: initialModeProperty(),
       turns_per_hour_override: turnsPerHourProperty(),
-      error_reply_text: errorReplyTextProperty(),
+      reply_texts: replyTextsProperty(),
     },
   };
 }
@@ -325,7 +323,7 @@ export interface RouteFormValue {
   execution_key?: string;
   initial_mode?: ConversationMode;
   turns_per_hour_override?: number;
-  error_reply_text?: string;
+  reply_texts?: ReplyTextsValue;
   // The route locale the platform keys, not authored by this form; carried through an
   // edit so an upsert never drops one set elsewhere.
   locale?: string | null;
@@ -391,7 +389,7 @@ export function routeToFormValue(route: ConversationRouteView): RouteFormValue {
     ...(route.turns_per_hour_override !== null
       ? { turns_per_hour_override: route.turns_per_hour_override }
       : {}),
-    ...(route.error_reply_text !== null ? { error_reply_text: route.error_reply_text } : {}),
+    ...(route.reply_texts !== null ? { reply_texts: replyTextsValue(route.reply_texts) } : {}),
     // Both target kinds carry the five door jqs (prefilled from their inline content).
     target: routeTargetValue(route),
     delivery:
@@ -410,11 +408,19 @@ const FIELD_TEXT: Readonly<Record<string, string>> = {
   'delivery.callback_url': 'Must be an absolute https URL with no user name or password.',
   'delivery.channel': 'Use a ":"-free channel name.',
   'delivery.our_identity': 'An identity is required.',
-  error_reply_text: 'Enter the reply text (up to 2,000 characters).',
+  ...Object.fromEntries(
+    REPLY_TEXT_MEMBERS.map(({ name }) => [
+      replyTextPath(name),
+      'Enter the reply text (up to 2,000 characters).',
+    ]),
+  ),
 };
 
-/** The optional text fields, where a blank value is no value (a poll-only route, the default reply). */
-const OPTIONAL_TEXT_FIELDS: readonly string[] = ['delivery.callback_url', 'error_reply_text'];
+/** The optional text fields, where a blank value is no value (a poll-only route, a built-in reply). */
+const OPTIONAL_TEXT_FIELDS: readonly string[] = [
+  'delivery.callback_url',
+  ...REPLY_TEXT_MEMBERS.map(({ name }) => replyTextPath(name)),
+];
 
 /** The form value at a dotted field path. */
 function valueAt(value: RouteFormValue, path: string): unknown {
@@ -566,7 +572,7 @@ function scalarBodyFields(
   | 'initial_mode'
   | 'execution_key'
   | 'turns_per_hour_override'
-  | 'error_reply_text'
+  | 'reply_texts'
   | 'locale'
 > {
   return {
@@ -574,7 +580,7 @@ function scalarBodyFields(
     initial_mode: value.initial_mode ?? 'agent',
     execution_key: value.execution_key ?? '',
     turns_per_hour_override: value.turns_per_hour_override ?? null,
-    error_reply_text: blank(value.error_reply_text) ? null : (value.error_reply_text ?? null),
+    reply_texts: replyTextsBody(value.reply_texts ?? {}),
     // Carried through unchanged — the form does not author the locale, and the upsert
     // replaces the whole row, so echoing it back keeps one set elsewhere.
     locale: value.locale ?? null,

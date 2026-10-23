@@ -265,7 +265,7 @@ export function makeRoute(overrides: Partial<ConversationRouteView> = {}): Conve
     our_identity: '+15550000000',
     callback_url: null,
     turns_per_hour_override: null,
-    error_reply_text: null,
+    reply_texts: null,
     execution_key_fingerprint: 'fp-1',
     locale: null,
     overlap: { running: 'continue', deliver: 'one', settle_seconds: 0 },

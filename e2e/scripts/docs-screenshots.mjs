@@ -128,6 +128,18 @@
  *                  inbound attachments (a served image inline, a document download chip),
  *                  via a forced transcript + served-media override the live backend never
  *                  produces.
+ *   - conversation-inbound-reply-to — a transcript whose visitor turns quote earlier
+ *                  messages: one quote the thread holds, drawn with its text, and one it
+ *                  does not hold, drawn with the message id, via a forced transcript the
+ *                  live backend never produces. Captured as the whole transcript card,
+ *                  which runs past the viewport.
+ *   - conversation-transcript-sends — a transcript carrying the platform's own sends: a send
+ *                  made during a turn drawn inside that turn, a sent message and a question
+ *                  asked outside any turn (the question sensitive, its reply not stored), a
+ *                  platform notice, a failed channel notice and a send whose outcome is
+ *                  unknown, both open delivery details showing, via forced transcript
+ *                  records the demo backend never produces. Captured as the whole transcript
+ *                  card, which runs past the viewport.
  *   - conversation-bulk-reset-{select,confirm,result} — the thread list's bulk reset over a
  *                  forced route and its three threads: every row ticked through the header
  *                  checkbox with the "Reset selected (3)" action, the confirm dialog naming the
@@ -135,15 +147,21 @@
  *                  reason and a Retry). The deletes are answered by route stubs, so no live
  *                  thread is forgotten.
  *   - entry-gate —the drill-in of the seeded `relay` web route: the web channel's
- *                  "Entry gate" panel, gate on, with its one `launch` code row.
+ *                  "Web chat" panel's entry-gate section, gate on, with its one `launch` code
+ *                  row.
  *   - entry-gate-empty — the drill-in of the seeded `relay-open` web route: the panel's
  *                  "No entry codes" state.
  *   - entry-gate-mint — the panel's shown-once mint dialog on `relay-open`, after a real
  *                  mint (the fresh code and its chat link).
  *   - entry-gate-unavailable — the panel's "Entry gate unavailable" card, via the real
  *                  `GET /api/plugins` answer with the web channel's mounts emptied.
+ *   - web-words — the same panel's words section on `relay`, with the route's own words
+ *                  for its entry-refused page and its busy sentence stored through the
+ *                  real words door.
  *   - conversation-route-agent-contract — the route CREATE dialog for an agent target,
  *                  framing the five door-contract jq fields and the execution key.
+ *   - conversation-route-reply-texts — the same CREATE dialog framing its Reply texts
+ *                  group, with the failed-turn and pairing-code words filled in.
  *   - schedule-contract — the add-schedule dialog framing its door-contract section (the
  *                  execution-key picker + the four jq fields), backed by the RQ scheduling
  *                  backend the docs-demo boot installs.
@@ -223,7 +241,7 @@ const OWNED_KEY = process.env.STUDIO_OWNED_KEY;
 const CONVERSATION_ROUTE = process.env.STUDIO_CONVERSATION_ROUTE;
 const CONVERSATION_THREAD = process.env.STUDIO_CONVERSATION_THREAD;
 
-/** The two seeded web routes the entry-gate shots drill into, each texted at its own name
+/** The two seeded web routes the entry-gate and words shots drill into, each texted at its own name
  * as its web identity: `ENTRY_GATE_ROUTE` gated with one live `launch` code,
  * `ENTRY_GATE_OPEN_ROUTE` ungated with none. The runner (docs-screenshots.sh) creates both
  * and seeds their gates after boot, then exports their names; there is no static fallback. */
@@ -231,8 +249,9 @@ const ENTRY_GATE_ROUTE = process.env.STUDIO_ENTRY_GATE_ROUTE;
 const ENTRY_GATE_OPEN_ROUTE = process.env.STUDIO_ENTRY_GATE_OPEN_ROUTE;
 /** The web channel's entry-gate doors, keyed by a web route's identity. */
 const ENTRY_GATE_DOORS = '/api/channels/web/gates';
-/** The panel the web channel's Studio plugin contributes to a web route's drill-in. */
-const ENTRY_GATE_PANEL = 'section[aria-label="Entry gate"]';
+/** The panel the web channel's Studio plugin contributes to a web route's drill-in: its
+ * entry-gate and words sections. */
+const WEB_CHAT_PANEL = 'section[aria-label="Web chat"]';
 
 /** When set (the automated CI pipeline sets it), skip the shots tagged
  * `nondeterministic` — the QR screens, whose QR encodes a freshly-minted random token
@@ -321,6 +340,25 @@ async function frameKwargsEditor(page) {
     .evaluate((el) => {
       el.scrollIntoView({ block: 'start' });
     });
+}
+
+/** The web channel's words doors, keyed by a web route's identity. */
+const WEB_WORDS_DOORS = '/api/channels/web/words';
+/** The words the `web-words` frame stores on its route. */
+const WEB_WORDS = {
+  page: {
+    entry_refused: { heading: 'Members only', text: 'Ask for a fresh link to join.' },
+  },
+  transport: { busy: 'One moment, please send that again.' },
+};
+
+/** Store `WEB_WORDS` as the web route `identity`'s whole words through the real words door. */
+async function storeWebWords(page, identity) {
+  const stored = await page.request.put(
+    `${STUDIO_URL}${WEB_WORDS_DOORS}/${encodeURIComponent(identity)}`,
+    { headers: { 'x-api-key': DEMO_KEY }, data: WEB_WORDS },
+  );
+  if (!stored.ok()) throw new Error(`storing the words on ${identity} failed (${stored.status()})`);
 }
 
 /** Revoke every live entry code on the web route `identity` through the real gate doors. */
@@ -583,7 +621,8 @@ const SCHEDULE_ROWS = [
 // The inbound-attachments transcript is FORCED through a route override: the live demo
 // backend mints no byte-backed inbound attachments, so the transcript record, its thread
 // and its served-media bitmap are all stubbed to render the attachment states
-// deterministically (the relative timestamps still drift, so the frame is nondeterministic).
+// deterministically. The record is stamped `ATTACHMENT_MINUTES_AGO` before the capture, so
+// its relative time label reads the same on every run.
 const ATTACHMENT_TRANSCRIPT_ROUTE = 'assistant-line';
 const ATTACHMENT_TRANSCRIPT_THREAD = 'assistant-line-demo';
 const ATTACHMENT_TRANSCRIPT_ADDRESS = '+10000000000';
@@ -644,9 +683,173 @@ const ATTACHMENT_TRANSCRIPT_RECORD = {
   answer: 'Thanks — received.',
   successor_id: null,
   delivery_status: 'delivered',
-  created_at: 1_800_000_010,
-  updated_at: 1_800_000_011,
 };
+const ATTACHMENT_MINUTES_AGO = 8;
+
+// The sends transcript is FORCED on the same stubbed thread: the demo backend runs no channel
+// that records platform sends, so the turn, the send made during it, the sends made outside any
+// turn and their outcomes are stubbed records, oldest first. Each label the frame draws follows
+// from its record: only `m-302` carries a `turn_message_id`, so it alone is drawn inside a turn.
+// Each record is stamped `minutesAgo` before the capture (like the bulk-reset threads), so the
+// transcript's relative time labels read the same on every run.
+const SENDS_RECORD_BASE = {
+  route_name: ATTACHMENT_TRANSCRIPT_ROUTE,
+  door: 'channel',
+  thread_id: ATTACHMENT_TRANSCRIPT_THREAD,
+  client_address: ATTACHMENT_TRANSCRIPT_ADDRESS,
+  caller_principal: null,
+  inbound_attachments: null,
+};
+const SEND_RECORD_BASE = {
+  ...SENDS_RECORD_BASE,
+  origin: 'send',
+  inbound_text: '',
+  answer_status: null,
+  successor_id: null,
+  turn_message_id: null,
+};
+const SENDS_TRANSCRIPT_RECORDS = [
+  {
+    ...SENDS_RECORD_BASE,
+    message_id: 'm-301',
+    origin: 'client',
+    inbound_text: 'is the nightly export done',
+    answer_status: 'answered',
+    answer: 'Yes — the export finished at 02:10.',
+    successor_id: null,
+    delivery_status: 'delivered',
+    minutesAgo: 50,
+  },
+  {
+    ...SEND_RECORD_BASE,
+    message_id: 'm-302',
+    sent_by: 'notify',
+    turn_message_id: 'm-301',
+    answer: 'Checking the export log now.',
+    delivery_status: 'delivered',
+    sends: [{ part: 0, chars: 28, provider_message_ids: ['SM-302'] }],
+    minutesAgo: 49,
+  },
+  {
+    ...SEND_RECORD_BASE,
+    message_id: 'm-303',
+    sent_by: 'notify',
+    answer: 'Your weekly summary is ready.',
+    delivery_status: 'delivered',
+    sends: [{ part: 0, chars: 29, provider_message_ids: ['SM-303'] }],
+    minutesAgo: 40,
+  },
+  {
+    ...SEND_RECORD_BASE,
+    message_id: 'm-304',
+    sent_by: 'ask',
+    answer: 'Please reply with the one-time code from your account page.',
+    ask: { answer_format: 'text', attempts: 1, interaction_id: 'int-304', sensitive: true },
+    ask_reply: {
+      answer: null,
+      answeredMinutesAgo: 29,
+      medium_message_id: 'SM-in-304',
+    },
+    delivery_status: 'delivered',
+    sends: [{ part: 0, chars: 59, provider_message_ids: ['SM-304'] }],
+    minutesAgo: 30,
+  },
+  {
+    ...SEND_RECORD_BASE,
+    message_id: 'm-305',
+    sent_by: 'notice',
+    answer: 'This conversation was linked to your other channel.',
+    delivery_status: 'delivered',
+    sends: [{ part: 0, chars: 51, provider_message_ids: ['SM-305'] }],
+    minutesAgo: 20,
+  },
+  {
+    ...SEND_RECORD_BASE,
+    message_id: 'm-306',
+    sent_by: 'channel',
+    answer: 'That form has closed.',
+    delivery_status: 'failed',
+    attempts: 1,
+    error: 'ChannelDeliveryError: the provider refused the recipient',
+    minutesAgo: 10,
+  },
+  {
+    ...SEND_RECORD_BASE,
+    message_id: 'm-307',
+    sent_by: 'notify',
+    answer: 'Your export link expires tomorrow.',
+    delivery_status: 'outcome_unknown',
+    attempts: 1,
+    error: 'the send did not answer within 30s; the outcome is unknown',
+    minutesAgo: 5,
+  },
+];
+
+/** The sends transcript stamped against `nowSeconds`, oldest first. */
+// The reply-to transcript is FORCED on the same stubbed thread, oldest first: an answered turn,
+// a turn quoting that answer (held, so its text shows) and a turn quoting a message the thread
+// does not hold. Each record is stamped `minutesAgo` before the capture.
+const REPLY_TO_ANSWER = 'There are two options: the daily digest or the weekly summary.';
+const REPLY_TO_TRANSCRIPT_RECORDS = [
+  {
+    ...SENDS_RECORD_BASE,
+    message_id: 'm-401',
+    origin: 'client',
+    inbound_text: 'which reports can I get',
+    answer_status: 'answered',
+    answer: REPLY_TO_ANSWER,
+    successor_id: null,
+    delivery_status: 'delivered',
+    minutesAgo: 30,
+  },
+  {
+    ...SENDS_RECORD_BASE,
+    message_id: 'm-402',
+    origin: 'client',
+    inbound_text: 'the second one, please',
+    inbound_reply_to: { message_id: 'wamid.demo-401', status: 'found', text: REPLY_TO_ANSWER },
+    answer_status: 'answered',
+    answer: 'Done: the weekly summary is on.',
+    successor_id: null,
+    delivery_status: 'delivered',
+    minutesAgo: 20,
+  },
+  {
+    ...SENDS_RECORD_BASE,
+    message_id: 'm-403',
+    origin: 'client',
+    inbound_text: 'and is this one still right?',
+    inbound_reply_to: { message_id: 'wamid.demo-117', status: 'not_found', text: null },
+    answer_status: 'answered',
+    answer: 'I cannot see that earlier message here. Could you send it again?',
+    successor_id: null,
+    delivery_status: 'delivered',
+    minutesAgo: 10,
+  },
+];
+
+function sendsTranscriptRecords(nowSeconds) {
+  return SENDS_TRANSCRIPT_RECORDS.map(({ minutesAgo, ...record }) => {
+    const at = nowSeconds - minutesAgo * 60;
+    const stamped = { ...record, created_at: at, updated_at: at };
+    if (record.ask_reply) {
+      const { answeredMinutesAgo, ...reply } = record.ask_reply;
+      const answeredAt = new Date((nowSeconds - answeredMinutesAgo * 60) * 1000);
+      stamped.ask_reply = { ...reply, answered_at: answeredAt.toISOString() };
+    }
+    return stamped;
+  });
+}
+
+/** Open the delivery detail of the transcript exchange whose text includes `text`. */
+async function openDeliveryDetail(page, text) {
+  await page
+    .getByTestId('conversation-exchange')
+    .filter({ hasText: text })
+    .getByTestId('exchange-admin-detail')
+    .locator('summary')
+    .click();
+}
 
 /** One paged read-door envelope shaped as the doors return it. */
 function pageOf(items, extra = {}) {
@@ -693,7 +896,7 @@ const STUB_CHANNEL_ROUTE = {
   our_identity: '+10000000000',
   callback_url: null,
   turns_per_hour_override: null,
-  error_reply_text: null,
+  reply_texts: null,
   callback_secret: null,
   locale: null,
   overlap: { running: 'continue', deliver: 'one', settle_seconds: 0 },
@@ -1110,6 +1313,47 @@ const AUTHED_PAGES = [
       const contractField = dialog.getByText('Reply expression', { exact: true });
       await contractField.waitFor({ state: 'visible', timeout: 8000 });
       await contractField.scrollIntoViewIfNeeded();
+    },
+  },
+  {
+    // The same CREATE dialog framing its Reply texts group: the route's own words for the
+    // platform's fixed participant replies, each blank input drawing the built-in English.
+    // The action fills the required fields and two of the group's inputs. Nothing is
+    // submitted, so no backend state is touched and the frame is deterministic.
+    name: 'conversation-route-reply-texts',
+    path: '/conversations',
+    wait: 'button:has-text("Create route")',
+    // The dialog is modal (the background nav goes inert), so the plugin-nav wait is
+    // meaningless — the dialog's own waits are the stable signal.
+    awaitPluginNav: false,
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Create route' }).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByRole('textbox', { name: 'Route name' }).fill('events');
+      const pickVariant = async (groupName, optionName) => {
+        await dialog.getByRole('group', { name: groupName }).getByRole('combobox').click();
+        await page.getByRole('option', { name: optionName }).click();
+      };
+      await pickVariant('Target', 'agent');
+      await dialog.getByRole('textbox', { name: /^Agent name\b/ }).fill('assistant');
+      await pickVariant('Door', 'channel');
+      await dialog.getByRole('textbox', { name: /^Channel\b/ }).fill('whatsapp');
+      await dialog.getByRole('textbox', { name: /^Our identity\b/ }).fill('+15550000000');
+      await dialog.getByRole('textbox', { name: 'Execution key' }).fill('svc-events');
+      const replyTexts = dialog.getByRole('group', { name: 'Reply texts' });
+      await replyTexts
+        .getByRole('textbox', { name: /^Failed turn\b/ })
+        .fill('Something went wrong, please try again.');
+      const pairingCode = replyTexts.getByRole('textbox', { name: /^Pairing code(?! refused)/ });
+      await pairingCode.fill('Your code is {pairing_code}. It works until {expires_at}.');
+      // Drop the focus and move the pointer off the dialog so no input wears the focus or
+      // hover border, then scroll the group's heading and hint, which sit just above its
+      // box, to the top of the dialog.
+      await pairingCode.blur();
+      await page.mouse.move(0, 0);
+      await dialog.getByText('Reply texts', { exact: true }).evaluate((el) => {
+        el.scrollIntoView({ block: 'start' });
+      });
     },
   },
   {
@@ -1892,15 +2136,13 @@ const AUTHED_PAGES = [
   {
     // A transcript whose visitor turn carries typed inbound attachments — a served image
     // inline and a document download chip — forced through a route override (the live demo
-    // backend mints none). Nondeterministic: the transcript's timestamps render RELATIVELY
-    // against the moment of capture (like the `conversations` frame), so the automated
-    // pipeline skips it (SKIP_NONDETERMINISTIC_SHOTS) and a manual full run recaptures it
-    // when the attachment UI changes.
+    // backend mints none). The record is stamped relative to the capture, so the frame is
+    // the same on every run.
     name: 'conversation-inbound-attachments',
-    nondeterministic: true,
     path: `/conversations?route=${encodeURIComponent(ATTACHMENT_TRANSCRIPT_ROUTE)}&thread=${encodeURIComponent(ATTACHMENT_TRANSCRIPT_THREAD)}`,
     wait: '[data-testid="media-document"]',
     setup: async (page) => {
+      const at = Math.floor(Date.now() / 1000) - ATTACHMENT_MINUTES_AGO * 60;
       await stubGet(page, '/api/conversations', pageOf([STUB_CHANNEL_ROUTE]));
       await stubGet(
         page,
@@ -1909,7 +2151,7 @@ const AUTHED_PAGES = [
           {
             thread_id: ATTACHMENT_TRANSCRIPT_THREAD,
             client_address: ATTACHMENT_TRANSCRIPT_ADDRESS,
-            last_activity_at: 1_800_000_010,
+            last_activity_at: at,
             message_count: 1,
             last_delivery_status: 'delivered',
           },
@@ -1922,7 +2164,10 @@ const AUTHED_PAGES = [
       await stubGet(
         page,
         `/api/conversations/${ATTACHMENT_TRANSCRIPT_ROUTE}/transcript`,
-        pageOf([ATTACHMENT_TRANSCRIPT_RECORD], { order: 'desc', person_id: null }),
+        pageOf([{ ...ATTACHMENT_TRANSCRIPT_RECORD, created_at: at, updated_at: at }], {
+          order: 'desc',
+          person_id: null,
+        }),
       );
       await page.route(
         (url) => url.pathname.startsWith('/api/interactions/media/'),
@@ -1937,6 +2182,104 @@ const AUTHED_PAGES = [
         .getByRole('link', { name: 'report.pdf' })
         .evaluate((el) => el.scrollIntoView({ block: 'center' }));
     },
+  },
+  {
+    // A transcript whose visitor turns quote earlier messages, forced through route overrides
+    // (the live demo backend runs no channel that quotes): a held quote with its text above the
+    // message and a quote the thread does not hold, naming its id. The shot is the whole
+    // transcript card, which runs past the viewport. The records are stamped relative to the
+    // capture, so the frame is the same on every run.
+    name: 'conversation-inbound-reply-to',
+    path: `/conversations?route=${encodeURIComponent(ATTACHMENT_TRANSCRIPT_ROUTE)}&thread=${encodeURIComponent(ATTACHMENT_TRANSCRIPT_THREAD)}`,
+    wait: '[data-testid="exchange-quote"][data-status="not_found"]',
+    setup: async (page) => {
+      const now = Math.floor(Date.now() / 1000);
+      const records = REPLY_TO_TRANSCRIPT_RECORDS.map(({ minutesAgo, ...record }) => {
+        const at = now - minutesAgo * 60;
+        return { ...record, created_at: at, updated_at: at };
+      });
+      const newest = records[records.length - 1];
+      await stubGet(page, '/api/conversations', pageOf([STUB_CHANNEL_ROUTE]));
+      await stubGet(
+        page,
+        `/api/conversations/${ATTACHMENT_TRANSCRIPT_ROUTE}/threads`,
+        pageOf([
+          {
+            thread_id: ATTACHMENT_TRANSCRIPT_THREAD,
+            client_address: ATTACHMENT_TRANSCRIPT_ADDRESS,
+            last_activity_at: newest.created_at,
+            message_count: records.length,
+            last_delivery_status: newest.delivery_status,
+          },
+        ]),
+      );
+      await stubGet(page, `/api/conversations/${ATTACHMENT_TRANSCRIPT_ROUTE}/thread/mode`, {
+        mode: 'agent',
+        source: 'route',
+      });
+      // The transcript door reads newest first; the page reverses it to reading order.
+      await stubGet(
+        page,
+        `/api/conversations/${ATTACHMENT_TRANSCRIPT_ROUTE}/transcript`,
+        pageOf([...records].reverse(), { order: 'desc', person_id: null }),
+      );
+    },
+    frame: (page) =>
+      page
+        .locator('.tai-card')
+        .filter({ has: page.getByTestId('conversation-transcript') })
+        .last(),
+  },
+  {
+    // A transcript carrying the platform's own sends beside a visitor turn, forced through
+    // route overrides (the live demo backend records no channel sends). The two delivery
+    // details are opened, and the shot is the whole transcript card, which runs past the
+    // viewport. The records are stamped relative to the capture, so the frame is the same on
+    // every run.
+    name: 'conversation-transcript-sends',
+    path: `/conversations?route=${encodeURIComponent(ATTACHMENT_TRANSCRIPT_ROUTE)}&thread=${encodeURIComponent(ATTACHMENT_TRANSCRIPT_THREAD)}`,
+    wait: '[data-testid="exchange-mid-turn-send"]',
+    setup: async (page) => {
+      const records = sendsTranscriptRecords(Math.floor(Date.now() / 1000));
+      const newest = records[records.length - 1];
+      await stubGet(page, '/api/conversations', pageOf([STUB_CHANNEL_ROUTE]));
+      await stubGet(
+        page,
+        `/api/conversations/${ATTACHMENT_TRANSCRIPT_ROUTE}/threads`,
+        pageOf([
+          {
+            thread_id: ATTACHMENT_TRANSCRIPT_THREAD,
+            client_address: ATTACHMENT_TRANSCRIPT_ADDRESS,
+            last_activity_at: newest.created_at,
+            message_count: records.length,
+            last_delivery_status: newest.delivery_status,
+          },
+        ]),
+      );
+      await stubGet(page, `/api/conversations/${ATTACHMENT_TRANSCRIPT_ROUTE}/thread/mode`, {
+        mode: 'agent',
+        source: 'route',
+      });
+      // The transcript door reads newest first; the page reverses it to reading order.
+      await stubGet(
+        page,
+        `/api/conversations/${ATTACHMENT_TRANSCRIPT_ROUTE}/transcript`,
+        pageOf([...records].reverse(), { order: 'desc', person_id: null }),
+      );
+    },
+    action: async (page) => {
+      await openDeliveryDetail(page, 'Your weekly summary is ready.');
+      await openDeliveryDetail(page, 'Your export link expires tomorrow.');
+      await page
+        .getByTestId('conversation-transcript')
+        .getByText('Sent, outcome unknown')
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+    frame: (page) =>
+      page
+        .locator('.tai-card')
+        .filter({ has: page.getByTestId('conversation-transcript') })
+        .last(),
   },
   {
     // The thread list's multi-select surface over the forced route's three threads: the header
@@ -1997,7 +2340,7 @@ const AUTHED_PAGES = [
     name: 'entry-gate',
     nondeterministic: true,
     path: `/conversations?route=${encodeURIComponent(ENTRY_GATE_ROUTE)}`,
-    wait: `${ENTRY_GATE_PANEL} td:text-is("launch")`,
+    wait: `${WEB_CHAT_PANEL} td:text-is("launch")`,
   },
   {
     // The panel on the ungated `relay-open` route, which holds no code. A code an earlier
@@ -2005,7 +2348,7 @@ const AUTHED_PAGES = [
     // the frame always shows the empty state.
     name: 'entry-gate-empty',
     path: `/conversations?route=${encodeURIComponent(ENTRY_GATE_OPEN_ROUTE)}`,
-    wait: `${ENTRY_GATE_PANEL} >> text=No entry codes`,
+    wait: `${WEB_CHAT_PANEL} >> text=No entry codes`,
     setup: async (page) => {
       await revokeEntryCodes(page, ENTRY_GATE_OPEN_ROUTE);
     },
@@ -2018,14 +2361,14 @@ const AUTHED_PAGES = [
     name: 'entry-gate-mint',
     nondeterministic: true,
     path: `/conversations?route=${encodeURIComponent(ENTRY_GATE_OPEN_ROUTE)}`,
-    wait: `${ENTRY_GATE_PANEL} >> text=No entry codes`,
+    wait: `${WEB_CHAT_PANEL} >> text=No entry codes`,
     setup: async (page) => {
       await revokeEntryCodes(page, ENTRY_GATE_OPEN_ROUTE);
     },
     // The dialog is modal and hides the nav the plugin-nav wait looks for.
     awaitPluginNav: false,
     action: async (page) => {
-      await page.locator(ENTRY_GATE_PANEL).getByRole('button', { name: 'Mint entry code' }).click();
+      await page.locator(WEB_CHAT_PANEL).getByRole('button', { name: 'Mint entry code' }).click();
       const dialog = page.getByRole('dialog', { name: 'Mint entry code' });
       await dialog.getByRole('button', { name: 'Mint code' }).click();
       await dialog
@@ -2039,7 +2382,7 @@ const AUTHED_PAGES = [
     // live boot always mounts the web channel's doors).
     name: 'entry-gate-unavailable',
     path: `/conversations?route=${encodeURIComponent(ENTRY_GATE_ROUTE)}`,
-    wait: `${ENTRY_GATE_PANEL} >> text=Entry gate unavailable`,
+    wait: `${WEB_CHAT_PANEL} >> text=Entry gate unavailable`,
     setup: async (page) => {
       await page.route(
         (url) => url.pathname === '/api/plugins',
@@ -2054,6 +2397,25 @@ const AUTHED_PAGES = [
           await route.fulfill({ response, json: body });
         },
       );
+    },
+  },
+  {
+    // The panel's words section on the gated `relay` route, its stored words loaded into
+    // the form. The section sits under the entry-gate section, so the shot scrolls its
+    // heading to the top of the view.
+    name: 'web-words',
+    path: `/conversations?route=${encodeURIComponent(ENTRY_GATE_ROUTE)}`,
+    wait: `${WEB_CHAT_PANEL} input[value="Members only"]`,
+    setup: async (page) => {
+      await storeWebWords(page, ENTRY_GATE_ROUTE);
+    },
+    action: async (page) => {
+      await page
+        .locator(WEB_CHAT_PANEL)
+        .getByRole('heading', { name: 'Words', exact: true })
+        .evaluate((el) => {
+          el.scrollIntoView({ block: 'start' });
+        });
     },
   },
   // --- Capability-scoped screens (authenticated as the seeded OWNED key) -------
@@ -2230,10 +2592,10 @@ if (
   process.exit(1);
 }
 
-// The entry-gate frames drill into the runtime-seeded web routes; require their names only
-// when one of those frames is in the run.
+// The entry-gate and words frames drill into the runtime-seeded web routes; require their
+// names only when one of those frames is in the run.
 if (
-  AUTHED_RUN.some((entry) => entry.name.startsWith('entry-gate')) &&
+  AUTHED_RUN.some((entry) => entry.name.startsWith('entry-gate') || entry.name === 'web-words') &&
   (!ENTRY_GATE_ROUTE || !ENTRY_GATE_OPEN_ROUTE)
 ) {
   console.error(
