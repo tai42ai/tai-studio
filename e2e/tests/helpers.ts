@@ -178,8 +178,8 @@ export const ADD_SERVER_LOOKUP = {
 };
 
 /**
- * On the Connectors page, open "Add MCP server" and drive it to its review step. The
- * single look-up call is answered by a route stub: the stack under test has no
+ * On the Connectors page, click the header's "Add a custom server" and drive the "Add
+ * MCP server" dialog to its review step. The single look-up call is answered by a route stub: the stack under test has no
  * OAuth-protected server to look up, and the frame is of the screen, not the server.
  */
 export async function openAddServerReview(page: Page): Promise<Locator> {
@@ -189,14 +189,144 @@ export async function openAddServerReview(page: Page): Promise<Locator> {
       await route.fulfill({ json: { data: ADD_SERVER_LOOKUP } });
     },
   );
+  // The header's action, by name inside the page header: an empty directory draws a
+  // second "Add a custom server" in its empty state.
   await page
-    .getByRole('region', { name: 'Providers' })
-    .getByRole('button', { name: 'Add MCP server' })
-    .first()
+    .locator('.tai-page-header')
+    .getByRole('button', { name: 'Add a custom server' })
     .click();
   const dialog = page.getByRole('dialog', { name: 'Add MCP server' });
   await dialog.getByLabel('Server address').fill(ADD_SERVER_LOOKUP.url);
   await dialog.getByRole('button', { name: 'Look up' }).click();
   await expect(dialog.getByRole('button', { name: 'Add server' })).toBeVisible();
+  return dialog;
+}
+
+/** The preset the held-delete frame shows, and the route that holds it. */
+const HELD_PRESET = 'relay-echo';
+const HELD_ROUTE = 'chat-line';
+
+/**
+ * Open the delete confirm for a preset a conversation route still holds, its holder
+ * list drawn. The preset list, its detail and its delete-holder read are served here, so
+ * the frame needs no seeded preset and writes nothing; every other read falls through
+ * to the live skeleton.
+ */
+export async function openHeldPresetDelete(page: Page): Promise<Locator> {
+  const record = {
+    name: HELD_PRESET,
+    base_tool: 'studio_demo_echo',
+    description: 'Echoes a fixed message.',
+    active_version: 1,
+    conflicted: false,
+    conflicted_reason: null,
+    extensions: [],
+    input_schema: null,
+    input_map: null,
+    output_schema: null,
+    output_map: null,
+    used_by: [],
+    uses: [],
+  };
+  const served: Record<string, unknown> = {
+    '/api/presets': [record],
+    [`/api/presets/${HELD_PRESET}`]: { ...record, fixed_kwargs: {} },
+    [`/api/presets/${HELD_PRESET}/referees`]: {
+      action: 'delete',
+      holders: [
+        {
+          kind: 'conversation route',
+          name: HELD_ROUTE,
+          locator: {},
+          summary: `conversation route '${HELD_ROUTE}'`,
+        },
+      ],
+    },
+  };
+  await page.route(
+    (url) => Object.hasOwn(served, url.pathname),
+    async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      const pathname = new URL(route.request().url()).pathname;
+      await route.fulfill({ json: { data: served[pathname] } });
+    },
+  );
+  await page.goto(`/presets?preset=${HELD_PRESET}`);
+  await page.getByRole('button', { name: `Delete preset ${HELD_PRESET}` }).click();
+  const dialog = page.getByRole('dialog', { name: `Delete preset — ${HELD_PRESET}` });
+  await expect(
+    dialog.getByRole('link', { name: `conversation route '${HELD_ROUTE}'` }),
+  ).toBeVisible();
+  return dialog;
+}
+
+/**
+ * Open the Connectors connect flow at its Connect step for a stubbed provider with one
+ * sub-service and no connection yet: the stepper above the connect form. The providers
+ * and connections reads are served here, so the frame needs no seeded provider and
+ * writes nothing; every other read falls through to the live skeleton.
+ */
+export async function openConnectFlow(page: Page): Promise<Locator> {
+  const served: Record<string, unknown> = {
+    '/api/connectors/providers': {
+      providers: [
+        {
+          id: 'acme_files',
+          display_name: 'Acme files',
+          description: 'Read and write files in an Acme workspace.',
+          icon_url: null,
+          kind: 'oauth',
+          origin: 'system',
+          category: 'tools',
+          sub_services: [{ id: 'default', display_name: 'Files', description: '', scopes: [] }],
+          config_fields: [],
+        },
+      ],
+      categories: [{ id: 'tools', display_name: 'Tools', sort_order: 1 }],
+    },
+    '/api/connectors/connections': { items: [], total: 0, unhealthy: 0 },
+  };
+  await page.route(
+    (url) => Object.hasOwn(served, url.pathname),
+    async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      const pathname = new URL(route.request().url()).pathname;
+      await route.fulfill({ json: { data: served[pathname] } });
+    },
+  );
+  await page.goto('/connectors');
+  await page
+    .getByRole('row')
+    .filter({ has: page.locator('[data-directory-row="provider:acme_files"]') })
+    .getByRole('button', { name: 'Connect', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Connect Acme files' });
+  await expect(dialog.getByLabel('Alias')).toBeVisible();
+  return dialog;
+}
+
+/**
+ * Open the conversation route create dialog with every binding field drawn: the target
+ * kind set to Agent and the door to Channel, so the agent and channel pickers, the
+ * address field and the execution key show. The lists are the live skeleton's.
+ */
+export async function openRouteDialog(page: Page): Promise<Locator> {
+  await page.goto('/conversations');
+  await page.getByRole('button', { name: 'Create route' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Create route' });
+  for (const [name, option] of [
+    ['Target kind', 'Agent'],
+    ['Door', 'Channel'],
+  ] as const) {
+    await dialog.getByRole('combobox', { name, exact: true }).click();
+    await page.getByRole('option', { name: option, exact: true }).click();
+  }
+  await expect(dialog.getByRole('combobox', { name: 'Channel', exact: true })).toBeVisible();
   return dialog;
 }

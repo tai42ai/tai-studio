@@ -18,11 +18,12 @@ function hasParams(record: TriggerLinkRecord): boolean {
 
 export interface TriggerLinkRowProps {
   readonly record: TriggerLinkRecord;
-  readonly canWrite: boolean;
+  /** Whether the caller's projection reaches the revoke route. */
+  readonly canRevoke: boolean;
   readonly onRevoke: (name: string) => void;
 }
 
-export function TriggerLinkRow({ record, canWrite, onRevoke }: TriggerLinkRowProps): ReactNode {
+export function TriggerLinkRow({ record, canRevoke, onRevoke }: TriggerLinkRowProps): ReactNode {
   return (
     <TR>
       <TD>{record.name}</TD>
@@ -39,7 +40,7 @@ export function TriggerLinkRow({ record, canWrite, onRevoke }: TriggerLinkRowPro
         <code style={{ fontSize: 'var(--tai-text-sm)' }}>{record.token_hash_prefix}</code>
       </TD>
       <TD style={{ textAlign: 'right' }}>
-        {canWrite ? (
+        {canRevoke ? (
           <Button
             variant="ghost"
             aria-label={`Revoke trigger link ${record.name}`}

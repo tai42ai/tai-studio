@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 import { BackupTab } from './BackupTab';
-import { renderWithProviders } from './test-utils';
+import { fullProjection, renderWithProviders, scopedProjection } from './test-utils';
 
 function sectionsFixture(): { name: string; secret: boolean }[] {
   return [
@@ -56,7 +56,10 @@ afterEach(() => {
 describe('BackupTab', () => {
   it('defaults secret sections unchecked and warns when one is checked', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub() });
+    renderWithProviders(<BackupTab readOnly={false} />, {
+      client: baseStub(),
+      projection: fullProjection(),
+    });
 
     expect(await screen.findByRole('checkbox', { name: 'manifest' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'env' })).not.toBeChecked();
@@ -77,14 +80,18 @@ describe('BackupTab', () => {
 
   it('exports the chosen sections and triggers a download', async () => {
     const user = userEvent.setup();
+    const exported = { version: 1, created_at: '2026-07-05T00:00:00Z', sections: {}, errors: {} };
     const exportBackup = vi.fn(() =>
-      Promise.resolve(new Blob(['{}'], { type: 'application/json' })),
+      Promise.resolve(new Blob([JSON.stringify(exported)], { type: 'application/json' })),
     );
     // Spy the anchor click so jsdom does not attempt (and log) a real navigation;
     // the download wiring is still asserted for real via the captured anchor.
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
     const appendChild = vi.spyOn(document.body, 'appendChild');
-    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub({ exportBackup }) });
+    renderWithProviders(<BackupTab readOnly={false} />, {
+      client: baseStub({ exportBackup }),
+      projection: fullProjection(),
+    });
 
     await screen.findByRole('checkbox', { name: 'manifest' });
     await user.click(screen.getByRole('button', { name: 'Export backup' }));
@@ -100,12 +107,52 @@ describe('BackupTab', () => {
     expect(anchor?.download).toMatch(/^tai-backup-.*\.json$/);
   });
 
+  it('keeps the download and names each section the export dropped with its message', async () => {
+    const user = userEvent.setup();
+    const exported = {
+      version: 1,
+      created_at: '2026-07-05T00:00:00Z',
+      sections: { manifest: {} },
+      errors: {
+        storage: "storage read failed: resource 'logo.png' could not be read",
+        webhooks: 'webhook store unavailable',
+      },
+    };
+    const exportBackup = vi.fn(() =>
+      Promise.resolve(new Blob([JSON.stringify(exported)], { type: 'application/json' })),
+    );
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    renderWithProviders(<BackupTab readOnly={false} />, {
+      client: baseStub({ exportBackup }),
+      projection: fullProjection(),
+    });
+
+    await screen.findByRole('checkbox', { name: 'manifest' });
+    await user.click(screen.getByRole('button', { name: 'Export backup' }));
+
+    const warning = await screen.findByTestId('export-section-errors');
+    expect(createObjectURL).toHaveBeenCalled();
+    expect(warning).toHaveAttribute('role', 'alert');
+    expect(warning).toHaveClass('tai-warn-state');
+    expect(
+      within(warning).getByText('Backup downloaded, but 2 sections failed to export'),
+    ).toBeInTheDocument();
+    const storage = within(warning).getByTestId('export-error-storage');
+    expect(within(storage).getByText('storage')).toBeInTheDocument();
+    expect(
+      within(storage).getByText("storage read failed: resource 'logo.png' could not be read"),
+    ).toBeInTheDocument();
+    const webhooks = within(warning).getByTestId('export-error-webhooks');
+    expect(within(webhooks).getByText('webhook store unavailable')).toBeInTheDocument();
+  });
+
   it('renders the import report with highlighted error rows', async () => {
     const user = userEvent.setup();
     const report: BackupImportReport = {
       ok: true,
       sections: {
         manifest: {
+          span_release_error: null,
           created: 1,
           updated: 0,
           skipped: 0,
@@ -116,6 +163,7 @@ describe('BackupTab', () => {
           awaiting_respawn: [],
         },
         env: {
+          span_release_error: null,
           created: 0,
           updated: 0,
           skipped: 1,
@@ -128,7 +176,10 @@ describe('BackupTab', () => {
       },
     };
     const importBackup = vi.fn().mockResolvedValue(report);
-    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub({ importBackup }) });
+    renderWithProviders(<BackupTab readOnly={false} />, {
+      client: baseStub({ importBackup }),
+      projection: fullProjection(),
+    });
 
     await screen.findByRole('button', { name: 'Choose backup file' });
     await uploadBackup(user);
@@ -168,7 +219,10 @@ describe('BackupTab', () => {
       },
     });
     const importBackup = vi.fn().mockResolvedValue(report);
-    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub({ importBackup }) });
+    renderWithProviders(<BackupTab readOnly={false} />, {
+      client: baseStub({ importBackup }),
+      projection: fullProjection(),
+    });
 
     await screen.findByRole('button', { name: 'Choose backup file' });
     await uploadBackup(user);
@@ -191,6 +245,7 @@ describe('BackupTab', () => {
       ok: false,
       sections: {
         env: {
+          span_release_error: null,
           created: 0,
           updated: 0,
           skipped: 0,
@@ -203,7 +258,10 @@ describe('BackupTab', () => {
       },
     };
     const importBackup = vi.fn().mockResolvedValue(report);
-    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub({ importBackup }) });
+    renderWithProviders(<BackupTab readOnly={false} />, {
+      client: baseStub({ importBackup }),
+      projection: fullProjection(),
+    });
 
     await screen.findByRole('button', { name: 'Choose backup file' });
     await uploadBackup(user);
@@ -219,6 +277,7 @@ describe('BackupTab', () => {
       ok: false,
       sections: {
         env: {
+          span_release_error: null,
           created: 0,
           updated: 0,
           skipped: 0,
@@ -231,7 +290,10 @@ describe('BackupTab', () => {
       },
     };
     const importBackup = vi.fn().mockResolvedValue(report);
-    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub({ importBackup }) });
+    renderWithProviders(<BackupTab readOnly={false} />, {
+      client: baseStub({ importBackup }),
+      projection: fullProjection(),
+    });
 
     await screen.findByRole('button', { name: 'Choose backup file' });
     await uploadBackup(user);
@@ -246,6 +308,7 @@ describe('BackupTab', () => {
       ok: true,
       sections: {
         env: {
+          span_release_error: null,
           created: 0,
           updated: 1,
           skipped: 0,
@@ -284,7 +347,10 @@ describe('BackupTab', () => {
       },
     };
     const importBackup = vi.fn().mockResolvedValue(report);
-    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub({ importBackup }) });
+    renderWithProviders(<BackupTab readOnly={false} />, {
+      client: baseStub({ importBackup }),
+      projection: fullProjection(),
+    });
 
     await screen.findByRole('button', { name: 'Choose backup file' });
     await uploadBackup(user);
@@ -305,6 +371,7 @@ describe('BackupTab', () => {
       ok: true,
       sections: {
         env: {
+          span_release_error: null,
           created: 0,
           updated: 1,
           skipped: 0,
@@ -343,7 +410,10 @@ describe('BackupTab', () => {
       },
     };
     const importBackup = vi.fn().mockResolvedValue(report);
-    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub({ importBackup }) });
+    renderWithProviders(<BackupTab readOnly={false} />, {
+      client: baseStub({ importBackup }),
+      projection: fullProjection(),
+    });
 
     await screen.findByRole('button', { name: 'Choose backup file' });
     await uploadBackup(user);
@@ -358,7 +428,10 @@ describe('BackupTab', () => {
 
   it('fronts the import surface with a danger-zone note and a danger restore button', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub() });
+    renderWithProviders(<BackupTab readOnly={false} />, {
+      client: baseStub(),
+      projection: fullProjection(),
+    });
 
     // A restore overwrites live config, so the import surface wears the danger ground:
     // the note is up front, before any file is chosen.
@@ -371,7 +444,10 @@ describe('BackupTab', () => {
   });
 
   it('hides the danger zone in read-only mode', async () => {
-    renderWithProviders(<BackupTab readOnly />, { client: baseStub() });
+    renderWithProviders(<BackupTab readOnly />, {
+      client: baseStub(),
+      projection: fullProjection(),
+    });
 
     // The read-only note replaces the import controls, so no destructive surface renders.
     expect(await screen.findByText(/read-only for this deployment/i)).toBeInTheDocument();
@@ -382,7 +458,10 @@ describe('BackupTab', () => {
   it('surfaces malformed JSON loudly and does not import', async () => {
     const user = userEvent.setup();
     const importBackup = vi.fn();
-    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub({ importBackup }) });
+    renderWithProviders(<BackupTab readOnly={false} />, {
+      client: baseStub({ importBackup }),
+      projection: fullProjection(),
+    });
 
     await screen.findByRole('button', { name: 'Choose backup file' });
     const input = screen.getByLabelText('Backup file');
@@ -390,5 +469,57 @@ describe('BackupTab', () => {
 
     expect(await screen.findByText(/not valid JSON/i)).toBeInTheDocument();
     expect(importBackup).not.toHaveBeenCalled();
+  });
+
+  describe('the admin-only export and import doors', () => {
+    const SECTIONS_ONLY = scopedProjection({
+      routes: [{ path: '/api/backup/sections', methods: ['GET'] }],
+    });
+
+    it('lists the sections and names both admin actions to a caller without them', async () => {
+      renderWithProviders(<BackupTab readOnly />, {
+        client: baseStub(),
+        projection: SECTIONS_ONLY,
+      });
+
+      const exportNote = await screen.findByText('Exporting a backup is an admin action.');
+      expect(exportNote).toHaveAttribute('role', 'status');
+      const importNote = screen.getByText('Importing a backup is an admin action.');
+      expect(importNote).toHaveAttribute('role', 'status');
+
+      const list = screen.getByRole('list');
+      for (const name of ['manifest', 'env', 'access_control']) {
+        expect(within(list).getByText(name)).toBeInTheDocument();
+      }
+      expect(within(list).getAllByText('secret')).toHaveLength(2);
+
+      expect(screen.queryByRole('button', { name: 'Export backup' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Choose backup file' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+      expect(screen.queryByText(/read-only for this deployment/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/overwrites this deployment/i)).not.toBeInTheDocument();
+    });
+
+    it('keeps export and shows the mode sentence to an admin on a read-only deployment', async () => {
+      renderWithProviders(<BackupTab readOnly />, {
+        client: baseStub(),
+        projection: fullProjection(),
+      });
+
+      expect(await screen.findByText(/read-only for this deployment/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Export backup' })).toBeInTheDocument();
+      expect(screen.queryByText(/is an admin action/)).not.toBeInTheDocument();
+    });
+
+    it('shows both actions to an admin on a writable deployment', async () => {
+      renderWithProviders(<BackupTab readOnly={false} />, {
+        client: baseStub(),
+        projection: fullProjection(),
+      });
+
+      expect(await screen.findByRole('button', { name: 'Export backup' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Choose backup file' })).toBeInTheDocument();
+      expect(screen.queryByText(/is an admin action/)).not.toBeInTheDocument();
+    });
   });
 });

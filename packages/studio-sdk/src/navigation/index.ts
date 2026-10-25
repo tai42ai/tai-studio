@@ -14,6 +14,7 @@ export type {
   NavigationContextValue,
   NavigationGuardHandler,
   PageProps,
+  PluginHolderTarget,
   PluginNavigateOptions,
   PluginSearch,
   RouteSearch,

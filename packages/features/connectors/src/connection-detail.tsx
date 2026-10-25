@@ -8,6 +8,7 @@
 import {
   type ConnectionView,
   type FleetReportSummary,
+  isFleetReportFailure,
   summarizeFleetFanout,
 } from '@tai42/api-client';
 import {
@@ -142,7 +143,7 @@ function useConnectionMutations(connectionId: string, connection: ConnectionView
   const oauth = useOAuthPopup({
     onSuccess: (fleet) => {
       void queryClient.invalidateQueries({ queryKey: connectionKey(connectionId) });
-      setOauthFleet(fleet !== null && fleet.status !== 'converged' ? fleet : null);
+      setOauthFleet(isFleetReportFailure(fleet) ? fleet : null);
     },
   });
 
@@ -197,8 +198,8 @@ function useConnectionMutations(connectionId: string, connection: ConnectionView
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: CONNECTIONS_KEY });
       setConfirmOpen(false);
-      const summary = summarizeFleetFanout(result.fanout, []);
-      const fleetConverged = summary === null || summary.status === 'converged';
+      const summary = summarizeFleetFanout(result.fanout, [], result.span_release_error);
+      const fleetConverged = !isFleetReportFailure(summary);
       // Navigate away only on a fully-clean disconnect (upstream access confirmed
       // revoked AND the reload converged). A failed/skipped revoke or a stranded fleet
       // keeps the view open with the honest note below.
@@ -333,7 +334,11 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
         consentBlocked={consentBlocked}
         refusal={refusal}
         mutationError={mutationError}
-        patchFleet={patch.isSuccess ? summarizeFleetFanout(patch.data.fanout, []) : null}
+        patchFleet={
+          patch.isSuccess
+            ? summarizeFleetFanout(patch.data.fanout, [], patch.data.span_release_error)
+            : null
+        }
         oauthNotice={oauth.notice}
         onClearOauthNotice={oauth.clearNotice}
         oauthFleet={oauthFleet}

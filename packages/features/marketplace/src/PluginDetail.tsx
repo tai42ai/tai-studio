@@ -6,11 +6,18 @@
  * installed and advisory queries never blank it — their failures surface as loud
  * inline strips in their own sections.
  */
-import { Card, CopyField, errorMessage, ErrorState, Skeleton, Stack } from '@tai42/studio-sdk';
+import {
+  Card,
+  CopyField,
+  errorMessage,
+  ErrorState,
+  routeItemsOf,
+  Skeleton,
+  Stack,
+} from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
 import { AdvisoriesStrip } from './advisories';
-import { routeItemsOf } from './install-dialog';
 import { ActionsCard } from './plugin-detail-actions';
 import {
   ActionResultCard,
@@ -20,7 +27,6 @@ import {
   RoutesCard,
   VersionsCard,
 } from './plugin-detail-cards';
-import { requiredEnvFromDetail } from './plugin-detail-data';
 import { PluginDetailDialogs } from './plugin-detail-dialogs';
 import { usePluginDetail } from './use-plugin-detail';
 
@@ -67,9 +73,8 @@ export function PluginDetail({
   }
 
   const plugin = detailQuery.data;
-  const { requiredEnvSecret, requiredEnvHints } = requiredEnvFromDetail(plugin);
   // The route-carrying items of the latest version — a channel or router that
-  // declares HTTP routes. When present, install/update runs through the mount dialog.
+  // declares HTTP routes. When present, an update runs through the mount dialog.
   const routeItems = routeItemsOf(plugin.latest?.items ?? []);
   const version = plugin.latest?.version ?? null;
   // The stored `{item_name: base}` mounts of this plugin's installed row (absent until
@@ -124,12 +129,9 @@ export function PluginDetail({
         detail={plugin}
         routeItems={routeItems}
         version={version}
-        requiredEnvSecret={requiredEnvSecret}
-        requiredEnvHints={requiredEnvHints}
         installedMounts={installedMounts}
-        installMutation={detail.installMutation}
-        updateMutation={detail.updateMutation}
-        uninstallMutation={detail.uninstallMutation}
+        callbacks={detail.actions}
+        uninstallMutation={detail.actions.uninstallMutation}
         onClose={detail.closeAction}
       />
     </Stack>

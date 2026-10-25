@@ -1,10 +1,35 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, type Mock, vi } from 'vitest';
 
-import { ToolPicker } from './tool-picker';
+import { type ToolListQuery, ToolPicker } from './tool-picker';
 
 const TOOLS = ['alpha', 'beta', 'gamma'];
+const EMPTY = 'No tools are registered on this deployment.';
+
+function loaded(data: readonly string[]): ToolListQuery {
+  return { data, isPending: false, isError: false, isSuccess: true, error: null, refetch: vi.fn() };
+}
+
+function failed(error: unknown): ToolListQuery & { refetch: Mock<() => void> } {
+  return {
+    data: undefined,
+    isPending: false,
+    isError: true,
+    isSuccess: false,
+    error,
+    refetch: vi.fn<() => void>(),
+  };
+}
+
+const PENDING: ToolListQuery = {
+  data: undefined,
+  isPending: true,
+  isError: false,
+  isSuccess: false,
+  error: null,
+  refetch: () => undefined,
+};
 
 /**
  * The tag filter's accessible name. It comes from the `Field` that wraps it —
@@ -24,7 +49,13 @@ function toolCombobox(): HTMLElement {
 describe('ToolPicker', () => {
   it('renders a combobox showing the placeholder when nothing is selected', () => {
     render(
-      <ToolPicker toolNames={TOOLS} value={null} onChange={vi.fn()} placeholder="Pick a tool" />,
+      <ToolPicker
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
+        value={null}
+        onChange={vi.fn()}
+        placeholder="Pick a tool"
+      />,
     );
     const trigger = screen.getByRole('combobox');
     expect(trigger).toHaveTextContent('Pick a tool');
@@ -32,7 +63,7 @@ describe('ToolPicker', () => {
 
   it('renders one option per tool name', async () => {
     const user = userEvent.setup();
-    render(<ToolPicker toolNames={TOOLS} value={null} onChange={vi.fn()} />);
+    render(<ToolPicker query={loaded(TOOLS)} emptyNote={EMPTY} value={null} onChange={vi.fn()} />);
 
     await user.click(screen.getByRole('combobox'));
     for (const name of TOOLS) {
@@ -43,7 +74,7 @@ describe('ToolPicker', () => {
   it('fires onChange with the chosen tool name', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<ToolPicker toolNames={TOOLS} value={null} onChange={onChange} />);
+    render(<ToolPicker query={loaded(TOOLS)} emptyNote={EMPTY} value={null} onChange={onChange} />);
 
     await user.click(screen.getByRole('combobox'));
     await user.click(await screen.findByRole('option', { name: 'beta' }));
@@ -54,7 +85,15 @@ describe('ToolPicker', () => {
   it('does not open when disabled', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<ToolPicker toolNames={TOOLS} value={null} onChange={onChange} disabled />);
+    render(
+      <ToolPicker
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
+        value={null}
+        onChange={onChange}
+        disabled
+      />,
+    );
 
     await user.click(screen.getByRole('combobox'));
 
@@ -66,7 +105,7 @@ describe('ToolPicker', () => {
     const user = userEvent.setup();
     const payload = '<script>alert(1)</script>';
     const { container } = render(
-      <ToolPicker toolNames={[payload]} value={payload} onChange={vi.fn()} />,
+      <ToolPicker query={loaded([payload])} emptyNote={EMPTY} value={payload} onChange={vi.fn()} />,
     );
 
     await user.click(screen.getByRole('combobox'));
@@ -75,39 +114,223 @@ describe('ToolPicker', () => {
     expect(container.querySelector('script')).toBeNull();
   });
 
-  it('shows the empty copy and disables the trigger when no tool is available', () => {
-    render(<ToolPicker toolNames={[]} value={null} onChange={vi.fn()} placeholder="Pick a tool" />);
-    const trigger = screen.getByRole('combobox');
-    expect(trigger).toHaveTextContent('No tools available');
-    expect(trigger).toBeDisabled();
-  });
-
-  it('shows the empty copy when every tool name is excluded', () => {
-    render(<ToolPicker toolNames={TOOLS} value={null} onChange={vi.fn()} excludeNames={TOOLS} />);
-    const trigger = screen.getByRole('combobox');
-    expect(trigger).toHaveTextContent('No tools available');
-    expect(trigger).toBeDisabled();
-  });
-
-  it('keeps the caller placeholder while loading, never the empty copy', () => {
-    render(
+  it('reads "Loading tools…" while pending over a host placeholder, which shows once loaded', () => {
+    const { rerender } = render(
       <ToolPicker
-        toolNames={[]}
+        query={PENDING}
         value={null}
         onChange={vi.fn()}
-        disabled
-        placeholder="Loading tools…"
+        emptyNote={EMPTY}
+        placeholder="Pick a tool"
+      />,
+    );
+    expect(screen.getByRole('combobox')).toHaveTextContent('Loading tools…');
+    expect(screen.getByRole('combobox')).toBeDisabled();
+    rerender(
+      <ToolPicker
+        query={loaded(TOOLS)}
+        value={null}
+        onChange={vi.fn()}
+        emptyNote={EMPTY}
+        placeholder="Pick a tool"
+      />,
+    );
+    expect(screen.getByRole('combobox')).toHaveTextContent('Pick a tool');
+    expect(screen.getByRole('combobox')).toBeEnabled();
+  });
+
+  it('draws the empty note and action in place of the control for an empty list', () => {
+    render(
+      <ToolPicker
+        query={loaded([])}
+        value={null}
+        onChange={vi.fn()}
+        emptyNote={EMPTY}
+        emptyAction={<a href="/marketplace">Browse plugins</a>}
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent(EMPTY);
+    expect(screen.getByRole('link', { name: 'Browse plugins' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).toBeNull();
+  });
+
+  it('draws the empty note when excludeNames removes every name', () => {
+    render(
+      <ToolPicker
+        query={loaded(TOOLS)}
+        value={null}
+        onChange={vi.fn()}
+        emptyNote={EMPTY}
+        excludeNames={TOOLS}
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent(EMPTY);
+    expect(screen.queryByRole('combobox')).toBeNull();
+  });
+
+  it('draws a failed read as an ErrorState with Retry inside the group Field, the error text hidden', async () => {
+    const user = userEvent.setup();
+    const query = failed(new Error('boom'));
+    render(
+      <ToolPicker
+        query={query}
+        value={null}
+        onChange={vi.fn()}
+        emptyNote={EMPTY}
+        label="Tool"
+        error="A tool is required."
+      />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('boom');
+    expect(screen.queryByText('A tool is required.')).toBeNull();
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.getByRole('group', { name: 'Tool' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /retry/i }));
+    expect(query.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('draws errorNote as a status line with no Retry, no ErrorState and no control', () => {
+    render(
+      <ToolPicker
+        query={failed(new Error('boom'))}
+        value={null}
+        onChange={vi.fn()}
+        emptyNote={EMPTY}
+        label="Tool"
+        errorNote="The tool list could not be read; the error is shown above."
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'The tool list could not be read; the error is shown above.',
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('combobox')).toBeNull();
+  });
+
+  it('draws forbiddenNote on a 403 and keeps a stored value as its sole unflagged option', () => {
+    const { rerender } = render(
+      <ToolPicker
+        query={failed({ status: 403 })}
+        value={null}
+        onChange={vi.fn()}
+        emptyNote={EMPTY}
+        forbiddenNote="This session cannot list tools."
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('This session cannot list tools.');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('combobox')).toBeNull();
+    rerender(
+      <ToolPicker
+        query={failed({ status: 403 })}
+        value="kept"
+        onChange={vi.fn()}
+        emptyNote={EMPTY}
+        forbiddenNote="This session cannot list tools."
+        unlistedLabel="not registered"
+      />,
+    );
+    expect(screen.getByRole('combobox')).toHaveTextContent('kept');
+    expect(screen.queryByText(/not registered/)).toBeNull();
+  });
+
+  it('hands label, description and error to its Field while a Select renders', () => {
+    render(
+      <ToolPicker
+        query={loaded(TOOLS)}
+        value={null}
+        onChange={vi.fn()}
+        emptyNote={EMPTY}
+        label="Tool"
+        description="The tool the route runs."
+        error="A tool is required."
+      />,
+    );
+    const trigger = screen.getByRole('combobox', { name: 'Tool' });
+    expect(trigger).toHaveAccessibleDescription(/The tool the route runs\..*A tool is required\./);
+  });
+
+  it('renders every state bare without a label', () => {
+    const { rerender } = render(
+      <ToolPicker
+        query={loaded([])}
+        value={null}
+        onChange={vi.fn()}
+        emptyNote={EMPTY}
+        aria-label="Add a tool"
+      />,
+    );
+    expect(screen.queryByRole('group')).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent(EMPTY);
+    rerender(
+      <ToolPicker
+        query={failed(new Error('boom'))}
+        value={null}
+        onChange={vi.fn()}
+        emptyNote={EMPTY}
+        aria-label="Add a tool"
+      />,
+    );
+    expect(screen.queryByRole('group')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('boom');
+  });
+
+  it('flags a stored value the loaded list does not carry, only once loaded', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <ToolPicker
+        query={PENDING}
+        value="gone"
+        onChange={vi.fn()}
+        emptyNote={EMPTY}
+        unlistedLabel="not registered"
+      />,
+    );
+    expect(screen.queryByText(/not registered/)).toBeNull();
+    rerender(
+      <ToolPicker
+        query={loaded(TOOLS)}
+        value="gone"
+        onChange={vi.fn()}
+        emptyNote={EMPTY}
+        unlistedLabel="not registered"
       />,
     );
     const trigger = screen.getByRole('combobox');
-    expect(trigger).toHaveTextContent('Loading tools…');
-    expect(trigger).not.toHaveTextContent('No tools available');
+    expect(trigger).toHaveAccessibleDescription(
+      'not registered gone is not registered. Pick another, or saving is refused.',
+    );
+    expect(trigger).toBeEnabled();
+    await user.click(trigger);
+    const options = await screen.findAllByRole('option');
+    expect(options[0]).toHaveAccessibleName('gone (not registered)');
+  });
+
+  it('draws the flagged sole option beside the empty note over an empty list', () => {
+    render(
+      <ToolPicker
+        query={loaded([])}
+        value="gone"
+        onChange={vi.fn()}
+        emptyNote={EMPTY}
+        unlistedLabel="not registered"
+      />,
+    );
+    expect(screen.getByRole('combobox')).toHaveTextContent('gone (not registered)');
+    expect(screen.getByRole('status')).toHaveTextContent(EMPTY);
   });
 
   it('excludes names in excludeNames from the options', async () => {
     const user = userEvent.setup();
     render(
-      <ToolPicker toolNames={TOOLS} value={null} onChange={vi.fn()} excludeNames={['beta']} />,
+      <ToolPicker
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
+        value={null}
+        onChange={vi.fn()}
+        excludeNames={['beta']}
+      />,
     );
 
     await user.click(screen.getByRole('combobox'));
@@ -120,7 +343,8 @@ describe('ToolPicker', () => {
     const user = userEvent.setup();
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         tagsByTool={{ alpha: ['geo'], beta: ['geo'], gamma: ['scratch'] }}
@@ -145,7 +369,8 @@ describe('ToolPicker', () => {
     const user = userEvent.setup();
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         agentToolNames={new Set(['beta'])}
@@ -162,7 +387,8 @@ describe('ToolPicker', () => {
     const user = userEvent.setup();
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         tagsByTool={{ alpha: ['geo'], beta: ['geo'], gamma: ['scratch'] }}
@@ -180,7 +406,8 @@ describe('ToolPicker', () => {
     const user = userEvent.setup();
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         tagsByTool={{ alpha: ['geo'], beta: ['geo'], gamma: ['scratch'] }}
@@ -199,7 +426,8 @@ describe('ToolPicker', () => {
     const user = userEvent.setup();
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         displayNames={{ beta: 'Beta Tool' }}
@@ -217,7 +445,8 @@ describe('ToolPicker', () => {
     const user = userEvent.setup();
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         tagsByTool={{ alpha: ['geo'], beta: ['geo'], gamma: ['scratch'] }}
@@ -235,7 +464,8 @@ describe('ToolPicker', () => {
     const user = userEvent.setup();
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         displayNames={{ beta: 'Beta Tool' }}
@@ -251,7 +481,8 @@ describe('ToolPicker', () => {
     const user = userEvent.setup();
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         displayNames={{ beta: 'beta' }}
@@ -266,7 +497,13 @@ describe('ToolPicker', () => {
   it('renders the bare raw name when the mapping is an empty string', async () => {
     const user = userEvent.setup();
     render(
-      <ToolPicker toolNames={TOOLS} value={null} onChange={vi.fn()} displayNames={{ beta: '' }} />,
+      <ToolPicker
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
+        value={null}
+        onChange={vi.fn()}
+        displayNames={{ beta: '' }}
+      />,
     );
 
     await user.click(screen.getByRole('combobox'));
@@ -280,7 +517,8 @@ describe('ToolPicker', () => {
     const user = userEvent.setup();
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         displayNames={{ beta: 'Beta Tool' }}
@@ -299,7 +537,8 @@ describe('ToolPicker', () => {
     const onChange = vi.fn();
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={onChange}
         displayNames={{ beta: 'Beta Tool' }}
@@ -317,7 +556,8 @@ describe('ToolPicker', () => {
     const payload = '<script>alert(1)</script>';
     const { container } = render(
       <ToolPicker
-        toolNames={['beta']}
+        query={loaded(['beta'])}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         displayNames={{ beta: payload }}
@@ -333,7 +573,8 @@ describe('ToolPicker', () => {
   it('lays the filter and the picker out on the design-system stack, not an inline style', () => {
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         tagsByTool={{ alpha: ['geo'] }}
@@ -349,7 +590,8 @@ describe('ToolPicker', () => {
     const user = userEvent.setup();
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         placeholder="Pick a tool"
@@ -370,7 +612,8 @@ describe('ToolPicker', () => {
   it("names the tag filter from its Field's visible label, with no aria-label over it", () => {
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         tagsByTool={{ alpha: ['geo'], gamma: ['scratch'] }}
@@ -389,7 +632,8 @@ describe('ToolPicker', () => {
   it('names a bare picker from aria-label, and lets a label out-rank it', () => {
     const { unmount } = render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         aria-label="Base tool"
@@ -403,7 +647,8 @@ describe('ToolPicker', () => {
 
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         label="Base tool label"
@@ -419,7 +664,8 @@ describe('ToolPicker', () => {
   it('renders the SELECTED tool declared badges as read-only chips', () => {
     render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value="beta"
         onChange={vi.fn()}
         badgesByTool={{ beta: ['network', 'audited'] }}
@@ -433,7 +679,8 @@ describe('ToolPicker', () => {
   it('shows no badge chips when nothing is selected or the tool declares none', () => {
     const { rerender } = render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value={null}
         onChange={vi.fn()}
         badgesByTool={{ beta: ['network'] }}
@@ -443,7 +690,8 @@ describe('ToolPicker', () => {
 
     rerender(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value="alpha"
         onChange={vi.fn()}
         badgesByTool={{ beta: ['network'] }}
@@ -456,7 +704,8 @@ describe('ToolPicker', () => {
     const payload = '<script>alert(1)</script>';
     const { container } = render(
       <ToolPicker
-        toolNames={TOOLS}
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
         value="beta"
         onChange={vi.fn()}
         badgesByTool={{ beta: [payload] }}

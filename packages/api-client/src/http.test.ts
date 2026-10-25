@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { createApiClient } from './client';
 import { ApiError, ApiSchemaError, ApiUnauthorizedError } from './errors';
-import { type ApiConfig, apiRequest, apiText, encodeSegment } from './http';
+import { type ApiConfig, apiRequest, apiText, encodePathPart, encodeSegment } from './http';
 import { servedConstants } from './schemas';
 
 function textResponse(body: string, status = 200): Response {
@@ -530,6 +530,18 @@ describe('contract drift', () => {
     const fetchImpl = vi.fn(async () => jsonResponse({ data: { items: [] } }));
     const client = createApiClient(config(fetchImpl));
     await expect(client.listHooks()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+});
+
+describe('encodePathPart (one part of a path parameter)', () => {
+  it('keeps an empty part and percent-encodes the rest', () => {
+    expect(encodePathPart('')).toBe('');
+    expect(encodePathPart('a b')).toBe('a%20b');
+  });
+
+  it('throws on a `.` or `..` part', () => {
+    expect(() => encodePathPart('.')).toThrow("must not be '.' or '..'");
+    expect(() => encodePathPart('..')).toThrow("must not be '.' or '..'");
   });
 });
 

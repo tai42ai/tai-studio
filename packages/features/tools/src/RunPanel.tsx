@@ -65,7 +65,7 @@ function TimeoutNotice(): ReactNode {
 function RunActions({ run }: { readonly run: AutoFormRun }): ReactNode {
   if (run.noRunDoor) {
     return (
-      <p role="note" data-testid="run-read-only-note" className="tai-muted" style={{ margin: 0 }}>
+      <p role="status" data-testid="run-read-only-note" className="tai-muted" style={{ margin: 0 }}>
         Running this tool is outside your access — it is shown read-only.
       </p>
     );

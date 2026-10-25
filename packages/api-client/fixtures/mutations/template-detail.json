@@ -1,5 +1,9 @@
 {
-  "template": "Hello {{ name }}, welcome to {{ product }}.",
+  "id": "welcome.txt",
+  "kind": "text",
+  "content": "Hello {{ name }}, welcome to {{ product }}.",
+  "content_type": "text/plain",
+  "size": 43,
   "schema": {
     "type": "object",
     "properties": {
@@ -7,5 +11,6 @@
       "product": { "type": "string" }
     },
     "required": ["name", "product"]
-  }
+  },
+  "schema_error": null
 }

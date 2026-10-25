@@ -11,8 +11,8 @@
  * query, so the list's active version and the key table stay in sync. Rollback
  * errors surface loudly inside the panel's confirm dialog — never swallowed.
  *
- * History is a READ surface, reachable in `readOnly` config mode too; only the
- * per-row Rollback (the mutation) is hidden then. A 404 (the user has no policy
+ * The API keys tab opens History only for a caller whose projection covers the
+ * versions read; `readOnly` hides the per-row Rollback (the mutation). A 404 (the user has no policy
  * history) is the honest EMPTY state, distinguished from a real load failure by
  * `ApiError.status === 404`; any other error stays a loud `ErrorState`.
  */

@@ -1,5 +1,6 @@
 /**
- * The server data the register form reads: the api-key list it runs as, the full
+ * The server data the register form reads: the session's execution-key binding and
+ * the api-key list it runs as (read only under a checked binding), the full
  * hooks list (overwrite detection), the templated-text template catalog, the
  * conversation targets a subject may point at, and the state-binding editor's
  * catalogs, inherited binding and tool-schema field sources. Every fetch is a
@@ -8,6 +9,7 @@
 import type { HookList, TokensPayload } from '@tai42/api-client';
 import {
   errorMessage,
+  type ExecutionKeyBinding,
   fieldPathsFromSchema,
   type StateBindingEditorProps,
   statesCatalogFromList,
@@ -16,6 +18,7 @@ import {
   templatedTextCatalog,
   templatesCatalogFromList,
   useApi,
+  useExecutionKeyBinding,
 } from '@tai42/studio-sdk';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useMemo } from 'react';
@@ -29,6 +32,7 @@ type StateBindingProps = Omit<StateBindingEditorProps, 'value' | 'onChange'>;
 export interface HookFormData {
   readonly hooksQuery: UseQueryResult<HookList>;
   readonly keysQuery: UseQueryResult<TokensPayload>;
+  readonly binding: ExecutionKeyBinding;
   readonly existingNames: ReadonlySet<string>;
   readonly templatedTextTemplates: TemplatedTextTemplates;
   readonly targetOptions: readonly { readonly value: string; readonly label: string }[];
@@ -144,7 +148,8 @@ export function useHookFormData({
   const templatedTextTemplates = useTemplatedTextTemplates();
   const stateBinding = useStateBindingProps(tool, templatedTextTemplates);
   const targetOptions = useConversationTargets(subjectOpen);
-  const keysQuery = useExecutionKeys();
+  const binding = useExecutionKeyBinding();
+  const keysQuery = useExecutionKeys(binding.mode === 'checked');
   const hooksQuery = useQuery({
     queryKey: hooksListKey(''),
     queryFn: ({ signal }) => api.listHooks(undefined, signal),
@@ -157,6 +162,7 @@ export function useHookFormData({
   return {
     hooksQuery,
     keysQuery,
+    binding,
     existingNames,
     templatedTextTemplates,
     targetOptions,

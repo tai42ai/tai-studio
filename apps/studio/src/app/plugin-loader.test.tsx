@@ -6,7 +6,7 @@
  * card; and a cold deep link to a plugin page resolves through the gate (no 404 on
  * first paint).
  */
-import { type PluginContext } from '@tai42/studio-sdk';
+import { type PluginContext, STUDIO_PLUGIN_API_VERSION } from '@tai42/studio-sdk';
 import { getContributions } from '@tai42/studio-sdk/host';
 import { __resetContributions } from '@tai42/studio-sdk/testing';
 import { screen, waitFor } from '@testing-library/react';
@@ -33,7 +33,7 @@ function manifest(overrides: ManifestOverrides = {}) {
   return {
     name: 'acme',
     version: '1.0.0',
-    api_version: overrides.api_version ?? 1,
+    api_version: overrides.api_version ?? STUDIO_PLUGIN_API_VERSION,
     mounts: overrides.mounts ?? {},
     entry: 'index.js',
     integrity: overrides.integrity ?? { 'index.js': 'sha384-abc' },

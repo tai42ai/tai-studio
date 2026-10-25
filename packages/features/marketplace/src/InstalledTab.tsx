@@ -7,10 +7,11 @@
  * the table when any non-withdrawn advisory matches an installed plugin.
  * Per-plugin install / update / uninstall actions live on the detail view.
  */
-import type {
-  MarketplaceAdvisory,
-  MarketplaceInstalledPlugin,
-  MarketplaceUpgradeAllRow,
+import {
+  apiRoutes,
+  type MarketplaceAdvisory,
+  type MarketplaceInstalledPlugin,
+  type MarketplaceUpgradeAllRow,
 } from '@tai42/api-client';
 import {
   AppLink,
@@ -22,6 +23,7 @@ import {
   ErrorState,
   FeatureDisabled,
   featureDisabledMessage,
+  installedMarketplacePluginsKey,
   isFeatureDisabled,
   ScrollRegion,
   Skeleton,
@@ -32,6 +34,7 @@ import {
   THead,
   TR,
   useApi,
+  useCanWrite,
 } from '@tai42/studio-sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -39,7 +42,7 @@ import type { ReactNode } from 'react';
 import { severityVariant, WarningBlock } from './advisories';
 import { sourceLabel } from './badges';
 import { type MarketplaceSearch, mergeSearch } from './filters';
-import { marketplaceAdvisoriesKey, marketplaceInstalledKey } from './keys';
+import { marketplaceAdvisoriesKey } from './keys';
 
 /** The advisory status badge for one installed row. */
 function StatusBadge({ row }: { readonly row: MarketplaceInstalledPlugin }): ReactNode {
@@ -110,11 +113,15 @@ function AdvisoriesBanner({
   );
 }
 
+const UPGRADE_ALL_NO_GRANT =
+  'This session cannot upgrade plugins. Upgrading all needs administrator access to POST /api/marketplace/upgrade-all; ask an administrator to upgrade them.';
+
 export function InstalledTab({ search }: { readonly search: MarketplaceSearch }): ReactNode {
   const api = useApi();
+  const canUpgradeAll = useCanWrite(apiRoutes.post_api_marketplace_upgrade_all.path);
   const queryClient = useQueryClient();
   const installedQuery = useQuery({
-    queryKey: marketplaceInstalledKey,
+    queryKey: installedMarketplacePluginsKey,
     queryFn: ({ signal }) => api.listInstalledMarketplacePlugins(signal),
   });
   const advisoriesQuery = useQuery({
@@ -184,14 +191,20 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
       ) : null}
 
       <div className="tai-row">
-        <Button
-          onClick={() => {
-            upgradeAllMutation.mutate();
-          }}
-          disabled={upgradeAllMutation.isPending || storeDisabled}
-        >
-          {upgradeAllMutation.isPending ? 'Upgrading…' : 'Upgrade all'}
-        </Button>
+        {canUpgradeAll ? (
+          <Button
+            onClick={() => {
+              upgradeAllMutation.mutate();
+            }}
+            disabled={upgradeAllMutation.isPending || storeDisabled}
+          >
+            {upgradeAllMutation.isPending ? 'Upgrading…' : 'Upgrade all'}
+          </Button>
+        ) : (
+          <p role="status" className="tai-status" style={{ margin: 0 }}>
+            {UPGRADE_ALL_NO_GRANT}
+          </p>
+        )}
       </div>
 
       {upgradeAllMutation.isError ? (

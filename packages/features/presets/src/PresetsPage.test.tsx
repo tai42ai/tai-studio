@@ -29,6 +29,8 @@ function record(name: string): PresetRecord {
     extensions: [],
     output_schema: null,
     input_schema: null,
+    input_map: null,
+    output_map: null,
     conflicted: false,
     conflicted_reason: null,
     uses: [],

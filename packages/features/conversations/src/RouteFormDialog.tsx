@@ -5,10 +5,12 @@
  * (its `route_name` shown read-only, because the name IS the route's identity and
  * URL key).
  *
- * The body is authored through the SDK's `SchemaForm` over a schema built from the
- * contract's published `ConversationRouteCreate` document (see `route-schema`): each door
- * only shows its own delivery fields, and the document's constraints are refused in-form
- * with each field's own text. What only the server checks (the residual callback-URL
+ * The route name, the target, the door and the execution key are authored by
+ * `RouteBindingFields`, whose pickers choose each name from the deployment's own lists;
+ * the rest of the route is authored through the SDK's `SchemaForm` over
+ * `routeSettingsSchema`. The whole value is checked against the schema built from the
+ * contract's published `ConversationRouteCreate` document (see `route-schema`), so the
+ * document's constraints are refused in-form with each field's own text. What only the server checks (the residual callback-URL
  * rule, the overlap rule, the attach-check refusals a target's bind validator raises)
  * surfaces via `ErrorState`. Both target kinds carry the five door-contract jq fields
  * (`start_expr`/`cancel_expr`/`resume_expr`/`extras_expr`/`reply_expr`), each with
@@ -25,6 +27,7 @@
  */
 import type { ConversationRouteView } from '@tai42/api-client';
 import {
+  boundExecutionKey,
   Button,
   CopyField,
   Dialog,
@@ -45,8 +48,11 @@ import {
   routeFormErrors,
   routeFormSchema,
   type RouteFormValue,
+  routeSettingsSchema,
   routeToFormValue,
 } from './route-schema';
+import { RouteBindingFields } from './RouteBindingFields';
+import { useRoutePickers } from './use-route-pickers';
 
 export interface RouteFormDialogProps {
   /** A route to edit; absent renders the blank create form. */
@@ -60,16 +66,20 @@ export function RouteFormDialog({ initial, onClose }: RouteFormDialogProps): Rea
   const queryClient = useQueryClient();
   const editing = initial !== undefined;
 
+  const pickers = useRoutePickers();
   const schema = useMemo(() => routeFormSchema(initial?.route_name), [initial?.route_name]);
   const [value, setValue] = useState<RouteFormValue>(() =>
     initial === undefined ? blankRouteValue() : routeToFormValue(initial),
   );
+  const targetKind = value.target?.target_kind;
+  const settingsSchema = useMemo(() => routeSettingsSchema(targetKind), [targetKind]);
   const [errors, setErrors] = useState<SchemaFormErrors | undefined>(undefined);
   // The api-door secret, held only here after a successful write (shown once).
   const [secret, setSecret] = useState<string | null>(null);
 
   const mutation = useMutation({
-    mutationFn: () => api.createOrReplaceConversationRoute(formValueToBody(value)),
+    mutationFn: (submitted: RouteFormValue) =>
+      api.createOrReplaceConversationRoute(formValueToBody(submitted)),
     onSuccess: (written) => {
       void queryClient.invalidateQueries({ queryKey: conversationRoutesKey });
       if (written.callback_secret !== null) {
@@ -83,10 +93,14 @@ export function RouteFormDialog({ initial, onClose }: RouteFormDialogProps): Rea
 
   const onSubmit = (event: SyntheticEvent): void => {
     event.preventDefault();
-    const found: SchemaFormErrors = routeFormErrors(schema, value, editing);
+    const submitted: RouteFormValue = {
+      ...value,
+      execution_key: boundExecutionKey(value.execution_key ?? '', pickers.binding),
+    };
+    const found: SchemaFormErrors = routeFormErrors(schema, submitted, editing);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
-    mutation.mutate();
+    mutation.mutate(submitted);
   };
 
   const title =
@@ -123,8 +137,15 @@ export function RouteFormDialog({ initial, onClose }: RouteFormDialogProps): Rea
           onSubmit={onSubmit}
           className="tai-stack"
         >
+          <RouteBindingFields
+            value={value}
+            onChange={setValue}
+            errors={errors}
+            fixedRouteName={initial?.route_name}
+            pickers={pickers}
+          />
           <SchemaForm
-            schema={schema}
+            schema={settingsSchema}
             value={value}
             onChange={(next) => {
               setValue(next as RouteFormValue);

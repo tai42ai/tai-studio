@@ -1,7 +1,7 @@
 /** TanStack Query keys for the agents feature. */
 
-/** The full registered-agents list (`GET /api/agents`). */
-export const agentsListKey = ['agents', 'list'] as const;
+/** The full registered-agents list (`GET /api/agents`), shared with the route form. */
+export { agentsListKey } from '@tai42/studio-sdk';
 
 /** The authorable subset (`GET /api/agents/spec-runnable`) — the compose base picker. */
 export const specRunnableAgentsKey = ['agents', 'spec-runnable'] as const;

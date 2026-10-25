@@ -122,4 +122,13 @@ describe('ConfirmDialog', () => {
     await user.click(keep);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('holds the confirm disabled while confirmDisabled is set', async () => {
+    const user = userEvent.setup();
+    const { onConfirm } = renderConfirm({ confirmDisabled: true });
+    const confirm = screen.getByRole('button', { name: 'Delete scope' });
+    expect(confirm).toBeDisabled();
+    await user.click(confirm);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
 });

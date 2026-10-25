@@ -11,6 +11,7 @@ import { renderStudio, server } from './test-harness';
 /** A scoped (`admin: false`) projection reaching exactly the given concrete routes. */
 export function scoped(paths: readonly string[]): MeProjection {
   return {
+    access_control_enabled: true,
     user_id: 'u-scoped',
     owner_user_id: null,
     principal: null,

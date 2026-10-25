@@ -14,22 +14,26 @@ import { renderWithProviders, type StubApiClient } from './test-utils';
 import { ToolExtensionsCard } from './ToolExtensionsCard';
 
 const available: Extension[] = [
-  { name: 'marka', kind: 'wrapper', multiple: true },
-  { name: 'markb', kind: 'wrapper', multiple: true },
-  { name: 'chain', kind: 'transformer', multiple: true },
+  { name: 'marka', kind: 'wrapper', multiple: true, config_schema: null },
+  { name: 'markb', kind: 'wrapper', multiple: true, config_schema: null },
+  { name: 'chain', kind: 'transformer', multiple: true, config_schema: null },
 ];
+
+// The apply result of a single-worker reload, the shape the server returns.
+const localApply = {
+  status: 'ok',
+  env_keys: 0,
+  awaiting_respawn: [],
+  recycle: null,
+  span_release_error: null,
+  fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
+};
 
 function baseClient(overrides: StubApiClient = {}): StubApiClient {
   return {
     getToolExtensions: vi.fn().mockResolvedValue({ combos: [['marka'], ['markb']], available }),
     listPresets: vi.fn().mockResolvedValue([]),
-    setToolExtensions: vi.fn().mockResolvedValue({
-      status: 'ok',
-      env_keys: 0,
-      awaiting_respawn: [],
-      recycle: null,
-      fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
-    }),
+    setToolExtensions: vi.fn().mockResolvedValue(localApply),
     ...overrides,
   };
 }
@@ -86,7 +90,7 @@ describe('ToolExtensionsCard', () => {
 
   it('saves the full combos array', async () => {
     const user = userEvent.setup();
-    const setToolExtensions = vi.fn().mockResolvedValue({ status: 'ok', env_keys: 0 });
+    const setToolExtensions = vi.fn().mockResolvedValue(localApply);
     renderWithProviders(<ToolExtensionsCard tool="shout" />, {
       client: baseClient({ setToolExtensions }),
     });
@@ -106,7 +110,7 @@ describe('ToolExtensionsCard', () => {
       name: 'output_schema',
       config: { schema: { type: 'object', title: 'Weather' } },
     };
-    const setToolExtensions = vi.fn().mockResolvedValue({ status: 'ok', env_keys: 0 });
+    const setToolExtensions = vi.fn().mockResolvedValue(localApply);
     renderWithProviders(<ToolExtensionsCard tool="shout" />, {
       client: baseClient({
         getToolExtensions: vi.fn().mockResolvedValue({ combos: [[configElement]], available }),
@@ -128,7 +132,7 @@ describe('ToolExtensionsCard', () => {
 
   it('clears with an empty array only after the clear confirm', async () => {
     const user = userEvent.setup();
-    const setToolExtensions = vi.fn().mockResolvedValue({ status: 'ok', env_keys: 0 });
+    const setToolExtensions = vi.fn().mockResolvedValue(localApply);
     renderWithProviders(<ToolExtensionsCard tool="shout" />, {
       client: baseClient({ setToolExtensions }),
     });
@@ -208,6 +212,7 @@ describe('ToolExtensionsCard', () => {
       env_keys: 1,
       awaiting_respawn: [],
       recycle: null,
+      span_release_error: null,
       fanout: {
         mode: 'fleet',
         op: 'reload_config',
@@ -244,6 +249,8 @@ describe('ToolExtensionsCard', () => {
   it('shows the presets-page hint instead of the editor for a preset tool', async () => {
     const presets: PresetRecord[] = [
       {
+        input_map: null,
+        output_map: null,
         name: 'shout',
         base_tool: 'echo',
         description: '',
@@ -334,6 +341,8 @@ describe('ToolExtensionsCard', () => {
   it('shows the editor (not the hint) for a CONFLICTED preset row — it is authored via the manifest path', async () => {
     const presets: PresetRecord[] = [
       {
+        input_map: null,
+        output_map: null,
         name: 'shout',
         base_tool: 'echo',
         description: '',
@@ -359,7 +368,7 @@ describe('ToolExtensionsCard', () => {
 
   it('clears a pending clear-confirm when a combo is added back in the builder', async () => {
     const user = userEvent.setup();
-    const setToolExtensions = vi.fn().mockResolvedValue({ status: 'ok', env_keys: 0 });
+    const setToolExtensions = vi.fn().mockResolvedValue(localApply);
     renderWithProviders(<ToolExtensionsCard tool="shout" />, {
       client: baseClient({ setToolExtensions }),
     });

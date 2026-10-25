@@ -9,7 +9,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { presetDetailKey, presetsListKey, presetVersionsKey } from './keys';
 import { PresetVersions } from './PresetVersions';
-import { clickWhenInteractable, renderWithProviders, type StubApiClient } from './test-utils';
+import {
+  clickWhenInteractable,
+  fullProjection,
+  renderWithProviders,
+  type StubApiClient,
+} from './test-utils';
 
 function version(v: number, isCurrent: boolean) {
   return {
@@ -34,7 +39,10 @@ describe('PresetVersions', () => {
     const client: StubApiClient = {
       listPresetVersions: vi.fn().mockResolvedValue([version(1, false), version(2, true)]),
     };
-    const { container } = renderWithProviders(<PresetVersions name="paris_weather" />, { client });
+    const { container } = renderWithProviders(<PresetVersions name="paris_weather" />, {
+      projection: fullProjection(),
+      client,
+    });
 
     await screen.findByTestId('version-row-2');
     const rows = [...container.querySelectorAll('[data-testid^="version-row-"]')];
@@ -48,7 +56,10 @@ describe('PresetVersions', () => {
     const client: StubApiClient = {
       listPresetVersions: vi.fn().mockResolvedValue([version(1, false), tagged]),
     };
-    renderWithProviders(<PresetVersions name="paris_weather" />, { client });
+    renderWithProviders(<PresetVersions name="paris_weather" />, {
+      projection: fullProjection(),
+      client,
+    });
 
     await screen.findByTestId('version-row-2');
     expect(screen.getByRole('columnheader', { name: 'Tags' })).toBeInTheDocument();
@@ -66,6 +77,7 @@ describe('PresetVersions', () => {
       setPresetVersionTags,
     };
     const { queryClient } = renderWithProviders(<PresetVersions name="paris_weather" />, {
+      projection: fullProjection(),
       client,
     });
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
@@ -88,6 +100,7 @@ describe('PresetVersions', () => {
       rollbackPreset,
     };
     const { queryClient } = renderWithProviders(<PresetVersions name="paris_weather" />, {
+      projection: fullProjection(),
       client,
     });
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');

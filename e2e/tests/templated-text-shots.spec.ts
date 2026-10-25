@@ -167,8 +167,8 @@ async function stubStorage(page: Page, mode: 'present' | 'absent' | 'loading'): 
       }
       const data =
         mode === 'absent'
-          ? { present: false, provider: null, module: null }
-          : { present: true, provider: 'demo', module: 'demo' };
+          ? { present: false, provider: null, module: null, surfaces: [] }
+          : { present: true, provider: 'demo', module: 'demo', surfaces: ['storage', 'templates'] };
       await route.fulfill({ json: { data } });
     },
   );

@@ -165,6 +165,16 @@ function stateAttachmentMethods(t: Transport) {
         s.stateAttachmentUpdated,
         { method: 'PATCH', body },
       ),
+    // Every holder that would refuse detaching `template` from the state.
+    getStateTemplateReferees: (name: string, template: string, signal?: AbortSignal) =>
+      req(
+        buildPath(apiRoutes.get_api_states_name_attachments_template_referees.path, {
+          name,
+          template,
+        }),
+        s.holdersPreview,
+        { signal },
+      ),
     detachStateTemplate: (name: string, template: string) =>
       req(
         buildPath(apiRoutes.delete_api_states_name_attachments_template.path, { name, template }),

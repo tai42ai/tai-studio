@@ -1,5 +1,6 @@
 {
   "present": true,
   "provider": "FilesystemStorage",
-  "module": "tai42_storage_fs.provider"
+  "module": "tai42_storage_fs.provider",
+  "surfaces": ["storage", "templates"]
 }

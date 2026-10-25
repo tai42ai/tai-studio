@@ -7,6 +7,13 @@ import { fleetReportFanout } from './fleet';
 export const backupSections = openapi.backupSectionListing;
 
 /**
+ * The export door's downloaded document: the exported `sections` and the `errors` map
+ * naming each section whose exporter failed (that section is absent from `sections`).
+ */
+export const backupExportDocument = openapi.backupExportDocument;
+export type BackupExportDocument = z.infer<typeof backupExportDocument>;
+
+/**
  * A backup document as the import door accepts it — validated when the UI reads a picked
  * file. Hand-written over the export's document: the import door takes `version` 1 and a
  * `sections` object, and the export's `errors` map is optional there.

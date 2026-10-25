@@ -1,41 +1,50 @@
-/** The fire-path submit gate: which execution-key read states block. */
+/** The fire-path submit gate reads the execution-key picker's own predicate. */
 import type { TokensPayload } from '@tai42/api-client';
-import type { UseQueryResult } from '@tanstack/react-query';
-import { describe, expect, it } from 'vitest';
+import {
+  canHoldExecutionKey,
+  type ExecutionKeyBinding,
+  type ExecutionKeyQuery,
+} from '@tai42/studio-sdk';
+import { describe, expect, it, vi } from 'vitest';
 
-import { fireGateUnsatisfiable, isExecutionKeyListEmpty } from './fire-path-gate';
+import { fireGateUnsatisfiable } from './fire-path-gate';
 
-/** Only the flags + data the gate reads; the rest of `UseQueryResult` is irrelevant. */
-function query<T>(state: 'pending' | 'error' | 'success', data?: T): UseQueryResult<T> {
+function query(overrides: Partial<ExecutionKeyQuery>): ExecutionKeyQuery {
   return {
-    isPending: state === 'pending',
-    isError: state === 'error',
-    isSuccess: state === 'success',
-    data,
-  } as UseQueryResult<T>;
+    data: undefined,
+    isPending: false,
+    isError: false,
+    isSuccess: false,
+    error: null,
+    refetch: vi.fn(),
+    ...overrides,
+  };
 }
 
-const KEYS = query('success', [{ user_id: 'svc' }] as unknown as TokensPayload);
+const KEYS = [{ user_id: 'svc' }] as unknown as TokensPayload;
+const QUERIES: [string, ExecutionKeyQuery][] = [
+  ['pending', query({ isPending: true })],
+  ['refused', query({ isError: true, error: { status: 403 } })],
+  ['loaded', query({ isSuccess: true, data: KEYS })],
+  ['loaded empty', query({ isSuccess: true, data: [] })],
+];
+const BINDINGS: [string, ExecutionKeyBinding][] = [
+  ['pending', { mode: 'pending' }],
+  ['unchecked', { mode: 'unchecked', fillKey: '__no_auth__' }],
+  ['checked key', { mode: 'checked', own: { userId: 'me', kind: 'key', admin: false } }],
+  ['checked account', { mode: 'checked', own: { userId: 'me', kind: 'account', admin: false } }],
+];
 
-describe('isExecutionKeyListEmpty', () => {
-  // Query retains `data` across a failed refetch, so the non-success cases carry [].
-  it('is true only for a RESOLVED empty list, never for a pending or failed one holding []', () => {
-    expect(isExecutionKeyListEmpty(query('success', []))).toBe(true);
-    expect(isExecutionKeyListEmpty(query('pending', []))).toBe(false);
-    expect(isExecutionKeyListEmpty(query('error', []))).toBe(false);
-  });
-});
-
-describe('fireGateUnsatisfiable — the execution key gates the fire path', () => {
-  it('is satisfied only when the key list resolved non-empty', () => {
-    expect(fireGateUnsatisfiable(KEYS)).toBe(false);
-  });
-
-  it.each(['pending', 'error'] as const)('blocks while the key list is %s', (state) => {
-    expect(fireGateUnsatisfiable(query(state))).toBe(true);
-  });
-
-  it('blocks when no key exists to bind', () => {
-    expect(fireGateUnsatisfiable(query('success', []))).toBe(true);
-  });
+describe('fireGateUnsatisfiable', () => {
+  for (const [queryName, keys] of QUERIES) {
+    for (const [bindingName, binding] of BINDINGS) {
+      for (const value of ['', 'svc']) {
+        it(`a ${queryName} list under a ${bindingName} binding, value "${value}"`, () => {
+          expect(fireGateUnsatisfiable(keys, binding, value)).toBe(
+            !canHoldExecutionKey(keys, binding, value),
+          );
+        });
+      }
+    }
+  }
 });

@@ -8,7 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { PresetsList } from './PresetsList';
-import { renderWithProviders, type StubApiClient } from './test-utils';
+import { fullProjection, renderWithProviders, type StubApiClient } from './test-utils';
 
 const normal = {
   name: 'paris_weather',
@@ -69,7 +69,10 @@ describe('PresetsList', () => {
       [normal],
       [metaRow('paris_weather', { display_name: 'Paris Weather', tags: ['geo'] })],
     );
-    renderWithProviders(<PresetsList selected={undefined} />, { client });
+    renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
+      client,
+    });
 
     const row = await screen.findByTestId('preset-row-paris_weather');
     expect(
@@ -89,7 +92,10 @@ describe('PresetsList', () => {
   });
 
   it('labels the extension-count column Extensions (not the internal word)', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, { client: listClient([normal]) });
+    renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
+      client: listClient([normal]),
+    });
 
     await screen.findByTestId('preset-row-paris_weather');
     expect(screen.getByRole('columnheader', { name: 'Extensions' })).toBeInTheDocument();
@@ -102,7 +108,10 @@ describe('PresetsList', () => {
     // wrapping-between-chips is the cell's own `.tai-row`. jsdom loads no CSS, so the
     // class presence is what this asserts; narrow-viewport.test.ts guards the rule.
     const client = listClient([normal], [metaRow('paris_weather', { tags: ['palette-node'] })]);
-    renderWithProviders(<PresetsList selected={undefined} />, { client });
+    renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
+      client,
+    });
 
     const chip = await screen.findByText('palette-node');
     expect(chip).toHaveClass('tai-chip', 'tai-chip-static');
@@ -111,7 +120,10 @@ describe('PresetsList', () => {
   it('omits the display-name sub-line and shows — for tags when the overlay row is absent', async () => {
     // No overlay entry for the tool → no display name, and the Tags cell falls back
     // to the em-dash rather than inventing tags.
-    renderWithProviders(<PresetsList selected={undefined} />, { client: listClient([normal]) });
+    renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
+      client: listClient([normal]),
+    });
 
     const row = await screen.findByTestId('preset-row-paris_weather');
     expect(within(row).queryByTestId('preset-display-name-paris_weather')).toBeNull();
@@ -120,6 +132,7 @@ describe('PresetsList', () => {
 
   it('shows the conflicted badge + the server reason only on a conflicted row', async () => {
     renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
       client: listClient([normal, conflicted]),
     });
 
@@ -136,6 +149,7 @@ describe('PresetsList', () => {
 
   it('falls back to the generic sentence when conflicted_reason is null', async () => {
     renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
       client: listClient([{ ...conflicted, conflicted_reason: null }]),
     });
 
@@ -145,6 +159,7 @@ describe('PresetsList', () => {
 
   it('splits conflicted rows into their own Conflicted section, apart from the active table', async () => {
     renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
       client: listClient([normal, conflicted]),
     });
 
@@ -157,7 +172,10 @@ describe('PresetsList', () => {
   });
 
   it('renders no Conflicted section when every preset is active', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, { client: listClient([normal]) });
+    renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
+      client: listClient([normal]),
+    });
 
     await screen.findByTestId('preset-row-paris_weather');
     expect(screen.queryByTestId('presets-conflicted-section')).toBeNull();
@@ -166,6 +184,7 @@ describe('PresetsList', () => {
   it('navigates ?preset= when a row is selected', async () => {
     const user = userEvent.setup({ delay: null });
     const { navigate } = renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
       client: listClient([normal]),
     });
 
@@ -176,6 +195,7 @@ describe('PresetsList', () => {
   it('opens the preset when the row body (a non-link cell) is clicked', async () => {
     const user = userEvent.setup({ delay: null });
     const { navigate } = renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
       client: listClient([normal]),
     });
 
@@ -188,6 +208,7 @@ describe('PresetsList', () => {
   it('navigates once — not twice — when the name link itself is clicked', async () => {
     const user = userEvent.setup({ delay: null });
     const { navigate } = renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
       client: listClient([normal]),
     });
 
@@ -197,7 +218,10 @@ describe('PresetsList', () => {
   });
 
   it('marks the selected row link as the current page', async () => {
-    renderWithProviders(<PresetsList selected="paris_weather" />, { client: listClient([normal]) });
+    renderWithProviders(<PresetsList selected="paris_weather" />, {
+      projection: fullProjection(),
+      client: listClient([normal]),
+    });
 
     const link = await screen.findByRole('link', { name: 'Open preset paris_weather' });
     // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
@@ -213,13 +237,19 @@ describe('PresetsList', () => {
       listPresets: vi.fn().mockRejectedValue(new Error('boom: list failed')),
       listToolMeta: vi.fn().mockResolvedValue({ folders: [], meta: [] }),
     };
-    renderWithProviders(<PresetsList selected={undefined} />, { client });
+    renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
+      client,
+    });
 
     expect(await screen.findByRole('alert')).toHaveTextContent('boom: list failed');
   });
 
   it('shows the empty state when there are no presets', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, { client: listClient([]) });
+    renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
+      client: listClient([]),
+    });
 
     expect(await screen.findByText('No presets yet')).toBeInTheDocument();
   });
@@ -229,6 +259,7 @@ describe('PresetsList', () => {
     // store: the create button is WITHDRAWN and the muted OFF note stands where the
     // create-oriented empty state would otherwise mislead.
     renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
       client: listClient([]),
       systemKinds: [
         {
@@ -253,6 +284,7 @@ describe('PresetsList', () => {
 
   it('KEEPS the create affordance when the versioning kind is active', async () => {
     renderWithProviders(<PresetsList selected={undefined} />, {
+      projection: fullProjection(),
       client: listClient([normal]),
       systemKinds: [{ kind: 'versioning', state: 'active', plugin: 'pg', detail: '' }],
     });

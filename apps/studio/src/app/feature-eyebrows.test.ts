@@ -38,8 +38,6 @@ const PAGE_SOURCES: Record<FeatureToken, string> = {
   agents: 'agents/src/agents.tsx',
   presets: 'presets/src/PresetsPage.tsx',
   states: 'states/src/StatesPage.tsx',
-  extensions: 'extensions/src/extensions.tsx',
-  templates: 'templates/src/TemplatesPage.tsx',
   connectors: 'connectors/src/connectors-page.tsx',
   servedEndpoints: 'manifest/src/ServedEndpointsPage.tsx',
   hooks: 'hooks/src/HooksPage.tsx',

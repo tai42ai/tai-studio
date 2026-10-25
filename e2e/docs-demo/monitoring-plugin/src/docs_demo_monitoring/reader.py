@@ -317,6 +317,31 @@ class DemoReader:
     ) -> list[MonitoringTraceSummary]:
         if limit is not None and limit > _MAX_PAGE_SIZE:
             raise ValueError(f"limit {limit} exceeds the reader's maximum page size {_MAX_PAGE_SIZE}")
+        traces = self._matching_traces(from_timestamp, to_timestamp, filter_, order_by)
+        if limit is not None:
+            start = ((page or 1) - 1) * limit
+            traces = traces[start : start + limit]
+        return [_to_summary(t) for t in traces]
+
+    async def export_traces(
+        self,
+        *,
+        from_timestamp: datetime | None = None,
+        to_timestamp: datetime | None = None,
+        max_rows: int,
+        filter_: MonitoringFilter | None = None,
+        order_by: OrderBy | None = None,
+    ) -> list[MonitoringTraceSummary]:
+        traces = self._matching_traces(from_timestamp, to_timestamp, filter_, order_by)
+        return [_to_summary(t) for t in traces[: max_rows + 1]]
+
+    def _matching_traces(
+        self,
+        from_timestamp: datetime | None,
+        to_timestamp: datetime | None,
+        filter_: MonitoringFilter | None,
+        order_by: OrderBy | None,
+    ) -> list[MonitoringTrace]:
         traces = [
             t
             for t in self._store.all_traces()
@@ -324,11 +349,7 @@ class DemoReader:
         ]
         if filter_ is not None:
             traces = [t for t in traces if self._trace_matches(t, filter_)]
-        traces = self._sort_traces(traces, order_by)
-        if limit is not None:
-            start = ((page or 1) - 1) * limit
-            traces = traces[start : start + limit]
-        return [_to_summary(t) for t in traces]
+        return self._sort_traces(traces, order_by)
 
     async def get_trace(self, trace_id: str) -> MonitoringTrace:
         trace = self._store.get(trace_id)

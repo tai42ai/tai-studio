@@ -14,7 +14,8 @@
  * operator originally requested (the returnTo pin) — defaulting to `/`, where the
  * capability-gated landing route resolves the actual destination. The navigate
  * runs from an effect keyed on `isAuthenticated`, so the router's injected auth
- * context has already flipped before the guarded destination re-evaluates.
+ * context has already flipped before the guarded destination re-evaluates, and it
+ * replaces `/login` in history so Back never returns to the credential screen.
  *
  * Method discovery, the SSO hand-back, the claim hand-off, and the key-paste
  * verification each run in a dedicated hook; the method/notice/key-paste views are
@@ -97,8 +98,10 @@ export function LoginPage({
   useEffect(() => {
     // `returnTo` is a full internal href (may carry a `?search`), so navigate by
     // `href` — `{ to }` treats the string as a pathname template and would drop
-    // the query. It is origin-checked upstream.
-    if (isAuthenticated) void navigate({ href: returnTo });
+    // the query. It is origin-checked upstream. The navigation REPLACES `/login`:
+    // a push would leave it one step back, and Back would land on it only for this
+    // effect to send the operator forward again.
+    if (isAuthenticated) void navigate({ href: returnTo, replace: true });
   }, [isAuthenticated, navigate, returnTo]);
 
   const shown = methods.status === 'ready' ? visibleMethods(methods.data, inviteToken) : [];

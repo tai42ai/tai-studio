@@ -1,4 +1,4 @@
-/** Manifest / MCP section, env-ref and config-reload sub-clients. */
+/** Manifest / MCP section, per-server MCP ops, env-ref and config-reload sub-clients. */
 import { apiRoutes, buildPath } from '../generated/api-routes';
 import * as s from '../schemas';
 import type { Transport } from './transport';
@@ -28,6 +28,12 @@ export interface SetMcpSecretEnvBody {
   readonly manifest_pointer: string;
 }
 
+/** The include/exclude tool filter of one MCP entry (`PUT .../tool-filter`). */
+export interface McpToolFilter {
+  readonly include: readonly string[];
+  readonly exclude: readonly string[];
+}
+
 export function manifestClient(t: Transport) {
   const { req } = t;
   return {
@@ -38,17 +44,6 @@ export function manifestClient(t: Transport) {
         method: 'POST',
         body: { mcp },
       }),
-    getMcpStatus: (signal?: AbortSignal) =>
-      req(apiRoutes.get_api_mcp_status.path, s.mcpStatus, { signal }),
-    reloadMcp: (title: string) =>
-      req(
-        buildPath(apiRoutes.post_api_mcp_status_title_reload.path, { title }),
-        s.mcpReloadResult,
-        {
-          method: 'POST',
-        },
-      ),
-
     // Granular manifest-section entry edits — add/replace or remove ONE entry by
     // title, leaving the rest of the section untouched (the surgical counterpart to
     // the whole-section `setMcpConfig`). Each crosses the config pipeline and returns
@@ -93,6 +88,38 @@ export function manifestClient(t: Transport) {
           exclude_remove: body.exclude_remove ?? [],
         },
       }),
+  };
+}
+
+/** Per-server MCP status reads and live ops: status, advertised tools, tool filter, reloads. */
+export function mcpServersClient(t: Transport) {
+  const { req } = t;
+  return {
+    getMcpStatus: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_mcp_status.path, s.mcpStatus, { signal }),
+    // Every tool the server advertises, before the entry's tool filter. A POST: the
+    // read opens a session to the server.
+    listMcpAdvertisedTools: (title: string, signal?: AbortSignal) =>
+      req(
+        buildPath(apiRoutes.post_api_mcp_status_title_advertised_tools.path, { title }),
+        s.mcpAdvertisedTools,
+        { method: 'POST', signal },
+      ),
+    // Replace the entry's include/exclude tool filter; crosses the config pipeline.
+    setMcpToolFilter: (title: string, filter: McpToolFilter) =>
+      req(
+        buildPath(apiRoutes.put_api_mcp_config_entries_title_tool_filter.path, { title }),
+        s.reloadConfigResult,
+        { method: 'PUT', body: filter },
+      ),
+    reloadMcp: (title: string) =>
+      req(
+        buildPath(apiRoutes.post_api_mcp_status_title_reload.path, { title }),
+        s.mcpReloadResult,
+        {
+          method: 'POST',
+        },
+      ),
 
     // The MCP servers skipped by the viability check, plus their remediation ops. The
     // LIST rides the fleet fan-out primitive (each worker's failed roster arrives as

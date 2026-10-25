@@ -1,10 +1,10 @@
 /**
  * The Templates tab: the attachments table and the state-template catalog render; Attach
  * template opens a form over the template's parameter schema and PUTs the attachment;
- * Detach confirms and removes it; a template attached elsewhere cannot be deleted; a 501
- * shows FeatureDisabled.
+ * Detach confirms and removes it, its confirm listing what still uses the attachment; a
+ * template attached elsewhere cannot be deleted; a 501 shows FeatureDisabled.
  */
-import { ApiError, type StateDetail } from '@tai42/api-client';
+import { ApiError, apiRoutes, type StateDetail } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -13,6 +13,7 @@ import { stateTemplatesKey } from './keys';
 import { TemplatesTab } from './TemplatesTab';
 import {
   clickWhenInteractable,
+  fullProjection,
   lastFileInput,
   renderWithProviders,
   type StubApiClient,
@@ -540,5 +541,93 @@ describe('TemplatesTab — orphan reconcile on a declarations edit', () => {
     expect(
       screen.queryByRole('button', { name: 'Close orphans and save' }),
     ).not.toBeInTheDocument();
+  });
+
+  describe('the detach holder preview', () => {
+    const attached = (): StateDetail =>
+      detail([{ template: 'notes', path: [], parameters: {}, declarations: {} }]);
+    const presetHolder = {
+      kind: 'preset',
+      name: 'welcome',
+      locator: { version: 1 },
+      summary: "preset 'welcome' version 1",
+    };
+
+    it('lists what still uses the attachment and holds Detach disabled', async () => {
+      const user = userEvent.setup({ delay: null });
+      const getStateTemplateReferees = vi.fn().mockResolvedValue({ holders: [presetHolder] });
+      renderWithProviders(<TemplatesTab state={attached()} />, {
+        client: client({ getStateTemplateReferees }),
+        projection: fullProjection(),
+      });
+      await user.click(await screen.findByRole('button', { name: 'Detach' }));
+      const dialog = await screen.findByRole('dialog');
+      expect(
+        await within(dialog).findByText('Still used by — change these bindings first:'),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog).getByRole('link', { name: "preset 'welcome' version 1" }),
+      ).toBeInTheDocument();
+      expect(within(dialog).getByRole('button', { name: 'Detach' })).toBeDisabled();
+      expect(getStateTemplateReferees).toHaveBeenCalledWith('profile', 'notes', expect.anything());
+    });
+
+    it('says the check is outside the access and leaves Detach enabled without the grant', async () => {
+      const user = userEvent.setup({ delay: null });
+      const getStateTemplateReferees = vi.fn();
+      renderWithProviders(<TemplatesTab state={attached()} />, {
+        client: client({ getStateTemplateReferees }),
+        projection: fullProjection({
+          admin: false,
+          routes: [
+            {
+              path: apiRoutes.delete_api_states_name_attachments_template.path,
+              methods: ['DELETE'],
+            },
+          ],
+        }),
+      });
+      await user.click(await screen.findByRole('button', { name: 'Detach' }));
+      const dialog = await screen.findByRole('dialog');
+      expect(
+        await within(dialog).findByText(
+          'Checking what still uses this is outside your access — it needs read access to states.',
+        ),
+      ).toBeInTheDocument();
+      expect(within(dialog).getByRole('button', { name: 'Detach' })).toBeEnabled();
+      expect(getStateTemplateReferees).not.toHaveBeenCalled();
+    });
+
+    it('a refusal naming holders shows its first line and lists them', async () => {
+      const user = userEvent.setup({ delay: null });
+      const message =
+        "template 'notes' on state 'profile' cannot be detached — held by:\n  preset 'welcome' version 1";
+      const detachStateTemplate = vi.fn().mockRejectedValue(
+        new ApiError(message, 409, undefined, undefined, {
+          error: message,
+          holders: [presetHolder],
+        }),
+      );
+      renderWithProviders(<TemplatesTab state={attached()} />, {
+        client: client({
+          getStateTemplateReferees: vi.fn().mockResolvedValue({ holders: [] }),
+          detachStateTemplate,
+        }),
+        projection: fullProjection(),
+      });
+      await user.click(await screen.findByRole('button', { name: 'Detach' }));
+      const dialog = await screen.findByRole('dialog');
+      await clickWhenInteractable(user, within(dialog).getByRole('button', { name: 'Detach' }));
+
+      expect(
+        await within(dialog).findByText(
+          "template 'notes' on state 'profile' cannot be detached — held by:",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog).getByRole('link', { name: "preset 'welcome' version 1" }),
+      ).toBeInTheDocument();
+      expect(within(dialog).getByRole('button', { name: 'Detach' })).toBeDisabled();
+    });
   });
 });

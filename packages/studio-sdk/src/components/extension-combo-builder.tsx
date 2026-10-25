@@ -10,16 +10,16 @@
  *  - the current combos, each an ordered row of name `Badge`s with a per-combo Edit
  *    (pull it back into the draft) and Remove;
  *  - a combo UNDER CONSTRUCTION, authored with the shared `ExtensionPicker` (grouped
- *    by kind, single-select for the non-stackable `backend` kind). When the draft
- *    includes the `output_schema` extension, its config is authored inline with a
- *    `SchemaEditor` (no title required); an "Add combo" / "Update combo" action
- *    composes the elements — `output_schema` as `{ name, config: { schema } }`, every
- *    other extension as a bare name — and writes it into the value.
+ *    by kind, single-select for the non-stackable `backend` kind). An extension whose
+ *    catalog entry declares a `config_schema` is authored as `{ name, config }` through
+ *    its settings form; any other name stays a bare element, or the edited combo's own
+ *    element when it survives the edit. An "Add extension set" / "Update extension
+ *    set" action composes the elements and writes the combo into the value.
  *
  * The builder only blocks the client-trivial invalids: an EMPTY combo (Add is
  * disabled until the draft has ≥1 member), a DUPLICATE of a combo already in the
- * value (by name sequence; flagged inline, Add blocked), an INVALID `output_schema`
- * config (the `SchemaEditor` shows the parse/lint error and Add is blocked), and an
+ * value (by name sequence; flagged inline, Add blocked), an INVALID or not yet
+ * reported settings form of a drafted extension (Add is blocked), and an
  * UNKNOWN extension name in an existing combo (a name absent from `available`, which
  * happens when a plugin is removed after a preset was authored) — flagged inline on
  * that combo row and reported through `onValidityChange` so the caller can block
@@ -39,15 +39,17 @@ import type { Extension, PresetExtensionElement } from '@tai42/api-client';
 import { type ReactNode, useEffect, useState } from 'react';
 
 import { comboElementNames, extensionElementName } from '../extension-combos';
-import { type SchemaEditorChange } from '../schema-editor';
+import type { JsonSchema } from '../schema-form/types';
 import {
   ComboDraftEditor,
   CommittedComboList,
-  OUTPUT_SCHEMA,
-  outputSchemaConfig,
+  type ConfigurableExtension,
   sameNames,
   unknownNames,
 } from './extension-combo-parts';
+import type { ExtensionConfigChange } from './extension-config-editor';
+
+type Seeds = Readonly<Record<string, Record<string, unknown> | undefined>>;
 
 export interface ExtensionComboBuilderProps {
   /** The extension catalog the combos are drawn from (caller-fetched). */
@@ -84,15 +86,29 @@ export function ExtensionComboBuilder({
   availableReady = true,
 }: ExtensionComboBuilderProps): ReactNode {
   const [draft, setDraft] = useState<string[]>([]);
-  const [draftConfig, setDraftConfig] = useState<SchemaEditorChange>({ schema: null, valid: true });
+  // The settings each drafted configurable extension's form last reported.
+  const [draftConfigs, setDraftConfigs] = useState<Readonly<Record<string, ExtensionConfigChange>>>(
+    {},
+  );
+  // The stored settings the forms seed from when a combo is pulled in for edit.
+  const [draftSeeds, setDraftSeeds] = useState<Seeds>({});
   // The index of the combo being edited (pulled into the draft), or `null` for a new one.
   const [editing, setEditing] = useState<number | null>(null);
 
-  const draftHasOutputSchema = draft.includes(OUTPUT_SCHEMA);
+  const settingsSchemas = new Map<string, JsonSchema>();
+  for (const extension of available) {
+    if (extension.config_schema !== null) {
+      settingsSchemas.set(extension.name, extension.config_schema);
+    }
+  }
+  const configurable: ConfigurableExtension[] = draft.flatMap((name) => {
+    const schema = settingsSchemas.get(name);
+    return schema === undefined ? [] : [{ name, schema }];
+  });
   const isDuplicate =
     draft.length > 0 &&
     value.some((combo, index) => index !== editing && sameNames(comboElementNames(combo), draft));
-  const configInvalid = draftHasOutputSchema && !draftConfig.valid;
+  const configInvalid = configurable.some(({ name }) => draftConfigs[name]?.valid !== true);
   const canAdd = !disabled && draft.length > 0 && !isDuplicate && !configInvalid;
 
   // Unknown-name validation over the EXISTING combos. Until the catalog is ready the
@@ -108,16 +124,16 @@ export function ExtensionComboBuilder({
 
   const resetDraft = (): void => {
     setDraft([]);
-    setDraftConfig({ schema: null, valid: true });
+    setDraftConfigs({});
+    setDraftSeeds({});
     setEditing(null);
   };
 
   /**
-   * Compose the draft names into config-bearing elements. `output_schema` takes the
-   * inline-authored config; every other name keeps the edited combo's existing
-   * element verbatim when it survives — preserving any author `config` (e.g. an
-   * `ask_external` verifier) the builder does not itself author — and a newly-added
-   * name becomes a bare-name element.
+   * Compose the draft names into elements. An extension whose catalog entry declares
+   * a `config_schema` is authored as `{ name, config }` through its settings form;
+   * any other name stays a bare element, or the edited combo's own element when it
+   * survives the edit.
    */
   const composeCombo = (): PresetExtensionElement[] => {
     const source = editing === null ? undefined : value[editing];
@@ -125,11 +141,10 @@ export function ExtensionComboBuilder({
     if (source !== undefined) {
       for (const element of source) byName.set(extensionElementName(element), element);
     }
-    return draft.map((name) =>
-      name === OUTPUT_SCHEMA
-        ? { name, config: { schema: draftConfig.schema ?? {} } }
-        : (byName.get(name) ?? name),
-    );
+    return draft.map((name) => {
+      const report = settingsSchemas.has(name) ? draftConfigs[name] : undefined;
+      return report === undefined ? (byName.get(name) ?? name) : { name, config: report.config };
+    });
   };
 
   const commitCombo = (): void => {
@@ -146,9 +161,26 @@ export function ExtensionComboBuilder({
   const startEdit = (index: number): void => {
     const combo = value[index];
     if (combo === undefined) return;
+    const seeds: Record<string, Record<string, unknown>> = {};
+    for (const element of combo) {
+      if (typeof element !== 'string') seeds[element.name] = element.config;
+    }
     setDraft(comboElementNames(combo));
-    setDraftConfig({ schema: outputSchemaConfig(combo), valid: true });
+    setDraftConfigs({});
+    setDraftSeeds(seeds);
     setEditing(index);
+  };
+
+  const changeDraft = (next: string[]): void => {
+    setDraft(next);
+    // An unticked extension's settings report goes with it.
+    setDraftConfigs((current) =>
+      Object.fromEntries(Object.entries(current).filter(([name]) => next.includes(name))),
+    );
+  };
+
+  const changeDraftConfig = (name: string, change: ExtensionConfigChange): void => {
+    setDraftConfigs((current) => ({ ...current, [name]: change }));
   };
 
   const removeCombo = (index: number): void => {
@@ -172,10 +204,10 @@ export function ExtensionComboBuilder({
       <ComboDraftEditor
         available={available}
         draft={draft}
-        onDraftChange={setDraft}
-        draftHasOutputSchema={draftHasOutputSchema}
-        draftConfig={draftConfig}
-        onDraftConfigChange={setDraftConfig}
+        onDraftChange={changeDraft}
+        configurable={configurable}
+        draftConfigs={draftSeeds}
+        onDraftConfigChange={changeDraftConfig}
         isDuplicate={isDuplicate}
         canAdd={canAdd}
         editing={editing}

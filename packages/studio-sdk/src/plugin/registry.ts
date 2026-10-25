@@ -6,12 +6,15 @@
  * the SAME instance every host caller — the shell and the feature panels — sees. The
  * plugin surface (`@tai42/studio-sdk`) does not include it, so a plugin cannot reach it.
  */
+import { CORE_HOLDER_KINDS } from '../components/holder-kinds';
 import type {
+  HolderLinkContribution,
   NavEntryContribution,
   PageContribution,
   PluginContext,
   PluginContributions,
   PluginEntry,
+  RegisteredHolderLink,
   RegisteredNavEntry,
   RegisteredPage,
   RegisteredRoutePanel,
@@ -26,6 +29,7 @@ const pages: RegisteredPage[] = [];
 const settingsTabs: RegisteredSettingsTab[] = [];
 const navEntries: RegisteredNavEntry[] = [];
 const routePanels = new Map<string, RegisteredRoutePanel>();
+const holderLinks = new Map<string, RegisteredHolderLink>();
 
 /**
  * What the host knows about a plugin from its registry listing entry: `mounts`, the
@@ -46,6 +50,7 @@ interface StagedContributions {
   readonly tabIds: Set<string>;
   readonly navEntries: RegisteredNavEntry[];
   readonly routePanels: Map<string, RegisteredRoutePanel>;
+  readonly holderLinks: Map<string, RegisteredHolderLink>;
 }
 
 /**
@@ -64,6 +69,7 @@ function emptyStaged(): StagedContributions {
     tabIds: new Set(),
     navEntries: [],
     routePanels: new Map(),
+    holderLinks: new Map(),
   };
 }
 
@@ -144,6 +150,16 @@ function makeStagingContext(
       }
       staged.routePanels.set(contribution.channel, { ...contribution, pluginId });
     },
+    registerHolderLink(contribution: HolderLinkContribution): void {
+      assertOpen();
+      if (CORE_HOLDER_KINDS.has(contribution.kind)) {
+        throw new Error(`holder kind “${contribution.kind}” is a core kind; the shell links it`);
+      }
+      if (staged.holderLinks.has(contribution.kind) || holderLinks.has(contribution.kind)) {
+        throw new Error(`a holder link is already registered for kind “${contribution.kind}”`);
+      }
+      staged.holderLinks.set(contribution.kind, { ...contribution, pluginId });
+    },
     routeBase(itemName: string): string | null {
       return Object.hasOwn(host.mounts, itemName) ? (host.mounts[itemName] ?? null) : null;
     },
@@ -200,6 +216,7 @@ function commitStaged(staged: StagedContributions): void {
   for (const tab of staged.settingsTabs) settingsTabs.push(tab);
   for (const navEntry of staged.navEntries) navEntries.push(navEntry);
   for (const [channel, panel] of staged.routePanels) routePanels.set(channel, panel);
+  for (const [kind, link] of staged.holderLinks) holderLinks.set(kind, link);
 }
 
 /**
@@ -237,7 +254,7 @@ export async function loadPlugin(
 
 /** The shell reads this after loading every installed plugin bundle. */
 export function getContributions(): PluginContributions {
-  return { toolPanels, pages, settingsTabs, navEntries, routePanels };
+  return { toolPanels, pages, settingsTabs, navEntries, routePanels, holderLinks };
 }
 
 /** Tests reset the module-level registry between cases. */
@@ -247,4 +264,5 @@ export function __resetContributions(): void {
   settingsTabs.length = 0;
   navEntries.length = 0;
   routePanels.clear();
+  holderLinks.clear();
 }

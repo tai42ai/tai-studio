@@ -70,7 +70,19 @@ const settingsSchemaData = {
 describe('manifest / mcp client transport', () => {
   it('getManifest GETs /api/manifest and parses the mcp + user_tools view', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { mcp: [{ name: 'files' }], user_tools: ['echo'] } }),
+      jsonResponse({
+        data: {
+          mcp: [{ name: 'files' }],
+          user_tools: ['echo'],
+          extension_settings: {
+            extensions_modules: [],
+            backend_module: null,
+            tools: [],
+            mcp: [],
+            api_tools: {},
+          },
+        },
+      }),
     );
     const out = await client.getManifest();
     expect(captured[0]?.method).toBe('GET');
@@ -87,7 +99,17 @@ describe('manifest / mcp client transport', () => {
     };
     const { client } = harness(() =>
       jsonResponse({
-        data: { mcp: [managed, { title: 'hand', config: {} }], user_tools: [] },
+        data: {
+          mcp: [managed, { title: 'hand', config: {} }],
+          user_tools: [],
+          extension_settings: {
+            extensions_modules: [],
+            backend_module: null,
+            tools: [],
+            mcp: [],
+            api_tools: {},
+          },
+        },
       }),
     );
     const out = await client.getManifest();
@@ -110,6 +132,57 @@ describe('manifest / mcp client transport', () => {
         data: {
           mcp: [{ title: 't', managed: { provider_id: 'github', sub_service: 'repo' } }],
           user_tools: [],
+          extension_settings: {
+            extensions_modules: [],
+            backend_module: null,
+            tools: [],
+            mcp: [],
+            api_tools: {},
+          },
+        },
+      }),
+    );
+    await expect(client.getManifest()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('getManifest parses the extension settings, combo elements refined', async () => {
+    const extension_settings = {
+      extensions_modules: ['pkg.ext'],
+      backend_module: 'pkg.backend',
+      tools: [{ title: 'a', extensions: { echo: [['ask_external']] } }],
+      mcp: [
+        {
+          title: 'srv',
+          extensions: { fetch: [[{ name: 'label_ext', config: { label: '!ENV ${EXT_TOKEN}' } }]] },
+        },
+      ],
+      api_tools: { shout: [['ask_external']] },
+    };
+    const { client } = harness(() =>
+      jsonResponse({ data: { mcp: [], user_tools: [], extension_settings } }),
+    );
+    const out = await client.getManifest();
+    expect(out.extension_settings).toEqual(extension_settings);
+  });
+
+  it('throws ApiSchemaError LOUDLY on a view missing extension_settings', async () => {
+    const { client } = harness(() => jsonResponse({ data: { mcp: [], user_tools: [] } }));
+    await expect(client.getManifest()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('throws ApiSchemaError LOUDLY on a combo element that is neither a name nor { name, config }', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          mcp: [],
+          user_tools: [],
+          extension_settings: {
+            extensions_modules: [],
+            backend_module: null,
+            tools: [{ title: 'a', extensions: { echo: [[{ config: {} }]] } }],
+            mcp: [],
+            api_tools: {},
+          },
         },
       }),
     );

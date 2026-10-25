@@ -7,7 +7,13 @@
  * request fires.
  */
 import type { TokensPayload, TriggerLinkCreateBody, TriggerLinkCreated } from '@tai42/api-client';
-import { errorMessage, useApi } from '@tai42/studio-sdk';
+import {
+  boundExecutionKey,
+  errorMessage,
+  type ExecutionKeyBinding,
+  useApi,
+  useExecutionKeyBinding,
+} from '@tai42/studio-sdk';
 import {
   useMutation,
   type UseMutationResult,
@@ -89,6 +95,8 @@ export interface CreateTriggerLinkForm {
   readonly kwargsError: string | null;
   readonly mutation: UseMutationResult<TriggerLinkCreated, Error, TriggerLinkCreateBody>;
   readonly keysQuery: UseQueryResult<TokensPayload>;
+  /** How the form binds its key (`useExecutionKeyBinding()`). */
+  readonly binding: ExecutionKeyBinding;
   readonly unsatisfiable: boolean;
   readonly link: TriggerLinkCreated | null;
   readonly url: string | null;
@@ -96,9 +104,25 @@ export interface CreateTriggerLinkForm {
   readonly onSubmit: (event: SyntheticEvent) => void;
 }
 
-export function useCreateTriggerLink(): CreateTriggerLinkForm {
+/** The create write: on success it holds the minted link and refreshes the link list. */
+function useCreateLinkMutation(
+  onCreated: (created: TriggerLinkCreated) => void,
+): UseMutationResult<TriggerLinkCreated, Error, TriggerLinkCreateBody> {
   const api = useApi();
   const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: TriggerLinkCreateBody) => api.createTriggerLink(body),
+    onSuccess: (created) => {
+      onCreated(created);
+      void queryClient.invalidateQueries({
+        predicate: (q) => q.queryKey[0] === TRIGGER_LINKS_KEY_ROOT,
+      });
+    },
+  });
+}
+
+export function useCreateTriggerLink(): CreateTriggerLinkForm {
+  const api = useApi();
 
   const [topic, setTopic] = useState('');
   const [name, setName] = useState('');
@@ -113,21 +137,15 @@ export function useCreateTriggerLink(): CreateTriggerLinkForm {
   const [kwargsError, setKwargsError] = useState<string | null>(null);
   const [link, setLink] = useState<TriggerLinkCreated | null>(null);
 
-  const keysQuery = useExecutionKeys();
+  const binding = useExecutionKeyBinding();
+  const keysQuery = useExecutionKeys(binding.mode === 'checked');
 
-  const mutation = useMutation({
-    mutationFn: (body: TriggerLinkCreateBody) => api.createTriggerLink(body),
-    onSuccess: (created) => {
-      setLink(created);
-      void queryClient.invalidateQueries({
-        predicate: (q) => q.queryKey[0] === TRIGGER_LINKS_KEY_ROOT,
-      });
-    },
-  });
+  const mutation = useCreateLinkMutation(setLink);
 
   const topicMissing = topic.trim() === '';
-  const executionKeyMissing = executionKey === '';
-  const unsatisfiable = fireGateUnsatisfiable(keysQuery);
+  const boundKey = boundExecutionKey(executionKey, binding);
+  const executionKeyMissing = boundKey === '';
+  const unsatisfiable = fireGateUnsatisfiable(keysQuery, binding, boundKey);
   const url = link !== null ? composeTriggerUrl(api.baseUrl, link.trigger_path) : null;
   // Held by identity so a re-render does not re-encode + re-write the QR's innerHTML.
   const qr = useMemo(() => (url === null ? null : { __html: renderSVG(url) }), [url]);
@@ -143,7 +161,7 @@ export function useCreateTriggerLink(): CreateTriggerLinkForm {
     const result = resolveCreateBody({
       topic,
       name,
-      executionKey,
+      executionKey: boundKey,
       requireApiKey,
       expiryChoice,
       customSeconds,
@@ -177,6 +195,7 @@ export function useCreateTriggerLink(): CreateTriggerLinkForm {
     kwargsError,
     mutation,
     keysQuery,
+    binding,
     unsatisfiable,
     link,
     url,

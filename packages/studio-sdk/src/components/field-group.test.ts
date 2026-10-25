@@ -294,16 +294,20 @@ const EXPRESSION_CHILD_SITES: Readonly<Record<string, string>> = {
     'ErrorState on a failed read, MultiToolPicker / PresetSpecEditor / SubAgentComposer otherwise — all three are marked group, so neither branch claims the control id.',
   'packages/studio-sdk/src/components/execution-key-picker.tsx':
     'Select on the ready branch, ErrorState / <p role="status"> otherwise — group is branch-conditional.',
+  'packages/features/connectors/src/pick-tools-step.tsx':
+    'One section per server: Skeleton while it reads, ErrorState on a failed read, else the SectionBody checkbox list, then the save outcome — the Field is marked group, so it claims no control id.',
   'packages/features/hooks/src/VerifierSelectField.tsx':
     'Select on the ready branch, ErrorState / <p role="status"> otherwise — group is branch-conditional.',
   'packages/features/interactions/src/renderers/select-answer.tsx':
     'RadioGroup at or below RADIO_MAX_OPTIONS, Select above — group is branch-conditional.',
+  'packages/studio-sdk/src/components/named-list-picker.tsx':
+    'ErrorState on a failed read, else a Select while one renders beside the MutedLine notes — group is branch-conditional.',
   'packages/studio-sdk/src/components/reveal-input.tsx':
     'Both branches are the SDK TextInput, which claims the control id — no marker needed.',
   'packages/studio-sdk/src/components/templated-text-field.tsx':
     'The RadioGroup source toggle then a mode branch (Skeleton, ErrorState, or a hideLabel Field around Select) plus the KwargsEditor — the outer Field is marked group, so it claims no control id and each inner control names or drops its own.',
   'packages/studio-sdk/src/components/tool-picker.tsx':
-    'The Field wraps the tool ToolSelect (a grouped or flat Select) only when the caller passes a visible label; that inner Select claims the control id, so no marker is needed.',
+    'The Field (only with a visible label) is marked group exactly while no Select renders in it (the error, errorNote, refused or empty state); whenever the grouped or flat Select renders it claims the control id.',
   'packages/studio-sdk/src/schema-form/string-field.tsx':
     'CompletionInput or TextInput, both of which claim the control id — no marker needed.',
   'packages/studio-sdk/src/schema-form/multiselect-field.tsx':
@@ -317,15 +321,10 @@ const EXPRESSION_CHILD_SITES: Readonly<Record<string, string>> = {
  * The first eight spread `useFieldControl()` straight onto a labelable element
  * (`grep -rl useFieldControl` finds exactly those modules — `UploadDropZone` is
  * split out of `MediaField` for precisely this reason, so its hook call runs
- * inside the `Field`). The last two claim it THROUGH an inner control and are
+ * inside the `Field`). The last one claims it THROUGH an inner control and is
  * listed with that reason:
  *
  * - `TagsInput` renders the SDK's `TextInput`, which claims the id.
- * - `ToolPicker` renders its `Select` bare when it is given no `label` of its
- *   own, and that `Select` claims the id. Every in-repo `<Field><ToolPicker>`
- *   site omits `label`; a site that passed one would open an inner `Field`, and
- *   the outer id would dangle — which is why the label-less shape is the only
- *   one this entry covers.
  */
 const CLAIMING_CHILDREN = new Set([
   'TextInput',
@@ -337,7 +336,6 @@ const CLAIMING_CHILDREN = new Set([
   'CompletionInput',
   'UploadDropZone',
   'TagsInput',
-  'ToolPicker',
 ]);
 
 /**

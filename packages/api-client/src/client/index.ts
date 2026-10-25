@@ -1,4 +1,5 @@
 /** Composition root: assembles the per-resource sub-clients into the client. */
+import { holdersFromError, storedPresetFaultFromError } from '../errors';
 import type { ApiConfig } from '../http';
 import { servedConstants } from '../schemas';
 import { agentsClient } from './agents-client';
@@ -13,7 +14,7 @@ import { conversationsClient } from './conversations-client';
 import { hooksClient } from './hooks-client';
 import { interactionsClient, interactionsStreamClient } from './interactions-client';
 import { loginClient, logoutClient } from './login-client';
-import { manifestClient, manifestSecretEnvClient } from './manifest-client';
+import { manifestClient, manifestSecretEnvClient, mcpServersClient } from './manifest-client';
 import { marketplaceClient } from './marketplace-client';
 import { mcpConfigSchemaClient } from './mcp-config-schema-client';
 import { notificationsClient } from './notifications-client';
@@ -57,7 +58,7 @@ export type {
 } from './conversations-client';
 export type { TopicVerifierBody } from './hooks-client';
 export { isSafeApiPath } from './login-client';
-export type { ApiToolsListsBody } from './manifest-client';
+export type { ApiToolsListsBody, McpToolFilter } from './manifest-client';
 export type {
   MarketplaceInstallBody,
   MarketplaceInstallPreviewBody,
@@ -92,6 +93,11 @@ export function createApiClient(config: ApiConfig) {
      *  401 handling, error classes and `{ data }` unwrap as every core call. Core routes
      *  use the named methods. */
     request: t.req,
+    /** Readers of this client's refusals. They recognise the `ApiError` this client throws, so a
+     *  caller that holds no copy of the error classes (a plugin bundle) reads a refusal through
+     *  the client that raised it. */
+    holdersFromError,
+    storedPresetFaultFromError,
     ...toolsClient(t),
     ...presetsClient(t),
     ...statesClient(t),
@@ -101,6 +107,7 @@ export function createApiClient(config: ApiConfig) {
     ...toolExtensionsClient(t),
     ...templatesClient(t),
     ...manifestClient(t),
+    ...mcpServersClient(t),
     ...subMcpClient(t),
     ...configClient(t),
     ...profilesClient(t),

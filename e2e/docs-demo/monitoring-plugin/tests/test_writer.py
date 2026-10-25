@@ -8,10 +8,20 @@ tests keep that promise honest.
 
 from __future__ import annotations
 
+import hashlib
 from datetime import UTC, datetime
+from typing import Any
 
 import pytest
-from tai42_contract.monitoring import MonitoringExportHealth, RecordId, SpanKind, TokenUsage, TraceContext
+from tai42_contract.monitoring import (
+    MonitoringExportHealth,
+    RecordId,
+    SpanKind,
+    TokenUsage,
+    TraceContext,
+    is_span_id,
+    is_trace_id,
+)
 from tai42_contract.secrets import SecretValue
 from tai42_kit.monitoring import payload_ref
 
@@ -22,6 +32,19 @@ T0 = datetime(2026, 7, 13, 12, 0, 0, tzinfo=UTC)
 T1 = datetime(2026, 7, 13, 12, 0, 5, tzinfo=UTC)
 
 
+PARENT_SPAN_ID = "00000000000000a1"
+
+
+def _tid(label: str) -> str:
+    """A contract-form trace id (32 lower-hex) derived from a readable test label."""
+    return hashlib.sha256(label.encode()).hexdigest()[:32]
+
+
+def _ctx(label: str, **fields: Any) -> TraceContext:
+    """An explicit context joining the trace named by ``label`` under a parent span in it."""
+    return TraceContext(trace_id=_tid(label), parent_span_id=PARENT_SPAN_ID, **fields)
+
+
 def _writer() -> tuple[DemoWriter, TraceStore]:
     store = TraceStore()
     return DemoWriter(store), store
@@ -29,14 +52,14 @@ def _writer() -> tuple[DemoWriter, TraceStore]:
 
 def test_start_span_records_into_store_and_amends_via_handle() -> None:
     writer, store = _writer()
-    ctx = TraceContext(trace_id="trace-a", tags=["demo"])
+    ctx = _ctx("trace-a", tags=["demo"])
     assert writer.current_trace_id() is None
     with writer.start_span(name="root", kind=SpanKind.TOOL, trace_context=ctx) as span:
-        assert writer.current_trace_id() == "trace-a"
+        assert writer.current_trace_id() == _tid("trace-a")
         span.update(output={"ok": True}, model="claude-sonnet-4-5", usage=TokenUsage(input_tokens=10, output_tokens=3))
     # Outside the block the ambient stack is popped.
     assert writer.current_trace_id() is None
-    trace = store.get("trace-a")
+    trace = store.get(_tid("trace-a"))
     assert trace is not None
     assert len(trace.observations) == 1
     obs = trace.observations[0]
@@ -49,14 +72,14 @@ def test_start_span_records_into_store_and_amends_via_handle() -> None:
 
 def test_start_span_body_exception_propagates_and_stack_is_balanced() -> None:
     writer, store = _writer()
-    ctx = TraceContext(trace_id="trace-b")
+    ctx = _ctx("trace-b")
     with pytest.raises(RuntimeError, match="boom"):
         with writer.start_span(name="root", kind=SpanKind.TOOL, trace_context=ctx):
             raise RuntimeError("boom")
     # The app's exception propagated (not swallowed) AND the contextvar stack was
     # reset — the span is still recorded with an end time.
     assert writer.current_trace_id() is None
-    assert len(store.get("trace-b").observations) == 1
+    assert len(store.get(_tid("trace-b")).observations) == 1
 
 
 def test_record_span_requires_trace_id() -> None:
@@ -74,31 +97,31 @@ def test_record_span_persists_with_explicit_times() -> None:
         kind=SpanKind.LLM,
         start=T0,
         end=T1,
-        trace_context=TraceContext(trace_id="trace-c"),
+        trace_context=_ctx("trace-c"),
         model="gpt-4o-mini",
         usage=TokenUsage(input_tokens=5, output_tokens=2, cost_usd=0.001),
     )
-    obs = store.get("trace-c").observations
+    obs = store.get(_tid("trace-c")).observations
     assert len(obs) == 1
     assert obs[0].model == "gpt-4o-mini" and obs[0].start == T0 and obs[0].end == T1
     assert obs[0].kind is SpanKind.LLM
     assert (obs[0].input_tokens, obs[0].output_tokens) == (5, 2)
     # The cost is kept by the store beside the observation, for the per-model cost measure.
-    assert store.cost_of("trace-c", obs[0].id) == 0.001
+    assert store.cost_of(_tid("trace-c"), obs[0].id) == 0.001
 
 
 def test_disable_suppresses_emission_that_creates_traces() -> None:
     # The emit methods that MINT a trace/observation record nothing while disabled.
     writer, store = _writer()
     with writer.disable():
-        with writer.start_span(name="root", kind=SpanKind.TOOL, trace_context=TraceContext(trace_id="x")):
+        with writer.start_span(name="root", kind=SpanKind.TOOL, trace_context=_ctx("x")):
             pass
         writer.record_span(
-            name="gen", kind=SpanKind.LLM, start=T0, end=T1, trace_context=TraceContext(trace_id="x")
+            name="gen", kind=SpanKind.LLM, start=T0, end=T1, trace_context=_ctx("x")
         )
-        writer.create_event(name="ev", trace_context=TraceContext(trace_id="x"))
+        writer.create_event(name="ev", trace_context=_ctx("x"))
     # Nothing was recorded while disabled.
-    assert store.get("x") is None
+    assert store.get(_tid("x")) is None
 
 
 def test_disable_suppresses_mutation_of_a_live_trace() -> None:
@@ -108,16 +131,16 @@ def test_disable_suppresses_mutation_of_a_live_trace() -> None:
     # guard were removed, since the ambient span/trace is present).
     writer, store = _writer()
     with writer.start_span(
-        name="root", kind=SpanKind.TOOL, trace_context=TraceContext(trace_id="y", tags=["orig"])
+        name="root", kind=SpanKind.TOOL, trace_context=_ctx("y", tags=["orig"])
     ):
-        obs = store.get("y").observations[0]
+        obs = store.get(_tid("y")).observations[0]
         with writer.disable():
             writer.update_current_span(metadata={"suppressed": True}, output="nope")
             with writer.trace_attributes(tags=["suppressed"], name="suppressed-name"):
                 pass
         # The open span was not mutated, and the trace's tags/metadata are intact.
         assert obs.metadata is None and obs.output is None
-    trace = store.get("y")
+    trace = store.get(_tid("y"))
     assert trace.tags == ["orig"]
     assert not (trace.metadata or {}).get("name")
 
@@ -131,7 +154,7 @@ def test_emit_is_fail_safe_when_the_store_raises() -> None:
             raise RuntimeError("store is down")
 
     writer = DemoWriter(FailingStore())
-    ctx = TraceContext(trace_id="z")
+    ctx = _ctx("z")
     with writer.start_span(name="root", kind=SpanKind.TOOL, trace_context=ctx):
         pass  # must not raise despite the failing store
     writer.record_span(name="gen", kind=SpanKind.LLM, start=T0, end=T1, trace_context=ctx)
@@ -152,26 +175,64 @@ def test_lifecycle_calls_the_health_listener_with_zero_health() -> None:
 
 def test_open_span_activates_until_end() -> None:
     writer, store = _writer()
-    span = writer.open_span(name="n", kind=SpanKind.CHAIN, trace_context=TraceContext(trace_id="o"), activate=True)
+    span = writer.open_span(name="n", kind=SpanKind.CHAIN, trace_context=_ctx("o"), activate=True)
     assert writer.current_span_id() == span.id
-    assert writer.current_trace_id() == "o"
+    assert writer.current_trace_id() == _tid("o")
     writer.update_current_span(input_={"in": 1}, metadata={"a": 1})
     writer.update_current_span(metadata={"b": 2})
     span.end()
     assert writer.current_span_id() is None
-    (obs,) = store.get("o").observations
+    (obs,) = store.get(_tid("o")).observations
     assert obs.input == {"in": 1}
     assert obs.metadata == {"a": 1, "b": 2}
     assert obs.end is not None
 
 
+def test_use_span_makes_an_open_span_current_without_ending_it() -> None:
+    writer, store = _writer()
+    outer = writer.open_span(name="outer", kind=SpanKind.CHAIN, trace_context=_ctx("u"), activate=True)
+    inner = writer.open_span(name="inner", kind=SpanKind.CHAIN, trace_context=_ctx("u"))
+    assert writer.current_span_id() == outer.id
+    with writer.use_span(inner):
+        assert writer.current_span_id() == inner.id
+    assert writer.current_span_id() == outer.id
+    obs = {o.name: o for o in store.get(_tid("u")).observations}
+    assert obs["inner"].end is None
+    inner.end()
+    outer.end()
+
+
+def test_use_span_leaves_the_current_span_for_an_inert_or_foreign_span() -> None:
+    writer, _ = _writer()
+    other, _ = _writer()
+    current = writer.open_span(name="c", kind=SpanKind.CHAIN, trace_context=_ctx("c"), activate=True)
+    with writer.disable():
+        inert = writer.open_span(name="i", kind=SpanKind.CHAIN, trace_context=_ctx("c"))
+    foreign = other.open_span(name="f", kind=SpanKind.CHAIN, trace_context=_ctx("f"))
+    with writer.use_span(inert):
+        assert writer.current_span_id() == current.id
+    with writer.use_span(foreign):
+        assert writer.current_span_id() == current.id
+    current.end()
+    foreign.end()
+
+
+def test_a_new_root_span_carries_contract_form_ids() -> None:
+    writer, _ = _writer()
+    span = writer.open_span(name="root", kind=SpanKind.CHAIN, activate=True)
+    assert is_trace_id(writer.current_trace_id())
+    assert is_span_id(writer.current_span_id())
+    assert writer.current_span_id() == span.id
+    span.end()
+
+
 def test_a_secret_is_stored_as_the_placeholder() -> None:
     writer, store = _writer()
     with writer.start_span(
-        name="n", kind=SpanKind.TOOL, trace_context=TraceContext(trace_id="s"), input_={"k": SecretValue("hush")}
+        name="n", kind=SpanKind.TOOL, trace_context=_ctx("s"), input_={"k": SecretValue("hush")}
     ) as span:
         span.update(output=[SecretValue("hush")])
-    (obs,) = store.get("s").observations
+    (obs,) = store.get(_tid("s")).observations
     assert obs.input == {"k": "[secret]"}
     assert obs.output == ["[secret]"]
 
@@ -179,20 +240,20 @@ def test_a_secret_is_stored_as_the_placeholder() -> None:
 def test_a_reference_is_stored_as_its_one_key_object() -> None:
     writer, store = _writer()
     writer.open_span(
-        name="n", kind=SpanKind.CHAIN, trace_context=TraceContext(trace_id="r"), input_={"x": payload_ref("a", "output")}
+        name="n", kind=SpanKind.CHAIN, trace_context=_ctx("r"), input_={"x": payload_ref("a", "output")}
     ).end()
-    (obs,) = store.get("r").observations
+    (obs,) = store.get(_tid("r")).observations
     assert obs.input == {"x": {"$tai42_ref": {"span_id": "a", "field": "output", "pointer": ""}}}
 
 
 def test_create_event_returns_its_record_id() -> None:
     writer, store = _writer()
-    rid = writer.create_event(name="ev", trace_context=TraceContext(trace_id="e"), output={"o": 1})
-    (obs,) = store.get("e").observations
-    assert rid == RecordId(trace_id="e", span_id=obs.id)
+    rid = writer.create_event(name="ev", trace_context=_ctx("e"), output={"o": 1})
+    (obs,) = store.get(_tid("e")).observations
+    assert rid == RecordId(trace_id=_tid("e"), span_id=obs.id)
     assert obs.output == {"o": 1}
     with writer.disable():
-        assert writer.create_event(name="ev", trace_context=TraceContext(trace_id="e")) is None
+        assert writer.create_event(name="ev", trace_context=_ctx("e")) is None
 
 
 def test_trace_attributes_accepts_platform_run_attribution_call_shape() -> None:
@@ -205,9 +266,9 @@ def test_trace_attributes_accepts_platform_run_attribution_call_shape() -> None:
     from tai42_contract.monitoring.writer import attribute_run
 
     writer, store = _writer()
-    with writer.start_span(name="root", kind=SpanKind.TOOL, trace_context=TraceContext(trace_id="a")):
+    with writer.start_span(name="root", kind=SpanKind.TOOL, trace_context=_ctx("a")):
         with attribute_run(writer, RunAttribution(tags=["t"], user_id="u-1", session_id="s-1")):
             pass
-    trace = store.get("a")
+    trace = store.get(_tid("a"))
     assert (trace.metadata or {}).get("user_id") == "u-1"
     assert (trace.metadata or {}).get("session_id") == "s-1"

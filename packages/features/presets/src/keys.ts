@@ -9,6 +9,7 @@
  * SIBLINGS (never a prefix of the list), so invalidating the list after a mutation
  * does not also refetch the tool universe, the extension catalog, or the tags map.
  */
+import type { PresetHolderAction } from '@tai42/api-client';
 
 /** The root segment every presets query key shares. */
 export const PRESETS_KEY_ROOT = 'presets';
@@ -30,11 +31,14 @@ export function presetVersionsKey(
   return [PRESETS_KEY_ROOT, 'versions', name];
 }
 
-/** Key for a preset's referees (the presets that name it as a tool), by name. */
+/** Key for the holders that block one action on a preset, by name then action. */
 export function presetRefereesKey(
   name: string,
-): readonly [typeof PRESETS_KEY_ROOT, 'referees', string] {
-  return [PRESETS_KEY_ROOT, 'referees', name];
+  action?: PresetHolderAction,
+): readonly [typeof PRESETS_KEY_ROOT, 'referees', string, ...PresetHolderAction[]] {
+  return action === undefined
+    ? [PRESETS_KEY_ROOT, 'referees', name]
+    : [PRESETS_KEY_ROOT, 'referees', name, action];
 }
 
 /** Key for the full tool-name universe feeding the create form's `ToolPicker`. */

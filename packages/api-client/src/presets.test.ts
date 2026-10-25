@@ -16,6 +16,8 @@ const record = {
   extensions: [],
   output_schema: null,
   input_schema: null,
+  input_map: null,
+  output_map: null,
   conflicted: false,
   conflicted_reason: null,
   uses: [],
@@ -133,6 +135,8 @@ describe('presetVersion — immutable version row', () => {
       extensions: [],
       output_schema: null,
       input_schema: null,
+      input_map: null,
+      output_map: null,
     },
     tags: [],
     created_at: '2024-01-01T00:00:03+00:00',
@@ -202,14 +206,34 @@ describe('toolTags — additive per-tool native surface', () => {
   });
 });
 
-describe('presetReferees — rename preflight', () => {
-  it('parses a name plus its referee list', () => {
-    const parsed = schemas.presetReferees.parse({ name: 'weather', referees: ['a', 'b'] });
-    expect(parsed.referees).toEqual(['a', 'b']);
+describe('holdersPreview — rename and delete preflight', () => {
+  const holder = {
+    kind: 'preset',
+    name: 'nightly',
+    locator: { preset: 'nightly' },
+    summary: 'base of preset nightly',
+  };
+
+  it('parses an action plus its holder list', () => {
+    const parsed = schemas.holdersPreview.parse({ action: 'rename', holders: [holder] });
+    expect(parsed.holders).toEqual([holder]);
   });
 
-  it('throws loudly when referees is not a string array', () => {
-    expect(() => schemas.presetReferees.parse({ name: 'weather', referees: [1] })).toThrow();
+  it('defaults an absent holder locator to an empty map', () => {
+    const parsed = schemas.holdersPreview.parse({
+      action: 'delete',
+      holders: [{ kind: 'preset', name: 'nightly', summary: 'base' }],
+    });
+    expect(parsed.holders[0]?.locator).toEqual({});
+  });
+
+  it('throws loudly when a holder carries no summary', () => {
+    expect(() =>
+      schemas.holdersPreview.parse({
+        action: 'delete',
+        holders: [{ kind: 'preset', name: 'nightly', locator: {} }],
+      }),
+    ).toThrow();
   });
 });
 

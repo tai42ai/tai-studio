@@ -139,6 +139,16 @@ def test_list_and_get_traces() -> None:
         asyncio.run(reader.get_trace("does-not-exist"))
 
 
+def test_export_traces_reads_the_list_order_up_to_one_past_the_bound() -> None:
+    reader = _reader()
+    order = OrderBy(field="total_cost")
+    listed = asyncio.run(reader.list_traces(from_timestamp=FROM, to_timestamp=TO, order_by=order))
+    exported = asyncio.run(reader.export_traces(from_timestamp=FROM, to_timestamp=TO, max_rows=5, order_by=order))
+    assert exported == listed[:6]
+    everything = asyncio.run(reader.export_traces(from_timestamp=FROM, to_timestamp=TO, max_rows=100))
+    assert len(everything) == 24
+
+
 def test_list_spans_in_window() -> None:
     reader = _reader()
     spans = asyncio.run(reader.list_spans_in_window(FROM, TO))

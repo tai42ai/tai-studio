@@ -304,8 +304,8 @@ describe('authored-agents list', () => {
         }),
       ),
     );
-    // The authored agent is visible (its preset reads), but the dynamic authored-run POST
-    // is not method-expressible in the projection, so the run degrades to read-only.
+    // The authored agent is visible (its preset reads), but the projection lists no POST
+    // on the authored-run route, so the run degrades to read-only.
     renderWithProviders(<AgentsPage />, authoredClient({ streamAuthoredAgentRun, getPreset }), {
       projection: scopedProjection({ routes: [{ path: '/api/agents', methods: ['GET'] }] }),
     });
@@ -313,7 +313,11 @@ describe('authored-agents list', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: 'Run authored agent assistant' }),
     );
-    expect(await screen.findByTestId('run-read-only-note')).toBeInTheDocument();
+    const note = await screen.findByTestId('run-read-only-note');
+    expect(note).toHaveAttribute('role', 'status');
+    expect(note).toHaveTextContent(
+      'Running this agent is outside your access — it is shown read-only.',
+    );
     expect(screen.queryByRole('button', { name: 'Run' })).not.toBeInTheDocument();
     expect(streamAuthoredAgentRun).not.toHaveBeenCalled();
   });

@@ -29,6 +29,7 @@ import {
   errorMessage,
   ErrorState,
   FleetReport,
+  RecycleRollSection,
   Spinner,
   useApi,
   useRegisterDirty,
@@ -38,7 +39,6 @@ import { type CSSProperties, type ReactNode, useId, useState } from 'react';
 
 import { type EnvVarRow, EnvVarRows, useEnvVarRows } from './env-var-rows';
 import { envConfigKey, settingsSchemaKey } from './keys';
-import { RecycleRollSection } from './RecycleRollSection';
 import { ownedSecretMap, SECRET_MARKS_ENV_VAR } from './settings-secrets';
 
 const headerStyle: CSSProperties = {
@@ -311,7 +311,11 @@ function EnvironmentEditor({
       {mutation.isSuccess ? (
         <div style={{ marginTop: 'var(--tai-space-4)' }}>
           <FleetReport
-            summary={summarizeFleetFanout(mutation.data.fanout, mutation.data.awaiting_respawn)}
+            summary={summarizeFleetFanout(
+              mutation.data.fanout,
+              mutation.data.awaiting_respawn,
+              mutation.data.span_release_error,
+            )}
           />
           {mutation.data.recycle !== null ? (
             <SaveRecycleReport roll={mutation.data.recycle} />

@@ -373,4 +373,21 @@ describe('VersionHistoryPanel', () => {
     expect(screen.getByRole('region', { name: 'Version 1 body' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'JSON' })).toBeNull();
   });
+
+  it('marks the highlighted version row, scrolled into view, and no other', () => {
+    const scrollIntoView = vi.spyOn(HTMLElement.prototype, 'scrollIntoView');
+    render(<VersionHistoryPanel versions={VERSIONS} onRollback={vi.fn()} highlightVersion={1} />);
+    const marked = screen.getByRole('button', { name: 'Roll back to version 1' }).closest('tr');
+    expect(marked).toHaveAttribute('aria-current', 'true');
+    expect(
+      screen.getByRole('button', { name: 'Roll back to version 2' }).closest('tr'),
+    ).not.toHaveAttribute('aria-current');
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+    scrollIntoView.mockRestore();
+  });
+
+  it('marks no row without a highlighted version', () => {
+    render(<VersionHistoryPanel versions={VERSIONS} onRollback={vi.fn()} />);
+    expect(document.querySelector('tr[aria-current]')).toBeNull();
+  });
 });

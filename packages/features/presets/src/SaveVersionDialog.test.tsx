@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { presetDetailKey, presetsListKey, presetVersionsKey } from './keys';
 import { SaveVersionDialog } from './SaveVersionDialog';
-import { renderWithProviders, type StubApiClient } from './test-utils';
+import { fullProjection, renderWithProviders, type StubApiClient } from './test-utils';
 
 const detail = {
   name: 'paris_weather',
@@ -21,6 +21,8 @@ const detail = {
   extensions: [['chain']],
   output_schema: null,
   input_schema: null,
+  input_map: null,
+  output_map: null,
   conflicted: false,
   conflicted_reason: null,
   uses: [],
@@ -41,7 +43,9 @@ function currentVersion(stateBinding: unknown = null) {
 
 function client(overrides: StubApiClient = {}): StubApiClient {
   return {
-    listExtensions: vi.fn().mockResolvedValue([{ name: 'chain', kind: 'wrapper', multiple: true }]),
+    listExtensions: vi
+      .fn()
+      .mockResolvedValue([{ name: 'chain', kind: 'wrapper', multiple: true, config_schema: null }]),
     // The active binding rides the current version body; the dialog reads it from here.
     listPresetVersions: vi.fn().mockResolvedValue([currentVersion(null)]),
     listStates: vi.fn().mockResolvedValue([]),
@@ -190,8 +194,8 @@ describe('SaveVersionDialog', () => {
       client: client({
         savePresetVersion,
         listExtensions: vi.fn().mockResolvedValue([
-          { name: 'chain', kind: 'wrapper', multiple: true },
-          { name: 'batch', kind: 'wrapper', multiple: true },
+          { name: 'chain', kind: 'wrapper', multiple: true, config_schema: null },
+          { name: 'batch', kind: 'wrapper', multiple: true, config_schema: null },
         ]),
       }),
     });
@@ -345,7 +349,10 @@ describe('SaveVersionDialog', () => {
       name: 'paris_weather',
       fixed_kwargs: { city: 'Paris' },
       extensions: [['chain']],
+      input_schema: null,
+      input_map: null,
       output_schema: null,
+      output_map: null,
     });
     expect(await screen.findByText('Draft binds cleanly')).toBeInTheDocument();
   });
@@ -358,7 +365,9 @@ describe('SaveVersionDialog', () => {
       client: client({
         listExtensions: vi
           .fn()
-          .mockResolvedValue([{ name: 'other', kind: 'wrapper', multiple: true }]),
+          .mockResolvedValue([
+            { name: 'other', kind: 'wrapper', multiple: true, config_schema: null },
+          ]),
         savePresetVersion,
       }),
     });
@@ -382,6 +391,72 @@ describe('SaveVersionDialog', () => {
     });
 
     expect(screen.queryByText(/unknown extension/i)).toBeNull();
+  });
+
+  it('sends ONLY a newly authored input schema and input map', async () => {
+    const user = userEvent.setup({ delay: null });
+    const savePresetVersion = vi.fn().mockResolvedValue({
+      version: 3,
+      body: detail,
+      tags: [],
+      created_at: 'now',
+      is_current: true,
+    });
+    renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
+      // A seeded session lets the kind table settle, so the map editors draw.
+      projection: fullProjection(),
+      client: client({ savePresetVersion }),
+    });
+
+    const inputSchema = { type: 'object', properties: { town: { type: 'string' } } };
+    fireEvent.change(screen.getByLabelText('Input schema JSON'), {
+      target: { value: JSON.stringify(inputSchema) },
+    });
+    await user.type(await screen.findByRole('textbox', { name: 'Input map' }), '.town');
+    await user.click(screen.getByRole('button', { name: 'Save as new version' }));
+
+    expect(savePresetVersion).toHaveBeenCalledWith('paris_weather', {
+      input_schema: inputSchema,
+      input_map: { content: '.town' },
+    });
+  });
+
+  it('seeds a stored inline output map and sends null when it is cleared', async () => {
+    const user = userEvent.setup({ delay: null });
+    const savePresetVersion = vi.fn().mockResolvedValue({
+      version: 3,
+      body: detail,
+      tags: [],
+      created_at: 'now',
+      is_current: true,
+    });
+    renderWithProviders(
+      <SaveVersionDialog detail={{ ...detail, output_map: '.temp' }} onClose={vi.fn()} />,
+      { projection: fullProjection(), client: client({ savePresetVersion }) },
+    );
+
+    const editor = await screen.findByRole('textbox', { name: 'Output map' });
+    expect(editor).toHaveValue('.temp');
+    // The untouched seed is not a change.
+    expect(screen.getByRole('button', { name: 'Save as new version' })).toBeDisabled();
+    await user.clear(editor);
+    await user.click(screen.getByRole('button', { name: 'Save as new version' }));
+
+    expect(savePresetVersion).toHaveBeenCalledWith('paris_weather', { output_map: null });
+  });
+
+  it('blocks submit while the input schema is invalid JSON', async () => {
+    const user = userEvent.setup({ delay: null });
+    const savePresetVersion = vi.fn();
+    renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
+      client: client({ savePresetVersion }),
+    });
+
+    fireEvent.change(screen.getByLabelText('Input schema JSON'), { target: { value: '{ broken' } });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save as new version' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Save as new version' }));
+    expect(savePresetVersion).not.toHaveBeenCalled();
   });
 
   describe('state binding', () => {
@@ -500,7 +575,10 @@ describe('SaveVersionDialog', () => {
         name: 'paris_weather',
         fixed_kwargs: { city: 'Paris' },
         extensions: [['chain']],
+        input_schema: null,
+        input_map: null,
         output_schema: null,
+        output_map: null,
         state_binding: null,
       });
     });

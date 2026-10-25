@@ -57,7 +57,7 @@ export function RoleDetailPanel({
   readOnly,
   isAdmin,
   grantableGroups,
-  adminOnlyGroups,
+  levelFreeGroups,
   onHistory,
   onDelete,
 }: {
@@ -65,7 +65,7 @@ export function RoleDetailPanel({
   readonly readOnly: boolean;
   readonly isAdmin: boolean;
   readonly grantableGroups: readonly FeatureGroup[];
-  readonly adminOnlyGroups: readonly FeatureGroup[];
+  readonly levelFreeGroups: readonly FeatureGroup[];
   readonly onHistory: (role: RoleBody) => void;
   readonly onDelete: (name: string) => void;
 }): ReactNode {
@@ -113,7 +113,7 @@ export function RoleDetailPanel({
         key={role.name}
         role={role}
         grantableGroups={grantableGroups}
-        adminOnlyGroups={adminOnlyGroups}
+        levelFreeGroups={levelFreeGroups}
         disabled={readOnly || isAdmin}
       />
 

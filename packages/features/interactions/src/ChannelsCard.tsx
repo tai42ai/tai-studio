@@ -8,7 +8,7 @@ import { AppLink, Badge, Card, ErrorState, Skeleton, useApi } from '@tai42/studi
 import { useQuery } from '@tanstack/react-query';
 import type { CSSProperties, ReactNode } from 'react';
 
-import { channelsKey } from './keys';
+import { channelsListKey } from './keys';
 
 const bodyStyle: CSSProperties = {
   display: 'flex',
@@ -30,7 +30,7 @@ const mutedStyle: CSSProperties = {
 export function ChannelsCard(): ReactNode {
   const api = useApi();
   const query = useQuery({
-    queryKey: channelsKey(),
+    queryKey: channelsListKey,
     queryFn: ({ signal }) => api.listChannels(signal),
   });
 
@@ -51,9 +51,9 @@ export function ChannelsCard(): ReactNode {
   } else {
     body = (
       <div style={rowStyle} data-testid="channels-list">
-        {query.data.channels.map((name) => (
-          <Badge key={name} variant="neutral">
-            {name}
+        {query.data.channels.map((entry) => (
+          <Badge key={entry.name} variant="neutral">
+            {entry.name}
           </Badge>
         ))}
       </div>

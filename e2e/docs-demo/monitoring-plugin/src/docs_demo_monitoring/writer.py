@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import secrets
 import uuid
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -196,7 +197,7 @@ class DemoWriter:
                 metadata=trace_context.metadata if trace_context else None,
             )
             obs = MonitoringObservation(
-                id=uuid.uuid4().hex,
+                id=secrets.token_hex(8),
                 trace_id=trace_id,
                 parent_id=self._parent_id(trace_context),
                 kind=kind,
@@ -242,6 +243,25 @@ class DemoWriter:
             yield span
         finally:
             span.end()
+
+    @contextmanager
+    def use_span(self, span: Span) -> Iterator[None]:
+        """Make ``span`` current for the block without ending it (fail-safe).
+
+        The inert span changes nothing; a span this writer did not open is logged and changes nothing.
+        """
+        if isinstance(span, _InertSpan):
+            yield
+            return
+        if not isinstance(span, DemoSpan) or span._store is not self._store:
+            logger.error("DemoWriter.use_span got a span this writer did not open: %s", type(span).__qualname__)
+            yield
+            return
+        token = _SPAN_STACK.set((*_SPAN_STACK.get(), span))
+        try:
+            yield
+        finally:
+            _SPAN_STACK.reset(token)
 
     def record_span(
         self,
@@ -408,7 +428,7 @@ class DemoWriter:
         span = _current()
         if span is not None:
             return span.trace_id
-        return f"live-{uuid.uuid4().hex}"
+        return uuid.uuid4().hex
 
     def _parent_id(self, trace_context: TraceContext | None) -> str | None:
         if trace_context and trace_context.trace_id:

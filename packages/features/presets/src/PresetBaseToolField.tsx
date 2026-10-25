@@ -1,10 +1,11 @@
 /**
  * The base-tool picker for the create form: the shared `ToolPicker` over `listTools()`
  * (grouped by merged tags, agent tools labelled), EXCLUDING existing non-conflicted
- * preset names and effective-hidden tools. A failed tools/preset read is surfaced
- * loudly instead of a silently-empty picker.
+ * preset names and effective-hidden tools. The picker draws the tools read's states in
+ * its own field; a failed preset read is surfaced loudly in its place while the tools
+ * read has not failed, never a silently-empty exclusion.
  */
-import { errorMessage, ErrorState, Field, ToolPicker } from '@tai42/studio-sdk';
+import { errorMessage, ErrorState, ToolPicker } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
 import type { PresetToolCatalog } from './usePresetToolCatalog';
@@ -22,17 +23,9 @@ export function PresetBaseToolField({
 }): ReactNode {
   const { toolsQuery, presetsQuery } = catalog;
 
-  if (toolsQuery.isError) {
-    return (
-      <ErrorState
-        message={errorMessage(toolsQuery.error)}
-        onRetry={() => void toolsQuery.refetch()}
-      />
-    );
-  }
   // The base-tool exclusion list depends on the preset list — a failed load is
   // surfaced loudly, never a silently-empty exclusion.
-  if (presetsQuery.isError) {
+  if (presetsQuery.isError && !toolsQuery.isError) {
     return (
       <ErrorState
         message={errorMessage(presetsQuery.error)}
@@ -43,22 +36,19 @@ export function PresetBaseToolField({
 
   const baseMissing = base === null || base === '';
   return (
-    <Field
+    <ToolPicker
+      query={toolsQuery}
+      value={base}
+      onChange={onChange}
       label="Base tool"
       error={submitted && baseMissing ? 'A base tool is required.' : undefined}
-    >
-      <ToolPicker
-        toolNames={toolsQuery.data ?? []}
-        value={base}
-        onChange={onChange}
-        disabled={toolsQuery.isPending}
-        placeholder={toolsQuery.isPending ? 'Loading tools…' : 'Select a base tool…'}
-        excludeNames={catalog.excludeNames}
-        tagsByTool={catalog.tagsByTool}
-        agentToolNames={catalog.agentToolNames}
-        displayNames={catalog.displayNames}
-        badgesByTool={catalog.badgesByTool}
-      />
-    </Field>
+      emptyNote="No base tool to choose from. Tools come from installed plugins; presets and hidden tools are not offered."
+      placeholder="Select a base tool…"
+      excludeNames={catalog.excludeNames}
+      tagsByTool={catalog.tagsByTool}
+      agentToolNames={catalog.agentToolNames}
+      displayNames={catalog.displayNames}
+      badgesByTool={catalog.badgesByTool}
+    />
   );
 }

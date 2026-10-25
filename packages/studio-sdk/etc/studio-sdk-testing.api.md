@@ -22,6 +22,9 @@ export function deferred<T>(): {
 };
 
 // @public
+export function destructiveColorOffences(source: string): string[];
+
+// @public
 export function flushResizeObservers(): void;
 
 // @public

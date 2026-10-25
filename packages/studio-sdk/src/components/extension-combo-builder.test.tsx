@@ -4,14 +4,34 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { JSON_SCHEMA_META_URI } from '../schema-form/json-schema-meta';
 import { ExtensionComboBuilder } from './extension-combo-builder';
 import { AlertTriangleIcon, XCircleIcon } from './icons';
 
 const CATALOG: Extension[] = [
-  { name: 'marka', kind: 'wrapper', multiple: true },
-  { name: 'markb', kind: 'wrapper', multiple: true },
-  { name: 'backendx', kind: 'backend', multiple: false },
-  { name: 'output_schema', kind: 'wrapper', multiple: true },
+  { name: 'marka', kind: 'wrapper', multiple: true, config_schema: null },
+  { name: 'markb', kind: 'wrapper', multiple: true, config_schema: null },
+  { name: 'backendx', kind: 'backend', multiple: false, config_schema: null },
+  {
+    name: 'shape_ext',
+    kind: 'wrapper',
+    multiple: true,
+    config_schema: {
+      type: 'object',
+      properties: { schema: { $ref: JSON_SCHEMA_META_URI, title: 'Shape' } },
+      required: ['schema'],
+    },
+  },
+  {
+    name: 'label_ext',
+    kind: 'wrapper',
+    multiple: true,
+    config_schema: {
+      type: 'object',
+      properties: { label: { type: 'string', title: 'Label', minLength: 1 } },
+      required: ['label'],
+    },
+  },
 ];
 
 /** A controlled harness so the committed combos reflect each Add/Update/Remove. */
@@ -112,7 +132,14 @@ describe('ExtensionComboBuilder', () => {
     const payload = '<script>alert(1)</script>';
     const { container } = render(
       <ExtensionComboBuilder
-        available={[{ name: payload, kind: 'wrapper', multiple: true }]}
+        available={[
+          {
+            name: payload,
+            kind: 'wrapper',
+            multiple: true,
+            config_schema: null,
+          },
+        ]}
         value={[[payload]]}
         onChange={vi.fn()}
       />,
@@ -121,67 +148,120 @@ describe('ExtensionComboBuilder', () => {
     expect(container.querySelector('script')).toBeNull();
   });
 
-  it('authors an output_schema element as { name, config: { schema } }', async () => {
+  it('composes a combo in draft order: bare names and { name, config } settings', async () => {
     const user = userEvent.setup();
     render(<Controlled />);
 
-    // Selecting output_schema reveals the inline SchemaEditor.
-    await user.click(screen.getByRole('checkbox', { name: 'output_schema' }));
-    const editor = screen.getByLabelText('Output schema JSON');
-    fireEvent.change(editor, { target: { value: '{"type":"object","properties":{}}' } });
-
-    await user.click(screen.getByRole('button', { name: 'Add extension set' }));
-
-    expect(screen.getByTestId('combos')).toHaveTextContent(
-      JSON.stringify([
-        [{ name: 'output_schema', config: { schema: { type: 'object', properties: {} } } }],
-      ]),
-    );
-  });
-
-  it('composes a mixed combo (a plain name + an output_schema config element)', async () => {
-    const user = userEvent.setup();
-    render(<Controlled />);
-
+    await user.click(screen.getByRole('checkbox', { name: 'shape_ext' }));
     await user.click(screen.getByRole('checkbox', { name: 'marka' }));
-    await user.click(screen.getByRole('checkbox', { name: 'output_schema' }));
-    fireEvent.change(screen.getByLabelText('Output schema JSON'), {
+    await user.click(screen.getByRole('checkbox', { name: 'label_ext' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Shape JSON' }), {
       target: { value: '{"type":"object","title":"R"}' },
     });
+    await user.type(screen.getByRole('textbox', { name: /^Label/ }), 'alpha');
     await user.click(screen.getByRole('button', { name: 'Add extension set' }));
 
-    // The plain name stays a bare element; output_schema carries its config, in order.
     expect(screen.getByTestId('combos')).toHaveTextContent(
       JSON.stringify([
-        ['marka', { name: 'output_schema', config: { schema: { type: 'object', title: 'R' } } }],
+        [
+          { name: 'shape_ext', config: { schema: { type: 'object', title: 'R' } } },
+          'marka',
+          { name: 'label_ext', config: { label: 'alpha' } },
+        ],
       ]),
     );
   });
 
-  it('preserves a non-output_schema element config when its combo is edited', async () => {
-    const user = userEvent.setup();
-    // A config-bearing element the builder does NOT author inline (e.g. an
-    // ask_external verifier). Editing the combo must not flatten it to a bare name.
-    const configured = { name: 'marka', config: { verifier: 'secret_env' } };
-    render(<Controlled initial={[[configured, 'markb']]} />);
-
-    // Pull the combo into the draft and re-commit without changing its members.
-    await user.click(screen.getByRole('button', { name: 'Edit extension set marka+markb' }));
-    await user.click(screen.getByRole('button', { name: 'Update extension set' }));
-
-    expect(screen.getByTestId('combos')).toHaveTextContent(JSON.stringify([[configured, 'markb']]));
-  });
-
-  it('blocks Add while the output_schema config is invalid JSON', async () => {
+  it('keeps Add off while any settings form is invalid or unreported', async () => {
     const user = userEvent.setup();
     render(<Controlled />);
+    const add = (): HTMLElement => screen.getByRole('button', { name: 'Add extension set' });
 
-    await user.click(screen.getByRole('checkbox', { name: 'output_schema' }));
-    fireEvent.change(screen.getByLabelText('Output schema JSON'), {
+    await user.click(screen.getByRole('checkbox', { name: 'label_ext' }));
+    expect(screen.getByRole('group', { name: 'label_ext settings' })).toBeInTheDocument();
+    expect(add()).toBeDisabled();
+    await user.type(screen.getByRole('textbox', { name: /^Label/ }), 'alpha');
+    expect(add()).toBeEnabled();
+
+    await user.click(screen.getByRole('checkbox', { name: 'shape_ext' }));
+    expect(add()).toBeDisabled();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Shape JSON' }), {
       target: { value: '{ broken' },
     });
+    expect(add()).toBeDisabled();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Shape JSON' }), {
+      target: { value: '{"type":"string"}' },
+    });
+    expect(add()).toBeEnabled();
 
-    expect(screen.getByRole('button', { name: 'Add extension set' })).toBeDisabled();
+    // Unticking a configurable extension drops its form from the gate.
+    await user.click(screen.getByRole('checkbox', { name: 'shape_ext' }));
+    expect(add()).toBeEnabled();
+  });
+
+  it('re-seeds every configurable element when a combo is edited', async () => {
+    const user = userEvent.setup();
+    const stored = { type: 'object', title: 'Stored' };
+    render(
+      <Controlled
+        initial={[
+          [
+            { name: 'shape_ext', config: { schema: stored } },
+            { name: 'label_ext', config: { label: 'beta' } },
+          ],
+        ]}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole('button', { name: 'Edit extension set shape_ext+label_ext' }),
+    );
+    expect(screen.getByRole('textbox', { name: 'Shape JSON' })).toHaveValue(
+      JSON.stringify(stored, null, 2),
+    );
+    expect(screen.getByRole('textbox', { name: /^Label/ })).toHaveValue('beta');
+
+    await user.type(screen.getByRole('textbox', { name: /^Label/ }), '2');
+    await user.click(screen.getByRole('button', { name: 'Update extension set' }));
+    expect(screen.getByTestId('combos')).toHaveTextContent(
+      JSON.stringify([
+        [
+          { name: 'shape_ext', config: { schema: stored } },
+          { name: 'label_ext', config: { label: 'beta2' } },
+        ],
+      ]),
+    );
+  });
+
+  it('keeps an element without a settings schema verbatim when its combo is edited', async () => {
+    const user = userEvent.setup();
+    const configured = { name: 'marka', config: { verifier: 'demo' } };
+    const unlisted = { name: 'gone_ext', config: { n: 1 } };
+    render(<Controlled initial={[[configured, unlisted, 'markb']]} />);
+
+    await user.click(
+      screen.getByRole('button', { name: 'Edit extension set marka+gone_ext+markb' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Update extension set' }));
+
+    expect(screen.getByTestId('combos')).toHaveTextContent(
+      JSON.stringify([[configured, unlisted, 'markb']]),
+    );
+  });
+
+  it('keeps a served env-marker setting sealed and writes the marker back verbatim', async () => {
+    const user = userEvent.setup();
+    const served = { name: 'label_ext', config: { label: '!ENV ${EXT_TOKEN}' } };
+    render(<Controlled initial={[[served]]} />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit extension set label_ext' }));
+    expect(screen.queryByRole('textbox', { name: /^Label/ })).toBeNull();
+    expect(screen.getByText('Env reference EXT_TOKEN, kept as written.')).toBeInTheDocument();
+    const update = screen.getByRole('button', { name: 'Update extension set' });
+    expect(update).toBeEnabled();
+    await user.click(update);
+
+    expect(screen.getByTestId('combos')).toHaveTextContent(JSON.stringify([[served]]));
   });
 
   it('flags an unknown extension name in a seeded combo and reports invalid with ZERO edits', () => {
@@ -232,31 +312,6 @@ describe('ExtensionComboBuilder', () => {
 
     expect(screen.queryByRole('alert')).toBeNull();
     expect(onValidityChange).toHaveBeenLastCalledWith(true);
-  });
-
-  it('re-hydrates the SchemaEditor with a stored element config when a combo is edited', async () => {
-    const user = userEvent.setup();
-    const stored = { type: 'object', title: 'Stored', properties: {} };
-    render(<Controlled initial={[[{ name: 'output_schema', config: { schema: stored } }]]} />);
-
-    // Pull the stored combo back into the draft; its config seeds the editor.
-    await user.click(screen.getByRole('button', { name: 'Edit extension set output_schema' }));
-
-    expect(screen.getByLabelText('Output schema JSON')).toHaveValue(
-      JSON.stringify(stored, null, 2),
-    );
-
-    // Update it in place to a new schema.
-    fireEvent.change(screen.getByLabelText('Output schema JSON'), {
-      target: { value: '{"type":"object","title":"Edited"}' },
-    });
-    await user.click(screen.getByRole('button', { name: 'Update extension set' }));
-
-    expect(screen.getByTestId('combos')).toHaveTextContent(
-      JSON.stringify([
-        [{ name: 'output_schema', config: { schema: { type: 'object', title: 'Edited' } } }],
-      ]),
-    );
   });
 
   it('renders each committed combo as a design-system card, with no inline palette', () => {

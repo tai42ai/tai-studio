@@ -23,7 +23,13 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
-import { openAddServerReview, seedCredential } from './helpers';
+import {
+  openAddServerReview,
+  openConnectFlow,
+  openHeldPresetDelete,
+  openRouteDialog,
+  seedCredential,
+} from './helpers';
 
 needs();
 
@@ -51,19 +57,19 @@ const FEATURE_ROUTES = [
   '/tools',
   '/agents',
   '/presets',
-  '/extensions',
-  '/templates',
   '/connectors',
+  '/conversations',
   '/hooks',
-  '/storage',
   '/scheduling',
+  '/served-endpoints',
+  '/states',
   '/interactions',
   '/notifications',
-  '/conversations',
+  '/members',
+  '/settings',
+  '/storage',
   '/marketplace',
   '/manifest',
-  '/served-endpoints',
-  '/settings',
   '/system',
 ] as const;
 
@@ -96,8 +102,48 @@ for (const scheme of ['light', 'dark'] as const) {
             await horizontalOverflow(page),
             `${route} with the add-server review step overflows at 1280 px (${scheme})`,
           ).toBeLessThanOrEqual(0);
+          // The connect flow dialog: its stepper and form fit the panel.
+          await openConnectFlow(page);
+          expect(
+            await horizontalOverflow(page),
+            `${route} with the connect flow open overflows at 1280 px (${scheme})`,
+          ).toBeLessThanOrEqual(0);
+        }
+        if (route === '/presets') {
+          // The delete confirm with its holder list: each holder's link wraps inside
+          // the panel, never pushing the page sideways.
+          await openHeldPresetDelete(page);
+          expect(
+            await horizontalOverflow(page),
+            `${route} with the held delete confirm overflows at 1280 px (${scheme})`,
+          ).toBeLessThanOrEqual(0);
+        }
+        if (route === '/conversations') {
+          // The route create dialog with its pickers drawn: the long field descriptions
+          // wrap inside the panel, never pushing the page sideways.
+          await openRouteDialog(page);
+          expect(
+            await horizontalOverflow(page),
+            `${route} with the create route dialog overflows at 1280 px (${scheme})`,
+          ).toBeLessThanOrEqual(0);
         }
       }
+    });
+  });
+
+  test.describe(`the connect flow at 320 px (${scheme})`, () => {
+    test.use({ viewport: { width: 320, height: 900 }, colorScheme: scheme });
+
+    test('the open connect flow dialog fits a phone width without sideways scroll', async ({
+      page,
+    }) => {
+      await seedCredential(page);
+      const dialog = await openConnectFlow(page);
+      await expect(dialog.getByRole('navigation', { name: 'Connection steps' })).toBeVisible();
+      expect(
+        await horizontalOverflow(page),
+        `the connect flow overflows horizontally at 320 px (${scheme})`,
+      ).toBeLessThanOrEqual(0);
     });
   });
 

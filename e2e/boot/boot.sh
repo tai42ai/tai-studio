@@ -315,10 +315,17 @@ export TAI_IDENTITY_REDIS_URL="${REDIS_URL}"
 # which defaults to `/app` — a path that exists only inside the deployment image, not
 # on a bare runner. Point it at a writable directory so the config doors work (e.g.
 # POST /api/config/env, which a suite seeds an env key through) rather than failing on
-# a missing path. The manifest is served from --manifest-path, so this dir holds only
-# the env file the config screen reads and writes.
+# a missing path. It also holds the manifest the server serves (below).
+# Every boot starts it fresh: an empty env file, which every config reload reads (a
+# missing one fails the reload), and a copy of MANIFEST_PATH. The server rewrites the
+# manifest it serves (a config door's save writes it back, with a lock file beside it),
+# so serving the copy means a run never rewrites the checked-in manifest.
 export TAI_CONFIG_DIR_PATH="${BOOT_DIR}/.config-state"
+rm -rf "${TAI_CONFIG_DIR_PATH}"
 mkdir -p "${TAI_CONFIG_DIR_PATH}"
+: > "${TAI_CONFIG_DIR_PATH}/.env"
+SERVED_MANIFEST_PATH="${TAI_CONFIG_DIR_PATH}/manifest.yml"
+cp "${MANIFEST_PATH}" "${SERVED_MANIFEST_PATH}"
 # The access-control policy store (policy bodies + route mappings), the versioned-document
 # store (the policy-version history every api-key mint/edit appends), and the tool-metadata
 # overlay store (the tools page's folder tree + per-tool overlay, read on every ToolsPage
@@ -373,6 +380,6 @@ log "launching tai serve on http://127.0.0.1:${STUDIO_PORT} (access control ON)"
 log "  API key (test-only): ${STUDIO_API_KEY}"
 cd "${MONOREPO_DIR}"
 exec uv run --no-sync tai serve \
-  --manifest-path "${MANIFEST_PATH}" \
+  --manifest-path "${SERVED_MANIFEST_PATH}" \
   --host 127.0.0.1 \
   --port "${STUDIO_PORT}"

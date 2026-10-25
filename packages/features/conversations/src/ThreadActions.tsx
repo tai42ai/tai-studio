@@ -49,12 +49,11 @@ export function ThreadActions({
   const transcript = useInfiniteQuery(transcriptQueryOptions(api, route, threadId, q));
   const personId = transcript.data?.pages[0]?.person_id ?? null;
 
-  // Both destructive actions ride DYNAMIC (templated) DELETE doors — the thread delete on
+  // Both destructive actions ride templated DELETE doors — the thread delete on
   // `/api/conversations/{route_name}/thread`, the person erasure on
-  // `/api/conversations/persons/{person_id}`. Following the house static-placeholder
-  // idiom, the interpolated path resolves to a full-projection gate: a scoped projection
-  // can never method-express a templated route, so its write affordances stay withdrawn
-  // (projection ⊆ gate; fail closed until ready+granted).
+  // `/api/conversations/persons/{person_id}`. Each gates on its template path with
+  // `DELETE`, which the projection lists when the caller's grant admits it (projection ⊆
+  // gate; fail closed until ready+granted).
   const canDeleteThread = useCanWrite(
     apiRoutes.delete_api_conversations_route_name_thread.path,
     'DELETE',

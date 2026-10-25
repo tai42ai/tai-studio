@@ -2,7 +2,7 @@
  * Hooks page: the surface for lifecycle hooks registered on the skeleton. A
  * topic filter drives the list query (its value is part of the query key, so
  * typing a topic refetches); below it the registered-hooks table and a register
- * form. The `hooks` route carries no search parameters, so the page reads none.
+ * form. A deep link's `hook` clears the topic filter and marks that hook's row.
  *
  * All server state flows through TanStack Query with loud loading / empty /
  * error surfaces owned by {@link HooksList} and {@link RegisterHookForm}.
@@ -19,7 +19,7 @@ import {
   TextInput,
   useCapabilities,
 } from '@tai42/studio-sdk';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 
 import { HooksList } from './HooksList';
 import { RegisterHookForm } from './RegisterHookForm';
@@ -32,8 +32,13 @@ import { TriggerLinksList } from './TriggerLinksList';
  * ungranted caller does not. Fails closed until the projection is ready. */
 const TRIGGER_LINKS_ROUTE = apiRoutes.get_api_hooks_trigger_links.path;
 
-export function HooksPage(_props: PageProps<'hooks'>): ReactNode {
+export function HooksPage({ search }: PageProps<'hooks'>): ReactNode {
   const [topic, setTopic] = useState('');
+  // A linked hook is looked up in the unfiltered list, so a filter never hides it.
+  const linkedHook = search.hook;
+  useEffect(() => {
+    if (linkedHook !== undefined) setTopic('');
+  }, [linkedHook]);
   const { state } = useCapabilities();
 
   const triggerLinksVisible =
@@ -42,7 +47,7 @@ export function HooksPage(_props: PageProps<'hooks'>): ReactNode {
 
   return (
     <Stack gap={6}>
-      <PageHeader eyebrow="Triggers" title="Hooks" />
+      <PageHeader eyebrow="Doors" title="Hooks" />
 
       <Card>
         <Field
@@ -59,7 +64,7 @@ export function HooksPage(_props: PageProps<'hooks'>): ReactNode {
         </Field>
       </Card>
 
-      <HooksList topic={topic} />
+      <HooksList topic={topic} highlight={linkedHook} />
       {triggerLinksVisible ? <TriggerLinksList /> : null}
       <TopicVerifierForm />
       <RegisterHookForm />

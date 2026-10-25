@@ -9,6 +9,7 @@ import {
   apiRoutes,
   type DiscoveredServer,
   type FleetReportSummary,
+  isFleetReportFailure,
   type ProviderView,
   summarizeFleetFanout,
 } from '@tai42/api-client';
@@ -93,9 +94,9 @@ function useReviewStep(
     onSuccess: (result: AddServerResult) => {
       void queryClient.invalidateQueries({ queryKey: PROVIDERS_KEY });
       void queryClient.invalidateQueries({ queryKey: CONNECTIONS_KEY });
-      const fleet = summarizeFleetFanout(result.fanout, []);
+      const fleet = summarizeFleetFanout(result.fanout, [], result.span_release_error);
       // A reload that did not reach every worker keeps the dialog open on its report.
-      if (fleet !== null && fleet.status !== 'converged') {
+      if (isFleetReportFailure(fleet)) {
         setFleetFailure(fleet);
         return;
       }

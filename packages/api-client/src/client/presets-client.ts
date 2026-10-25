@@ -1,5 +1,6 @@
 /** Preset CRUD, versioning and validation sub-client. */
 import { apiRoutes, buildPath } from '../generated/api-routes';
+import type { PresetHolderAction } from '../schemas';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -10,7 +11,11 @@ import type { Transport } from './transport';
  * `extensions` is the combos list — the create flow OMITS it when there are no
  * combos (the route rejects an explicit `extensions: []`). `output_schema` is the
  * optional author-set output JSON Schema; `input_schema` is the optional author-set
- * input JSON Schema, read by the router as a top-level version field. Each combo
+ * input JSON Schema, read by the router as a top-level version field. `input_map` is
+ * the optional jq program that turns the caller's input into the base tool's
+ * arguments (it needs an `input_schema`); `output_map` is the optional jq program that
+ * reshapes the base tool's result before the output schema is checked. Each map is
+ * inline `content` or a stored template `id` (a plain string is inline jq). Each combo
  * element is a bare extension name or a `{ name, config }` mapping. Categorization
  * tags live in the tool_meta overlay, written after a successful create — never in
  * this body.
@@ -23,6 +28,8 @@ export interface CreatePresetBody {
   readonly extensions?: readonly s.PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
   readonly input_schema?: Record<string, unknown> | null;
+  readonly input_map?: s.TemplatedText | string | null;
+  readonly output_map?: s.TemplatedText | string | null;
   // The optional door-layer state binding applied around every run of this preset.
   readonly state_binding?: s.StateBinding | null;
 }
@@ -35,7 +42,9 @@ export interface CreatePresetBody {
  * or `input_schema`. `input_schema` is the optional author-set input JSON Schema and
  * follows the same carry-forward sentinel as `output_schema`. `state_binding` is the
  * optional door-layer binding and follows the same sentinel: omitted carries the active
- * one forward, an explicit `null` clears it. `description` carries forward when omitted;
+ * one forward, an explicit `null` clears it. `input_map` and `output_map` follow the same
+ * sentinel: omitted carries the active map forward, an explicit `null` clears it.
+ * `description` carries forward when omitted;
  * an explicit non-empty string sets it (the API rejects an explicit empty one).
  * Categorization tags are not a version field — they live in the tool_meta overlay.
  */
@@ -45,6 +54,8 @@ export interface SavePresetVersionBody {
   readonly extensions?: readonly s.PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
   readonly input_schema?: Record<string, unknown> | null;
+  readonly input_map?: s.TemplatedText | string | null;
+  readonly output_map?: s.TemplatedText | string | null;
   readonly state_binding?: s.StateBinding | null;
 }
 
@@ -63,6 +74,8 @@ export interface ValidatePresetBody {
   readonly extensions?: readonly s.PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
   readonly input_schema?: Record<string, unknown> | null;
+  readonly input_map?: s.TemplatedText | string | null;
+  readonly output_map?: s.TemplatedText | string | null;
   // The optional door-layer state binding to dry-run — validated (never mounted) by the
   // same checks the write would run. In VERSION mode it follows the save-version sentinel:
   // omitted carries the active binding forward, an explicit `null` clears it.
@@ -112,10 +125,11 @@ export function presetsClient(t: Transport) {
         method: 'POST',
         body: { new_name: newName },
       }),
-    // The presets whose active composition names this one as a tool — the referees
-    // a rename would strand. A rename preflight reads this to warn before the 409.
-    getPresetReferees: (name: string, signal?: AbortSignal) =>
-      req(buildPath(apiRoutes.get_api_presets_name_referees.path, { name }), s.presetReferees, {
+    // Every holder that would refuse this preset's rename or delete. A dialog
+    // preflights it to list the holders before the server's 409 backstop.
+    getPresetReferees: (name: string, action: PresetHolderAction, signal?: AbortSignal) =>
+      req(buildPath(apiRoutes.get_api_presets_name_referees.path, { name }), s.holdersPreview, {
+        query: { action },
         signal,
       }),
     // The dry-run verdict for a draft (create OR version, mode-resolved server-side):

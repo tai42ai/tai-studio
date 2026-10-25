@@ -8,8 +8,8 @@
  *
  * A `projection` seeds the capability context to `ready`: a session key is set so
  * `AuthProvider` is authenticated and `CapabilityProvider` fetches a stubbed
- * `getMe`. With no projection the context stays `loading` and the gated section
- * stays hidden (fail closed) — the shape the pre-existing tests expect.
+ * `getMe`. With no projection the context stays `loading`: the gated section stays
+ * hidden (fail closed), the execution-key field is pending and the forms cannot submit.
  */
 import type {
   ApiClient,
@@ -150,6 +150,7 @@ export function apiKey(overrides: Partial<TokensPayload[number]> = {}): TokensPa
 }
 
 const baseProjection: MeProjection = {
+  access_control_enabled: true,
   user_id: 'u-test',
   owner_user_id: null,
   principal: null,
@@ -172,6 +173,41 @@ export function fullProjection(overrides: Partial<MeProjection> = {}): MeProject
 /** A scoped (non-admin) projection restricted to the given slice. */
 export function scopedProjection(overrides: Partial<MeProjection> = {}): MeProjection {
   return { ...baseProjection, ...overrides };
+}
+
+const ALICE = { user_id: 'alice', display_name: 'Alice', kind: 'human' } as const;
+
+/** A non-admin key session: the api key `alice-key`, owned by the account `alice`. */
+export function keySessionProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return {
+    ...baseProjection,
+    user_id: 'alice-key',
+    owner_user_id: 'alice',
+    principal: ALICE,
+    ...overrides,
+  };
+}
+
+/** A non-admin account session: the account `alice` itself, which the key picker cannot offer. */
+export function accountSessionProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return {
+    ...baseProjection,
+    user_id: 'alice',
+    owner_user_id: null,
+    principal: ALICE,
+    ...overrides,
+  };
+}
+
+/** A deployment with access control off: every session is the fill identity `__no_auth__`. */
+export function gateOffProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return {
+    ...baseProjection,
+    access_control_enabled: false,
+    user_id: '__no_auth__',
+    admin: true,
+    ...overrides,
+  };
 }
 
 /**

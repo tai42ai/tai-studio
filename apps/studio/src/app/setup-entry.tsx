@@ -317,7 +317,7 @@ function SetupSuccess({
       </div>
       <p
         role="status"
-        style={{ marginTop: 'var(--tai-space-2)', color: 'var(--tai-color-danger)' }}
+        style={{ marginTop: 'var(--tai-space-2)', color: 'var(--tai-color-err-text)' }}
       >
         {SETUP_COPY.keyWarning}
       </p>

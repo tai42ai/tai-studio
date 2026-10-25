@@ -102,6 +102,11 @@ describe('the shell navigation drawer', () => {
     await user.click(screen.getByRole('button', { name: 'Open navigation' }));
     await screen.findByRole('dialog', { name: 'Navigation' });
 
+    const drawer = screen.getByRole('dialog', { name: 'Navigation' });
+    expect(
+      Array.from(drawer.querySelectorAll('.tai-nav-section-header')).map((el) => el.textContent),
+    ).toEqual(['Capabilities', 'Connections', 'Doors', 'Activity', 'Administration']);
+
     const ids = Array.from(document.querySelectorAll('.tai-nav-section-header')).map((el) => el.id);
     // Both copies are mounted, so there is more than one section header on screen.
     expect(ids.length).toBeGreaterThan(1);

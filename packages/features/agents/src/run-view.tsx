@@ -201,7 +201,7 @@ export function StreamRunView({
   readonly bakedFields?: readonly { readonly key: string; readonly value: unknown }[];
   /** Whether the caller's projection reaches this run's POST door. `false` degrades the
    * view to read-only (no Run) — the plain-agent list is already projection-filtered, so
-   * it defaults `true`; the authored run, whose door the projection cannot method-express,
+   * it defaults `true`; the authored run, whose templated door that list does not cover,
    * threads its own gate. */
   readonly canRun?: boolean;
 }): ReactNode {
@@ -257,7 +257,7 @@ export function StreamRunView({
                 Run
               </Button>
             ) : (
-              <span role="note" data-testid="run-read-only-note" className="tai-muted">
+              <span role="status" data-testid="run-read-only-note" className="tai-muted">
                 Running this agent is outside your access — it is shown read-only.
               </span>
             )}

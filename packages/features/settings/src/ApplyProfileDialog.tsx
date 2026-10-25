@@ -13,6 +13,7 @@ import {
   errorMessage,
   ErrorState,
   FleetReport,
+  RecycleRollSection,
   Spinner,
   useApi,
 } from '@tai42/studio-sdk';
@@ -28,7 +29,6 @@ import {
 import { assertApplyable } from './profile-apply';
 import type { ApplyResponse } from './profile-secrets';
 import { DiffCallouts } from './ProfileDiffDialog';
-import { RecycleRollSection } from './RecycleRollSection';
 
 const dangerPanelStyle: CSSProperties = {
   display: 'flex',
@@ -38,7 +38,7 @@ const dangerPanelStyle: CSSProperties = {
   padding: 'var(--tai-space-3)',
   borderRadius: 'var(--tai-radius-md)',
   border: '1px solid var(--tai-color-err-text)',
-  background: 'var(--tai-color-danger-surface)',
+  background: 'var(--tai-color-err-tint)',
   color: 'var(--tai-color-err-text)',
   fontSize: 'var(--tai-text-sm)',
 };
@@ -96,7 +96,13 @@ function ApplyReport({ report }: { readonly report: ApplyResponse }): ReactNode 
   const unjoinedFresh = report.fresh.filter((life) => !recycledNames.has(life.name));
   return (
     <div className="tai-stack" data-testid="apply-report">
-      <FleetReport summary={summarizeFleetFanout(report.fanout, report.awaiting_respawn)} />
+      <FleetReport
+        summary={summarizeFleetFanout(
+          report.fanout,
+          report.awaiting_respawn,
+          report.span_release_error,
+        )}
+      />
 
       <section>
         <h4 style={sectionTitleStyle}>Hot-swapped</h4>

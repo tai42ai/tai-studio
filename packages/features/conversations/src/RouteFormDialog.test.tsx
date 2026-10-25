@@ -1,19 +1,38 @@
 /**
- * The route create/edit dialog: the blank render, the target/door conditional
- * fields (both target kinds carry the five door-contract jq fields; each door shows
- * only its own delivery fields), the jq expression door rendering through an injected
- * `ExpressionFieldContext`, the flat wire body a submit sends, the inline
- * required-field guard, edit prefill with a read-only name, and the shown-once
- * `callback_secret` reveal for an api-door write.
+ * The route create/edit dialog: the binding fields (route name, the picked target, the
+ * door with its channel and identity hint, the execution key), the schema-driven settings
+ * (the five door-contract jq fields of the picked kind, the overlap policy, the reply
+ * texts), the flat wire body a submit sends, the inline required-field guard, edit
+ * prefill with a read-only name, the pickers' refused and failed reads, and the shown-once
+ * `callback_secret` reveal for an api-door write. The execution-key readings are in
+ * `RouteFormDialog.execution-key.test.tsx`.
  */
-import { ExpressionFieldContext, type ExpressionFieldProps } from '@tai42/studio-sdk';
+import { ApiError, type MeProjection } from '@tai42/api-client';
+import {
+  agentsListKey,
+  channelsListKey,
+  ExpressionFieldContext,
+  type ExpressionFieldProps,
+} from '@tai42/studio-sdk';
+import type { QueryClient } from '@tanstack/react-query';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { RouteFormDialog } from './RouteFormDialog';
-import { makeRoute, renderWithProviders } from './test-utils';
+import {
+  agentListing,
+  apiKey,
+  channelListing,
+  gateOffProjection,
+  keySessionProjection,
+  makeRoute,
+  openSelect,
+  pickOption,
+  renderWithProviders,
+  type StubApiClient,
+} from './test-utils';
 
 /**
  * A stable stub expression door: it satisfies `ExpressionFieldProps` and renders a
@@ -40,39 +59,98 @@ function StubExpressionField({ label, value, onChange }: ExpressionFieldProps): 
 // Every case drives a full Radix dialog flow — portal mount, combobox pickers, and a
 // schema-driven form that re-renders on each keystroke — so these flows are a heavy
 // render chain that runs slowly under coverage instrumentation on a loaded runner.
-// userEvent runs without its inter-key delay so a loaded runner cannot push a keystroke
-// chain past the timeout, and the file gets explicit testTimeout headroom; correctness
-// stays gated by the real assertions and awaited signals below.
-vi.setConfig({ testTimeout: 15_000 });
+// userEvent runs without its inter-key delay and the file gets explicit testTimeout
+// headroom; correctness stays gated by the real assertions and awaited signals below.
+vi.setConfig({ testTimeout: 20_000 });
 
-/** Open a discriminated-union variant picker inside the named field group. */
-async function pickVariant(
-  user: ReturnType<typeof userEvent.setup>,
-  groupName: string,
-  optionName: string,
-): Promise<void> {
-  // The picker's accessible name derives from the union's discriminator (e.g.
-  // "Target kind", "Door"), so scope to the group's single combobox instead of
-  // pinning a label.
-  const group = screen.getByRole('group', { name: groupName });
-  await user.click(within(group).getByRole('combobox'));
-  await user.click(await screen.findByRole('option', { name: optionName }));
+type User = ReturnType<typeof userEvent.setup>;
+
+const WHATSAPP_HINT = 'The phone number in E.164 form, for example +15550000000.';
+const IDENTITY_FALLBACK = 'The address on this channel that clients message.';
+const DOOR_HELP =
+  'Where messages arrive and how the answer goes back: a channel answers on its own medium; the API door answers to a callback URL, or the caller polls.';
+
+const never = <T,>(): Promise<T> => new Promise<T>(() => undefined);
+
+/** The pickers' reads: two agents, two tools, a channel with a hint and one without, one key. */
+function pickerClient(overrides: StubApiClient = {}): StubApiClient {
+  return {
+    listAgents: vi.fn().mockResolvedValue(agentListing(['assistant', 'researcher'])),
+    listTools: vi.fn().mockResolvedValue(['lookup_record', 'lookup_account']),
+    listChannels: vi.fn().mockResolvedValue(
+      channelListing([
+        ['whatsapp', WHATSAPP_HINT],
+        ['telegram', null],
+      ]),
+    ),
+    listTokensPayload: vi.fn().mockResolvedValue([apiKey({ user_id: 'svc-events' })]),
+    ...overrides,
+  };
 }
 
+function renderDialog({
+  initial,
+  client = {},
+  projection = keySessionProjection(),
+  seed,
+  onClose = vi.fn(),
+  expressionField,
+}: {
+  readonly initial?: ReturnType<typeof makeRoute>;
+  readonly client?: StubApiClient;
+  readonly projection?: MeProjection;
+  readonly seed?: (queryClient: QueryClient) => void;
+  readonly onClose?: () => void;
+  readonly expressionField?: (props: ExpressionFieldProps) => ReactNode;
+} = {}) {
+  const dialog = <RouteFormDialog initial={initial} onClose={onClose} />;
+  return renderWithProviders(
+    expressionField === undefined ? (
+      dialog
+    ) : (
+      <ExpressionFieldContext.Provider value={expressionField}>
+        {dialog}
+      </ExpressionFieldContext.Provider>
+    ),
+    { client: pickerClient(client), projection, ...(seed === undefined ? {} : { seed }) },
+  );
+}
+
+async function pickTarget(user: User, kind: 'Agent' | 'Tool', name: string): Promise<void> {
+  await pickOption(user, 'Target kind', kind);
+  await pickOption(user, kind, name);
+}
+
+async function pickChannelDoor(user: User, channel: string, identity: string): Promise<void> {
+  await pickOption(user, 'Door', 'Channel');
+  await pickOption(user, 'Channel', channel);
+  await user.type(screen.getByRole('textbox', { name: 'Our identity' }), identity);
+}
+
+async function pickKey(user: User, key = 'svc-events'): Promise<void> {
+  await pickOption(user, 'Execution key', key);
+}
+
+const identityBox = (): HTMLElement => screen.getByRole('textbox', { name: 'Our identity' });
+
 describe('RouteFormDialog — create', () => {
-  it('renders the blank create form with the identity, target, door, and key fields', () => {
-    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, { client: {} });
+  it('renders the blank create form with the identity, target, door, and key fields', async () => {
+    renderDialog();
 
     expect(screen.getByRole('textbox', { name: 'Route name' })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Target' })).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Door' })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Execution key' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Target' })).toHaveAccessibleDescription(
+      'What an inbound turn on this route runs.',
+    );
+    expect(screen.getByRole('combobox', { name: 'Target kind' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Door' })).toHaveAccessibleDescription(DOOR_HELP);
+    expect(screen.getByRole('combobox', { name: 'Door' })).toBeInTheDocument();
+    expect(await screen.findByRole('combobox', { name: 'Execution key' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create route' })).toBeInTheDocument();
   });
 
-  it('shows the five door-contract jq fields on both the agent and the tool target', async () => {
+  it('describes each target kind and shows the five jq fields on both', async () => {
     const user = userEvent.setup({ delay: null });
-    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, { client: {} });
+    renderDialog();
     const jqFieldNames = [
       'Start expression',
       'Reply expression',
@@ -80,47 +158,67 @@ describe('RouteFormDialog — create', () => {
       'Resume expression',
       'Extras expression',
     ];
+    const target = screen.getByRole('group', { name: 'Target' });
 
-    await pickVariant(user, 'Target', 'agent');
-    expect(screen.getByRole('textbox', { name: /^Agent name\b/ })).toBeInTheDocument();
+    await pickOption(user, 'Target kind', 'Agent');
+    expect(target).toHaveAccessibleDescription(
+      'Each turn runs this agent as a threaded conversation.',
+    );
+    expect(await screen.findByRole('combobox', { name: 'Agent' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Expressions' })).toBeInTheDocument();
     for (const name of jqFieldNames) {
       expect(screen.getByRole('textbox', { name })).toBeInTheDocument();
     }
 
-    await pickVariant(user, 'Target', 'tool');
-    expect(screen.getByRole('textbox', { name: /^Tool name\b/ })).toBeInTheDocument();
+    await pickOption(user, 'Target kind', 'Tool');
+    expect(target).toHaveAccessibleDescription(
+      'Each message dispatches this tool on its own, with no thread memory.',
+    );
+    expect(await screen.findByRole('combobox', { name: 'Tool' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Agent' })).not.toBeInTheDocument();
     for (const name of jqFieldNames) {
       expect(screen.getByRole('textbox', { name })).toBeInTheDocument();
     }
+  });
+
+  it('clears the picked name when the target kind changes, keeping the expressions', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createOrReplaceConversationRoute = vi.fn();
+    renderDialog({ client: { createOrReplaceConversationRoute } });
+
+    await pickTarget(user, 'Tool', 'lookup_record');
+    await user.type(screen.getByRole('textbox', { name: 'Start expression' }), '.message');
+    await pickOption(user, 'Target kind', 'Agent');
+    expect(screen.getByRole('combobox', { name: 'Agent' })).not.toHaveTextContent('lookup_record');
+    expect(screen.getByRole('textbox', { name: 'Start expression' })).toHaveValue('.message');
+    await user.click(screen.getByRole('button', { name: 'Create route' }));
+
+    expect(await screen.findByText('An agent name is required.')).toBeInTheDocument();
+    expect(createOrReplaceConversationRoute).not.toHaveBeenCalled();
   });
 
   it('shows only the api door field for the api door and the channel fields for channel', async () => {
     const user = userEvent.setup({ delay: null });
-    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, { client: {} });
+    renderDialog();
 
-    await pickVariant(user, 'Door', 'api');
-    expect(screen.getByRole('textbox', { name: /^Callback URL\b/ })).toBeInTheDocument();
-    expect(screen.queryByRole('textbox', { name: /^Channel\b/ })).not.toBeInTheDocument();
+    await pickOption(user, 'Door', 'API');
+    expect(screen.getByRole('textbox', { name: 'Callback URL' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Channel' })).not.toBeInTheDocument();
 
-    await pickVariant(user, 'Door', 'channel');
-    expect(screen.getByRole('textbox', { name: /^Channel\b/ })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: /^Our identity\b/ })).toBeInTheDocument();
-    expect(screen.queryByRole('textbox', { name: /^Callback URL\b/ })).not.toBeInTheDocument();
+    await pickOption(user, 'Door', 'Channel');
+    expect(await screen.findByRole('combobox', { name: 'Channel' })).toBeInTheDocument();
+    expect(identityBox()).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Callback URL' })).not.toBeInTheDocument();
   });
 
   it('renders the jq expression door through an injected ExpressionFieldContext', async () => {
     const user = userEvent.setup({ delay: null });
-    renderWithProviders(
-      <ExpressionFieldContext.Provider value={StubExpressionField}>
-        <RouteFormDialog onClose={vi.fn()} />
-      </ExpressionFieldContext.Provider>,
-      { client: {} },
-    );
+    renderDialog({ expressionField: StubExpressionField });
 
-    // No expression fields exist until a target variant is chosen; then all five
+    // No expression fields exist until a target kind is chosen; then all five
     // door-contract jqs render through the injected door.
     expect(screen.queryAllByTestId('jq-stub')).toHaveLength(0);
-    await pickVariant(user, 'Target', 'tool');
+    await pickOption(user, 'Target kind', 'Tool');
 
     const doors = screen.getAllByTestId('jq-stub');
     expect(doors).toHaveLength(5);
@@ -136,17 +234,12 @@ describe('RouteFormDialog — create', () => {
       route: makeRoute(),
       callback_secret: null,
     });
-    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
-      client: { createOrReplaceConversationRoute },
-    });
+    renderDialog({ client: { createOrReplaceConversationRoute } });
 
     await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'events');
-    await pickVariant(user, 'Target', 'tool');
-    await user.type(screen.getByRole('textbox', { name: /^Tool name\b/ }), 'lookup_record');
-    await pickVariant(user, 'Door', 'channel');
-    await user.type(screen.getByRole('textbox', { name: /^Channel\b/ }), 'whatsapp');
-    await user.type(screen.getByRole('textbox', { name: /^Our identity\b/ }), '+15550000000');
-    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-events');
+    await pickTarget(user, 'Tool', 'lookup_record');
+    await pickChannelDoor(user, 'whatsapp', '+15550000000');
+    await pickKey(user);
     await user.click(screen.getByRole('button', { name: 'Create route' }));
 
     await waitFor(() => {
@@ -180,16 +273,13 @@ describe('RouteFormDialog — create', () => {
       route: makeRoute(),
       callback_secret: null,
     });
-    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
-      client: { createOrReplaceConversationRoute },
-    });
+    renderDialog({ client: { createOrReplaceConversationRoute } });
 
     expect(screen.getByRole('group', { name: 'Reply texts' })).toBeInTheDocument();
     await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'events');
-    await pickVariant(user, 'Target', 'agent');
-    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
-    await pickVariant(user, 'Door', 'api');
-    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-events');
+    await pickTarget(user, 'Agent', 'assistant');
+    await pickOption(user, 'Door', 'API');
+    await pickKey(user);
     await user.type(screen.getByRole('textbox', { name: /^Failed turn\b/ }), 'Please try again.');
     await user.type(
       screen.getByRole('textbox', { name: /^Pairing code(?! refused)/ }),
@@ -208,57 +298,60 @@ describe('RouteFormDialog — create', () => {
 
   it("surfaces a server attach-check refusal through the dialog's error state", async () => {
     const user = userEvent.setup({ delay: null });
-    // The bind-time attach check refuses a target that cannot honour the route's
-    // own door fields, returning its blocking lines as a 422; they ride the existing
-    // mutation-error path into `ErrorState`, never a swallowed failure.
     const refusal = 'cannot bind agent to route: an asking agent needs a reply or resume path';
     const createOrReplaceConversationRoute = vi.fn().mockRejectedValue(new Error(refusal));
-    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
-      client: { createOrReplaceConversationRoute },
-    });
+    renderDialog({ client: { createOrReplaceConversationRoute } });
 
     await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'events');
-    await pickVariant(user, 'Target', 'agent');
-    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
-    await pickVariant(user, 'Door', 'channel');
-    await user.type(screen.getByRole('textbox', { name: /^Channel\b/ }), 'whatsapp');
-    await user.type(screen.getByRole('textbox', { name: /^Our identity\b/ }), '+15550000000');
-    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-events');
+    await pickTarget(user, 'Agent', 'assistant');
+    await pickChannelDoor(user, 'whatsapp', '+15550000000');
+    await pickKey(user);
     await user.click(screen.getByRole('button', { name: 'Create route' }));
 
-    expect(await screen.findByText(refusal, undefined, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(refusal);
   });
 
   it('blocks submit with inline errors and never calls the API when required fields are blank', async () => {
     const user = userEvent.setup({ delay: null });
     const createOrReplaceConversationRoute = vi.fn();
-    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
-      client: { createOrReplaceConversationRoute },
-    });
+    renderDialog({ client: { createOrReplaceConversationRoute } });
+    await openSelect(user, 'Execution key');
+    await user.keyboard('{Escape}');
 
     await user.click(screen.getByRole('button', { name: 'Create route' }));
 
-    expect(
-      await screen.findByText('A route name is required.', undefined, { timeout: 5000 }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('An execution key is required.')).toBeInTheDocument();
+    expect(await screen.findByText('A route name is required.')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Execution key' })).toHaveAccessibleDescription(
+      expect.stringContaining('An execution key is required.') as string,
+    );
+    expect(createOrReplaceConversationRoute).not.toHaveBeenCalled();
+  });
+
+  it('names the blank picked fields of a channel route', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createOrReplaceConversationRoute = vi.fn();
+    renderDialog({ client: { createOrReplaceConversationRoute } });
+
+    await pickOption(user, 'Target kind', 'Tool');
+    await pickOption(user, 'Door', 'Channel');
+    await user.click(screen.getByRole('button', { name: 'Create route' }));
+
+    expect(await screen.findByText('A tool name is required.')).toBeInTheDocument();
+    expect(screen.getByText('A channel is required.')).toBeInTheDocument();
+    expect(screen.getByText('An identity is required.')).toBeInTheDocument();
     expect(createOrReplaceConversationRoute).not.toHaveBeenCalled();
   });
 
   it('rejects a non-slug route name locally before any request', async () => {
     const user = userEvent.setup({ delay: null });
     const createOrReplaceConversationRoute = vi.fn();
-    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
-      client: { createOrReplaceConversationRoute },
-    });
+    renderDialog({ client: { createOrReplaceConversationRoute } });
 
     await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'Not A Slug');
     await user.click(screen.getByRole('button', { name: 'Create route' }));
 
     expect(
-      await screen.findByText('Use lowercase letters, digits and hyphens.', undefined, {
-        timeout: 5000,
-      }),
+      await screen.findByText('Use lowercase letters, digits and hyphens.'),
     ).toBeInTheDocument();
     expect(createOrReplaceConversationRoute).not.toHaveBeenCalled();
   });
@@ -266,29 +359,20 @@ describe('RouteFormDialog — create', () => {
   it('rejects a callback URL carrying a user name locally before any request', async () => {
     const user = userEvent.setup({ delay: null });
     const createOrReplaceConversationRoute = vi.fn();
-    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
-      client: { createOrReplaceConversationRoute },
-    });
+    renderDialog({ client: { createOrReplaceConversationRoute } });
 
     await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'account');
-    await pickVariant(user, 'Target', 'agent');
-    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
-    await pickVariant(user, 'Door', 'api');
+    await pickTarget(user, 'Agent', 'assistant');
+    await pickOption(user, 'Door', 'API');
     await user.type(
-      screen.getByRole('textbox', { name: /^Callback URL\b/ }),
+      screen.getByRole('textbox', { name: 'Callback URL' }),
       'https://user@sink.example/cb',
     );
-    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-account');
+    await pickKey(user);
     await user.click(screen.getByRole('button', { name: 'Create route' }));
 
     expect(
-      await screen.findByText(
-        'Must be an absolute https URL with no user name or password.',
-        undefined,
-        {
-          timeout: 5000,
-        },
-      ),
+      await screen.findByText('Must be an absolute https URL with no user name or password.'),
     ).toBeInTheDocument();
     expect(createOrReplaceConversationRoute).not.toHaveBeenCalled();
   });
@@ -301,16 +385,12 @@ describe('RouteFormDialog — create', () => {
       route: makeRoute({ route_name: 'account', door: 'api', channel: null, our_identity: null }),
       callback_secret: null,
     });
-    const onClose = vi.fn();
-    renderWithProviders(<RouteFormDialog onClose={onClose} />, {
-      client: { createOrReplaceConversationRoute },
-    });
+    renderDialog({ client: { createOrReplaceConversationRoute } });
 
     await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'account');
-    await pickVariant(user, 'Target', 'agent');
-    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
-    await pickVariant(user, 'Door', 'api');
-    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-account');
+    await pickTarget(user, 'Agent', 'assistant');
+    await pickOption(user, 'Door', 'API');
+    await pickKey(user);
     await user.click(screen.getByRole('button', { name: 'Create route' }));
 
     await waitFor(() => {
@@ -323,33 +403,33 @@ describe('RouteFormDialog — create', () => {
     });
   });
 
-  it('reveals the api-door callback secret once, then closes on Done', async () => {
-    const user = userEvent.setup({ delay: null });
-    const onClose = vi.fn();
+  async function reachSecretReveal(user: User, onClose: () => void): Promise<void> {
     const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
       created: true,
       route_name: 'account',
       route: makeRoute({ route_name: 'account', door: 'api' }),
       callback_secret: 'super-secret-token',
     });
-    renderWithProviders(<RouteFormDialog onClose={onClose} />, {
-      client: { createOrReplaceConversationRoute },
-    });
+    renderDialog({ client: { createOrReplaceConversationRoute }, onClose });
 
     await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'account');
-    await pickVariant(user, 'Target', 'agent');
-    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
-    await pickVariant(user, 'Door', 'api');
+    await pickTarget(user, 'Agent', 'assistant');
+    await pickOption(user, 'Door', 'API');
     await user.type(
-      screen.getByRole('textbox', { name: /^Callback URL\b/ }),
+      screen.getByRole('textbox', { name: 'Callback URL' }),
       'https://sink.example/cb',
     );
-    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-account');
+    await pickKey(user);
     await user.click(screen.getByRole('button', { name: 'Create route' }));
-
     expect(await screen.findByText('super-secret-token')).toBeInTheDocument();
+  }
+
+  it('reveals the api-door callback secret once, then closes on Done', async () => {
+    const user = userEvent.setup({ delay: null });
+    const onClose = vi.fn();
+    await reachSecretReveal(user, onClose);
+
     expect(screen.getByText(/Shown once/)).toBeInTheDocument();
-    // The reveal did not auto-close; Done does.
     expect(onClose).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Done' }));
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -358,44 +438,244 @@ describe('RouteFormDialog — create', () => {
   it('keeps the revealed secret on Escape, then closes only on the explicit Done', async () => {
     const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
-    const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
-      created: true,
-      route_name: 'account',
-      route: makeRoute({ route_name: 'account', door: 'api' }),
-      callback_secret: 'super-secret-token',
-    });
-    renderWithProviders(<RouteFormDialog onClose={onClose} />, {
-      client: { createOrReplaceConversationRoute },
-    });
-
-    await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'account');
-    await pickVariant(user, 'Target', 'agent');
-    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
-    await pickVariant(user, 'Door', 'api');
-    await user.type(
-      screen.getByRole('textbox', { name: /^Callback URL\b/ }),
-      'https://sink.example/cb',
-    );
-    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-account');
-    await user.click(screen.getByRole('button', { name: 'Create route' }));
-
-    // Reach the shown-once callback-secret reveal.
-    expect(await screen.findByText('super-secret-token')).toBeInTheDocument();
+    await reachSecretReveal(user, onClose);
 
     // Escape must NOT dismiss the reveal — the secret cannot be re-read.
     await user.keyboard('{Escape}');
     expect(screen.getByText('super-secret-token')).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
 
-    // The explicit Done is the only way out.
     await user.click(screen.getByRole('button', { name: 'Done' }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 
+describe('RouteFormDialog — "Our identity" description', () => {
+  it('asks for a channel first, then shows the picked channel hint or the fallback', async () => {
+    const user = userEvent.setup({ delay: null });
+    renderDialog();
+
+    await pickOption(user, 'Door', 'Channel');
+    expect(identityBox()).toHaveAccessibleDescription('Pick a channel to see what to enter here.');
+    await pickOption(user, 'Channel', 'whatsapp');
+    expect(identityBox()).toHaveAccessibleDescription(WHATSAPP_HINT);
+    await user.type(identityBox(), '+15550000000');
+    await pickOption(user, 'Channel', 'telegram');
+    expect(identityBox()).toHaveAccessibleDescription(IDENTITY_FALLBACK);
+    // Changing the channel keeps the identity the operator typed.
+    expect(identityBox()).toHaveValue('+15550000000');
+  });
+
+  it('reads the loading line while the channel list is pending', () => {
+    const initial = makeRoute({ channel: 'whatsapp' });
+    renderDialog({ initial, client: { listChannels: vi.fn().mockReturnValue(never()) } });
+
+    expect(identityBox()).toHaveAccessibleDescription("Loading this channel's hint…");
+  });
+
+  it('reads the could-not-load line and the error when the channel list fails', async () => {
+    const initial = makeRoute({ channel: 'whatsapp' });
+    renderDialog({
+      initial,
+      client: { listChannels: vi.fn().mockRejectedValue(new ApiError('boom', 500)) },
+    });
+
+    await waitFor(() => {
+      expect(identityBox()).toHaveAccessibleDescription(
+        `${IDENTITY_FALLBACK} The channel's hint could not be loaded.`,
+      );
+    });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
+
+  it('reads the not-installed line for a stored channel the list does not hold', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createOrReplaceConversationRoute = vi
+      .fn()
+      .mockRejectedValue(new ApiError("route channel 'sms' is not a registered channel", 400));
+    renderDialog({
+      initial: makeRoute({ channel: 'sms' }),
+      client: { createOrReplaceConversationRoute },
+    });
+
+    const channel = await screen.findByRole('combobox', { name: 'Channel' });
+    await waitFor(() => {
+      expect(channel).toHaveTextContent('sms (not installed)');
+    });
+    expect(screen.getByText('not installed')).toBeInTheDocument();
+    expect(
+      screen.getByText('sms is not installed. Pick another, or saving is refused.'),
+    ).toBeInTheDocument();
+    expect(identityBox()).toHaveAccessibleDescription(
+      `${IDENTITY_FALLBACK} This channel is not installed, so it offers no hint.`,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "route channel 'sms' is not a registered channel",
+    );
+  });
+});
+
+describe('RouteFormDialog — refused and failed picker reads', () => {
+  const forbidden = (): Promise<never> => Promise.reject(new ApiError('forbidden', 403));
+
+  it('shows the agents note under a 403 and keeps the stored agent on save', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
+      created: false,
+      route_name: 'chat',
+      route: makeRoute(),
+      callback_secret: null,
+    });
+    renderDialog({
+      initial: makeRoute({ execution_key: 'svc-events' }),
+      client: { listAgents: vi.fn(forbidden), createOrReplaceConversationRoute },
+    });
+
+    expect(
+      await screen.findByText(
+        'This session cannot list agents. Picking one needs read access to GET /api/agents; ask an administrator to grant it.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => {
+      expect(createOrReplaceConversationRoute).toHaveBeenCalledWith(
+        expect.objectContaining({ target_kind: 'agent', target_name: 'assistant' }),
+      );
+    });
+  });
+
+  it('shows the tools note under a 403', async () => {
+    renderDialog({
+      initial: makeRoute({ target_kind: 'tool', target_name: 'lookup_record' }),
+      client: { listTools: vi.fn(forbidden) },
+    });
+
+    expect(
+      await screen.findByText(
+        'This session cannot list tools. Picking one needs read access to GET /api/tools; ask an administrator to grant it.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('shows the error state when the tool list fails', async () => {
+    renderDialog({
+      initial: makeRoute({ target_kind: 'tool', target_name: 'lookup_record' }),
+      client: { listTools: vi.fn().mockRejectedValue(new ApiError('boom', 500)) },
+    });
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+  });
+
+  it('shows the channels note and the no-hint identity line under a 403', async () => {
+    renderDialog({ initial: makeRoute(), client: { listChannels: vi.fn(forbidden) } });
+
+    expect(
+      await screen.findByText(
+        'This session cannot list channels. Picking one needs read access to GET /api/channels; ask an administrator to grant it.',
+      ),
+    ).toBeInTheDocument();
+    expect(identityBox()).toHaveAccessibleDescription(
+      `${IDENTITY_FALLBACK} This session cannot read the channel list, so no hint is shown.`,
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('shows the api-keys note under a 403', async () => {
+    renderDialog({ initial: makeRoute(), client: { listTokensPayload: vi.fn(forbidden) } });
+
+    expect(
+      await screen.findByText(
+        'This session cannot list api keys. Picking one needs read access to GET /api/auth/tokens-payload; ask an administrator to grant it.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('RouteFormDialog — shared list reads', () => {
+  it('draws the channel and agent options from data another screen already read', async () => {
+    const user = userEvent.setup({ delay: null });
+    const listChannels = vi.fn().mockReturnValue(never());
+    const listAgents = vi.fn().mockReturnValue(never());
+    renderDialog({
+      client: { listChannels, listAgents },
+      seed: (queryClient) => {
+        queryClient.setQueryData(channelsListKey, channelListing([['signal', null]]));
+        queryClient.setQueryData(agentsListKey, agentListing(['planner']));
+      },
+    });
+
+    await pickOption(user, 'Door', 'Channel');
+    await openSelect(user, 'Channel');
+    expect(await screen.findByRole('option', { name: 'signal' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await pickOption(user, 'Target kind', 'Agent');
+    await openSelect(user, 'Agent');
+    expect(await screen.findByRole('option', { name: 'planner' })).toBeInTheDocument();
+  });
+});
+
+describe('RouteFormDialog — access control off', () => {
+  it('shows no execution key field, reads no key list, and creates as the fill identity', async () => {
+    const user = userEvent.setup({ delay: null });
+    const listTokensPayload = vi.fn();
+    const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
+      created: true,
+      route_name: 'events',
+      route: makeRoute(),
+      callback_secret: null,
+    });
+    renderDialog({
+      projection: gateOffProjection(),
+      client: { listTokensPayload, createOrReplaceConversationRoute },
+    });
+
+    await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'events');
+    await pickTarget(user, 'Agent', 'assistant');
+    await pickChannelDoor(user, 'whatsapp', '+15550000000');
+    expect(screen.queryByRole('combobox', { name: 'Execution key' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Create route' }));
+
+    await waitFor(() => {
+      expect(createOrReplaceConversationRoute).toHaveBeenCalledWith(
+        expect.objectContaining({ execution_key: '__no_auth__' }),
+      );
+    });
+    expect(listTokensPayload).not.toHaveBeenCalled();
+  });
+
+  it('sends the stored key on an edit', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
+      created: false,
+      route_name: 'chat',
+      route: makeRoute(),
+      callback_secret: null,
+    });
+    renderDialog({
+      initial: makeRoute({ execution_key: 'svc-chat' }),
+      projection: gateOffProjection(),
+      client: { createOrReplaceConversationRoute },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => {
+      expect(createOrReplaceConversationRoute).toHaveBeenCalledWith(
+        expect.objectContaining({ execution_key: 'svc-chat' }),
+      );
+    });
+  });
+});
+
 describe('RouteFormDialog — overlap', () => {
   it('renders the blank Overlap group with the two policy radios and the settle field', () => {
-    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, { client: {} });
+    renderDialog();
 
     const overlap = screen.getByRole('group', { name: 'Overlap' });
     expect(overlap).toBeInTheDocument();
@@ -412,27 +692,21 @@ describe('RouteFormDialog — overlap', () => {
   it('shows the settle-window cross-field error inline and blocks submit', async () => {
     const user = userEvent.setup({ delay: null });
     const createOrReplaceConversationRoute = vi.fn();
-    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
-      client: { createOrReplaceConversationRoute },
-    });
+    renderDialog({ client: { createOrReplaceConversationRoute } });
 
     await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'account');
-    await pickVariant(user, 'Target', 'agent');
-    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
-    await pickVariant(user, 'Door', 'channel');
-    await user.type(screen.getByRole('textbox', { name: /^Channel\b/ }), 'sms');
-    await user.type(screen.getByRole('textbox', { name: /^Our identity\b/ }), '+15550000000');
-    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-account');
+    await pickTarget(user, 'Agent', 'assistant');
+    await pickChannelDoor(user, 'telegram', '+15550000000');
+    await pickKey(user);
     // A settle window with the default continue + one policy is refused.
     await user.type(screen.getByRole('spinbutton', { name: /^Settle window/ }), '5');
     await user.click(screen.getByRole('button', { name: 'Create route' }));
 
-    const message = await screen.findByText(
-      'A settle window needs Deliver set to all or Running turn set to cancel.',
-      undefined,
-      { timeout: 5000 },
-    );
-    expect(message).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        'A settle window needs Deliver set to all or Running turn set to cancel.',
+      ),
+    ).toBeInTheDocument();
     expect(createOrReplaceConversationRoute).not.toHaveBeenCalled();
   });
 
@@ -444,17 +718,12 @@ describe('RouteFormDialog — overlap', () => {
       route: makeRoute(),
       callback_secret: null,
     });
-    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
-      client: { createOrReplaceConversationRoute },
-    });
+    renderDialog({ client: { createOrReplaceConversationRoute } });
 
     await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'account');
-    await pickVariant(user, 'Target', 'agent');
-    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
-    await pickVariant(user, 'Door', 'channel');
-    await user.type(screen.getByRole('textbox', { name: /^Channel\b/ }), 'sms');
-    await user.type(screen.getByRole('textbox', { name: /^Our identity\b/ }), '+15550000000');
-    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-account');
+    await pickTarget(user, 'Agent', 'assistant');
+    await pickChannelDoor(user, 'telegram', '+15550000000');
+    await pickKey(user);
     await user.click(
       within(screen.getByRole('group', { name: 'Running turn' })).getByRole('radio', {
         name: 'cancel',
@@ -488,17 +757,20 @@ describe('RouteFormDialog — edit', () => {
     start_expr: { content: '.message' },
     reply_expr: null,
     initial_mode: 'manual',
-    execution_key: 'svc-chat',
+    execution_key: 'svc-events',
   });
 
-  it('prefills from the route and shows the name read-only', () => {
-    renderWithProviders(<RouteFormDialog initial={existing} onClose={vi.fn()} />, { client: {} });
+  it('prefills from the route and shows the name read-only', async () => {
+    renderDialog({ initial: existing });
 
-    const name = screen.getByDisplayValue('chat');
-    expect(name).toBeDisabled();
-    expect(screen.getByRole('textbox', { name: /^Tool name\b/ })).toHaveValue('lookup_account');
+    expect(screen.getByDisplayValue('chat')).toBeDisabled();
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Tool' })).toHaveTextContent('lookup_account');
+    });
+    expect(screen.getByRole('combobox', { name: 'Target kind' })).toHaveTextContent('Tool');
+    expect(screen.getByRole('combobox', { name: 'Door' })).toHaveTextContent('API');
     expect(screen.getByRole('textbox', { name: 'Start expression' })).toHaveValue('.message');
-    expect(screen.getByRole('textbox', { name: /^Callback URL\b/ })).toHaveValue(
+    expect(screen.getByRole('textbox', { name: 'Callback URL' })).toHaveValue(
       'https://sink.example/answers',
     );
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
@@ -512,9 +784,7 @@ describe('RouteFormDialog — edit', () => {
       route: existing,
       callback_secret: 'rotated-secret',
     });
-    renderWithProviders(<RouteFormDialog initial={existing} onClose={vi.fn()} />, {
-      client: { createOrReplaceConversationRoute },
-    });
+    renderDialog({ initial: existing, client: { createOrReplaceConversationRoute } });
 
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
@@ -527,6 +797,7 @@ describe('RouteFormDialog — edit', () => {
           target_name: 'lookup_account',
           start_expr: { content: '.message' },
           initial_mode: 'manual',
+          execution_key: 'svc-events',
           callback_url: 'https://sink.example/answers',
         }),
       );

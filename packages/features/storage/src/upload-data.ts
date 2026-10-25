@@ -42,6 +42,20 @@ export function readFileBase64(file: File): Promise<string> {
 }
 
 /**
+ * Read a picked file as UTF-8 text, or `null` when its bytes are not UTF-8. A read
+ * failure rejects loudly.
+ */
+export async function readFileUtf8(file: File): Promise<string | null> {
+  const bytes = await file.arrayBuffer();
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch (error) {
+    if (error instanceof TypeError) return null;
+    throw error;
+  }
+}
+
+/**
  * The pre-flight conflict check, run BEFORE any request: a derived id that already
  * exists (upload overwrites) or a name picked twice in the batch blocks the whole
  * batch so nothing is clobbered by accident.

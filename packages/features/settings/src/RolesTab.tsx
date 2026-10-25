@@ -7,9 +7,11 @@
  * per-tag `grants` map — is edited as a per-feature-GROUP TRI-STATE
  * (`none`/`read`/`write`), one selector per grantable feature tag. The feature groups
  * are derived from the route catalog (`listAuthRoutes`): a route's `tags` name its
- * feature group and its `action` classifies it. A group with at least one `read`/`write`
- * route is GRANTABLE; a purely-fenced group is shown with an admin-only marker and NO
- * grant control, mirroring the server, which rejects a grant on such a tag.
+ * feature group and its `role_reach` — the server's decision of what opens it for a
+ * non-admin role — classifies it. A group with at least one `level` route is
+ * GRANTABLE; every other group (its routes all admin-only, self-service or public) is
+ * listed read-only with NO grant control, mirroring the server, which rejects a grant
+ * on such a tag.
  *
  * The reserved `admin` role (`allow_all`) is shown but its grant editor is disabled
  * and it cannot be deleted — mirroring the server guard so the UI never sends a
@@ -195,7 +197,7 @@ export function RolesTab({ readOnly }: RolesTabProps): ReactNode {
   const roles = [...rolesQuery.data].sort((a, b) => a.name.localeCompare(b.name));
   const groups = featureGroupsOf(routesQuery.data);
   const grantableGroups = groups.filter((group) => group.grantable);
-  const adminOnlyGroups = groups.filter((group) => !group.grantable && group.hasFenced);
+  const levelFreeGroups = groups.filter((group) => !group.grantable);
 
   const selected: RoleBody | null =
     roles.find((role) => role.name === selectedName) ?? roles[0] ?? null;
@@ -252,7 +254,7 @@ export function RolesTab({ readOnly }: RolesTabProps): ReactNode {
                 readOnly={readOnly}
                 isAdmin={selectedIsAdmin}
                 grantableGroups={grantableGroups}
-                adminOnlyGroups={adminOnlyGroups}
+                levelFreeGroups={levelFreeGroups}
                 onHistory={setVersionsRole}
                 onDelete={setDeleteName}
               />

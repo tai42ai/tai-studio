@@ -1,4 +1,6 @@
 /** The shared transport seam every sub-client method flows through. */
+import type { z } from 'zod';
+
 import type { ApiConfig } from '../http';
 import { apiRequest } from '../http';
 
@@ -11,7 +13,7 @@ export function makeTransport(config: ApiConfig) {
     path: string,
     schema: S,
     options?: Parameters<typeof apiRequest>[3],
-  ) => apiRequest(config, path, schema, options);
+  ): Promise<z.output<S>> => apiRequest(config, path, schema, options);
   return { config, req };
 }
 

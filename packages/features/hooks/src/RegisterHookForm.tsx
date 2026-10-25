@@ -17,6 +17,7 @@
  */
 import type { HookParams } from '@tai42/api-client';
 import {
+  boundExecutionKey,
   Button,
   Card,
   errorMessage,
@@ -55,13 +56,14 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
   const mutation = useRegisterHook({ onClose, onReset: fields.reset });
 
   const trimmedName = fields.name.trim();
+  const executionKey = boundExecutionKey(fields.executionKey, data.binding);
   const missing = {
     name: trimmedName === '',
     topic: fields.topic.trim() === '',
     tool: fields.tool.trim() === '',
-    executionKey: fields.executionKey === '',
+    executionKey: executionKey === '',
   };
-  const unsatisfiable = fireGateUnsatisfiable(data.keysQuery);
+  const unsatisfiable = fireGateUnsatisfiable(data.keysQuery, data.binding, executionKey);
   // A register POST is an upsert: warn when the typed name hits ANOTHER hook — never
   // the one being edited, whose own name saving back over is the point of the edit.
   const replacesExisting =
@@ -79,7 +81,7 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
       name: fields.name,
       topic: fields.topic,
       tool: fields.tool,
-      executionKey: fields.executionKey,
+      executionKey,
       toolKwargs: fields.toolKwargs,
       subjectTarget: fields.subjectTarget,
       subjectKind: fields.subjectKind,
@@ -106,7 +108,7 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
       style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}
     >
       {data.hooksQuery.isError ? (
-        <p role="alert" style={{ margin: 0, color: 'var(--tai-color-warning)' }}>
+        <p role="alert" style={{ margin: 0, color: 'var(--tai-color-warn-text)' }}>
           Could not load existing hooks: {errorMessage(data.hooksQuery.error)}. Overwrite detection
           is unavailable; a register still replaces any existing hook with the same name.
         </p>
@@ -117,6 +119,7 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
         replacesExisting={replacesExisting}
         trimmedName={trimmedName}
         keysQuery={data.keysQuery}
+        binding={data.binding}
       />
       <HookSubjectSection fields={fields} targetOptions={data.targetOptions} />
       <HookConditionExprFields

@@ -5,6 +5,7 @@
  * same way.
  */
 import type { PluginContext } from '@tai42/studio-sdk';
+import { STUDIO_PLUGIN_API_VERSION } from '@tai42/studio-sdk';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -60,6 +61,8 @@ describe('TOKEN_REQUIREMENTS map', () => {
     // management route `/api/storage/resources` instead.
     expect(tokenCovered(scoped(['/api/storage/resources']), 'storage')).toBe(true);
     expect(tokenCovered(scoped(['/api/storage']), 'storage')).toBe(false);
+    // The templates grant's list opens the same screen.
+    expect(tokenCovered(scoped(['/api/templates']), 'storage')).toBe(true);
   });
 
   it('contributionCovered: full shows all; absent ⇒ full-only; declared ⇒ any-of', () => {
@@ -145,13 +148,15 @@ describe('capability-gated nav', () => {
 });
 
 describe('grouped nav structure', () => {
-  const SECTIONS = [
-    'Capabilities',
-    'Connections',
-    'Triggers',
-    'Activity',
-    'Administration',
-  ] as const;
+  const SECTIONS = ['Capabilities', 'Connections', 'Doors', 'Activity', 'Administration'] as const;
+
+  const SECTION_LINKS: Record<(typeof SECTIONS)[number], readonly string[]> = {
+    Capabilities: ['Tools', 'Agents', 'Presets'],
+    Connections: ['Connectors'],
+    Doors: ['Conversations', 'Hooks', 'Scheduling', 'Served endpoints', 'States'],
+    Activity: ['Interactions', 'Notifications'],
+    Administration: ['Members', 'Settings', 'Storage', 'Marketplace', 'Manifest', 'System'],
+  };
 
   it('leads with Dashboard, then renders the five sections in order with their headers', async () => {
     landAuthed();
@@ -179,24 +184,21 @@ describe('grouped nav structure', () => {
     ).toBeTruthy();
   });
 
-  it('places each token under its section (a representative from each)', async () => {
+  it('renders every section with its links in order', async () => {
     landAuthed();
     await screen.findByRole('link', { name: 'Tools' });
-    // A representative link lives inside the list named by its section header.
-    const inSection = (section: string, link: string): HTMLElement =>
-      within(screen.getByRole('list', { name: section })).getByRole('link', { name: link });
-    expect(inSection('Capabilities', 'Templates')).toBeInTheDocument();
-    expect(inSection('Connections', 'Connectors')).toBeInTheDocument();
-    expect(inSection('Connections', 'Served endpoints')).toBeInTheDocument();
-    expect(inSection('Triggers', 'Scheduling')).toBeInTheDocument();
-    expect(inSection('Activity', 'Conversations')).toBeInTheDocument();
-    expect(inSection('Administration', 'Marketplace')).toBeInTheDocument();
+    for (const section of SECTIONS) {
+      const links = within(screen.getByRole('list', { name: section }))
+        .getAllByRole('link')
+        .map((link) => link.textContent);
+      expect(links, section).toEqual([...SECTION_LINKS[section]]);
+    }
   });
 
   it('hides a section whose items are all filtered out (no empty labelled header)', async () => {
     // Only `/api/tools` is reachable: Capabilities has a covered item (Tools), and
-    // Administration shows via always-on Settings — Integrations and Activity have
-    // no covered item, and Dashboard's route is uncovered.
+    // Administration shows via always-on Settings — Connections, Doors and Activity
+    // have no covered item, and Dashboard's route is uncovered.
     server.use(meHandler(scoped(['/api/tools'])), okPlugins, okChannels);
     renderStudio({ initialPath: '/interactions', sessionKey: 'k-cap' });
 
@@ -207,10 +209,10 @@ describe('grouped nav structure', () => {
 
     // Fail-closed grouping: no header AND no list for a fully-filtered section.
     expect(screen.queryByText('Connections')).toBeNull();
-    expect(screen.queryByText('Triggers')).toBeNull();
+    expect(screen.queryByText('Doors')).toBeNull();
     expect(screen.queryByText('Activity')).toBeNull();
     expect(screen.queryByRole('list', { name: 'Connections' })).toBeNull();
-    expect(screen.queryByRole('list', { name: 'Triggers' })).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Doors' })).toBeNull();
     expect(screen.queryByRole('list', { name: 'Activity' })).toBeNull();
 
     // The standalone Dashboard row respects the filter too.
@@ -296,7 +298,7 @@ describe('route capability boundary (content-area gate)', () => {
     const manifest = {
       name: 'acme',
       version: '1.0.0',
-      api_version: 1,
+      api_version: STUDIO_PLUGIN_API_VERSION,
       mounts: {},
       entry: 'index.js',
       integrity: { 'index.js': 'sha384-abc' },

@@ -1,14 +1,21 @@
 /** The read-only plugin-detail cards: listing info + readme, contained items, routes,
  * version history, the back control, and the post-action receipt. */
-import type { MarketplacePluginDetail, MarketplaceVersion } from '@tai42/api-client';
+import {
+  type MarketplacePluginDetail,
+  type MarketplaceVersion,
+  summarizeFleetFanout,
+} from '@tai42/api-client';
 import {
   ArrowLeftIcon,
   Badge,
   Button,
   Card,
   CheckCircleIcon,
+  deliveryOf,
   EmptyState,
   ExternalLinkButton,
+  InstallReport,
+  type RouteItem,
   ScrollRegion,
   Table,
   TagChips,
@@ -23,8 +30,7 @@ import { type ReactNode, useMemo } from 'react';
 
 import { severityVariant } from './advisories';
 import { ListingIcon, listingTitle } from './display';
-import type { RouteItem } from './install-dialog';
-import { type ActionResult, deliveryOf, versionStatusVariant } from './plugin-detail-data';
+import { type ActionResult, versionStatusVariant } from './plugin-detail-data';
 
 export function BackButton({ onBack }: { readonly onBack: () => void }): ReactNode {
   return (
@@ -317,6 +323,17 @@ export function ActionResultCard({ result }: { readonly result: ActionResult }):
           </div>
         ) : null}
       </div>
+      {/* The reload the action ran and the worker roll that followed it. */}
+      {result.reload !== null ? (
+        <InstallReport
+          summary={summarizeFleetFanout(
+            result.reload.fanout,
+            result.reload.awaiting_respawn,
+            result.reload.span_release_error,
+          )}
+          recycle={result.reload.recycle}
+        />
+      ) : null}
     </Card>
   );
 }

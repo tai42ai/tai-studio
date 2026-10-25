@@ -2,6 +2,7 @@
 import { z } from 'zod';
 
 import * as openapi from '../generated/openapi-schemas';
+import { presetExtensionElement } from './extensions';
 import { fleetReportFanout } from './fleet';
 
 /**
@@ -33,8 +34,23 @@ export const manifestMcpEntry = z
   .loose();
 export type ManifestMcpEntry = z.infer<typeof manifestMcpEntry>;
 
+const extensionMap = z.record(z.string(), z.array(z.array(presetExtensionElement)));
+
+/**
+ * The preserved manifest's extension settings: the extension modules, the backend
+ * module, and the `extensions` maps of the `tools`, `mcp` and `api_tools` sections,
+ * each combo element refined to the client's extension-element schema.
+ */
+export const manifestExtensionSettings = openapi.manifestExtensionSettings.extend({
+  tools: z.array(openapi.manifestExtensionMap.extend({ extensions: extensionMap })),
+  mcp: z.array(openapi.manifestExtensionMap.extend({ extensions: extensionMap })),
+  api_tools: extensionMap,
+});
+export type ManifestExtensionSettings = z.infer<typeof manifestExtensionSettings>;
+
 export const manifestView = openapi.preservedManifestView.extend({
   mcp: z.array(manifestMcpEntry),
+  extension_settings: manifestExtensionSettings,
 });
 
 /**
@@ -62,3 +78,12 @@ export type McpEnvRefs = z.infer<typeof mcpEnvRefs>;
  */
 export const reloadConfigResult = openapi.applyResponse.extend({ fanout: fleetReportFanout });
 export type ReloadConfigResult = z.infer<typeof reloadConfigResult>;
+
+/**
+ * `POST /api/mcp-status/{title}/advertised-tools` — every tool the server advertises
+ * (before the entry's include/exclude filter), each with whether it is selected and
+ * bound, and why not (`unbound_reason`, or `null` when bound or unselected).
+ */
+export const mcpAdvertisedTools = openapi.mcpAdvertisedTools;
+export type McpAdvertisedTools = z.infer<typeof mcpAdvertisedTools>;
+export type McpAdvertisedTool = z.infer<typeof openapi.mcpAdvertisedTool>;

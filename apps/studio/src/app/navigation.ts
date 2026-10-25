@@ -18,15 +18,21 @@
  * the slot under the `studioPluginEntryState` namespace on `history.state`, keyed by
  * pluginId, so the browser persists it across back/forward and a hard reload and the
  * catch-all page hands each plugin its own slot back as `PluginPageProps.entryState`.
+ *
+ * `resolveHolderLink` answers a plugin-declared holder kind from the resolver its plugin
+ * registered, addressed to that plugin's page.
  */
 import type {
   NavigateOptions,
   NavigationContextValue,
+  PluginHolderTarget,
   PluginNavigateOptions,
   PluginSearch,
+  ReferenceHolder,
   RouteSearch,
   RouteToken,
 } from '@tai42/studio-sdk';
+import { getContributions } from '@tai42/studio-sdk/host';
 
 import type { AppRouter } from './router';
 import { PATH } from './routes';
@@ -162,6 +168,17 @@ function createPluginNavigation(
   };
 }
 
+/** The plugin page a registered holder-link resolver gives a holder, or `null` when none is registered. */
+function resolveHolderLink(holder: ReferenceHolder): PluginHolderTarget | null {
+  const link = getContributions().holderLinks.get(holder.kind);
+  if (link === undefined) return null;
+  return { pluginId: link.pluginId, ...link.resolve(holder) };
+}
+
 export function createNavigation(router: AppRouter): NavigationContextValue {
-  return { ...createTokenNavigation(router), ...createPluginNavigation(router) };
+  return {
+    ...createTokenNavigation(router),
+    ...createPluginNavigation(router),
+    resolveHolderLink,
+  };
 }

@@ -87,7 +87,7 @@ describe('ApiKeysTab — edit key', () => {
         condition: { content: '.policy.limit > 0' },
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+    renderTab(<ApiKeysTab publicId="public" />, {
       client: baseStub({ listTokensPayload: vi.fn(() => Promise.resolve(withPolicy)) }),
     });
 
@@ -102,7 +102,7 @@ describe('ApiKeysTab — edit key', () => {
   it('edits a key description and scopes', async () => {
     const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
-    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+    renderTab(<ApiKeysTab publicId="public" />, {
       client: baseStub({ editApiKey }),
     });
 
@@ -124,7 +124,7 @@ describe('ApiKeysTab — edit key', () => {
   it('"Remove condition" sends an explicit null clear for the whole condition', async () => {
     const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
-    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+    renderTab(<ApiKeysTab publicId="public" />, {
       client: baseStub({
         editApiKey,
         listTokensPayload: vi.fn(() => Promise.resolve(seededTokens())),
@@ -150,7 +150,7 @@ describe('ApiKeysTab — edit key', () => {
   it('a plain emptied condition textarea preserves the saved condition (no null clear)', async () => {
     const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
-    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+    renderTab(<ApiKeysTab publicId="public" />, {
       client: baseStub({
         editApiKey,
         listTokensPayload: vi.fn(() => Promise.resolve(seededTokens())),
@@ -174,7 +174,7 @@ describe('ApiKeysTab — edit key', () => {
   it('"Clear policy data" sends an explicit policy_data null clear', async () => {
     const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
-    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+    renderTab(<ApiKeysTab publicId="public" />, {
       client: baseStub({
         editApiKey,
         listTokensPayload: vi.fn(() => Promise.resolve(seededTokens())),
@@ -199,7 +199,7 @@ describe('ApiKeysTab — edit key', () => {
   it('removing all policy_data rows without the explicit clear preserves the saved value', async () => {
     const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
-    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+    renderTab(<ApiKeysTab publicId="public" />, {
       client: baseStub({
         editApiKey,
         listTokensPayload: vi.fn(() => Promise.resolve(seededTokens())),
@@ -240,7 +240,7 @@ describe('ApiKeysTab — edit key', () => {
         condition: null,
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+    renderTab(<ApiKeysTab publicId="public" />, {
       client: baseStub({ editApiKey, listTokensPayload: vi.fn(() => Promise.resolve(stringSeed)) }),
     });
 
@@ -273,7 +273,7 @@ describe('ApiKeysTab — edit key', () => {
         condition: { id: 'ac_tier', kwargs: { min: '7' } },
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+    renderTab(<ApiKeysTab publicId="public" />, {
       client: baseStub({
         editApiKey,
         listTokensPayload: vi.fn(() => Promise.resolve(templateSeed)),
@@ -313,7 +313,7 @@ describe('ApiKeysTab — edit key', () => {
         condition: { content: '  .policy.limit > 0  ' },
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+    renderTab(<ApiKeysTab publicId="public" />, {
       client: baseStub({ editApiKey, listTokensPayload: vi.fn(() => Promise.resolve(seed)) }),
     });
 
@@ -351,7 +351,7 @@ describe('ApiKeysTab — edit key', () => {
         condition: { content: '.policy.limit > {{ min }}', kwargs: { min: '7' } },
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+    renderTab(<ApiKeysTab publicId="public" />, {
       client: baseStub({ editApiKey, listTokensPayload: vi.fn(() => Promise.resolve(seed)) }),
     });
 
@@ -388,7 +388,7 @@ describe('ApiKeysTab — edit key', () => {
         condition: { id: 'ac_tier' },
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+    renderTab(<ApiKeysTab publicId="public" />, {
       client: baseStub({ editApiKey, listTokensPayload: vi.fn(() => Promise.resolve(seed)) }),
     });
 
@@ -421,7 +421,7 @@ describe('ApiKeysTab — edit key', () => {
         condition: { id: 'ac_tier', kwargs: { min: '7' } },
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+    renderTab(<ApiKeysTab publicId="public" />, {
       client: baseStub({
         editApiKey,
         listTokensPayload: vi.fn(() => Promise.resolve(templateSeed)),
@@ -465,7 +465,7 @@ describe('ApiKeysTab — edit key', () => {
         policy_data: {},
       },
     ];
-    renderTab(<ApiKeysTab readOnly={false} publicId="open" />, {
+    renderTab(<ApiKeysTab publicId="open" />, {
       client: baseStub({
         editApiKey,
         listScopes: vi.fn(() => Promise.resolve(renamedMarkerScopes)),

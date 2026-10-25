@@ -3,7 +3,7 @@
  * default, the sessionStorage opt-in, the 401→/login redirect, and the invariant
  * that localStorage is NEVER written.
  */
-import { type PluginContext } from '@tai42/studio-sdk';
+import { type PluginContext, STUDIO_PLUGIN_API_VERSION } from '@tai42/studio-sdk';
 import { __resetContributions } from '@tai42/studio-sdk/testing';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -64,6 +64,39 @@ describe('auth flow', () => {
     });
   });
 
+  it('signing in replaces /login in history, so Back never returns to the credential screen', async () => {
+    server.use(okPlugins, okTools, okToolTags);
+    const { studio } = renderStudio({ initialPath: '/tools' });
+
+    await signIn('secret-key');
+
+    await waitFor(() => {
+      expect(studio.router.state.location.pathname).toBe('/tools');
+    });
+    // The guard's redirect replaced `/tools` with `/login`; the post-sign-in
+    // navigation replaces `/login` with the destination. A push would leave
+    // `/login` one step back, and Back would land there only to be sent forward.
+    expect(studio.router.history.length).toBe(1);
+    expect(studio.router.history.canGoBack()).toBe(false);
+  });
+
+  it('a 401 replaces the failing route with /login, so Back never re-enters the redirect', async () => {
+    server.use(
+      okPlugins,
+      http.get('*/api/tools', () => HttpResponse.json({ error: 'unauthorized' }, { status: 401 })),
+      okToolTags,
+    );
+    const { studio } = renderStudio({ initialPath: '/tools', sessionKey: 'expired-key' });
+
+    await screen.findByLabelText('API key');
+    expect(studio.router.state.location.pathname).toBe('/login');
+    expect(studio.router.state.location.search).toEqual({ redirect: '/tools' });
+    // A push would leave the guarded `/tools` one step back; with the credential
+    // cleared, Back would hit the guard and be redirected straight to `/login` again.
+    expect(studio.router.history.length).toBe(1);
+    expect(studio.router.history.canGoBack()).toBe(false);
+  });
+
   it('sessionStorage opt-in survives a reload (a fresh shell reads the credential)', async () => {
     server.use(okPlugins, okTools, okToolTags);
     // A prior "remember" opt-in persisted the key; a fresh shell instance mounts.
@@ -120,7 +153,7 @@ describe('auth flow', () => {
             {
               name: 'acme',
               version: '1.0.0',
-              api_version: 1,
+              api_version: STUDIO_PLUGIN_API_VERSION,
               mounts: {},
               entry: 'index.js',
               integrity: { 'index.js': 'sha384-abc' },

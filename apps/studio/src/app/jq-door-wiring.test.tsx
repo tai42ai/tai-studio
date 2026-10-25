@@ -12,7 +12,12 @@
  * fortiori. The real `JqField` renders here — no double — so the assertion is the
  * door's own affordance, not a stand-in.
  */
-import { type JsonSchema, type PluginContext, SchemaForm } from '@tai42/studio-sdk';
+import {
+  type JsonSchema,
+  type PluginContext,
+  SchemaForm,
+  STUDIO_PLUGIN_API_VERSION,
+} from '@tai42/studio-sdk';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
 import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -48,7 +53,7 @@ function serveShell(): void {
           {
             name: 'acme',
             version: '1.0.0',
-            api_version: 1,
+            api_version: STUDIO_PLUGIN_API_VERSION,
             mounts: {},
             entry: 'index.js',
             integrity: { 'index.js': 'sha384-abc' },

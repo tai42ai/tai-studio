@@ -1,6 +1,6 @@
 /** Storage resource CRUD sub-client. */
 import { apiRoutes, buildPath } from '../generated/api-routes';
-import { apiDownload, isUnsafePathSegment } from '../http';
+import { apiDownload } from '../http';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -17,22 +17,17 @@ export interface StorageUploadBody {
 }
 
 /**
- * Encode a possibly-nested storage id / directory path for use in a URL path,
- * percent-encoding each segment while preserving the `/` separators. A storage id
- * can be a nested path (e.g. `a/b c.txt`); encoding each segment independently keeps
- * the slashes structural and escapes everything else (spaces, `#`, `?`, …).
- *
- * Dot segments (`.`, `..`), empty segments (a leading/trailing/doubled `/`, or an
- * empty id) are REJECTED loudly rather than encoded: the browser's WHATWG URL parser
- * removes dot-segments from a relative request path before it is sent — collapsing
- * `..` even when percent-encoded — so such an id can never be faithfully transmitted.
- * Left to encode, it would silently retarget the request at an unrelated same-origin
- * route. The server enforces the same relative-path rule; failing fast here keeps a
- * malformed id from ever leaving the client.
+ * A possibly-nested storage id for a `{resource_id:path}` route parameter. Only a `.`
+ * or `..` segment is refused here: the browser's URL parser removes those before the
+ * request is sent, so `./x` would silently reach `x`. Every other spelling (`a//b`,
+ * `x/`) is sent as typed, and the server refuses every non-canonical key, these
+ * included, with the same words.
  */
 function storagePath(id: string): string {
-  if (id.split('/').some(isUnsafePathSegment)) {
-    throw new Error("storage path must be a relative path with no empty, '.', or '..' segment");
+  if (id.split('/').some((segment) => segment === '.' || segment === '..')) {
+    throw new Error(
+      `non-canonical store key '${id}': a key is '/'-separated names with no empty, '.' or '..' segment`,
+    );
   }
   return id;
 }
@@ -43,12 +38,21 @@ export function storageClient(t: Transport) {
     // The content store a storage-provider plugin exposes. Dead by default:
     // `getStorageInfo` reports `present: false` (a 200 empty state) and every other
     // door answers a loud 501 when no provider is installed. Ids may be nested
-    // paths: `storagePath` refuses a dot or empty segment, and `buildPath` encodes each
-    // segment of the route's `{…:path}` parameter with the `/` separators preserved.
+    // paths: `storagePath` refuses a dot segment the browser would remove, and
+    // `buildPath` encodes each part of the route's `{…:path}` parameter with the `/`
+    // separators preserved; the server refuses every other non-canonical key.
     getStorageInfo: (signal?: AbortSignal) =>
       req(apiRoutes.get_api_storage.path, s.storageInfo, { signal }),
     listStorageResources: (signal?: AbortSignal) =>
       req(apiRoutes.get_api_storage_resources.path, s.storageResourceList, { signal }),
+    readStorageResource: (id: string, signal?: AbortSignal) =>
+      req(
+        buildPath(apiRoutes.get_api_storage_entries_resource_id.path, {
+          resource_id: storagePath(id),
+        }),
+        s.storedEntry,
+        { signal },
+      ),
     statStorageResource: (id: string, signal?: AbortSignal) =>
       req(
         buildPath(apiRoutes.get_api_storage_resources_resource_id_stat.path, {

@@ -69,32 +69,23 @@ function ToolsField({
   const { toolsQuery, tagsQuery } = data;
   return (
     <Field label="Tools" description="The tools this agent may call." group>
-      {toolsQuery.isError ? (
+      {/* A tags failure must not take down tool picking: the picker keeps its flat
+          mode and the failure is stated rather than silently ungrouping. A failed
+          tools read is the picker's own error state, so this line stands aside. */}
+      {tagsQuery.isError && !toolsQuery.isError ? (
         <ErrorState
-          message={errorMessage(toolsQuery.error)}
-          onRetry={() => void toolsQuery.refetch()}
+          message={errorMessage(tagsQuery.error)}
+          onRetry={() => void tagsQuery.refetch()}
         />
-      ) : (
-        <>
-          {/* A tags failure must not take down tool picking: the picker keeps its
-              flat mode and the failure is stated rather than silently ungrouping. */}
-          {tagsQuery.isError ? (
-            <ErrorState
-              message={errorMessage(tagsQuery.error)}
-              onRetry={() => void tagsQuery.refetch()}
-            />
-          ) : null}
-          <MultiToolPicker
-            toolNames={data.visibleToolNames}
-            tagsByTool={data.tagsByTool}
-            displayNames={data.displayNames}
-            value={value}
-            onChange={onChange}
-            disabled={toolsQuery.isPending}
-            idPrefix="compose-tools"
-          />
-        </>
-      )}
+      ) : null}
+      <MultiToolPicker
+        query={data.visibleToolsQuery}
+        tagsByTool={data.tagsByTool}
+        displayNames={data.displayNames}
+        value={value}
+        onChange={onChange}
+        idPrefix="compose-tools"
+      />
     </Field>
   );
 }
@@ -164,7 +155,7 @@ function SubAgentsField({
             />
           ) : null}
           <SubAgentComposer
-            toolNames={data.visibleToolNames}
+            toolsQuery={data.visibleToolsQuery}
             tagsByTool={data.tagsByTool}
             displayNames={data.displayNames}
             presetRecords={data.usablePresets}

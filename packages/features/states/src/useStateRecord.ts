@@ -1,8 +1,8 @@
 /**
  * The per-subject record's server reads, mutations and editor state. The document
  * read returns `null` for "no document yet" (a first-class state), never an error.
- * A successful save closes the editor and invalidates the record + its write trail; a
- * successful erase closes the confirm and invalidates the record.
+ * A successful save or erase closes the editor or the confirm and invalidates the record + its
+ * write trail (an erase records its own write row).
  */
 import type { StateDetail, StateRecord, StateSubjectRef } from '@tai42/api-client';
 import { type JsonSchema, useApi } from '@tai42/studio-sdk';
@@ -75,6 +75,7 @@ export function useStateRecord({
     onSuccess: () => {
       setEraseOpen(false);
       void queryClient.invalidateQueries({ queryKey: stateRecordKey(stateName, subject) });
+      void queryClient.invalidateQueries({ queryKey: stateWritesKey(stateName, subject) });
     },
   });
 

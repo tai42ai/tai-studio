@@ -61,11 +61,9 @@ export function RoutesTable({
   });
 
   // Create and edit ride the one UPSERT door (`POST /api/conversations/{route_name}`);
-  // delete rides the `DELETE` on the same path. Both are DYNAMIC (templated) write
-  // routes, so — following the house static-placeholder idiom — the interpolated path
-  // resolves to a full-projection gate: a scoped projection can never method-express a
-  // templated route, so its write affordances stay withdrawn (projection ⊆ gate). The
-  // read table below is unaffected; only the write controls gate.
+  // delete rides the `DELETE` on the same path. Both gate on the template path with
+  // their method, which the projection lists when the caller's grant admits it
+  // (projection ⊆ gate). The read table below is unaffected; only the write controls gate.
   const canWrite = useCanWrite(apiRoutes.post_api_conversations_route_name.path, 'POST');
   const canDelete = useCanWrite(apiRoutes.delete_api_conversations_route_name.path, 'DELETE');
 

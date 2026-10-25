@@ -7,11 +7,9 @@
  * any failed request → an always-visible `ErrorState` (a swallowed list error would
  * hide the whole revocation surface).
  *
- * The mutating controls (create + revoke) gate on the caller's WRITE capability for
- * the trigger-links surface. The DELETE route is templated (name-parameterized), so
- * the collection POST capability is the sound write witness for BOTH mutations,
- * since they are one hooks-tag `write` tier — a `read`-only grantee sees the list
- * without controls that would 403 on submit.
+ * Each mutating control gates on the caller's capability for its own route: create on
+ * the collection `POST`, revoke on the templated `DELETE /api/hooks/trigger-links/{name}`.
+ * A `read`-only grantee sees the list without controls that would 403 on submit.
  */
 import { apiRoutes } from '@tai42/api-client';
 import {
@@ -38,8 +36,9 @@ import { triggerLinksListKey } from './keys';
 import { RevokeTriggerLinkDialog } from './RevokeTriggerLinkDialog';
 import { TriggerLinkRow } from './TriggerLinkRow';
 
-/** The write route whose POST capability gates create AND revoke (see the header). */
-const TRIGGER_LINKS_WRITE_ROUTE = apiRoutes.post_api_hooks_trigger_links.path;
+/** The routes the create and the revoke controls gate on (see the header). */
+const CREATE_ROUTE = apiRoutes.post_api_hooks_trigger_links;
+const REVOKE_ROUTE = apiRoutes.delete_api_hooks_trigger_links_name;
 
 const headerStyle: CSSProperties = {
   display: 'flex',
@@ -51,7 +50,8 @@ const headerStyle: CSSProperties = {
 
 export function TriggerLinksList(): ReactNode {
   const api = useApi();
-  const canWrite = useCanWrite(TRIGGER_LINKS_WRITE_ROUTE, 'POST');
+  const canCreate = useCanWrite(CREATE_ROUTE.path, CREATE_ROUTE.method);
+  const canRevoke = useCanWrite(REVOKE_ROUTE.path, REVOKE_ROUTE.method);
 
   const [creating, setCreating] = useState(false);
   const [pendingRevoke, setPendingRevoke] = useState<string | null>(null);
@@ -100,7 +100,7 @@ export function TriggerLinksList(): ReactNode {
               <TriggerLinkRow
                 key={record.name}
                 record={record}
-                canWrite={canWrite}
+                canRevoke={canRevoke}
                 onRevoke={setPendingRevoke}
               />
             ))}
@@ -114,7 +114,7 @@ export function TriggerLinksList(): ReactNode {
     <Card>
       <div style={headerStyle}>
         <h2 style={{ margin: 0, fontSize: 'var(--tai-text-lg)' }}>Trigger links</h2>
-        {canWrite ? (
+        {canCreate ? (
           <Button
             variant="primary"
             onClick={() => {

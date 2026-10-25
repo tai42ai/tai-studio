@@ -104,16 +104,22 @@ function PrincipalCell({ payload }: { readonly payload: KeyPayload }): ReactNode
   );
 }
 
-/** One key row's Edit / History / Revoke actions — History stays reachable in readOnly. */
+/**
+ * One key row's Edit / History / Revoke actions. Edit and Revoke need the mint grant
+ * (`readOnly` is its absence); History needs a projection covering the policy-history
+ * read (`historyVisible`).
+ */
 function KeyRowActions({
   payload,
   readOnly,
+  historyVisible,
   onEdit,
   onHistory,
   onRevoke,
 }: {
   readonly payload: KeyPayload;
   readonly readOnly: boolean;
+  readonly historyVisible: boolean;
   readonly onEdit: (payload: KeyPayload) => void;
   readonly onHistory: (userId: string) => void;
   readonly onRevoke: (userId: string) => void;
@@ -131,16 +137,17 @@ function KeyRowActions({
           Edit
         </Button>
       )}
-      {/* History stays reachable in readOnly — only its Rollback action is hidden. */}
-      <Button
-        type="button"
-        aria-label={`Policy history for ${payload.user_id}`}
-        onClick={() => {
-          onHistory(payload.user_id);
-        }}
-      >
-        History
-      </Button>
+      {historyVisible ? (
+        <Button
+          type="button"
+          aria-label={`Policy history for ${payload.user_id}`}
+          onClick={() => {
+            onHistory(payload.user_id);
+          }}
+        >
+          History
+        </Button>
+      ) : null}
       {readOnly ? null : (
         <Button
           type="button"
@@ -160,13 +167,17 @@ function KeyRowActions({
 export function KeysTable({
   keys,
   readOnly,
+  historyVisible,
   headerAction,
   onEdit,
   onHistory,
   onRevoke,
 }: {
   readonly keys: readonly KeyPayload[];
+  /** No mint grant: Edit, Revoke and the empty state's create hint are not drawn. */
   readonly readOnly: boolean;
+  /** The projection covers the policy-history read, so each row offers History. */
+  readonly historyVisible: boolean;
   readonly headerAction: ReactNode;
   readonly onEdit: (payload: KeyPayload) => void;
   readonly onHistory: (userId: string) => void;
@@ -196,7 +207,10 @@ export function KeysTable({
       </p>
 
       {keys.length === 0 ? (
-        <EmptyState title="No API keys" description="Create a key to provision access." />
+        <EmptyState
+          title="No API keys"
+          description={readOnly ? undefined : 'Create a key to provision access.'}
+        />
       ) : (
         <ScrollRegion label="API keys">
           <Table>
@@ -207,7 +221,7 @@ export function KeysTable({
                 <TH>Principal</TH>
                 <TH>Description</TH>
                 <TH>Scopes</TH>
-                {/* History is a read surface, available in readOnly too. */}
+                {/* Edit and Revoke need the mint grant; History the policy-history read. */}
                 <TH>Actions</TH>
               </TR>
             </THead>
@@ -232,6 +246,7 @@ export function KeysTable({
                     <KeyRowActions
                       payload={payload}
                       readOnly={readOnly}
+                      historyVisible={historyVisible}
                       onEdit={onEdit}
                       onHistory={onHistory}
                       onRevoke={onRevoke}

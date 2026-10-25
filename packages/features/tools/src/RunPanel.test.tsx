@@ -447,7 +447,11 @@ describe('AutoFormRunPanel — run-door capability gate', () => {
       projection: scopedProjection({ routes: [] }),
     });
 
-    expect(await screen.findByTestId('run-read-only-note')).toBeInTheDocument();
+    const note = await screen.findByTestId('run-read-only-note');
+    expect(note).toHaveAttribute('role', 'status');
+    expect(note).toHaveTextContent(
+      'Running this tool is outside your access — it is shown read-only.',
+    );
     expect(screen.queryByRole('button', { name: 'Run' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Run in background' })).toBeNull();
   });

@@ -342,6 +342,13 @@ describe('combined env+manifest op + preserved manifest transport', () => {
         data: {
           mcp: [{ title: 'gh', headers: { Authorization: '!ENV ${GITHUB_TOKEN}' }, managed: null }],
           user_tools: ['search'],
+          extension_settings: {
+            extensions_modules: [],
+            backend_module: null,
+            tools: [],
+            mcp: [],
+            api_tools: {},
+          },
         },
       }),
     );

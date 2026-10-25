@@ -5,7 +5,7 @@
  */
 import type { HookParams, TriggerAuth } from '@tai42/api-client';
 import { Badge, Button, TD, TR } from '@tai42/studio-sdk';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 
 import { describeTriggerAuth } from './trigger-auth';
 
@@ -15,11 +15,27 @@ export interface HookRowProps {
   readonly door: TriggerAuth | undefined;
   readonly onEdit: (hook: HookParams) => void;
   readonly onDelete: (name: string) => void;
+  /** The row a deep link points at: marked current on the accent tint, scrolled to. */
+  readonly highlighted?: boolean;
 }
 
-export function HookRow({ hook, door, onEdit, onDelete }: HookRowProps): ReactNode {
+export function HookRow({
+  hook,
+  door,
+  onEdit,
+  onDelete,
+  highlighted = false,
+}: HookRowProps): ReactNode {
+  const rowRef = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    if (highlighted) rowRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [highlighted]);
   return (
-    <TR>
+    <TR
+      ref={rowRef}
+      aria-current={highlighted ? 'true' : undefined}
+      style={highlighted ? { background: 'var(--tai-color-accent-tint)' } : undefined}
+    >
       <TD>{hook.name}</TD>
       <TD>{hook.topic}</TD>
       <TD>{hook.tool}</TD>

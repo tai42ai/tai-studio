@@ -96,6 +96,25 @@ describe('SettingsPage', () => {
     expect(await screen.findByText('Read-only')).toBeInTheDocument();
   });
 
+  it('keeps the API keys writes for an admin on a read-only deployment', async () => {
+    const client = {
+      getConfigMode: vi.fn().mockResolvedValue({ config_mode: 'vault', read_only: true }),
+      getSettingsSchema: vi.fn(emptySchema),
+      getEnvConfig: vi.fn(() => Promise.resolve({ env: {}, secret_keys: [] })),
+      listTokensPayload: vi.fn(() => Promise.resolve([])),
+      listScopes: vi.fn(() => Promise.resolve({})),
+      getAuthCapabilities: vi.fn(() => Promise.resolve({ mintable: true, providers: [] })),
+      listAuthRoutes: vi.fn(() => Promise.resolve([])),
+      listPublicRoutes: vi.fn(() => Promise.resolve([])),
+      listSubMcp: vi.fn(() => Promise.resolve({})),
+    } as unknown as ApiClient;
+    renderWithProviders(<SettingsPage search={{}} />, { client, projection: fullProjection() });
+
+    expect(await screen.findByText('Read-only')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'API keys' }));
+    expect(await screen.findByRole('button', { name: 'Create key' })).toBeInTheDocument();
+  });
+
   it('surfaces a loud error state when the mode read rejects', async () => {
     const client = stubClient({
       getConfigMode: vi.fn().mockRejectedValue(new Error('config unavailable')),
@@ -451,6 +470,99 @@ describe('SettingsPage — capability-gated sub-tab visibility', () => {
     expect(screen.getByRole('tab', { name: 'API keys' })).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'Settings' })).not.toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'Environment' })).not.toBeInTheDocument();
+  });
+
+  it('names the backup admin actions to a scoped caller on a writable deployment', async () => {
+    const client = {
+      ...visibilityClient(),
+      listBackupSections: vi.fn(() => Promise.resolve([{ name: 'manifest', secret: false }])),
+    } as unknown as ApiClient;
+    renderWithProviders(<SettingsPage search={{}} />, {
+      client,
+      projection: scopedProjection({ routes: [BACKUP_READ] }),
+    });
+    await userEvent.click(await screen.findByRole('tab', { name: 'Backup' }));
+
+    expect(await screen.findByText('Exporting a backup is an admin action.')).toHaveAttribute(
+      'role',
+      'status',
+    );
+    expect(screen.getByText('Importing a backup is an admin action.')).toHaveAttribute(
+      'role',
+      'status',
+    );
+    expect(screen.getByText('manifest')).toBeInTheDocument();
+    expect(screen.queryByText(/read-only for this deployment/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export backup' })).not.toBeInTheDocument();
+  });
+
+  it('gives a scoped caller holding the mint grant the key writes but not History', async () => {
+    const getConfigMode = vi.fn().mockResolvedValue({ config_mode: 'env-file', read_only: false });
+    const client = {
+      ...visibilityClient(),
+      getConfigMode,
+      listTokensPayload: vi.fn(() =>
+        Promise.resolve([
+          {
+            condition: null,
+            principal: null,
+            orphaned: false,
+            user_id: 'alice',
+            description: 'Alice key',
+            scopes: ['read'],
+            policy_data: {},
+          },
+        ]),
+      ),
+      getAuthCapabilities: vi.fn(() => Promise.resolve({ mintable: true, providers: [] })),
+    } as unknown as ApiClient;
+    renderWithProviders(<SettingsPage search={{}} />, {
+      client,
+      projection: scopedProjection({
+        routes: [{ path: '/api/auth/api-keys', methods: ['POST'] }],
+      }),
+    });
+
+    expect(await screen.findByRole('button', { name: 'Create key' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit key alice' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Revoke key alice' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Policy history for alice' }),
+    ).not.toBeInTheDocument();
+    expect(getConfigMode).not.toHaveBeenCalled();
+  });
+
+  it('names the missing mint grant to a scoped caller without it', async () => {
+    const client = {
+      ...visibilityClient(),
+      listTokensPayload: vi.fn(() =>
+        Promise.resolve([
+          {
+            condition: null,
+            principal: null,
+            orphaned: false,
+            user_id: 'alice',
+            description: 'Alice key',
+            scopes: ['read'],
+            policy_data: {},
+          },
+        ]),
+      ),
+    } as unknown as ApiClient;
+    renderWithProviders(<SettingsPage search={{}} />, {
+      client,
+      projection: scopedProjection({ routes: [] }),
+    });
+
+    expect(await screen.findByText('Your access does not permit minting keys.')).toHaveAttribute(
+      'role',
+      'status',
+    );
+    expect(screen.queryByRole('button', { name: 'Create key' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit key alice' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Policy history for alice' }),
+    ).not.toBeInTheDocument();
   });
 
   it('a projection reaching neither shows only the always-on API keys tab', async () => {

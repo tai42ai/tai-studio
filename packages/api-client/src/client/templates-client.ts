@@ -9,7 +9,7 @@ export function templatesClient(t: Transport) {
     listTemplates: (signal?: AbortSignal) =>
       req(apiRoutes.get_api_templates.path, s.templateNames, { signal }),
     getTemplate: (templateId: string) =>
-      req(apiRoutes.post_api_template.path, s.templateDetail, {
+      req(apiRoutes.post_api_template.path, s.templateEntry, {
         method: 'POST',
         body: { template_id: templateId },
       }),

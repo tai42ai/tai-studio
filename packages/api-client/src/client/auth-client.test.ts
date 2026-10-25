@@ -127,6 +127,7 @@ describe('auth route-catalog client transport', () => {
             summary: 'List the registered tools.',
             action: 'read',
             declared_public: false,
+            role_reach: 'level',
           },
           {
             path: '/api/backup/export',
@@ -136,6 +137,7 @@ describe('auth route-catalog client transport', () => {
             summary: 'Export a backup.',
             action: 'fenced',
             declared_public: false,
+            role_reach: 'admin_only',
           },
         ],
       }),
@@ -144,10 +146,12 @@ describe('auth route-catalog client transport', () => {
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/auth/routes');
     expect(out[1]?.mapped).toBeNull();
-    // The join fields the Roles grant editor derives feature groups + admin-only markers from.
+    // The join fields the Roles grant editor groups by: the feature tags + the role reach.
     expect(out[0]?.tags).toEqual(['tools']);
     expect(out[0]?.action).toBe('read');
     expect(out[1]?.action).toBe('fenced');
+    expect(out[0]?.role_reach).toBe('level');
+    expect(out[1]?.role_reach).toBe('admin_only');
   });
 
   it('listPublicRoutes GETs the public-routes route and parses the pinned url list', async () => {

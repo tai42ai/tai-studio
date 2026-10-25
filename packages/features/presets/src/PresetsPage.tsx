@@ -91,7 +91,12 @@ export function PresetsPage({ search }: PageProps<'presets'>): ReactNode {
             </AppLink>
           ) : null}
           {selected !== undefined ? (
-            <PresetDetail key={selected} name={selected} headingRef={setDetailHeading} />
+            <PresetDetail
+              key={selected}
+              name={selected}
+              version={search.version}
+              headingRef={setDetailHeading}
+            />
           ) : (
             <Card>
               <EmptyState

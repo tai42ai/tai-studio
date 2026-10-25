@@ -9,10 +9,11 @@
  * config mode read is issued together with those tabs (it feeds the mode card), so it
  * too is skipped for a caller who cannot reach the admin config surface. When a caller
  * does NOT cover the admin config routes, the mode read is skipped, the mode card is
- * dropped, and editing defaults conservatively to read-only so the always-shown API
- * keys tab stays reachable and a scoped mode 403 never walls the page.
+ * dropped, and editing defaults conservatively to read-only so a scoped mode 403
+ * never walls the page.
  *
- * The deployment-wide `read_only` flag is threaded to every core tab. VISIBILITY is
+ * The read-only flag is threaded to the Settings, Environment, Profiles, Backup and
+ * Roles tabs, while the API keys tab gates its writes on the caller's mint grant. VISIBILITY is
  * the capability boundary: the Settings, Environment, Backup, Profiles and Roles tabs
  * render only when the caller's projection reaches their backing read route; the API
  * keys tab is an own-key surface the server self-limits, so it is always shown. Each

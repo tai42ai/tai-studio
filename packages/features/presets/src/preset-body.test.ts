@@ -23,7 +23,10 @@ describe('buildCreatePresetBody', () => {
     description: '  Paris weather  ',
     fixedKwargs: { city: 'Paris' },
     combos: [],
+    inputSchema: null,
+    inputMap: null,
     outputSchema: null,
+    outputMap: null,
     stateBinding: null,
   };
 
@@ -56,5 +59,23 @@ describe('buildCreatePresetBody', () => {
     const full = buildCreatePresetBody({ ...draft, outputSchema, stateBinding });
     expect(full.output_schema).toEqual(outputSchema);
     expect(full.state_binding).toEqual(stateBinding);
+  });
+
+  it('omits the input schema and both maps when unset and sends each when set', () => {
+    const bare = buildCreatePresetBody(draft);
+    expect(bare).not.toHaveProperty('input_schema');
+    expect(bare).not.toHaveProperty('input_map');
+    expect(bare).not.toHaveProperty('output_map');
+
+    const inputSchema: JsonSchema = { type: 'object', properties: { text: { type: 'string' } } };
+    const full = buildCreatePresetBody({
+      ...draft,
+      inputSchema,
+      inputMap: { content: '{payload: .text}' },
+      outputMap: { id: 'jq/reshape' },
+    });
+    expect(full.input_schema).toEqual(inputSchema);
+    expect(full.input_map).toEqual({ content: '{payload: .text}' });
+    expect(full.output_map).toEqual({ id: 'jq/reshape' });
   });
 });

@@ -44,6 +44,7 @@ export const agentList = z.object({
 });
 
 export type AgentSummary = z.infer<typeof agentSummary>;
+export type AgentListing = z.infer<typeof agentList>;
 
 // -- event union (mirrors the contract StreamEvent taxonomy) -----------------
 

@@ -5,6 +5,7 @@ import { contributionCovered } from './coverage';
 
 function projection(overrides: Partial<MeProjection> = {}): MeProjection {
   return {
+    access_control_enabled: true,
     user_id: 'u',
     owner_user_id: null,
     principal: null,

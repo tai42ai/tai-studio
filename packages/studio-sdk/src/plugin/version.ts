@@ -1,9 +1,11 @@
 /**
  * The Studio-plugin API compatibility version.
  *
- * A monotonic integer bumped ONLY on a breaking change to the Studio-plugin API
- * OR the public prop/type surface of any DS component the SDK exports (a prop
- * rename/removal bumps it; genuinely internal/visual changes do not).
+ * A monotonic integer bumped ONLY on a breaking change to the Studio-plugin API,
+ * to the public prop/type surface of any DS component the SDK exports (a prop
+ * rename/removal bumps it; genuinely internal/visual changes do not), or to the
+ * design-token names (`TOKEN_NAMES`), the only names a plugin styles through (a
+ * rename or a removal bumps it; a new name does not).
  *
  * Gate rule: equality is correct precisely because additive changes never
  * bump (existing plugins keep matching) and after a break every plugin must
@@ -24,7 +26,7 @@
  *    authoring docs state it: stylesheet injection is a host capability, so a
  *    deployment pairs the Studio host with plugins built for it.
  */
-export const STUDIO_PLUGIN_API_VERSION = 1;
+export const STUDIO_PLUGIN_API_VERSION = 2;
 
 export interface VersionGateResult {
   readonly ok: boolean;

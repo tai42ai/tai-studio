@@ -6,7 +6,8 @@
     "tags": ["tools"],
     "summary": "List the registered tools.",
     "action": "read",
-    "declared_public": false
+    "declared_public": false,
+    "role_reach": "level"
   },
   {
     "path": "/api/health",
@@ -15,7 +16,8 @@
     "tags": [],
     "summary": "Liveness probe.",
     "action": "read",
-    "declared_public": false
+    "declared_public": false,
+    "role_reach": "level"
   },
   {
     "path": "/api/backup/export",
@@ -24,7 +26,8 @@
     "tags": ["backup"],
     "summary": "Export a full backup archive.",
     "action": "fenced",
-    "declared_public": false
+    "declared_public": false,
+    "role_reach": "admin_only"
   },
   {
     "path": "/ready",
@@ -33,6 +36,7 @@
     "tags": ["health"],
     "summary": "Readiness probe.",
     "action": "read",
-    "declared_public": true
+    "declared_public": true,
+    "role_reach": "public"
   }
 ]

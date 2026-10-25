@@ -117,15 +117,65 @@ describe('summarizeFleetResult', () => {
 
 describe('summarizeFleetFanout', () => {
   it('returns null for an absent fan-out (no manifest change)', () => {
-    expect(summarizeFleetFanout(null, [])).toBeNull();
-    expect(summarizeFleetFanout(undefined, [])).toBeNull();
+    expect(summarizeFleetFanout(null, [], null)).toBeNull();
+    expect(summarizeFleetFanout(undefined, [], null)).toBeNull();
     expect(isFleetReportFailure(null)).toBe(false);
+  });
+
+  it('treats an unreleased write span as a failure on a converged fan-out', () => {
+    const summary = summarizeFleetFanout(
+      { mode: 'local-only', note: 'only this worker reloaded' },
+      [],
+      'OSError: releasing the span failed',
+    );
+    expect(summary?.status).toBe('converged');
+    expect(summary?.spanReleaseError).toBe('OSError: releasing the span failed');
+    expect(isFleetReportFailure(summary)).toBe(true);
+  });
+
+  it('reports an unreleased write span when the response mutated no manifest', () => {
+    const summary = summarizeFleetFanout(null, [], 'OSError: releasing the span failed');
+    expect(summary).toEqual({
+      status: 'converged',
+      note: null,
+      failures: [],
+      error: null,
+      awaiting: [],
+      spanReleaseError: 'OSError: releasing the span failed',
+    });
+    expect(isFleetReportFailure(summary)).toBe(true);
+  });
+
+  it('carries an unreleased write span beside a fleet fan-out', () => {
+    const summary = summarizeFleetFanout(
+      {
+        mode: 'fleet',
+        op: 'reload_config',
+        reachable: true,
+        local_only: false,
+        results: [
+          { name: 'serve-1', outcome: 'applied', payload: null, error: null, detail: null },
+        ],
+        error: null,
+      },
+      [],
+      'a; b',
+    );
+    expect(summary?.spanReleaseError).toBe('a; b');
+    expect(isFleetReportFailure(summary)).toBe(true);
+  });
+
+  it('a converged fan-out with a released span is not a failure', () => {
+    const summary = summarizeFleetFanout({ mode: 'local-only', note: 'n' }, [], null);
+    expect(summary?.spanReleaseError).toBeNull();
+    expect(isFleetReportFailure(summary)).toBe(false);
   });
 
   it('treats a local-only fan-out as converged, carrying its note', () => {
     const summary = summarizeFleetFanout(
       { mode: 'local-only', note: 'only this worker reloaded' },
       [],
+      null,
     );
     expect(summary?.status).toBe('converged');
     expect(summary?.note).toBe('only this worker reloaded');
@@ -151,6 +201,7 @@ describe('summarizeFleetFanout', () => {
         error: null,
       },
       [],
+      null,
     );
     expect(summary?.status).toBe('degraded');
     expect(summary?.failures[0]?.outcome).toBe('missing');
@@ -167,6 +218,7 @@ describe('summarizeFleetFanout', () => {
         error: 'bus down',
       },
       [],
+      null,
     );
     expect(summary?.status).toBe('unreachable');
     expect(summary?.error).toBe('bus down');
@@ -359,7 +411,8 @@ describe('the workers awaiting a respawn', () => {
 
   it('names nothing for a lone-worker or an unreachable broadcast', () => {
     expect(
-      summarizeFleetFanout({ mode: 'local-only', note: 'only this worker reloaded' }, [])?.awaiting,
+      summarizeFleetFanout({ mode: 'local-only', note: 'only this worker reloaded' }, [], null)
+        ?.awaiting,
     ).toEqual([]);
     expect(summarizeFleetResult(result({ reachable: false, error: 'down' })).awaiting).toEqual([]);
   });
@@ -384,18 +437,20 @@ describe('a mutation summary carries the operation verdict', () => {
   };
 
   it('takes awaiting from the response verdict, never from the rows', () => {
-    expect(summarizeFleetFanout(rowsListing, [])?.awaiting).toEqual([]);
+    expect(summarizeFleetFanout(rowsListing, [], null)?.awaiting).toEqual([]);
     expect(
-      summarizeFleetFanout(rowsListing, [{ name: 'serve-2', keys: ['BACKEND_MANIFEST_KEY'] }])
+      summarizeFleetFanout(rowsListing, [{ name: 'serve-2', keys: ['BACKEND_MANIFEST_KEY'] }], null)
         ?.awaiting,
     ).toEqual([{ name: 'serve-2', keys: ['BACKEND_MANIFEST_KEY'] }]);
   });
 
   it('carries the verdict on a lone-worker save too', () => {
     expect(
-      summarizeFleetFanout({ mode: 'local-only', note: 'lone worker' }, [
-        { name: 'serve-1', keys: ['K'] },
-      ])?.awaiting,
+      summarizeFleetFanout(
+        { mode: 'local-only', note: 'lone worker' },
+        [{ name: 'serve-1', keys: ['K'] }],
+        null,
+      )?.awaiting,
     ).toEqual([{ name: 'serve-1', keys: ['K'] }]);
   });
 });

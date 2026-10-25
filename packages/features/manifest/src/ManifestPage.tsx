@@ -1,15 +1,15 @@
 /**
- * `ManifestPage` — the feature entry the shell mounts at the `manifest` route: the
- * loaded-manifest CONFIG ARTIFACT view, an Administration surface. The MCP server
- * status + config moved to the unified Connectors page and the derived sub-MCP
- * servers to the Served Endpoints page, so this page is now the single artifact
- * inspector. State is server state, so its one section drives its own TanStack Query;
- * this component owns no data of its own.
+ * `ManifestPage` — the feature entry the shell mounts at the `manifest` route, an
+ * Administration surface. It holds the loaded manifest, the MCP server configuration and
+ * status, the extension settings (loaded and declared) and the section doors. State is server state, so each section drives its
+ * own TanStack Query; this component owns no data of its own.
  */
 import type { PageProps } from '@tai42/studio-sdk';
 import { PageHeader, Stack } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
+import { McpServersSection } from './mcp/mcp-servers';
+import { ManifestExtensionsCard } from './tabs/ManifestExtensionsCard';
 import { ManifestSectionsCard } from './tabs/ManifestSectionsCard';
 import { ManifestTab } from './tabs/ManifestTab';
 
@@ -21,6 +21,8 @@ export function ManifestPage(_props: PageProps<'manifest'>): ReactNode {
     <Stack gap={6}>
       <PageHeader eyebrow="Administration" title="Manifest" />
       <ManifestTab />
+      <McpServersSection />
+      <ManifestExtensionsCard />
       <ManifestSectionsCard />
     </Stack>
   );

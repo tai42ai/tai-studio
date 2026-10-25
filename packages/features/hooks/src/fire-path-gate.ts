@@ -1,13 +1,15 @@
 /** The fire-path form submit gate. */
-import type { TokensPayload } from '@tai42/api-client';
-import type { UseQueryResult } from '@tanstack/react-query';
+import {
+  canHoldExecutionKey,
+  type ExecutionKeyBinding,
+  type ExecutionKeyQuery,
+} from '@tai42/studio-sdk';
 
-/** Resolved, and holding no key at all. */
-export function isExecutionKeyListEmpty(keys: UseQueryResult<TokensPayload>): boolean {
-  return keys.isSuccess && keys.data.length === 0;
-}
-
-/** Unsatisfiable when no execution key is pickable (pending, failed, or empty). */
-export function fireGateUnsatisfiable(keys: UseQueryResult<TokensPayload>): boolean {
-  return keys.isPending || keys.isError || isExecutionKeyListEmpty(keys);
+/** Unsatisfiable exactly when the execution-key picker has no key for the form to send. */
+export function fireGateUnsatisfiable(
+  keys: ExecutionKeyQuery,
+  binding: ExecutionKeyBinding,
+  value: string,
+): boolean {
+  return !canHoldExecutionKey(keys, binding, value);
 }

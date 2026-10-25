@@ -75,7 +75,11 @@ export function createStudio(deps: StudioDeps): Studio {
    * A 401 means the stored credential is invalid/expired, so it is CLEARED first
    * (synchronously, before the navigation) — otherwise the login screen, still
    * seeing an "authenticated" state, would bounce straight back to the guarded
-   * route and 401 again in a loop. The operator re-enters a key and returns. */
+   * route and 401 again in a loop. The operator re-enters a key and returns.
+   *
+   * The navigation REPLACES the failing location, as the auth guard's own redirect
+   * does: a push would leave the guarded route one step back, and Back would hit the
+   * guard and be redirected straight to `/login` again. */
   const handleUnauthorized = (): void => {
     const router = routerRef;
     if (router === null) return;
@@ -84,7 +88,7 @@ export function createStudio(deps: StudioDeps): Studio {
     });
     const location = router.state.location;
     if (location.pathname === PATH.login) return;
-    void router.navigate({ to: '/login', search: { redirect: location.href } });
+    void router.navigate({ to: '/login', search: { redirect: location.href }, replace: true });
   };
 
   const pluginLoader = createPluginLoader({

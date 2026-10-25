@@ -1,3 +1,4 @@
+import type { ToolListQuery } from '@tai42/studio-sdk';
 import { Button, CloseIcon, ToolPicker } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
@@ -8,7 +9,7 @@ import type { ReactNode } from 'react';
  * offered (an unknown name cannot be added here; the server stays the loud backstop).
  */
 export function MultiToolPicker({
-  toolNames,
+  query,
   tagsByTool,
   displayNames,
   value,
@@ -17,7 +18,7 @@ export function MultiToolPicker({
   idPrefix,
   addLabel = 'Add a tool',
 }: {
-  readonly toolNames: readonly string[];
+  readonly query: ToolListQuery;
   readonly tagsByTool?: Readonly<Record<string, readonly string[]>>;
   readonly displayNames?: Readonly<Record<string, string>>;
   readonly value: readonly string[];
@@ -55,7 +56,7 @@ export function MultiToolPicker({
         </div>
       ) : null}
       <ToolPicker
-        toolNames={toolNames}
+        query={query}
         value={null}
         onChange={(name) => {
           if (!value.includes(name)) onChange([...value, name]);
@@ -67,6 +68,7 @@ export function MultiToolPicker({
         idPrefix={`${idPrefix}-add`}
         label={addLabel}
         placeholder="Add a tool…"
+        emptyNote="No more tools to add. Tools come from installed plugins; hidden tools are not offered."
       />
     </div>
   );

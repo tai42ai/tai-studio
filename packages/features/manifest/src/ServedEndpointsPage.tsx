@@ -309,7 +309,7 @@ function SubMcpListSection(): ReactNode {
 export function ServedEndpointsPage(_props: PageProps<'servedEndpoints'>): ReactNode {
   return (
     <Stack>
-      <PageHeader eyebrow="Connections" title="Served endpoints" />
+      <PageHeader eyebrow="Doors" title="Served endpoints" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
         <Card>
           <h2 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>

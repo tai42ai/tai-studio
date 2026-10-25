@@ -202,8 +202,8 @@ describe('ThreadActions — the served person', () => {
 
 describe('ThreadActions — write gating (projection ⊆ gate)', () => {
   // The card holds only the two destructive doors, so under a scoped projection it
-  // renders nothing at all. Both doors are DYNAMIC (templated) DELETE routes, so a
-  // scoped projection can never method-express them and the whole card withdraws.
+  // renders nothing at all. A scoped projection that lists neither templated DELETE
+  // route withdraws the whole card.
   // (The full-projection case — both doors offered — is the default the tests above ride.)
   async function renderScoped(threadId: string) {
     // A spy `getMe` so the fetch can be awaited: the card is empty both while loading

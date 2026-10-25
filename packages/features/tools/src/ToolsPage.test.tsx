@@ -898,6 +898,40 @@ describe('ToolsPage — overlay edit affordance', () => {
   });
 });
 
+describe('ToolsPage — the Edit gate reads the overlay write route', () => {
+  const client = (): StubApiClient => ({
+    listTools: vi.fn().mockResolvedValue(['echo', 'ping']),
+    listToolTags: vi.fn().mockResolvedValue([]),
+    listToolMeta: vi.fn().mockResolvedValue({ folders: [], meta: [] }),
+  });
+
+  it('shows each row its Edit for a projection listing PATCH on the templated overlay write', async () => {
+    renderWithProviders(<ToolsPage search={{}} />, {
+      client: client(),
+      projection: scopedProjection({
+        tools: ['echo', 'ping'],
+        routes: [{ path: '/api/tool-meta/tools/{tool_name}', methods: ['PATCH'] }],
+      }),
+    });
+
+    expect(await screen.findByRole('button', { name: 'Edit tool echo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit tool ping' })).toBeInTheDocument();
+  });
+
+  it('shows no Edit for a projection listing the overlay write without PATCH', async () => {
+    renderWithProviders(<ToolsPage search={{}} />, {
+      client: client(),
+      projection: scopedProjection({
+        tools: ['echo', 'ping'],
+        routes: [{ path: '/api/tool-meta/tools/{tool_name}', methods: ['DELETE'] }],
+      }),
+    });
+
+    expect(await screen.findByRole('link', { name: 'Open tool echo' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Edit tool / })).toBeNull();
+  });
+});
+
 describe('ToolsPage — search', () => {
   it('seeds the box from ?q= and filters the list by a name substring', async () => {
     renderWithProviders(<ToolsPage search={{ q: 'alph' }} />, { client: taggedClient() });

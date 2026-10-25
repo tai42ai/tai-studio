@@ -5,8 +5,9 @@
  * upload a template document and attach it (the Attach dialog's Declarations group); look up a
  * subject and CREATE its record through the schema form; EDIT it and read the `api`-door
  * write back off the Writes audit with the platform-stamped actor; FOLD the subject into
- * another; see a hook bind the state on the Consumers tab with its Open link; confirm the
- * 409 Replace on a duplicate template upload; and ERASE the record behind its danger confirm.
+ * another behind its danger confirm; see a hook bind the state on the Consumers tab with its
+ * Open link; confirm the 409 Replace on a duplicate template upload; and ERASE the record
+ * behind its danger confirm.
  *
  * Serial: each leg builds on the state the previous one left on the shared skeleton, so a
  * failing leg skips the rest (the composed scenario's own semantics). `beforeAll` clears a
@@ -213,17 +214,44 @@ test.describe.serial('the platform state store, end to end', () => {
     await expect(writes.getByText(EXECUTION_KEY_ID, { exact: true }).first()).toBeVisible();
   });
 
-  test('folds the subject into another', async ({ page }) => {
+  test('folds the subject into another behind a danger confirm', async ({ page }) => {
     await seedCredential(page);
     await page.goto(RECORD_PATH);
+
+    const foldPosts: string[] = [];
+    page.on('request', (req) => {
+      if (req.method() === 'POST' && new URL(req.url()).pathname.endsWith('/fold')) {
+        foldPosts.push(req.url());
+      }
+    });
 
     const fold = page.getByRole('heading', { name: 'Fold into' }).locator('..');
     await expect(fold.getByRole('button', { name: 'Fold' })).toBeVisible();
     await fold.getByLabel('Key', { exact: true }).fill(FOLD_INTO_KEY);
-    await fold.getByRole('button', { name: 'Fold' }).click();
 
-    // A resolved fold clears the target-key field (the mutation's success reset).
+    // The card's Fold only opens the confirm; Cancel closes it and sends nothing.
+    await fold.getByRole('button', { name: 'Fold' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Fold subject' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText(
+      `Fold ‘thread ${SUBJECT_KEY}’ into ‘thread ${FOLD_INTO_KEY}’? Its document merges into the ` +
+        `document of ‘thread ${FOLD_INTO_KEY}’; where both have a member, ‘thread ` +
+        `${FOLD_INTO_KEY}’ keeps its own value. Then this subject’s document is deleted, and this ` +
+        `subject, with any subjects already folded into it, resolves to ‘thread ${FOLD_INTO_KEY}’ ` +
+        'from now on. This cannot be undone.',
+    );
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(fold.getByLabel('Key', { exact: true })).toHaveValue(FOLD_INTO_KEY);
+    expect(foldPosts).toEqual([]);
+
+    // Confirming sends the fold; a resolved fold closes the confirm and clears the key field.
+    await fold.getByRole('button', { name: 'Fold' }).click();
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Fold' }).click();
+    await expect(dialog).toBeHidden();
     await expect(fold.getByLabel('Key', { exact: true })).toHaveValue('');
+    expect(foldPosts).toHaveLength(1);
   });
 
   test('shows the hook consumer with an Open link on the Consumers tab', async ({ page }) => {
@@ -276,13 +304,36 @@ test.describe.serial('the platform state store, end to end', () => {
     await seedCredential(page);
     await page.goto(RECORD_PATH);
 
+    // The Writes table here reads through the fold to the fold target's trail.
+    const writes = page.getByRole('heading', { name: 'Writes' }).locator('..');
+    await expect(writes.getByRole('row').nth(1)).toBeVisible();
+    const targetRows = await writes.getByRole('row').count();
+
     await page.getByRole('button', { name: 'Erase' }).click();
     const dialog = page.getByRole('dialog', { name: 'Erase record' });
     await expect(dialog).toBeVisible();
+    // The fold leg folded this subject into FOLD_INTO_KEY, so the erase resolves to that
+    // record and the confirm names it.
+    await expect(dialog).toContainText(
+      `Erase record ‘thread ${FOLD_INTO_KEY}’? ‘thread ${SUBJECT_KEY}’ is folded into it, so the ` +
+        `document shown here is its document. That document is deleted for good, and every ` +
+        `subject folded into ‘thread ${FOLD_INTO_KEY}’ stops pointing to it, ‘thread ` +
+        `${SUBJECT_KEY}’ included, which is left with no document. The erase is recorded in the ` +
+        `Writes of ‘thread ${FOLD_INTO_KEY}’, not here: this Writes table then shows only the ` +
+        `writes made to ‘thread ${SUBJECT_KEY}’ before its fold. This cannot be undone.`,
+    );
     await dialog.getByRole('button', { name: 'Erase' }).click();
 
     // Erasing returns the subject to the empty-document affordance.
     await expect(page.getByText('No record for this subject yet')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Create' })).toBeVisible();
+
+    // The record erased is the fold target's: it has no document either, and its own Writes
+    // table carries one more row, the erase.
+    await page.goto(
+      `/states?state=${STATE}&subject=thread:${FOLD_INTO_KEY}&target=${TARGET_KIND}:${TARGET_NAME}`,
+    );
+    await expect(page.getByText('No record for this subject yet')).toBeVisible();
+    await expect(writes.getByRole('row')).toHaveCount(targetRows + 1);
   });
 });

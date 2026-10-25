@@ -1,19 +1,19 @@
 /**
  * The Connectors page's provider and connection controls for the provider door: the
  * card's mark (the provider icon, or the connectors glyph for a provider with none),
- * the line saying where its app registration comes from, its administrator actions
- * (Client credentials, Remove), the Remove confirm, and the badge of a connection that
+ * the line saying where its app registration comes from, whether its client
+ * credentials can be set here, the Remove confirm, and the badge of a connection that
  * needs more permissions.
  */
 import {
   type ConnectionView,
   type FleetReportSummary,
+  isFleetReportFailure,
   type ProviderView,
   summarizeFleetFanout,
 } from '@tai42/api-client';
 import {
   Badge,
-  Button,
   ConfirmDialog,
   ConnectorsIcon,
   FleetReport,
@@ -84,48 +84,11 @@ export function ClientSourceLine({ provider }: { provider: ProviderView }): Reac
 }
 
 /** A provider whose client lives in the client store: its credentials can be set here. */
-function hasStoredClient(provider: ProviderView): boolean {
+export function hasStoredClient(provider: ProviderView): boolean {
   return (
     provider.client_source === 'manual' ||
     provider.client_source === 'dynamic' ||
     provider.client_source === 'unset'
-  );
-}
-
-/** The card's administrator actions; the caller renders them behind the admin gate. */
-export function ProviderAdminActions({
-  provider,
-  onCredentials,
-  onRemove,
-}: {
-  provider: ProviderView;
-  onCredentials: (provider: ProviderView) => void;
-  onRemove: (provider: ProviderView) => void;
-}): ReactNode {
-  return (
-    <>
-      {hasStoredClient(provider) ? (
-        <Button
-          variant="ghost"
-          onClick={() => {
-            onCredentials(provider);
-          }}
-        >
-          Client credentials
-        </Button>
-      ) : null}
-      {provider.removable ? (
-        <Button
-          variant="ghost"
-          className="tai-status-err"
-          onClick={() => {
-            onRemove(provider);
-          }}
-        >
-          Remove
-        </Button>
-      ) : null}
-    </>
   );
 }
 
@@ -147,8 +110,8 @@ export function RemoveProviderDialog({
     mutationFn: () => api.removeProvider(provider.id),
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: PROVIDERS_KEY });
-      const fleet = summarizeFleetFanout(result.fanout, []);
-      if (fleet !== null && fleet.status !== 'converged') {
+      const fleet = summarizeFleetFanout(result.fanout, [], result.span_release_error);
+      if (isFleetReportFailure(fleet)) {
         setFleetFailure(fleet);
         return;
       }

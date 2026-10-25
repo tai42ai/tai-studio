@@ -4,6 +4,8 @@ export { __resetContributions } from './plugin/registry';
 export { __resetPluginHostState } from './plugin/host-state';
 /** Test-only injector: serves a fixed tool display-name map without a live fetch. */
 export { StaticToolDisplayNamesProvider } from './hooks/useToolDisplayNames';
+/** The destructive-not-text rule over one source text, for a host's own source gate. */
+export { destructiveColorOffences } from './token-rules';
 
 /**
  * Every `ResizeObserver` the stub has handed out and not yet had disconnected,

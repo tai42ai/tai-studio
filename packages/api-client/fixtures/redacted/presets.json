@@ -12,6 +12,8 @@
       "required": ["temperature_c"]
     },
     "input_schema": null,
+    "input_map": null,
+    "output_map": null,
     "conflicted": false,
     "conflicted_reason": null,
     "uses": [],
@@ -39,6 +41,8 @@
     ],
     "output_schema": null,
     "input_schema": null,
+    "input_map": null,
+    "output_map": null,
     "conflicted": true,
     "conflicted_reason": "name 'stale_preset' collided with an existing tool at startup",
     "uses": [],

@@ -1,7 +1,8 @@
 /**
  * The page's URL contract: `?route=` picks a route, `?route=&thread=` drills into
  * one thread's transcript, and `?status=&address=&q=` filter the route's threads +
- * search their text. None of the filters — nor a `thread` — names anything the API
+ * search their text; `?config=` (no `route`) opens the landing's per-target configs
+ * tab on that config's row. None of the filters — nor a `thread` — names anything the API
  * can be asked for WITHOUT a `route`, and a blank value (`?route=`, `?thread=%20`)
  * names nothing either, so both are repaired away in one pass.
  *
@@ -22,7 +23,8 @@ function named(value: string | undefined): string | undefined {
 /**
  * The legal search a hand-edited or shared URL reduces to: a blank value is read as
  * absent, and a `thread`/`status`/`address`/`q` left without its `route` is dropped
- * with it — none filters or reads anything until a route is picked. Returns the SAME
+ * with it — none filters or reads anything until a route is picked — and a `config`
+ * beside a `route` is dropped, since the configs tab lives on the landing. Returns the SAME
  * reference when nothing needs repair, so a caller can tell "already legal" from
  * "repaired" by identity alone; a repair is a NEW object every call, so identity
  * says nothing about whether two repairs agree.
@@ -34,16 +36,18 @@ export function sanitizeSearch(search: ConversationsSearch): ConversationsSearch
   const status = scoped ? search.status : undefined;
   const address = scoped ? named(search.address) : undefined;
   const q = scoped ? named(search.q) : undefined;
+  const config = scoped ? undefined : named(search.config);
   if (
     route === search.route &&
     thread === search.thread &&
     status === search.status &&
     address === search.address &&
-    q === search.q
+    q === search.q &&
+    config === search.config
   ) {
     return search;
   }
-  return { route, thread, status, address, q };
+  return { route, thread, status, address, q, config };
 }
 
 /** The thread-list filter set projected onto the api-client query shape. */

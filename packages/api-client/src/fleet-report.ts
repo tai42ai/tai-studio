@@ -58,6 +58,12 @@ export interface FleetReportSummary {
   readonly error: string | null;
   /** The workers whose reload named recycle-class keys awaiting a respawn. */
   readonly awaiting: readonly FleetWorkerAwaitingRespawn[];
+  /**
+   * The config store's error releasing its exclusive write span after the persist, or
+   * `null` when it released. Non-null means the change landed but the store may hold
+   * the span until the writer process exits, so a later write can block or be refused.
+   */
+  readonly spanReleaseError: string | null;
 }
 
 /**
@@ -72,9 +78,12 @@ function awaitingKeys(payload: unknown): string[] {
   return keys.filter((key): key is string => typeof key === 'string');
 }
 
-/** True when a summary describes a propagation the operator must be shown. */
+/**
+ * True when a summary describes a failure the operator must be shown: a propagation
+ * that did not converge, or a write span the store did not release.
+ */
 export function isFleetReportFailure(summary: FleetReportSummary | null): boolean {
-  return summary !== null && summary.status !== 'converged';
+  return summary !== null && (summary.status !== 'converged' || summary.spanReleaseError !== null);
 }
 
 /**
@@ -88,15 +97,23 @@ export function summarizeFleetResult(result: Omit<FleetResult, 'ok'>): FleetRepo
   const awaiting: FleetWorkerAwaitingRespawn[] = result.results
     .map((entry) => ({ name: entry.name, keys: awaitingKeys(entry.payload) }))
     .filter((entry) => entry.keys.length > 0);
-  return summarizeWith(result, awaiting);
+  return summarizeWith(result, awaiting, null);
 }
 
 function summarizeWith(
   result: Omit<FleetResult, 'ok'>,
   awaiting: readonly FleetWorkerAwaitingRespawn[],
+  spanReleaseError: string | null,
 ): FleetReportSummary {
   if (!result.reachable) {
-    return { status: 'unreachable', note: null, failures: [], error: result.error, awaiting };
+    return {
+      status: 'unreachable',
+      note: null,
+      failures: [],
+      error: result.error,
+      awaiting,
+      spanReleaseError,
+    };
   }
   const failures: FleetWorkerFailure[] = result.results
     .filter((entry) => entry.outcome !== 'applied')
@@ -111,6 +128,7 @@ function summarizeWith(
     failures,
     error: null,
     awaiting,
+    spanReleaseError,
   };
 }
 
@@ -122,16 +140,37 @@ function summarizeWith(
  * `awaiting` is the mutation's own verdict (its response's `awaiting_respawn`, or `[]`
  * for a mutation that states none): the operation knows whether its recycle roll
  * carried a worker's moved env, so its per-worker rows are never re-read for it.
+ * `spanReleaseError` is the response's `span_release_error`: a non-null value makes the
+ * summary a failure ({@link isFleetReportFailure}) whatever the fan-out reports, and a
+ * response that mutated no manifest still yields a summary carrying it.
  */
 export function summarizeFleetFanout(
   fanout: FleetReportFanout | null | undefined,
   awaiting: readonly FleetWorkerAwaitingRespawn[],
+  spanReleaseError: string | null,
 ): FleetReportSummary | null {
-  if (fanout === null || fanout === undefined) return null;
-  if (fanout.mode === 'local-only') {
-    return { status: 'converged', note: fanout.note, failures: [], error: null, awaiting };
+  if (fanout === null || fanout === undefined) {
+    if (spanReleaseError === null) return null;
+    return {
+      status: 'converged',
+      note: null,
+      failures: [],
+      error: null,
+      awaiting,
+      spanReleaseError,
+    };
   }
-  return summarizeWith(fanout, awaiting);
+  if (fanout.mode === 'local-only') {
+    return {
+      status: 'converged',
+      note: fanout.note,
+      failures: [],
+      error: null,
+      awaiting,
+      spanReleaseError,
+    };
+  }
+  return summarizeWith(fanout, awaiting, spanReleaseError);
 }
 
 /** One MCP server skipped by the viability check — its title, a coarse status, and the

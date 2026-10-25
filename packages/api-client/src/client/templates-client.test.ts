@@ -53,16 +53,71 @@ describe('templates client transport', () => {
     expect(out).toEqual(['welcome', 'notice']);
   });
 
-  it('getTemplate POSTs { template_id } to /api/template and parses the detail', async () => {
-    const { client, captured } = harness(() =>
-      jsonResponse({ data: { template: 'Hello {{ name }}', schema: { type: 'object' } } }),
-    );
-    const out = await client.getTemplate('welcome');
+  it('getTemplate POSTs { template_id } to /api/template and parses a text entry', async () => {
+    const entry = {
+      id: 'welcome.md',
+      kind: 'text',
+      content: 'Hello {{ name }}',
+      content_type: 'text/markdown',
+      size: 16,
+      schema: { type: 'object' },
+      schema_error: null,
+    };
+    const { client, captured } = harness(() => jsonResponse({ data: entry }));
+    const out = await client.getTemplate('welcome.md');
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/template');
-    expect(captured[0]?.body).toEqual({ template_id: 'welcome' });
-    expect(out.template).toBe('Hello {{ name }}');
-    expect(out.schema).toEqual({ type: 'object' });
+    expect(captured[0]?.body).toEqual({ template_id: 'welcome.md' });
+    expect(out).toEqual(entry);
+  });
+
+  it('getTemplate parses a text entry whose schema failed with its schema_error', async () => {
+    const entry = {
+      id: 'broken.md',
+      kind: 'text',
+      content: 'Hello {{ name }',
+      content_type: 'text/markdown',
+      size: 15,
+      schema: null,
+      schema_error: "template error: unexpected '}'",
+    };
+    const { client } = harness(() => jsonResponse({ data: entry }));
+    expect(await client.getTemplate('broken.md')).toEqual(entry);
+  });
+
+  it('getTemplate parses a document and a binary entry with a null schema', async () => {
+    const doc = {
+      id: 'docs/a.pdf',
+      kind: 'document',
+      content: 'extracted',
+      content_type: 'application/pdf',
+      size: 900,
+      schema: null,
+    };
+    const bin = { id: 'img.png', kind: 'binary', content_type: 'image/png', size: 4, schema: null };
+    const first = harness(() => jsonResponse({ data: doc }));
+    expect(await first.client.getTemplate('docs/a.pdf')).toEqual(doc);
+    const second = harness(() => jsonResponse({ data: bin }));
+    expect(await second.client.getTemplate('img.png')).toEqual(bin);
+  });
+
+  it('getTemplate refuses a text entry with both or neither of schema and schema_error', async () => {
+    const base = { id: 'x.md', kind: 'text', content: 'x', content_type: null, size: 1 };
+    const both = harness(() =>
+      jsonResponse({ data: { ...base, schema: { type: 'object' }, schema_error: 'e' } }),
+    );
+    await expect(both.client.getTemplate('x.md')).rejects.toThrow();
+    const neither = harness(() =>
+      jsonResponse({ data: { ...base, schema: null, schema_error: null } }),
+    );
+    await expect(neither.client.getTemplate('x.md')).rejects.toThrow();
+  });
+
+  it('getTemplate refuses an unknown kind loudly', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: { id: 'x', kind: 'video', content_type: null, size: 1, schema: null } }),
+    );
+    await expect(client.getTemplate('x')).rejects.toThrow();
   });
 
   it('uploadTemplate POSTs { path, content } and parses the receipt', async () => {

@@ -73,7 +73,7 @@ async function seedFilteredHookRow(page: Page): Promise<Locator> {
   const topic = `e2e-design-system-${suffix}`;
   const registered = await page.request.post('/api/hooks', {
     headers: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
-    data: { name, topic, tool: 'echo', execution_key: EXECUTION_KEY_ID },
+    data: { name, topic, tool: 'studio_demo_echo', execution_key: EXECUTION_KEY_ID },
   });
   expect(registered.status()).toBe(200);
 

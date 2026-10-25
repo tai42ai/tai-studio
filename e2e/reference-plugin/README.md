@@ -1,15 +1,20 @@
 # reference-plugin
 
 Reference [Studio](../../README.md) plugin for the tai-studio end-to-end suite.
-It has two halves:
+It has three parts:
 
 - **Tools** (`src/reference_plugin/tools.py`) — `studio_demo_echo`,
   `studio_demo_form`, and `studio_demo_fail`, registered with the skeleton via
   `@tai42_app.tools.tool`.
+- **Channel** (`src/reference_plugin/channels.py`) — the `synthetic` channel,
+  loaded through a manifest's `channel_modules`. It reaches no medium (every send
+  raises); it exists so a conversation route can sit on it and the front-end's
+  route panel renders on that route's drill-in.
 - **Front-end** (`studio-src/`) — a Studio bundle built against `@tai42/studio-sdk`
   that exports a `register(context)` entry; the host calls it with a
   `PluginContext` through which the plugin contributes one page, one tool panel
-  (for `studio_demo_echo`), and one sidebar nav entry linking to the page. The
+  (for `studio_demo_echo`), one route panel (for `synthetic`-channel routes),
+  and one sidebar nav entry linking to the page. The
   build emits `src/reference_plugin/studio/` (the bundle, its scoped stylesheet,
   and `studio-manifest.json` with sub-resource-integrity hashes for every emitted
   file), which the skeleton serves under its configured `studio_dist_path`.

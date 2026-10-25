@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { checkPluginApiVersion, STUDIO_PLUGIN_API_VERSION } from './version';
 
+describe('STUDIO_PLUGIN_API_VERSION', () => {
+  it('is 2', () => {
+    expect(STUDIO_PLUGIN_API_VERSION).toBe(2);
+  });
+});
+
 describe('checkPluginApiVersion', () => {
   it('accepts a plugin targeting the exact current version', () => {
     const result = checkPluginApiVersion(STUDIO_PLUGIN_API_VERSION, STUDIO_PLUGIN_API_VERSION);

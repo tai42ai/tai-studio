@@ -4,7 +4,7 @@
  * the two-version compare dialog (`CompareDialog`), and the rollback confirm
  * dialog (`RollbackConfirmDialog`). All generic and kind-agnostic.
  */
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 
 import { Dialog } from './dialog';
 import { CheckCircleIcon, PendingIcon } from './icons';
@@ -25,6 +25,8 @@ interface VersionRowProps {
   readonly readOnly: boolean;
   /** An edit-tags affordance is available (the consumer supplied `onEditTags`). */
   readonly canEditTags: boolean;
+  /** The row a deep link points at: marked current on the accent tint, scrolled to. */
+  readonly highlighted: boolean;
   readonly onView: (version: number) => void;
   readonly onCompare: (version: number) => void;
   readonly onEditTags: (version: number) => void;
@@ -40,13 +42,23 @@ export function VersionRow({
   compareArmed,
   readOnly,
   canEditTags,
+  highlighted,
   onView,
   onCompare,
   onEditTags,
   onRollback,
 }: VersionRowProps): ReactNode {
+  const rowRef = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    if (highlighted) rowRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [highlighted]);
   return (
-    <TR data-testid={`version-row-${String(entry.version)}`}>
+    <TR
+      ref={rowRef}
+      data-testid={`version-row-${String(entry.version)}`}
+      aria-current={highlighted ? 'true' : undefined}
+      style={highlighted ? { background: 'var(--tai-color-accent-tint)' } : undefined}
+    >
       <TD className="tai-table-id" numeric>
         {entry.version}
       </TD>

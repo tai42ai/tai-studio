@@ -42,6 +42,8 @@ import './components/components.css';
 // -- Plugin API --------------------------------------------------------------
 export type {
   ChannelConversationRoute,
+  HolderLinkContribution,
+  HolderLinkTarget,
   NavEntryContribution,
   NavEntrySection,
   PageContribution,
@@ -50,6 +52,7 @@ export type {
   PluginEntry,
   PluginPageParamsSchema,
   PluginPageProps,
+  RegisteredHolderLink,
   RegisteredNavEntry,
   RegisteredPage,
   RegisteredRoutePanel,
@@ -65,7 +68,7 @@ export type {
 export type { VersionGateResult } from './plugin/version';
 export { checkPluginApiVersion, STUDIO_PLUGIN_API_VERSION } from './plugin/version';
 /** What `useApi().runTool` resolves with: the run-tool door's answer, read by its `kind`. */
-export type { RunAnswer } from '@tai42/api-client';
+export type { ReferenceHolder, RunAnswer } from '@tai42/api-client';
 
 // -- Hooks -------------------------------------------------------------------
 export type { ApiClient } from './hooks/useApi';
@@ -74,8 +77,14 @@ export type { AuthState } from './hooks/useAuth';
 export { AuthProvider, useAuth } from './hooks/useAuth';
 export type { Breakpoint, BreakpointState } from './hooks/useBreakpoint';
 export { useBreakpoint } from './hooks/useBreakpoint';
-export type { CapabilityContextValue, CapabilityState } from './hooks/useCapabilities';
+export type {
+  CapabilityContextValue,
+  CapabilityState,
+  ExecutionKeyBinding,
+  OwnIdentity,
+} from './hooks/useCapabilities';
 export {
+  boundExecutionKey,
   CapabilityProvider,
   coversAnyRoute,
   coversRoute,
@@ -83,6 +92,7 @@ export {
   isFullProjection,
   useCanWrite,
   useCapabilities,
+  useExecutionKeyBinding,
 } from './hooks/useCapabilities';
 export type {
   InteractionsStreamOptions,
@@ -118,6 +128,7 @@ export type {
   NavigationContextValue,
   NavigationGuardHandler,
   PageProps,
+  PluginHolderTarget,
   PluginNavigateOptions,
   PluginSearch,
   RouteSearch,
@@ -141,7 +152,7 @@ export {
 export { downloadBlob } from './download';
 export type { EnvRef } from './env-markers';
 export { collectEnvRefs, ENV_MARKER_PREFIX, formatEnvMarker, parseEnvMarker } from './env-markers';
-export { errorMessage } from './errors';
+export { errorMessage, isForbiddenError } from './errors';
 
 // -- Disabled-feature idiom (one helper + component, every consumer) ----------
 export type { FeatureDisabledProps } from './feature-disabled';
@@ -149,8 +160,21 @@ export { FeatureDisabled, featureDisabledMessage, isFeatureDisabled } from './fe
 
 // -- Cross-feature query keys ------------------------------------------------
 export {
+  agentsListKey,
+  channelsListKey,
+  envConfigKey,
   extensionsQueryKey,
+  installedMarketplacePluginsKey,
+  marketplacePluginKey,
+  mcpAdvertisedToolsKey,
+  mcpConfigSchemaKey,
+  mcpEnvRefsKey,
+  mcpExtensionsKey,
+  mcpFailedKey,
+  mcpStatusKey,
+  preservedManifestKey,
   statesListKey,
+  stateTemplateRefereesKey,
   stateTemplatesKey,
   subMcpKey,
   tokensPayloadKey,
@@ -167,6 +191,8 @@ export { effectiveHidden, hiddenToolNames } from './tool-visibility';
 export { mergeToolBadges, toolBadgesByName } from './tool-badges';
 
 // -- Design system -----------------------------------------------------------
+export type { ActionMenuItem, ActionMenuProps } from './components/action-menu';
+export { ActionMenu } from './components/action-menu';
 export type { BadgeProps } from './components/badge';
 export { Badge } from './components/badge';
 export type { CheckboxProps } from './components/checkbox';
@@ -298,10 +324,19 @@ export {
   FolderPicker,
   FolderRow,
 } from './components/folder-nav';
+export type {
+  HolderHref,
+  HolderListProps,
+  HolderPreviewProps,
+  HolderPreviewState,
+} from './components/holder-list';
+export { HolderList, HolderPreview, previewHolders, useHolderHref } from './components/holder-list';
 export type { HeadingLevel, MarkdownBlock, MarkdownProps } from './components/markdown';
 export { Markdown, parseMarkdown } from './components/markdown';
 export type { OpenTargetOptions, OpenTargetProps } from './components/open-target';
 export { openTargetProps } from './components/open-target';
+export type { RecycleRollSectionProps } from './components/recycle-roll';
+export { RecycleRollSection } from './components/recycle-roll';
 export type {
   MediaDocumentProps,
   MediaImageProps,
@@ -316,21 +351,28 @@ export {
   MediaPlayer,
   resolveMediaSrc,
 } from './components/served-media';
+export type { StepperProps, StepperStatus, StepperStep } from './components/stepper';
+export { Stepper } from './components/stepper';
+// The marketplace install UI; its directory index lists the published names.
+export * from './marketplace-install';
 // The URL half of the link-safety pair: `isSafeHttpUrl` answers yes/no, this one
 // hands back the parsed URL, so a caller that needs the URL does not re-parse it.
+export type { AgentListQuery, AgentPickerProps } from './components/agent-picker';
+export { AgentPicker } from './components/agent-picker';
+export type { ChannelListQuery, ChannelPickerProps } from './components/channel-picker';
+export { channelIdentityHint, ChannelPicker } from './components/channel-picker';
 export type { CopyFieldProps } from './components/copy-field';
 export { CopyField } from './components/copy-field';
 export type { ExecutionKeyPickerProps, ExecutionKeyQuery } from './components/execution-key-picker';
-export { ExecutionKeyPicker, isExecutionKeyListEmpty } from './components/execution-key-picker';
+export {
+  canHoldExecutionKey,
+  ExecutionKeyPicker,
+  isExecutionKeyListEmpty,
+} from './components/execution-key-picker';
 export type { ExtensionComboBuilderProps } from './components/extension-combo-builder';
 export { ExtensionComboBuilder } from './components/extension-combo-builder';
-export type { ExtensionFamily, ExtensionKindGroup } from './components/extension-grouping';
-export {
-  baseNameOf,
-  groupByKind,
-  groupIntoFamilies,
-  kindVariant,
-} from './components/extension-grouping';
+export type { ExtensionKindGroup } from './components/extension-grouping';
+export { groupByKind } from './components/extension-grouping';
 export type { ExtensionPickerProps } from './components/extension-picker';
 export { ExtensionPicker } from './components/extension-picker';
 export type { ExternalLinkButtonProps } from './components/external-link';
@@ -347,7 +389,7 @@ export {
 } from './components/subject-section';
 export type { TokenName } from './components/tokens';
 export { TOKEN_NAMES } from './components/tokens';
-export type { ToolPickerProps } from './components/tool-picker';
+export type { ToolListQuery, ToolPickerProps } from './components/tool-picker';
 export { BADGES_NOTE, ToolPicker } from './components/tool-picker';
 export type {
   VersionHistoryEntry,
@@ -374,7 +416,6 @@ export {
   DashboardIcon,
   DatabaseIcon,
   EditIcon,
-  ExtensionsIcon,
   ExternalLinkIcon,
   EyeIcon,
   EyeOffIcon,
@@ -406,7 +447,6 @@ export {
   StorageIcon,
   SunIcon,
   SystemIcon,
-  TemplatesIcon,
   ToolsIcon,
   UnplugIcon,
   XCircleIcon,

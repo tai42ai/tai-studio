@@ -81,13 +81,13 @@ export type HookRegister = z.infer<typeof hookRegister>;
 export const intervalCadence = z.object({ "every": z.number().gt(0), "kind": z.literal("interval").default("interval"), "relative": z.boolean().default(false) }).strict();
 export type IntervalCadence = z.infer<typeof intervalCadence>;
 
-export const presetBody = z.object({ "base_tool": z.string(), "description": z.string(), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))).default([]), "fixed_kwargs": z.record(z.string(), z.unknown()).default({}), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "state_binding": stateBinding.nullable().default(null) });
+export const presetBody = z.object({ "base_tool": z.string(), "description": z.string(), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))).default([]), "fixed_kwargs": z.record(z.string(), z.unknown()).default({}), "input_map": z.union([templatedText, z.string(), z.null()]).default(null), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "output_map": z.union([templatedText, z.string(), z.null()]).default(null), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "state_binding": stateBinding.nullable().default(null) });
 export type PresetBody = z.infer<typeof presetBody>;
 
 export const presetSeedToolMeta = z.object({ "display_name": z.string().nullable().default(null), "folder_path": z.string().nullable().default(null), "tags": z.array(z.string()).nullable().default(null) });
 export type PresetSeedToolMeta = z.infer<typeof presetSeedToolMeta>;
 
-export const presetSeed = z.object({ "base_tool": z.string(), "description": z.string(), "fixed_kwargs": z.record(z.string(), z.unknown()).default({}), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "name": z.string(), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "state_binding": stateBinding.nullable().default(null), "tool_meta": presetSeedToolMeta.nullable().default(null) });
+export const presetSeed = z.object({ "base_tool": z.string(), "description": z.string(), "fixed_kwargs": z.record(z.string(), z.unknown()).default({}), "input_map": z.union([templatedText, z.string(), z.null()]).default(null), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "name": z.string(), "output_map": z.union([templatedText, z.string(), z.null()]).default(null), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "state_binding": stateBinding.nullable().default(null), "tool_meta": presetSeedToolMeta.nullable().default(null) });
 export type PresetSeed = z.infer<typeof presetSeed>;
 
 export const previousProfileName = z.literal("@previous");
@@ -4294,7 +4294,7 @@ export const servedDocumentsJson = {
         }
       }
     },
-    "description": "The persisted body of a versioned preset.\n\n``base_tool`` is the tool the preset binds; ``description`` is the preset's\nhuman description; ``fixed_kwargs`` are the baked kwargs (each becomes a\nhidden, fixed constant on the bound tool). ``extensions`` is a list of\nextension COMBOS — the SAME shape as a manifest ``extensions`` map value,\neach combo element an extension name or a ``{\"name\", \"config\"}`` mapping\nbinding author config (e.g. an ``ask_external`` verifier) — fed unconverted\nto the structured runtime-attach API at register (an empty outer list means\nno extensions; an empty INNER combo is rejected by the validating view).\n``output_schema`` is an optional author-set OUTPUT JSON Schema (an object\nschema): on an AGENT base it is baked into the run tool's ``response_format``\nso the agent FORCES a structured output matching it; on a plain tool it is\nadvertised as the bound tool's output schema and every result is validated\nagainst it at run time — a park is a suspend signal, not a result, and passes.\n``input_schema`` is an optional author-set INPUT JSON\nSchema: it becomes the exposed named tool's input contract, and the caller's\nvalidated object is routed into the base tool's declared payload argument (see\n:class:`PresetInputSchemaSupport`). Only a base tool that DECLARES input-schema\nsupport accepts one; otherwise a set ``input_schema`` is a loud authoring error.\n\nEach schema is the ``TemplatedText | dict`` union: an inline ``dict`` is the JSON\nSchema document itself; a :class:`~tai42_contract.template.TemplatedText` names a stored\nschema by ``id`` (or carries it inline as ``content``), rendered and parsed as JSON to the\nsame schema at the point of use and save.\n\nEvery field must survive carry-forward on a version save: dropping\n``extensions`` would make the branch tools vanish on reload, dropping\n``base_tool`` would break the bind, dropping ``description`` would strip the\ntool's description, dropping ``output_schema`` would silently un-enforce the\nstructured output, and dropping ``input_schema`` would silently un-enforce the\nstructured input.\n\nA ``fixed_kwargs`` scalar-string value written ``!ENV ${VAR}`` is a SECRET\nREFERENCE, not a credential: the server resolves it from the environment at bind\nand the store keeps only the reference — never the resolved value.",
+    "description": "The persisted body of a versioned preset.\n\n``base_tool`` is the tool the preset binds; ``description`` is the preset's\nhuman description; ``fixed_kwargs`` are the baked kwargs (each becomes a\nhidden, fixed constant on the bound tool). ``extensions`` is a list of\nextension COMBOS — the SAME shape as a manifest ``extensions`` map value,\neach combo element an extension name or a ``{\"name\", \"config\"}`` mapping\nbinding author config (e.g. an ``ask_external`` verifier) — fed unconverted\nto the structured runtime-attach API at register (an empty outer list means\nno extensions; an empty INNER combo is rejected by the validating view).\n``output_schema`` is an optional author-set OUTPUT JSON Schema (an object\nschema): on an AGENT base it is baked into the run tool's ``response_format``\nso the agent FORCES a structured output matching it; on a plain tool it is\nadvertised as the bound tool's output schema and every result is validated\nagainst it at run time — a park is a suspend signal, not a result, and passes.\n``input_schema`` is an optional author-set INPUT JSON\nSchema: it becomes the exposed named tool's input contract, and the caller's\nvalidated object is routed into the base tool's declared payload argument (see\n:class:`PresetInputSchemaSupport`). Only a base tool that DECLARES input-schema\nsupport accepts one; otherwise a set ``input_schema`` is a loud authoring error.\n\n``input_map`` and ``output_map`` are optional jq programs. With an ``input_map`` the\ncaller's object (validated against ``input_schema``, which the map requires) is mapped\nto the base tool's arguments, with the stored ``fixed_kwargs`` readable as ``$fixed``;\nthe mapped object is merged with ``fixed_kwargs`` and a key both set is refused, so a\nfixed value is never overridden. The base tool's result then passes the output stage:\n``output_map`` maps it, and ``output_schema`` validates what the map produced (or the\nraw result when there is no map). An output map never runs over a result that carries\na secret. A ``str`` map is the jq program itself; a\n:class:`~tai42_contract.template.TemplatedText` is rendered to the program.\n\nEach schema is the ``TemplatedText | dict`` union: an inline ``dict`` is the JSON\nSchema document itself; a :class:`~tai42_contract.template.TemplatedText` names a stored\nschema by ``id`` (or carries it inline as ``content``), rendered and parsed as JSON to the\nsame schema at the point of use and save.\n\nEvery field must survive carry-forward on a version save: dropping\n``extensions`` would make the branch tools vanish on reload, dropping\n``base_tool`` would break the bind, dropping ``description`` would strip the\ntool's description, dropping ``output_schema`` would silently un-enforce the\nstructured output, dropping ``input_schema`` would silently un-enforce the\nstructured input, and dropping ``input_map`` or ``output_map`` would silently\nchange what the base tool receives or what the caller gets back.\n\nA ``fixed_kwargs`` scalar-string value written ``!ENV ${VAR}`` is a SECRET\nREFERENCE, not a credential: the server resolves it from the environment at bind\nand the store keeps only the reference — never the resolved value.",
     "properties": {
       "base_tool": {
         "title": "Base Tool",
@@ -4330,6 +4330,21 @@ export const servedDocumentsJson = {
         "title": "Fixed Kwargs",
         "type": "object"
       },
+      "input_map": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/TemplatedText"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Input Map"
+      },
       "input_schema": {
         "anyOf": [
           {
@@ -4345,6 +4360,21 @@ export const servedDocumentsJson = {
         ],
         "default": null,
         "title": "Input Schema"
+      },
+      "output_map": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/TemplatedText"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Output Map"
       },
       "output_schema": {
         "anyOf": [
@@ -4732,7 +4762,7 @@ export const servedDocumentsJson = {
         }
       }
     },
-    "description": "A declared default preset a plugin ships for import-time seeding.\n\nA seed names the preset (``name``), its human ``description``, the\n``base_tool`` it binds, and the ``fixed_kwargs`` baked in — the same body a\n:class:`PresetBody` carries — plus the optional author ``input_schema`` /\n``output_schema`` and optional ``tool_meta`` display seed. The applier creates\nor upgrades the preset from this shape; the contract holds only the SHAPE,\nnever the applier logic.\n\nA ``fixed_kwargs`` scalar-string value written ``!ENV ${VAR}`` is a SECRET\nREFERENCE, not a credential: the server resolves it from the environment at bind\nand the store keeps only the reference — never the resolved value.",
+    "description": "A declared default preset a plugin ships for import-time seeding.\n\nA seed names the preset (``name``), its human ``description``, the\n``base_tool`` it binds, and the ``fixed_kwargs`` baked in — the same body a\n:class:`PresetBody` carries — plus the optional author ``input_schema`` /\n``output_schema``, ``input_map`` / ``output_map`` and optional ``tool_meta`` display seed. The applier creates\nor upgrades the preset from this shape; the contract holds only the SHAPE,\nnever the applier logic.\n\nA ``fixed_kwargs`` scalar-string value written ``!ENV ${VAR}`` is a SECRET\nREFERENCE, not a credential: the server resolves it from the environment at bind\nand the store keeps only the reference — never the resolved value.",
     "properties": {
       "base_tool": {
         "title": "Base Tool",
@@ -4748,6 +4778,21 @@ export const servedDocumentsJson = {
         "description": "Baked kwargs, each a hidden fixed constant on the bound tool. A scalar-string value written `!ENV ${VAR}` (or `!ENV ${VAR:default}`) is a SECRET REFERENCE: the server resolves it from that environment variable server-side at bind and bakes the resolved value, while the stored body, its versions and any export keep only the reference — never the credential. A `:default` is baked and stored in the clear, so a credential must never be written as a default.",
         "title": "Fixed Kwargs",
         "type": "object"
+      },
+      "input_map": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/TemplatedText"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Input Map"
       },
       "input_schema": {
         "anyOf": [
@@ -4768,6 +4813,21 @@ export const servedDocumentsJson = {
       "name": {
         "title": "Name",
         "type": "string"
+      },
+      "output_map": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/TemplatedText"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Output Map"
       },
       "output_schema": {
         "anyOf": [

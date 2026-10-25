@@ -12,7 +12,7 @@
  * supplies the runtime resolution via {@link NavigationContextValue}; features
  * consume it type-safely.
  */
-import type { ConversationDeliveryStatus } from '@tai42/api-client';
+import type { ConversationDeliveryStatus, ReferenceHolder } from '@tai42/api-client';
 
 /**
  * Every top-level route the shell owns, mapped to its typed search parameters.
@@ -24,7 +24,8 @@ export interface RouteSearchByToken {
   login: Record<string, never>;
   tools: { tool?: string; tags?: string[]; q?: string };
   agents: Record<string, never>;
-  presets: { preset?: string };
+  // `preset` opens one preset; `version` marks one row of its version history.
+  presets: { preset?: string; version?: number };
   // The states surface: `state` opens one state, `tab` picks its section, and
   // `subject` (`<kind>:<key>`, split on the FIRST `:`, key URL-encoded) with `target`
   // (`<target_kind>:<target_name>`, same split rule) together address one subject's
@@ -39,7 +40,6 @@ export interface RouteSearchByToken {
     // of the state list — a read-only view of the whole uploaded document.
     template?: string;
   };
-  extensions: Record<string, never>;
   interactions: Record<string, never>;
   notifications: Record<string, never>;
   // The conversation monitor's drill state + thread-list filters: `route` picks a
@@ -53,21 +53,26 @@ export interface RouteSearchByToken {
     status?: ConversationDeliveryStatus;
     address?: string;
     q?: string;
+    // `config` (`<target_kind>:<target_name>`, split on the FIRST `:`) opens the
+    // per-target configs tab and marks that config's row.
+    config?: string;
   };
   connectors: { connection?: string };
   // The Served Endpoints surface (the promoted sub-MCP servers): a curated subset
   // of tools served on a transport. No search parameters — a flat list + create form.
   servedEndpoints: Record<string, never>;
-  hooks: Record<string, never>;
-  templates: { template?: string; q?: string };
-  storage: { q?: string };
+  // `hook` marks one hook's row.
+  hooks: { hook?: string };
+  // `id` opens one stored object's detail.
+  storage: { q?: string; id?: string };
   manifest: Record<string, never>;
   // The generic Members listing: people + outstanding invitations aggregated across
   // every accounts provider. No search parameters — a flat read-only view.
   members: Record<string, never>;
   settings: Record<string, never>;
   system: Record<string, never>;
-  scheduling: Record<string, never>;
+  // `schedule` marks one schedule's row.
+  scheduling: { schedule?: string };
   observability: {
     tab?: 'dashboard' | 'tracing';
     from?: string;
@@ -225,6 +230,21 @@ export interface NavigationContextValue {
    * {@link navigatePluginWithOptions}; reached through {@link usePluginEntryNavigation}.
    */
   updatePluginEntryState?: (pluginId: string, state: unknown) => void;
+  /**
+   * The plugin page that shows one holder of a plugin-declared kind, from the resolver
+   * a plugin registered for that kind; `null` when no plugin resolves it. OPTIONAL for
+   * the same additive reason as {@link navigatePluginWithOptions}: a host that omits
+   * it links no plugin kind, and the holder renders as text.
+   */
+  resolveHolderLink?: (holder: ReferenceHolder) => PluginHolderTarget | null;
+}
+
+/** A plugin page addressed by {@link NavigationContextValue.resolveHolderLink}. */
+export interface PluginHolderTarget {
+  readonly pluginId: string;
+  readonly pagePath: string;
+  readonly params?: string;
+  readonly search?: PluginSearch;
 }
 
 /**

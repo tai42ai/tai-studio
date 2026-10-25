@@ -25,7 +25,9 @@ function renderDialog(overrides: Parameters<typeof makeClient>[0] = {}) {
   const onClose = vi.fn();
   const onAdded = vi.fn();
   const discoverServer = vi.fn().mockResolvedValue(discovered());
-  const addServer = vi.fn().mockResolvedValue({ provider: discoveredProvider(), fanout: null });
+  const addServer = vi
+    .fn()
+    .mockResolvedValue({ provider: discoveredProvider(), span_release_error: null, fanout: null });
   const listProviders = vi.fn().mockResolvedValue({ providers: [], categories: [] });
   const client = makeClient({ discoverServer, addServer, listProviders, ...overrides });
   const utils = renderWithProviders(<AddServerDialog onClose={onClose} onAdded={onAdded} />, {
@@ -248,9 +250,11 @@ describe('AddServerDialog — step 2, the review', () => {
 
   it('stays open with the fleet report when the reload did not reach every worker', async () => {
     const { onAdded } = renderDialog({
-      addServer: vi
-        .fn()
-        .mockResolvedValue({ provider: discoveredProvider(), fanout: NON_CONVERGED_FANOUT }),
+      addServer: vi.fn().mockResolvedValue({
+        provider: discoveredProvider(),
+        span_release_error: null,
+        fanout: NON_CONVERGED_FANOUT,
+      }),
     });
     const user = await lookUp();
     await user.click(await screen.findByRole('button', { name: 'Add server' }));

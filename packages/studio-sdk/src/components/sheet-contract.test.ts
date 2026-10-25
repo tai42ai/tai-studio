@@ -233,6 +233,10 @@ describe('component sheet contract', () => {
         'focus-visible':
           'a <label> is not a tab stop; the box it labels is what takes focus, and that box is in the shared ring',
       },
+      '.tai-action-menu-item': {
+        unavailable:
+          'ActionMenu draws only the items the session may use; an item it may not use is left out of the menu, so an item is never rendered unavailable',
+      },
     };
 
     it('finds the sheet controls (a set that found nothing would pass vacuously)', () => {

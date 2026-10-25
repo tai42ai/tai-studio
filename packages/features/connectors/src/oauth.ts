@@ -39,11 +39,11 @@ export interface UseOAuthPopupOptions {
   /**
    * Runs after a `success` outcome, in addition to the always-run `['connections']`
    * invalidation, receiving the completion's settled {@link FleetReportSummary} (or
-   * `null` when it mutated no manifest). The consumer decides what to render and
-   * whether to close/navigate — a non-converged broadcast rides an honest FleetReport
-   * rather than a silent close.
+   * `null` when it mutated no manifest) and the completed connection's id. The
+   * consumer decides what to render and whether to close/navigate — a non-converged
+   * broadcast rides an honest FleetReport rather than a silent close.
    */
-  readonly onSuccess?: (fleet: FleetReportSummary | null) => void;
+  readonly onSuccess?: (fleet: FleetReportSummary | null, connectionId: string) => void;
 }
 
 export interface UseOAuthPopupResult {

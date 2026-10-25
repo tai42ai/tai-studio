@@ -4,8 +4,8 @@
  * all" action and its per-plugin
  * outcome readout, the advisories banner that appears only when an advisory
  * matches an installed plugin (and links to the detail), the advisory-failure
- * fallback that keeps the table, and the table pane's keyboard reachability
- * once it outruns its column.
+ * fallback that keeps the table, the table pane's keyboard reachability once it
+ * outruns its column, and the "Upgrade all" control following the session's grant.
  */
 import {
   ApiError,
@@ -19,7 +19,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { InstalledTab } from './InstalledTab';
-import { renderWithProviders, type StubApiClient } from './test-utils';
+import { renderWithProviders, scopedProjection, type StubApiClient } from './test-utils';
 
 function installedRow(overrides: Partial<MarketplaceInstalledPlugin>): MarketplaceInstalledPlugin {
   return {
@@ -344,5 +344,25 @@ describe('InstalledTab — the table pane is reachable without a pointer', () =>
     });
     expect(screen.getByRole('region', { name: 'Installed plugins' })).toBe(pane);
     expect(pane).toHaveAttribute('tabindex', '0');
+  });
+});
+
+describe('InstalledTab — Upgrade all follows the grant', () => {
+  it('draws no Upgrade all button without the upgrade-all route, and says why', async () => {
+    const client: StubApiClient = {
+      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue(installedList([installedRow({})])),
+      getMarketplaceAdvisories: vi.fn().mockResolvedValue(noAdvisories),
+    };
+    renderWithProviders(<InstalledTab search={{}} />, {
+      client,
+      projection: scopedProjection(),
+    });
+    await screen.findByRole('table');
+    const line = await screen.findByText(/This session cannot upgrade plugins\./);
+    expect(line).toHaveTextContent(
+      'Upgrading all needs administrator access to POST /api/marketplace/upgrade-all; ask an administrator to upgrade them.',
+    );
+    expect(line.closest('[role="status"]')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: 'Upgrade all' })).toBeNull();
   });
 });

@@ -4,6 +4,10 @@
  * empty render.
  */
 
+import { z } from 'zod';
+
+import { type ReferenceHolder, referenceHolder } from './generated/openapi-schemas';
+
 /** The skeleton returned `{ "error": "<message>" }` (or a non-2xx status). */
 export class ApiError extends Error {
   readonly status: number;
@@ -101,4 +105,34 @@ export class ApiSchemaError extends Error {
     this.endpoint = endpoint;
     this.issues = issues;
   }
+}
+
+/**
+ * The holders a refused rename or delete names: an `ApiError` whose body carries a
+ * `holders` list answers it, parsed (a malformed list throws). Any other error, or a
+ * body without `holders`, answers `null`.
+ */
+export function holdersFromError(error: unknown): ReferenceHolder[] | null {
+  if (!(error instanceof ApiError)) return null;
+  const body = error.body;
+  if (typeof body !== 'object' || body === null || !('holders' in body)) return null;
+  return z.array(referenceHolder).parse(body.holders);
+}
+
+const STORED_PRESET_UNREADABLE = 'stored-preset-unreadable';
+
+/**
+ * The stored preset a read could not walk: an `ApiError` with code
+ * `stored-preset-unreadable` answers the row's name from `body.preset`. That code without a
+ * non-empty string `preset` throws; any other error answers `null`.
+ */
+export function storedPresetFaultFromError(error: unknown): string | null {
+  if (!(error instanceof ApiError) || error.code !== STORED_PRESET_UNREADABLE) return null;
+  const body = error.body;
+  const preset =
+    typeof body === 'object' && body !== null && 'preset' in body ? body.preset : undefined;
+  if (typeof preset !== 'string' || preset === '') {
+    throw new Error(`a '${STORED_PRESET_UNREADABLE}' error carried no stored preset name`);
+  }
+  return preset;
 }
