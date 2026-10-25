@@ -276,19 +276,9 @@ describe('PluginDetail — premium badge + docs link', () => {
     expect(await screen.findByText('Premium')).toBeInTheDocument();
   });
 
-  it('shows no premium badge when the flag is false or absent', async () => {
+  it('shows no premium badge when the flag is false', async () => {
     renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, {
       client: reads(detailFixture({ premium: false }), []),
-    });
-    await screen.findByText('Toolbox');
-    expect(screen.queryByText('Premium')).toBeNull();
-  });
-
-  it('shows no premium badge when the flag is absent (nullish wire shape)', async () => {
-    // premium is z.boolean().nullish(): an ABSENT flag is a real wire shape, distinct
-    // from an explicit false — detailFixture() omits the key entirely. No badge either way.
-    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, {
-      client: reads(detailFixture(), []),
     });
     await screen.findByText('Toolbox');
     expect(screen.queryByText('Premium')).toBeNull();

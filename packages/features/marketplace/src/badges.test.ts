@@ -21,6 +21,7 @@ function row(overrides: Partial<MarketplaceSearchRow> = {}): MarketplaceSearchRo
     tags: [],
     trust_tier: 'official',
     pricing: 'free',
+    premium: false,
     latest_version: '1.0.0',
     downloads: 0,
     updated_at: '2026-07-01T00:00:00Z',

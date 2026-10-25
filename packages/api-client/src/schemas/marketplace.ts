@@ -132,9 +132,8 @@ export const marketplaceSearchRow = z.object({
   tags: z.array(z.string()),
   trust_tier: z.string(),
   pricing: z.string(),
-  // A display-only premium flag: a badge, never a payment surface. Nullable
-  // + optional: an older registry omits it, and it is absent on non-premium rows.
-  premium: z.boolean().nullish(),
+  // A display-only premium flag: a badge, never a payment surface.
+  premium: z.boolean(),
   latest_version: z.string().nullable(),
   downloads: z.number(),
   updated_at: z.string(),
@@ -209,9 +208,8 @@ export const marketplacePluginDetail = z.object({
   icon_url: z.string().nullable(),
   // Null for a descriptor listing (`source` `spec`): it names no package.
   package: z.string().nullable(),
-  // The install-provenance vocabulary (`pypi` / `github` / `spec`). Nullish: an
-  // older registry omits it, and a listing with nothing published carries none.
-  source: marketplaceSource.nullish(),
+  // The install-provenance vocabulary (`pypi` / `github` / `spec`).
+  source: marketplaceSource,
   description: z.string(),
   readme_md: z.string().nullable(),
   license: z.string().nullable(),
@@ -225,7 +223,7 @@ export const marketplacePluginDetail = z.object({
   trust_tier: z.string(),
   pricing: z.string(),
   // A display-only premium flag: a badge, never a payment surface.
-  premium: z.boolean().nullish(),
+  premium: z.boolean(),
   downloads: z.number(),
   latest: marketplaceLatestVersion.nullable(),
   versions: z.array(marketplaceVersion),

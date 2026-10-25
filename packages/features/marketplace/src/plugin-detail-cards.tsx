@@ -83,7 +83,7 @@ export function InfoCard({ detail }: { readonly detail: MarketplacePluginDetail 
                 derived from the listing's package the way the server derives it. */}
             {detail.latest !== null ? <Badge>{deliveryOf(detail)}</Badge> : null}
             {/* A display-only premium mark — a badge, never a payment surface. */}
-            {detail.premium === true ? <Badge variant="primary">Premium</Badge> : null}
+            {detail.premium ? <Badge variant="primary">Premium</Badge> : null}
             <span className="tai-muted">{detail.downloads} downloads</span>
             {detail.license !== null ? (
               <span className="tai-muted">License: {detail.license}</span>

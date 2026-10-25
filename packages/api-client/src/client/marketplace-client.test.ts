@@ -60,6 +60,7 @@ const SEARCH_ROW = {
   tags: ['uuid', 'hashing', 'text'],
   trust_tier: 'official',
   pricing: 'free',
+  premium: false,
   latest_version: '0.1.0',
   downloads: 3,
   updated_at: '2026-07-12T00:00:00Z',
@@ -113,6 +114,7 @@ const PLUGIN_DETAIL = {
   tags: ['uuid', 'hashing'],
   trust_tier: 'official',
   pricing: 'free',
+  premium: false,
   downloads: 3,
   source: 'github',
   latest: {

@@ -76,7 +76,7 @@ export function PluginCard({
               <Badge>{row.trust_tier}</Badge>
               <Badge>{row.pricing}</Badge>
               {/* A display-only premium mark — a badge, never a payment surface. */}
-              {row.premium === true ? <Badge variant="primary">Premium</Badge> : null}
+              {row.premium ? <Badge variant="primary">Premium</Badge> : null}
               {/* The latest published version, when the listing has one. It is nullable
                 defensively though the search relation only emits published listings. */}
               {row.latest_version !== null ? <Badge>{row.latest_version}</Badge> : null}

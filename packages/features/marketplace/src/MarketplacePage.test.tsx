@@ -103,19 +103,9 @@ describe('MarketplacePage — premium badge + mcp-server kind', () => {
     expect(await screen.findByText('Premium')).toBeInTheDocument();
   });
 
-  it('shows no premium badge when the flag is false or absent', async () => {
+  it('shows no premium badge when the flag is false', async () => {
     renderWithProviders(<MarketplacePage search={{}} />, {
       client: browseReads(searchPage([searchRow({ premium: false })])),
-    });
-    await screen.findByText('A box of tools.');
-    expect(screen.queryByText('Premium')).toBeNull();
-  });
-
-  it('shows no premium badge when the flag is absent (nullish wire shape)', async () => {
-    // premium is z.boolean().nullish(): an ABSENT flag is a real wire shape, distinct
-    // from an explicit false — the base row omits the key entirely. Neither may badge.
-    renderWithProviders(<MarketplacePage search={{}} />, {
-      client: browseReads(searchPage([searchRow()])),
     });
     await screen.findByText('A box of tools.');
     expect(screen.queryByText('Premium')).toBeNull();

@@ -345,16 +345,21 @@ function npmPublishedVersions(packageName) {
 // any OTHER git failure (an invalid ref, not a repository) surfaces loudly rather
 // than being silently read as "new". `git ls-tree` distinguishes the two: a valid
 // ref with an absent path exits 0 with empty output, while a bad ref exits non-zero.
-function reportAtRef(ref, dir, name) {
+function reportAtRef(ref, dir, name, root = REPO_ROOT) {
   const path = `${dir}/${name}`;
   const ls = spawnSync('git', ['ls-tree', '--name-only', ref, '--', path], {
-    cwd: REPO_ROOT,
+    cwd: root,
     encoding: 'utf8',
   });
   if (ls.error) fail(`git ls-tree failed for ${ref}:${path}: ${ls.error.message}`);
   if (ls.status !== 0) fail(`git ls-tree failed for ${ref}:${path}: ${ls.stderr.trim()}`);
   if (ls.stdout.trim() === '') return null; // path absent at this ref — additive.
-  return execFileSync('git', ['show', `${ref}:${path}`], { cwd: REPO_ROOT, encoding: 'utf8' });
+  // A report is read whole whatever its size (execFileSync's default buffer is 1 MiB).
+  return execFileSync('git', ['show', `${ref}:${path}`], {
+    cwd: root,
+    encoding: 'utf8',
+    maxBuffer: Infinity,
+  });
 }
 
 function reportAtWorktree(dir, name) {
@@ -1429,6 +1434,7 @@ export {
   allowedBumps,
   gatePasses,
   previousPublishedTag,
+  reportAtRef,
   runGate,
   GateError,
 };

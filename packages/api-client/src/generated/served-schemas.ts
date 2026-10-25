@@ -81,7 +81,7 @@ export type HookRegister = z.infer<typeof hookRegister>;
 export const intervalCadence = z.object({ "every": z.number().gt(0), "kind": z.literal("interval").default("interval"), "relative": z.boolean().default(false) }).strict();
 export type IntervalCadence = z.infer<typeof intervalCadence>;
 
-export const presetBody = z.object({ "base_tool": z.string(), "description": z.string().default(""), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))).default([]), "fixed_kwargs": z.record(z.string(), z.unknown()).default({}), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "state_binding": stateBinding.nullable().default(null) });
+export const presetBody = z.object({ "base_tool": z.string(), "description": z.string(), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))).default([]), "fixed_kwargs": z.record(z.string(), z.unknown()).default({}), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "state_binding": stateBinding.nullable().default(null) });
 export type PresetBody = z.infer<typeof presetBody>;
 
 export const presetSeedToolMeta = z.object({ "display_name": z.string().nullable().default(null), "folder_path": z.string().nullable().default(null), "tags": z.array(z.string()).nullable().default(null) });
@@ -4301,7 +4301,6 @@ export const servedDocumentsJson = {
         "type": "string"
       },
       "description": {
-        "default": "",
         "title": "Description",
         "type": "string"
       },
@@ -4376,7 +4375,8 @@ export const servedDocumentsJson = {
       }
     },
     "required": [
-      "base_tool"
+      "base_tool",
+      "description"
     ],
     "title": "PresetBody",
     "type": "object"

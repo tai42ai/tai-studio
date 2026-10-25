@@ -292,7 +292,7 @@ export type ConditionCheckResult = z.infer<typeof conditionCheckResult>;
 export const conditionValidation = z.object({ "condition": templatedText.nullable().default(null), "sample_context": z.record(z.string(), z.unknown()).nullable().default(null) });
 export type ConditionValidation = z.infer<typeof conditionValidation>;
 
-export const configFieldSpec = z.object({ "key": z.string(), "label": z.string().min(1), "required": z.boolean().default(true), "secret": z.boolean().default(false), "target": z.enum(["env","header"]) });
+export const configFieldSpec = z.object({ "key": z.string(), "label": z.string().min(1), "required": z.boolean().default(true), "secret": z.boolean().default(false), "target": z.enum(["env","header"]) }).strict();
 export type ConfigFieldSpec = z.infer<typeof configFieldSpec>;
 
 export const configModeView = z.object({ "config_mode": z.string() });
@@ -310,7 +310,7 @@ export type ConnectorCategoryView = z.infer<typeof connectorCategoryView>;
 export const connectorReencryptResult = z.object({ "cas_retries": z.number().int(), "clients_failed": z.number().int(), "clients_reencrypted": z.number().int(), "clients_scanned": z.number().int(), "clients_skipped": z.number().int(), "failed": z.number().int(), "failed_client_row_ids": z.array(z.string()), "failed_connection_ids": z.array(z.string()), "reencrypted": z.number().int(), "scanned": z.number().int(), "skipped": z.number().int() });
 export type ConnectorReencryptResult = z.infer<typeof connectorReencryptResult>;
 
-export const connectorRef = z.object({ "connection_id": z.string(), "provider_id": z.string().min(1).max(64), "sub_service": z.string().min(1).max(64) });
+export const connectorRef = z.object({ "connection_id": z.string(), "provider_id": z.string().min(1).max(64), "sub_service": z.string().min(1).max(64) }).strict();
 export type ConnectorRef = z.infer<typeof connectorRef>;
 
 export const consumerLink = z.object({ "plugin_path": z.string().nullable().default(null), "search": z.record(z.string(), z.unknown()).nullable().default(null), "token": z.string().nullable().default(null) }).strict();
@@ -559,7 +559,7 @@ export type LoginMethodsListing = z.infer<typeof loginMethodsListing>;
 export const logoutResult = z.object({ "revoked": z.boolean() });
 export type LogoutResult = z.infer<typeof logoutResult>;
 
-export const mCPConfig = z.object({ "args": z.array(z.string()).default([]), "command": z.string().nullable().default(null), "env": z.record(z.string(), z.string()).default({}), "headers": z.record(z.string(), z.string()).default({}), "type": z.string().nullable().default(null), "uds": z.string().nullable().default(null), "url": z.string().nullable().default(null) });
+export const mCPConfig = z.object({ "args": z.array(z.string()).default([]), "command": z.string().nullable().default(null), "env": z.record(z.string(), z.string()).default({}), "headers": z.record(z.string(), z.string()).default({}), "type": z.string().nullable().default(null), "uds": z.string().nullable().default(null), "url": z.string().nullable().default(null) }).strict();
 export type MCPConfig = z.infer<typeof mCPConfig>;
 
 export const manifestReplace = z.object({ "manifest_text": z.string() });
@@ -577,7 +577,7 @@ export type MarketplaceUninstall = z.infer<typeof marketplaceUninstall>;
 export const marketplaceUpdate = z.object({ "accept_public_routes": z.boolean().default(false), "env": z.record(z.string(), z.string()).nullable().default(null), "ref": z.string(), "route_mounts": z.record(z.string(), z.string()).nullable().default(null), "secret_keys": z.array(z.string()).nullable().default(null), "version": z.string().nullable().default(null) });
 export type MarketplaceUpdate = z.infer<typeof marketplaceUpdate>;
 
-export const taiMCPConfig = z.object({ "config": mCPConfig, "exclude": z.array(z.string()).default([]), "extensions": z.record(z.string(), z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())])))).default({}), "include": z.array(z.string()).default([]), "managed": connectorRef.nullable().default(null), "title": z.string() });
+export const taiMCPConfig = z.object({ "config": mCPConfig, "exclude": z.array(z.string()).default([]), "extensions": z.record(z.string(), z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())])))).default({}), "include": z.array(z.string()).default([]), "managed": connectorRef.nullable().default(null), "title": z.string() }).strict();
 export type TaiMCPConfig = z.infer<typeof taiMCPConfig>;
 
 export const mcpConfigUpdate = z.object({ "mcp": z.array(taiMCPConfig) });
@@ -1276,7 +1276,7 @@ export type ToolTagRow = z.infer<typeof toolTagRow>;
 export const toolTagListResponse = z.array(toolTagRow);
 export type ToolTagListResponse = z.infer<typeof toolTagListResponse>;
 
-export const toolsConfig = z.object({ "exclude": z.array(z.string()).default([]), "extensions": z.record(z.string(), z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())])))).default({}), "include": z.array(z.string()).default([]), "module": z.string(), "title": z.string() });
+export const toolsConfig = z.object({ "exclude": z.array(z.string()).default([]), "extensions": z.record(z.string(), z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())])))).default({}), "include": z.array(z.string()).default([]), "module": z.string(), "title": z.string() }).strict();
 export type ToolsConfig = z.infer<typeof toolsConfig>;
 
 export const toolsEntriesAdd = z.object({ "entries": z.array(toolsConfig), "replace": z.boolean().default(false) });
