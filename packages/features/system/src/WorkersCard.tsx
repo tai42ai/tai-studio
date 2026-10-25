@@ -142,7 +142,7 @@ export function WorkersCard(): ReactNode {
 
       {hideReload ? (
         <p
-          role="note"
+          role="status"
           data-testid="reload-read-only-note"
           style={{ ...readOnlyNoteStyle, marginBottom: 'var(--tai-space-4)' }}
         >

@@ -4,7 +4,7 @@
  * token resolves to, so a route rename is a one-line change here and a compile
  * break at any call site that used a now-removed token.
  */
-import type { RouteToken } from '@tai42/studio-sdk';
+import type { NavEntrySection, RouteToken } from '@tai42/studio-sdk';
 
 /**
  * Token → path. Every {@link RouteToken} in the SDK contract has an entry.
@@ -46,18 +46,21 @@ export const DASHBOARD_TOKEN = 'observability' as const satisfies RouteToken;
  * section in turn), so nav order and the flat token list can never drift apart.
  */
 export const NAV_SECTIONS = [
+  { label: 'Capabilities', tokens: ['tools', 'agents', 'presets', 'extensions', 'templates'] },
+  { label: 'Connections', tokens: ['connectors'] },
   {
-    label: 'Capabilities',
-    tokens: ['tools', 'agents', 'presets', 'states', 'extensions', 'templates'],
+    label: 'Doors',
+    tokens: ['conversations', 'hooks', 'scheduling', 'servedEndpoints', 'states'],
   },
-  { label: 'Connections', tokens: ['connectors', 'servedEndpoints'] },
-  { label: 'Triggers', tokens: ['hooks', 'scheduling'] },
-  { label: 'Activity', tokens: ['conversations', 'interactions', 'notifications'] },
+  { label: 'Activity', tokens: ['interactions', 'notifications'] },
   {
     label: 'Administration',
     tokens: ['members', 'settings', 'storage', 'marketplace', 'manifest', 'system'],
   },
-] as const satisfies readonly { readonly label: string; readonly tokens: readonly RouteToken[] }[];
+] as const satisfies readonly {
+  readonly label: NavEntrySection;
+  readonly tokens: readonly RouteToken[];
+}[];
 
 /**
  * The feature routes the shell mounts (every token EXCEPT `login`), each backed

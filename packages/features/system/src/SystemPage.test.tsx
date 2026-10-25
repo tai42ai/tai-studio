@@ -757,7 +757,9 @@ describe('SystemPage', () => {
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /^Reload config \(/ })).toBeNull();
     });
-    expect(screen.getByTestId('reload-read-only-note')).toBeInTheDocument();
+    const note = screen.getByTestId('reload-read-only-note');
+    expect(note).toHaveAttribute('role', 'status');
+    expect(note).toHaveTextContent('Reloading worker config is an admin action.');
   });
 
   it('fails closed while the projection is loading — the reload control is disabled', async () => {

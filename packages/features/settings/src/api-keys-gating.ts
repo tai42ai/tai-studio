@@ -17,6 +17,9 @@ export function scopeIdsOf(scopes: Record<string, string>, publicId: string): st
 /** The mint route the caller's projection must be able to reach to create a key. */
 export const MINT_ROUTE = apiRoutes.post_api_auth_api_keys.path;
 
+/** The policy-history read the caller's projection must reach for a row's History. */
+export const POLICY_VERSIONS_ROUTE = apiRoutes.get_api_auth_api_keys_user_id_policy_versions.path;
+
 /**
  * The admin reads the scopes mapper issues on mount: the route table
  * (`/api/auth/routes`), the public-route pins (`/api/auth/public-routes`), and the

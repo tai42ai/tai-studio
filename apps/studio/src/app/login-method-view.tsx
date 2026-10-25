@@ -85,7 +85,7 @@ export function MethodView({
 
 function InvalidMethod({ id }: { id: string }): ReactNode {
   return (
-    <p role="alert" style={{ ...sectionStyle, color: 'var(--tai-color-danger)' }}>
+    <p role="alert" style={{ ...sectionStyle, color: 'var(--tai-color-err-text)' }}>
       Sign-in method &quot;{id}&quot; declares an invalid target.
     </p>
   );

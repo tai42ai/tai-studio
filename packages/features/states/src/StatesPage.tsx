@@ -43,8 +43,8 @@ export function StatesPage({ search }: PageProps<'states'>): ReactNode {
     <div className="tai-stack tai-stack-6" data-testid="states-page">
       <PageHeader
         title="States"
-        eyebrow="Capabilities"
-        description="Declared JSON documents, one per subject — the record every door reads and writes."
+        eyebrow="Doors"
+        description="A state is a declared JSON document kept per subject and checked against its schema on every write. A preset, conversation route, hook or schedule that binds a state reads the record into the run's input before the run and writes the result back after it; plugins and the API write records too, and you can edit one here. Each state's Consumers tab lists what binds it."
       />
 
       {off && offMessage !== null ? null : <PendingSavesCard />}

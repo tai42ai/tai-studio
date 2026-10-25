@@ -16,7 +16,7 @@ export type MethodsState =
 export const sectionStyle: CSSProperties = { marginTop: 'var(--tai-space-5)' };
 export const errorStyle: CSSProperties = {
   margin: '0 0 var(--tai-space-3)',
-  color: 'var(--tai-color-danger)',
+  color: 'var(--tai-color-err-text)',
 };
 
 /** The fixed copy of the `needs_setup` setup entry — heading, field labels, help

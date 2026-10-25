@@ -3,16 +3,16 @@
  * never drift into a comment. A destructive fill that shares the brand accent's
  * ramp reads as the primary action — the exact confusion these assertions forbid:
  *
- *  - the danger label clears the 4.5:1 body-text floor on the danger fill, in both
+ *  - the destructive label clears the 4.5:1 body-text floor on the destructive fill, in both
  *    themes, so the button is legible;
- *  - the danger fill runs DARKER than the accent fill in both themes, so a
+ *  - the destructive fill runs DARKER than the accent fill in both themes, so a
  *    destructive control is told apart from a primary one by lightness alone —
- *    the dark half is the one at risk of a danger fill reading LIGHTER than the
+ *    the dark half is the one at risk of a destructive fill reading LIGHTER than the
  *    accent and nearly identical to it, which this half forbids;
  *  - the hover is a shade deeper than the rest, in both themes, so the pressed
  *    state reads as intent rather than a second colour.
  *
- * The accent (brand primary) is read only as the thing danger must differ from;
+ * The accent (brand primary) is read only as the thing the destructive fill must differ from;
  * nothing here touches it.
  */
 import { readFileSync } from 'node:fs';
@@ -58,8 +58,8 @@ const THEMES = [
   { name: 'dark', suffix: '-dark' },
 ] as const;
 
-/** Resolve one danger member for a theme; the light half has no `-dark` twin. */
-function danger(member: string, suffix: string): string {
+/** Resolve one destructive role token for a theme; the light half has no `-dark` twin. */
+function destructive(member: string, suffix: string): string {
   return suffix === '' ? hexOf(`--tai-color-${member}`) : hexOf(`--tai-dark-color-${member}`);
 }
 
@@ -68,32 +68,35 @@ function accent(suffix: string): string {
 }
 
 describe('destructive emphasis is distinct from the brand primary', () => {
-  it.each(THEMES)('$name: the danger label clears 4.5:1 on the danger fill', ({ suffix }) => {
-    const fill = danger('danger', suffix);
-    const label = danger('danger-text', suffix);
-    expect(contrast(fill, label)).toBeGreaterThanOrEqual(4.5);
-  });
+  it.each(THEMES)(
+    '$name: the destructive label clears 4.5:1 on the destructive fill',
+    ({ suffix }) => {
+      const fill = destructive('destructive', suffix);
+      const label = destructive('on-destructive', suffix);
+      expect(contrast(fill, label)).toBeGreaterThanOrEqual(4.5);
+    },
+  );
 
-  it.each(THEMES)('$name: the danger fill runs darker than the accent fill', ({ suffix }) => {
+  it.each(THEMES)('$name: the destructive fill runs darker than the accent fill', ({ suffix }) => {
     // Lightness alone separates the two: a reader never has to resolve the hue to
     // tell a destructive button from a primary one.
-    expect(relativeLuminance(danger('danger', suffix))).toBeLessThan(
+    expect(relativeLuminance(destructive('destructive', suffix))).toBeLessThan(
       relativeLuminance(accent(suffix)),
     );
     // …and they are not the same colour to begin with.
-    expect(danger('danger', suffix)).not.toBe(accent(suffix));
+    expect(destructive('destructive', suffix)).not.toBe(accent(suffix));
   });
 
-  it.each(THEMES)('$name: the danger hover is a shade deeper than the rest', ({ suffix }) => {
-    expect(relativeLuminance(danger('danger-hover', suffix))).toBeLessThan(
-      relativeLuminance(danger('danger', suffix)),
+  it.each(THEMES)('$name: the destructive hover is a shade deeper than the rest', ({ suffix }) => {
+    expect(relativeLuminance(destructive('destructive-hover', suffix))).toBeLessThan(
+      relativeLuminance(destructive('destructive', suffix)),
     );
   });
 
-  it.each(THEMES)('$name: the danger fill still stands off its page ground', ({ suffix }) => {
+  it.each(THEMES)('$name: the destructive fill still stands off its page ground', ({ suffix }) => {
     // A solid destructive button must read as a control against the page: the fill
     // clears the 3:1 WCAG 1.4.11 asks of a non-text boundary over the ground.
     const ground = suffix === '' ? hexOf('--tai-color-bg') : hexOf('--tai-dark-color-bg');
-    expect(contrast(danger('danger', suffix), ground)).toBeGreaterThanOrEqual(3);
+    expect(contrast(destructive('destructive', suffix), ground)).toBeGreaterThanOrEqual(3);
   });
 });

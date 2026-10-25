@@ -1,8 +1,7 @@
 /**
  * The documented CSS-variable token names — the Studio-plugin styling API. A
- * snapshot test pins this list so the contract can't drift silently. The
- * SDK compatibility version bumps if any of these are renamed/removed; the list
- * grows additively.
+ * snapshot test pins this list so the contract can't drift silently. A rename
+ * or a removal bumps the SDK compatibility version; a new name does not.
  *
  * The `--tai-dark-*` half of each themed pair is deliberately NOT here. Those
  * names are the theming mechanism's own storage — the two blocks in `tokens.css`
@@ -49,14 +48,9 @@ export const TOKEN_NAMES = [
   '--tai-color-syntax-string',
   '--tai-color-syntax-number',
   '--tai-color-syntax-bool',
-  '--tai-color-primary',
-  '--tai-color-primary-text',
-  '--tai-color-danger',
-  '--tai-color-danger-text',
-  '--tai-color-danger-hover',
-  '--tai-color-danger-surface',
-  '--tai-color-success',
-  '--tai-color-warning',
+  '--tai-color-destructive',
+  '--tai-color-destructive-hover',
+  '--tai-color-on-destructive',
   '--tai-space-1',
   '--tai-space-2',
   '--tai-space-3',
@@ -89,8 +83,6 @@ export const TOKEN_NAMES = [
   '--tai-shadow-overlay-color',
   '--tai-shadow-lift',
   '--tai-shadow-overlay',
-  '--tai-shadow-sm',
-  '--tai-shadow-md',
   '--tai-z-sticky',
   '--tai-z-dropdown',
   '--tai-z-overlay',

@@ -38,6 +38,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { destructiveColorOffences, governingProperty } from '../token-rules';
 import { withoutComments } from './test-css-reader';
 import { TOKEN_NAMES } from './tokens';
 
@@ -380,19 +381,6 @@ function remTokensWithDocumentedPx(): [string, number, number][] {
 const DECOR_REFERENCE = /var\(\s*--tai-color-decor/g;
 
 /**
- * The property a declaration's value belongs to: the last `name:` before the
- * value, with no statement boundary in between. Written as a backwards search
- * rather than a forward `property: value` match so that a value containing its
- * own commas and parentheses — `linear-gradient(90deg, …)`, or the next entry of
- * a JSX style object — cannot make the scan attribute the value to the wrong
- * property or miss it entirely.
- */
-function governingProperty(source: string, valueIndex: number): string | undefined {
-  const match = /([-A-Za-z][\w-]*)\s*:\s*[^;{}:]*$/.exec(source.slice(0, valueIndex));
-  return match?.[1];
-}
-
-/**
  * A border property that paints ONE edge — a rule or a divider — rather than the
  * closed boundary that says "this is a control".
  *
@@ -457,6 +445,8 @@ function decorOffences(source: string): string[] {
 // excludes itself from its own scan.
 const selfPath = fileURLToPath(import.meta.url);
 const files = scanRoots.flatMap(sourceFiles).filter((file) => file !== selfPath);
+// The rule's own test writes the forbidden declarations as samples.
+const tokenRulesSamplePath = resolve(packageRoot, 'src/token-rules.test.ts');
 
 describe('design-system token usage', () => {
   it('scans the whole monorepo (a scan that found nothing would pass vacuously)', () => {
@@ -726,7 +716,7 @@ describe('design-system token usage', () => {
       // row leaves a token the sheet authors and the table omits, and an invented
       // row leaves a token the table names and the sheet does not.
       const documented = documentedTokenValues();
-      expect(documented.rows).toBeGreaterThanOrEqual(80);
+      expect(documented.rows).toBeGreaterThanOrEqual(TOKEN_NAMES.length);
       expect([...documented.values.keys()].length).toBeGreaterThan(100);
 
       const authored = new Map(
@@ -835,6 +825,20 @@ describe('design-system token usage', () => {
 
       for (const file of files) {
         for (const property of decorOffences(readFileSync(file, 'utf8'))) {
+          offenders.push(`${relative(repoRoot, file)}: ${property}`);
+        }
+      }
+
+      expect(offenders).toEqual([]);
+    });
+  });
+
+  describe('the destructive role tokens stay off text colour', () => {
+    it('never land on a colour declaration under packages/, apps/ or e2e/', () => {
+      const offenders: string[] = [];
+
+      for (const file of files.filter((path) => path !== tokenRulesSamplePath)) {
+        for (const property of destructiveColorOffences(readFileSync(file, 'utf8'))) {
           offenders.push(`${relative(repoRoot, file)}: ${property}`);
         }
       }

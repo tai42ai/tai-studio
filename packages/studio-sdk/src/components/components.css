@@ -279,14 +279,14 @@
   }
 
   .tai-btn-danger {
-    background: var(--tai-color-danger);
-    border-color: var(--tai-color-danger);
-    color: var(--tai-color-danger-text);
+    background: var(--tai-color-destructive);
+    border-color: var(--tai-color-destructive);
+    color: var(--tai-color-on-destructive);
   }
 
   .tai-btn-danger:hover:not(:disabled):not([aria-disabled='true']) {
-    background: var(--tai-color-danger-hover);
-    border-color: var(--tai-color-danger-hover);
+    background: var(--tai-color-destructive-hover);
+    border-color: var(--tai-color-destructive-hover);
   }
 
   /* A square button whose only content is a 16 px icon; its accessible name

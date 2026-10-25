@@ -121,7 +121,7 @@ export function AttachmentsTable({
                         variant="ghost"
                         aria-label="Detach"
                         title="Detach"
-                        style={{ color: 'var(--tai-color-danger)' }}
+                        style={{ color: 'var(--tai-color-err-text)' }}
                         onClick={() => {
                           setDetach(attachment.template);
                         }}

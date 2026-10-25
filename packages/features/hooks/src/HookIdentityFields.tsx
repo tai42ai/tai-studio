@@ -49,7 +49,7 @@ export function HookIdentityFields({
         />
       </Field>
       {replacesExisting ? (
-        <p role="status" style={{ margin: 0, color: 'var(--tai-color-warning)' }}>
+        <p role="status" style={{ margin: 0, color: 'var(--tai-color-warn-text)' }}>
           Replaces the existing hook <strong>{trimmedName}</strong> — its current registration is
           overwritten.
         </p>

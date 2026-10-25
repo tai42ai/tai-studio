@@ -3,7 +3,7 @@
  * default, the sessionStorage opt-in, the 401→/login redirect, and the invariant
  * that localStorage is NEVER written.
  */
-import { type PluginContext } from '@tai42/studio-sdk';
+import { type PluginContext, STUDIO_PLUGIN_API_VERSION } from '@tai42/studio-sdk';
 import { __resetContributions } from '@tai42/studio-sdk/testing';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -153,7 +153,7 @@ describe('auth flow', () => {
             {
               name: 'acme',
               version: '1.0.0',
-              api_version: 1,
+              api_version: STUDIO_PLUGIN_API_VERSION,
               mounts: {},
               entry: 'index.js',
               integrity: { 'index.js': 'sha384-abc' },

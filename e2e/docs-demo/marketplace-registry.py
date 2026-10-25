@@ -5,13 +5,15 @@ Serves the registry public read API (``/api/v1/*``) the skeleton's
 ``RegistryClient`` calls, seeded with exactly ONE generic route-carrying plugin
 (``acme/alerts-relay``): a ``router`` item that declares a remappable base plus a
 public inbound webhook and an authed status route. That is enough for the Studio
-marketplace detail page to render and for the install dialog to preview its routes,
-prefix remap, and public-acceptance gate — the `marketplace-install` screenshot.
+marketplace list to show the listing (the `marketplace` screenshot), and for its
+detail page to render and the install dialog to preview its routes, prefix remap,
+and public-acceptance gate (the `marketplace-install` screenshot).
 
 Stdlib only (no deps): the docs-screenshots runner starts it on a loopback port,
-exports ``MARKETPLACE_URL`` at it, and reaps it on teardown. It answers three seed
-endpoints and ``/healthz``; any other path is a loud 404 so a wrong ref never
-captures a half-rendered dialog.
+exports ``MARKETPLACE_URL`` at it, and reaps it on teardown. It answers the search,
+the category and kind vocabularies, the three seed endpoints and ``/healthz``; any
+other path is a loud 404 so a wrong ref never captures a half-rendered dialog. The
+search answers every query with the one seeded listing: it has no index to filter.
 
 NOT A PRODUCTION REGISTRY — a fixed, in-memory fixture with no auth, no search
 index, and no ingest, matching the docs-demo's test-only posture.
@@ -22,6 +24,7 @@ from __future__ import annotations
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, urlsplit
 
 # The one seeded generic plugin's validated PluginSpec — a router item with a
 # remappable base, one public route (an inbound webhook, which must answer
@@ -41,7 +44,7 @@ _SPEC = {
     # preview resolves (the skeleton refuses a spec whose contract_range excludes the
     # installed tai42-contract). Pinned to the current major the same way every
     # shipped plugin's tai-plugin.yml is, so it tracks the contract bump.
-    "contract": ">=23,<24",
+    "contract": ">=24,<25",
     "categories": ["channels"],
     "tags": ["alerts", "relay", "webhook"],
     "provides": [
@@ -117,6 +120,51 @@ _VERSIONS = [
     }
 ]
 
+# The listing's search row (``GET /api/v1/search``): its one ungrouped item summarised
+# by kind, no logical groups.
+_SEARCH_ROW = {
+    "ref": _REF,
+    "namespace": _SPEC["namespace"],
+    "name": _SPEC["name"],
+    "display_name": _SPEC["display_name"],
+    "icon_url": None,
+    "package": _SPEC["package"],
+    "description": _SPEC["description"],
+    "categories": _SPEC["categories"],
+    "tags": _SPEC["tags"],
+    "trust_tier": "community",
+    "pricing": "free",
+    "premium": False,
+    "latest_version": _VERSION,
+    "downloads": 128,
+    "updated_at": _PUBLISHED_AT,
+    "kinds": [{"kind": "router", "count": 1, "names": ["relay"]}],
+    "groups": [],
+}
+
+# The controlled vocabularies the list's facets offer (``GET /api/v1/categories`` and
+# ``GET /api/v1/kinds``): the seeded listing's category, and the item kinds in the
+# contract's declaration order.
+_CATEGORIES = ["channels"]
+_KINDS = [
+    "tool",
+    "agent",
+    "extension",
+    "connector",
+    "channel",
+    "backend",
+    "storage",
+    "monitoring",
+    "webhook-verifier",
+    "config",
+    "identity",
+    "studio-plugin",
+    "router",
+    "middleware",
+    "mcp-server",
+    "sandbox",
+]
+
 # The install-time pinning response (``POST .../resolve``): the pinned version, the
 # full stored spec, a pypi source (no github artifact provenance needed), the
 # contract range, and no advisories.
@@ -142,6 +190,17 @@ class _Handler(BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path == "/healthz":
             self._send(200, {"data": "OK"})
+        elif path == "/api/v1/search":
+            query = parse_qs(urlsplit(self.path).query)
+            page = int(query.get("page", ["1"])[0])
+            page_size = int(query.get("page_size", ["20"])[0])
+            listings = [_SEARCH_ROW] if page == 1 else []
+            search_page = {"listings": listings, "total": 1, "page": page, "page_size": page_size}
+            self._send(200, {"data": search_page})
+        elif path == "/api/v1/categories":
+            self._send(200, {"data": {"categories": _CATEGORIES}})
+        elif path == "/api/v1/kinds":
+            self._send(200, {"data": {"kinds": _KINDS}})
         elif path == f"/api/v1/plugins/{_REF}":
             self._send(200, {"data": _LISTING})
         elif path == f"/api/v1/plugins/{_REF}/versions":

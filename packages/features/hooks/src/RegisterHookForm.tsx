@@ -106,7 +106,7 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
       style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}
     >
       {data.hooksQuery.isError ? (
-        <p role="alert" style={{ margin: 0, color: 'var(--tai-color-warning)' }}>
+        <p role="alert" style={{ margin: 0, color: 'var(--tai-color-warn-text)' }}>
           Could not load existing hooks: {errorMessage(data.hooksQuery.error)}. Overwrite detection
           is unavailable; a register still replaces any existing hook with the same name.
         </p>

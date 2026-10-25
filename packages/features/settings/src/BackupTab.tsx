@@ -15,17 +15,20 @@
  * highlighted; `ok: false` raises a loud failure banner. Any API keys minted by
  * an `access_control` restore are shown once in copy boxes.
  *
+ * Export and import are admin actions, each checked on its own door through
+ * `useCanWrite`. A caller who reads the sections without them sees the sections
+ * listed and, in place of each action, a status line naming the access it needs. A
+ * read-only deployment blocks import for an admin; export stays available.
+ *
  * SAFETY: the backup file is operator-uploaded and fully untrusted, so EVERY
  * report field — including per-section error strings (import and export) and
  * minted-key metadata — renders as ESCAPED text through the design-system components, never an HTML
- * sink. Read-only config mode disables importing (a write); export stays
- * available.
+ * sink.
  */
 import type { BackupImportReport, RecycleRoll } from '@tai42/api-client';
-import { schemas, summarizeFleetFanout } from '@tai42/api-client';
+import { apiRoutes, schemas, summarizeFleetFanout } from '@tai42/api-client';
 import {
   AlertTriangleIcon,
-  Badge,
   Button,
   Card,
   Checkbox,
@@ -43,18 +46,15 @@ import {
   THead,
   TR,
   useApi,
+  useCanWrite,
 } from '@tai42/studio-sdk';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { type CSSProperties, type ReactNode, useId, useRef, useState } from 'react';
 
-import { ExportSectionErrors, readExportErrors } from './ExportSectionErrors';
+import { checklistStyle, headingStyle, noteStyle, warningStyle } from './backup-styles';
+import { ExportCard, ExportSectionList } from './BackupExportCard';
 import { backupSectionsKey } from './keys';
 import { RecycleRollSection } from './RecycleRollSection';
-
-interface Section {
-  readonly name: string;
-  readonly secret: boolean;
-}
 
 const stackStyle: CSSProperties = {
   display: 'flex',
@@ -62,37 +62,8 @@ const stackStyle: CSSProperties = {
   gap: 'var(--tai-space-4)',
 };
 
-const headingStyle: CSSProperties = {
-  margin: '0 0 var(--tai-space-3)',
-  fontSize: 'var(--tai-text-lg)',
-  color: 'var(--tai-color-text)',
-};
-
-const checklistStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-2)',
-  marginBottom: 'var(--tai-space-3)',
-};
-
-const sectionRowStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 'var(--tai-space-2)',
-};
-
-// `.tai-warn-state` carries the panel itself — padding, tint, border, type — so the
-// only thing left here is the gap to whatever follows the warning.
-const warningStyle: CSSProperties = { margin: '0 0 var(--tai-space-3)' };
-
-const noteStyle: CSSProperties = {
-  margin: '0 0 var(--tai-space-3)',
-  color: 'var(--tai-color-text-muted)',
-  fontSize: 'var(--tai-text-sm)',
-};
-
 // A destructive-action surface: a restore overwrites live config, so it wears the
-// design system's danger ground — danger-surface tint, err-text ink, and the
+// design system's error ground — err-tint, err-text ink, and the
 // alert-triangle mark carrying the severity alongside the colour (never colour
 // alone). Shared by the top-of-import danger-zone note and the failure banner.
 const dangerPanelStyle: CSSProperties = {
@@ -103,7 +74,7 @@ const dangerPanelStyle: CSSProperties = {
   padding: 'var(--tai-space-3)',
   borderRadius: 'var(--tai-radius-md)',
   border: '1px solid var(--tai-color-err-text)',
-  background: 'var(--tai-color-danger-surface)',
+  background: 'var(--tai-color-err-tint)',
   color: 'var(--tai-color-err-text)',
   fontSize: 'var(--tai-text-sm)',
 };
@@ -132,104 +103,6 @@ const mintedStyle: CSSProperties = {
   gap: 'var(--tai-space-3)',
   marginTop: 'var(--tai-space-4)',
 };
-
-/** Trigger a browser download of a blob under the given filename. */
-function triggerDownload(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  // Defer the revoke to the next tick — revoking synchronously can cancel the
-  // download before the browser commits it.
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-  }, 0);
-}
-
-function backupFilename(): string {
-  return `tai-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-}
-
-// -- export ------------------------------------------------------------------
-
-function ExportCard({ sections }: { readonly sections: readonly Section[] }): ReactNode {
-  const api = useApi();
-  const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(sections.filter((section) => !section.secret).map((section) => section.name)),
-  );
-
-  const mutation = useMutation({
-    mutationFn: async (names: string[]) => {
-      const blob = await api.exportBackup(names);
-      return { blob, errors: await readExportErrors(blob) };
-    },
-    onSuccess: ({ blob }) => {
-      triggerDownload(blob, backupFilename());
-    },
-  });
-  const exportErrors = mutation.data?.errors ?? {};
-
-  const toggle = (name: string, next: boolean): void => {
-    setSelected((current) => {
-      const updated = new Set(current);
-      if (next) updated.add(name);
-      else updated.delete(name);
-      return updated;
-    });
-  };
-
-  const secretChecked = sections.some((s) => s.secret && selected.has(s.name));
-  const manifestChecked = selected.has('manifest');
-
-  return (
-    <Card>
-      <h3 style={headingStyle}>Export</h3>
-      <div style={checklistStyle}>
-        {sections.map((section) => (
-          <div key={section.name} style={sectionRowStyle}>
-            <Checkbox
-              label={section.name}
-              checked={selected.has(section.name)}
-              onCheckedChange={(next) => {
-                toggle(section.name, next);
-              }}
-            />
-            {section.secret ? <Badge variant="warning">secret</Badge> : null}
-          </div>
-        ))}
-      </div>
-
-      {secretChecked ? (
-        <p role="alert" className="tai-warn-state" style={warningStyle}>
-          This backup file will contain secrets/tokens — store it like a secret.
-        </p>
-      ) : null}
-      {manifestChecked ? (
-        <p style={noteStyle}>
-          The manifest section may embed MCP tokens — handle the file with care.
-        </p>
-      ) : null}
-
-      {mutation.isError ? <ErrorState message={errorMessage(mutation.error)} /> : null}
-      {Object.keys(exportErrors).length > 0 ? <ExportSectionErrors errors={exportErrors} /> : null}
-
-      <Button
-        type="button"
-        variant="primary"
-        disabled={selected.size === 0 || mutation.isPending}
-        onClick={() => {
-          mutation.mutate([...selected]);
-        }}
-      >
-        {mutation.isPending ? <Spinner label="Exporting" /> : null}
-        Export backup
-      </Button>
-    </Card>
-  );
-}
 
 // -- import ------------------------------------------------------------------
 
@@ -309,7 +182,7 @@ function ImportReportTable({ report }: { readonly report: BackupImportReport }):
                 <TR
                   key={name}
                   data-testid={`report-row-${name}`}
-                  style={hasErrors ? { background: 'var(--tai-color-danger-surface)' } : undefined}
+                  style={hasErrors ? { background: 'var(--tai-color-err-tint)' } : undefined}
                 >
                   <TD className="tai-mono">{name}</TD>
                   <TD numeric>{section.created}</TD>
@@ -362,7 +235,13 @@ function ImportReportTable({ report }: { readonly report: BackupImportReport }):
   );
 }
 
-function ImportCard({ readOnly }: { readonly readOnly: boolean }): ReactNode {
+function ImportCard({
+  readOnly,
+  canImport,
+}: {
+  readonly readOnly: boolean;
+  readonly canImport: boolean;
+}): ReactNode {
   const api = useApi();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [document_, setDocument_] = useState<unknown>(null);
@@ -426,7 +305,11 @@ function ImportCard({ readOnly }: { readonly readOnly: boolean }): ReactNode {
     <Card>
       <h3 style={headingStyle}>Import</h3>
 
-      {readOnly ? (
+      {!canImport ? (
+        <p role="status" style={noteStyle}>
+          Importing a backup is an admin action.
+        </p>
+      ) : readOnly ? (
         <p role="note" style={noteStyle}>
           Configuration is read-only for this deployment. Backups cannot be imported here.
         </p>
@@ -434,7 +317,7 @@ function ImportCard({ readOnly }: { readonly readOnly: boolean }): ReactNode {
         <>
           {/* A restore is destructive — it overwrites live deployment config — so the
               whole import surface is fronted by the danger ground: the alert mark plus
-              err-text on the danger tint, and the restore action itself is a danger button. */}
+              err-text on the err-tint, and the restore action itself is a danger button. */}
           <p style={dangerPanelStyle}>
             <AlertTriangleIcon />
             <span>
@@ -514,6 +397,8 @@ export interface BackupTabProps {
 
 export function BackupTab({ readOnly }: BackupTabProps): ReactNode {
   const api = useApi();
+  const canExport = useCanWrite(apiRoutes.post_api_backup_export.path);
+  const canImport = useCanWrite(apiRoutes.post_api_backup_import.path);
 
   const sectionsQuery = useQuery({
     queryKey: backupSectionsKey,
@@ -545,10 +430,12 @@ export function BackupTab({ readOnly }: BackupTabProps): ReactNode {
             description="This deployment exposes no backup sections."
           />
         </Card>
-      ) : (
+      ) : canExport ? (
         <ExportCard sections={sections} />
+      ) : (
+        <ExportSectionList sections={sections} />
       )}
-      <ImportCard readOnly={readOnly} />
+      <ImportCard readOnly={readOnly} canImport={canImport} />
     </div>
   );
 }

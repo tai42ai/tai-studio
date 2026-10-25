@@ -257,7 +257,7 @@ export function StreamRunView({
                 Run
               </Button>
             ) : (
-              <span role="note" data-testid="run-read-only-note" className="tai-muted">
+              <span role="status" data-testid="run-read-only-note" className="tai-muted">
                 Running this agent is outside your access — it is shown read-only.
               </span>
             )}

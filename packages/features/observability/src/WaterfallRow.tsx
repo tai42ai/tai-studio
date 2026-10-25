@@ -25,8 +25,7 @@ function percent(value: number): string {
 function barColor(node: SpanNode, slowestId: string | null): string {
   if (isErrorSpan(node.span)) return 'var(--tai-color-err-fill)';
   if (node.span.id === slowestId) return 'var(--tai-color-warn-fill)';
-  if (node.span.kind === 'LLM') return 'var(--tai-color-accent)';
-  if (node.span.kind === 'TOOL') return 'var(--tai-color-primary)';
+  if (node.span.kind === 'LLM' || node.span.kind === 'TOOL') return 'var(--tai-color-accent)';
   return 'var(--tai-color-border-strong)';
 }
 

@@ -2,7 +2,7 @@
   {
     "name": "reference_plugin",
     "version": "0.1.0",
-    "api_version": 1,
+    "api_version": 2,
     "entry": "reference-plugin-B9itFKyZ.js",
     "integrity": {
       "reference-plugin-B9itFKyZ.js": "sha384-JBre7hHsCZ3fKNXjbUY7zkoY4rlSKMqB1PoTUyB+bYfFRGsi5UYSIX3/P7DH55AN"

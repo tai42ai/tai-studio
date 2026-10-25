@@ -5,6 +5,7 @@
  * against a schemaless page is a not-found card.
  */
 import type { PluginContext, PluginPageProps } from '@tai42/studio-sdk';
+import { STUDIO_PLUGIN_API_VERSION } from '@tai42/studio-sdk';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
 import { screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -22,7 +23,7 @@ function serveShell(pages: string[]): void {
           {
             name: 'acme',
             version: '1.0.0',
-            api_version: 1,
+            api_version: STUDIO_PLUGIN_API_VERSION,
             mounts: {},
             entry: 'index.js',
             integrity: { 'index.js': 'sha384-abc' },

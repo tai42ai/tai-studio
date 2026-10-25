@@ -5,7 +5,7 @@
  * from a fill page removes the modifiers again.
  */
 import type { PluginContext } from '@tai42/studio-sdk';
-import { useFillViewport } from '@tai42/studio-sdk';
+import { STUDIO_PLUGIN_API_VERSION, useFillViewport } from '@tai42/studio-sdk';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
 import { act, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -23,7 +23,7 @@ function serveShell(pages: string[]): void {
           {
             name: 'acme',
             version: '1.0.0',
-            api_version: 1,
+            api_version: STUDIO_PLUGIN_API_VERSION,
             mounts: {},
             entry: 'index.js',
             integrity: { 'index.js': 'sha384-abc' },

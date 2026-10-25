@@ -1,7 +1,7 @@
 {
   "name": "reference_plugin",
   "version": "0.1.0",
-  "api_version": 1,
+  "api_version": 2,
   "entry": "reference-plugin-ChqcK95k.js",
   "integrity": {
     "reference-plugin-ChqcK95k.js": "sha384-D6qR68x0851eXGFYiC+xkDbP1MjEfz9GbZVbLBXCHnnik5wuEZjr1gZ1kXctUiI+",

@@ -249,7 +249,7 @@ describe('TraceView', () => {
       document.querySelector<HTMLElement>(`[data-span-id="${id}"] div[style*="left:"]`)?.style
         .background;
     expect(bar('gen')).toBe('var(--tai-color-accent)');
-    expect(bar('tool')).toBe('var(--tai-color-primary)');
+    expect(bar('tool')).toBe('var(--tai-color-accent)');
     expect(bar('quick')).toBe('var(--tai-color-border-strong)');
 
     await user.click(screen.getByText('model-step'));

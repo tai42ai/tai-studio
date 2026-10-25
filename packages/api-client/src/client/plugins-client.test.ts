@@ -44,7 +44,7 @@ const manifest = (
 ): Record<string, unknown> => ({
   name: 'reference_plugin',
   version: '0.1.0',
-  api_version: 1,
+  api_version: 2,
   entry: 'index.js',
   integrity: { 'index.js': 'sha384-abc' },
   contributions,

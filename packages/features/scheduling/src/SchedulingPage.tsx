@@ -232,7 +232,7 @@ export function SchedulingPage(_props: PageProps<'scheduling'>): ReactNode {
   return (
     <div className="tai-stack tai-stack-6" data-testid="scheduling-page">
       <PageHeader
-        eyebrow="Triggers"
+        eyebrow="Doors"
         title="Scheduling"
         actions={
           <>

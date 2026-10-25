@@ -32,15 +32,23 @@ describe('ExtensionPicker', () => {
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
-  it('groups the catalog by kind with a kind badge per group', () => {
+  it('groups the catalog by kind, one named group per kind holding its checkboxes', () => {
     render(<ExtensionPicker available={CATALOG} value={[]} onChange={vi.fn()} />);
-    // The two kinds each render a badge label.
-    expect(screen.getByText('wrapper')).toHaveAttribute('data-variant', 'primary');
-    expect(screen.getByText('backend')).toHaveAttribute('data-variant', 'warning');
-    // A checkbox per catalog entry.
-    for (const entry of CATALOG) {
-      expect(screen.getByRole('checkbox', { name: entry.name })).toBeInTheDocument();
-    }
+    const backend = screen.getByRole('group', { name: 'Kind: backend' });
+    const wrapper = screen.getByRole('group', { name: 'Kind: wrapper' });
+    expect(within(wrapper).getByRole('checkbox', { name: 'marka' })).toBeInTheDocument();
+    expect(within(wrapper).getByRole('checkbox', { name: 'markb' })).toBeInTheDocument();
+    expect(within(backend).getByRole('checkbox', { name: 'backendx' })).toBeInTheDocument();
+    expect(within(backend).getByRole('checkbox', { name: 'backendy' })).toBeInTheDocument();
+    expect(within(backend).queryByRole('checkbox', { name: 'marka' })).toBeNull();
+  });
+
+  it('describes a single-select kind group, and only that group', () => {
+    render(<ExtensionPicker available={CATALOG} value={[]} onChange={vi.fn()} />);
+    expect(screen.getByRole('group', { name: 'Kind: backend' })).toHaveAccessibleDescription(
+      '(single-select)',
+    );
+    expect(screen.getByRole('group', { name: 'Kind: wrapper' })).not.toHaveAccessibleDescription();
   });
 
   it('multi-selects freely within a stackable (wrapper) kind, preserving order', async () => {
@@ -86,7 +94,7 @@ describe('ExtensionPicker', () => {
     expect(screen.getByTestId('combo')).toHaveTextContent('["markb"]');
   });
 
-  it('marks the backend group as single-select in its heading', () => {
+  it('marks the backend group as single-select in its description', () => {
     render(<ExtensionPicker available={CATALOG} value={[]} onChange={vi.fn()} />);
     expect(screen.getByText('(single-select)')).toBeInTheDocument();
   });
@@ -145,30 +153,11 @@ describe('ExtensionPicker', () => {
     expect(within(picker).getByRole('checkbox', { name: 'marka' })).not.toBeChecked();
   });
 
-  it('builds its layout from the design-system classes, carrying no inline palette', () => {
+  it('carries no inline palette on the picker', () => {
     render(<ExtensionPicker available={CATALOG} value={[]} onChange={vi.fn()} />);
-
     const picker = screen.getByTestId('extension-picker');
     expect(picker).toHaveClass('tai-stack');
     expect(picker.getAttribute('style')).toBeNull();
-
-    // Each kind group is a stack whose heading row and option row are `tai-row`s.
-    const groups = [...picker.children];
-    expect(groups.length).toBeGreaterThan(0);
-    for (const group of groups) {
-      expect(group).toHaveClass('tai-stack', 'tai-stack-2');
-      expect(group.children).toHaveLength(2);
-      for (const row of group.children) expect(row).toHaveClass('tai-row');
-      expect(group.getAttribute('style')).toBeNull();
-    }
-  });
-
-  it('renders the single-select qualifier as secondary text beside the kind badge', () => {
-    render(<ExtensionPicker available={CATALOG} value={[]} onChange={vi.fn()} />);
-    const qualifier = screen.getByText('(single-select)');
-    expect(qualifier).toHaveClass('tai-muted');
-    // Not the uppercase-mono label style: it reads as prose, not as an eyebrow.
-    expect(qualifier).not.toHaveClass('tai-label');
   });
 
   it('renders every option with its accessible name', () => {

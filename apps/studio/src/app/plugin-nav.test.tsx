@@ -5,6 +5,7 @@
  * the registry route.
  */
 import type { NavEntrySection, PluginContext } from '@tai42/studio-sdk';
+import { STUDIO_PLUGIN_API_VERSION } from '@tai42/studio-sdk';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
 import { screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -25,7 +26,7 @@ describe('plugin capability gating', () => {
     return {
       name: 'acme',
       version: '1.0.0',
-      api_version: 1,
+      api_version: STUDIO_PLUGIN_API_VERSION,
       mounts: {},
       entry: 'index.js',
       integrity: { 'index.js': 'sha384-abc' },
@@ -188,7 +189,7 @@ describe('plugin nav sections', () => {
     return {
       name,
       version: '1.0.0',
-      api_version: 1,
+      api_version: STUDIO_PLUGIN_API_VERSION,
       mounts: {},
       entry: 'index.js',
       integrity: { 'index.js': 'sha384-abc' },
@@ -297,6 +298,22 @@ describe('plugin nav sections', () => {
     expect(screen.queryByRole('list', { name: 'acme' })).toBeNull();
   });
 
+  it('renders a Doors plugin entry after the Doors core rows, States last among them', async () => {
+    landWithEntry('Doors');
+
+    const doors = await screen.findByRole('list', { name: 'Doors' });
+    await within(doors).findByRole('link', { name: 'Reference' });
+    expect(rowTexts(doors)).toEqual([
+      'Conversations',
+      'Hooks',
+      'Scheduling',
+      'Served endpoints',
+      'States',
+      'Reference',
+    ]);
+    expect(screen.queryByRole('list', { name: 'Plugins' })).toBeNull();
+  });
+
   it('renders a non-core section value (Integrations) in the generic Plugins section', async () => {
     // `'Integrations'` is not a core section; it takes the ordinary unknown-section
     // path — the single generic Plugins section — never a core section, and never a
@@ -337,7 +354,7 @@ describe('plugin nav ordering', () => {
     return {
       name: 'acme',
       version: '2.0.0',
-      api_version: 1,
+      api_version: STUDIO_PLUGIN_API_VERSION,
       mounts: {},
       entry: 'index.js',
       integrity: { 'index.js': 'sha384-abc' },
@@ -376,7 +393,7 @@ describe('plugin nav — multiple plugins share the generic Plugins section', ()
     return {
       name,
       version,
-      api_version: 1,
+      api_version: STUDIO_PLUGIN_API_VERSION,
       mounts: {},
       entry: 'index.js',
       integrity: { 'index.js': 'sha384-abc' },

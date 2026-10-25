@@ -196,30 +196,22 @@
     --tai-color-syntax-number: var(--tai-color-accent);
     --tai-color-syntax-bool: var(--tai-color-warn-text);
 
-    /* -- Legacy token slots -------------------------------------------------
-       The names a plugin already styles against. `primary`/`success`/`warning`
-       re-point at the members of the contract above that keep them legible.
-
-       `danger` is the one destructive EMPHASIS, and it runs deeper than the
-       accent on purpose: a destructive fill sharing the crimson brand ramp reads
-       as the primary action, so this is its own deep red — clearly darker and
-       less pink than the accent in BOTH themes, unlike the light-fill dark-ink
-       convention the accent follows. Its label is white in both themes and its
-       hover a shade deeper still, so a destructive button is instantly told apart
-       from a primary one. `danger-text` is that white label on the danger FILL;
-       `danger-surface` is the faint error-tint ground the label sits over
-       elsewhere. */
-    --tai-color-primary: var(--tai-color-accent);
-    --tai-color-primary-text: var(--tai-color-on-accent);
-    --tai-color-danger: #991b1b;
-    --tai-dark-color-danger: #dc2626;
-    --tai-color-danger-text: #ffffff;
-    --tai-dark-color-danger-text: #ffffff;
-    --tai-color-danger-hover: #7f1d1d;
-    --tai-dark-color-danger-hover: #b91c1c;
-    --tai-color-danger-surface: var(--tai-color-err-tint);
-    --tai-color-success: var(--tai-color-ok-text);
-    --tai-color-warning: var(--tai-color-warn-text);
+    /* -- Destructive emphasis ---------------------------------------------
+       A FILL for the destructive button only, never text: as text the dark
+       fill fails contrast on the dark grounds, so error text takes `err-text`.
+       It runs deeper than the accent on purpose: a destructive fill sharing the
+       crimson brand ramp reads as the primary action, so this is its own deep
+       red, clearly darker and less pink than the accent in BOTH themes, unlike
+       the light-fill dark-ink convention the accent follows. `on-destructive` is
+       the white label on that fill in both themes, and the hover is a shade
+       deeper still, so a destructive button is instantly told apart from a
+       primary one. */
+    --tai-color-destructive: #991b1b;
+    --tai-dark-color-destructive: #dc2626;
+    --tai-color-destructive-hover: #7f1d1d;
+    --tai-dark-color-destructive-hover: #b91c1c;
+    --tai-color-on-destructive: #ffffff;
+    --tai-dark-color-on-destructive: #ffffff;
 
     /* -- Spacing (n x 4; there is deliberately no space-7) ------------------ */
     --tai-space-1: 0.25rem; /* 4px */
@@ -272,11 +264,6 @@
     --tai-dark-shadow-overlay-color: rgb(0 0 0 / 0.6);
     --tai-shadow-lift: 0 12px 32px var(--tai-shadow-lift-color);
     --tai-shadow-overlay: 0 24px 48px var(--tai-shadow-overlay-color);
-    /* Legacy slots, re-pointed at the new elevation pair. Both names are kept
-       and both changed MEANING: they were resting shadows (`0 1px 2px` /
-       `0 4px 12px`) and now alias the lift and overlay geometry. */
-    --tai-shadow-sm: var(--tai-shadow-lift);
-    --tai-shadow-md: var(--tai-shadow-overlay);
 
     /* -- Stacking ------------------------------------------------------------
        `popover` and `tooltip` sit ABOVE the modal layers on purpose. Both are
@@ -335,9 +322,9 @@
       --tai-color-scrim: var(--tai-dark-color-scrim);
       --tai-color-prose-link: var(--tai-dark-color-prose-link);
       --tai-color-prose-link-hover: var(--tai-dark-color-prose-link-hover);
-      --tai-color-danger: var(--tai-dark-color-danger);
-      --tai-color-danger-text: var(--tai-dark-color-danger-text);
-      --tai-color-danger-hover: var(--tai-dark-color-danger-hover);
+      --tai-color-destructive: var(--tai-dark-color-destructive);
+      --tai-color-destructive-hover: var(--tai-dark-color-destructive-hover);
+      --tai-color-on-destructive: var(--tai-dark-color-on-destructive);
       --tai-shadow-lift-color: var(--tai-dark-shadow-lift-color);
       --tai-shadow-overlay-color: var(--tai-dark-shadow-overlay-color);
     }
@@ -382,9 +369,9 @@
     --tai-color-scrim: var(--tai-dark-color-scrim);
     --tai-color-prose-link: var(--tai-dark-color-prose-link);
     --tai-color-prose-link-hover: var(--tai-dark-color-prose-link-hover);
-    --tai-color-danger: var(--tai-dark-color-danger);
-    --tai-color-danger-text: var(--tai-dark-color-danger-text);
-    --tai-color-danger-hover: var(--tai-dark-color-danger-hover);
+    --tai-color-destructive: var(--tai-dark-color-destructive);
+    --tai-color-destructive-hover: var(--tai-dark-color-destructive-hover);
+    --tai-color-on-destructive: var(--tai-dark-color-on-destructive);
     --tai-shadow-lift-color: var(--tai-dark-shadow-lift-color);
     --tai-shadow-overlay-color: var(--tai-dark-shadow-overlay-color);
   }

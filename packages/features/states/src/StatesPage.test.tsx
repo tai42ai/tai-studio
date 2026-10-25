@@ -47,6 +47,17 @@ function client(over: Partial<StubApiClient> = {}): StubApiClient {
   };
 }
 
+const INTRO =
+  "A state is a declared JSON document kept per subject and checked against its schema on every write. A preset, conversation route, hook or schedule that binds a state reads the record into the run's input before the run and writes the result back after it; plugins and the API write records too, and you can edit one here. Each state's Consumers tab lists what binds it.";
+
+describe('StatesPage header', () => {
+  it('sits under Doors and says what a state is and who reads and writes it', async () => {
+    renderWithProviders(<StatesPage search={{}} />, { client: client() });
+    expect(await screen.findByText(INTRO)).toBeInTheDocument();
+    expect(screen.getByText('Doors')).toBeInTheDocument();
+  });
+});
+
 describe('StatesPage routing', () => {
   it('a bare page shows the list and the no-selection prompt', async () => {
     renderWithProviders(<StatesPage search={{}} />, { client: client() });

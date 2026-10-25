@@ -13,8 +13,10 @@
  * them; a scoped own-key caller sees only the keys table above.
  *
  * Every server-supplied string renders as ESCAPED text through the design-system
- * components. Failures surface loudly through <ErrorState>. Read-only config mode
- * disables every mutation.
+ * components. Failures surface loudly through <ErrorState>. Creating, editing and
+ * revoking keys needs the caller's mint grant (its access reaches
+ * `POST /api/auth/api-keys`; an owned key never mints); without it the tab lists the
+ * caller's keys and a status line says minting is not permitted.
  */
 import type { PrincipalRef } from '@tai42/api-client';
 import {
@@ -32,6 +34,7 @@ import { type CSSProperties, type ReactNode, useState } from 'react';
 import {
   MINT_ROUTE,
   mintableScopeIds,
+  POLICY_VERSIONS_ROUTE,
   projectionCanMint,
   scopeIdsOf,
   scopesMapperVisible,
@@ -65,22 +68,26 @@ const createNoteStyle: CSSProperties = {
 };
 
 /**
- * The keys-card header control. Hidden in readOnly; a non-mintable deployment shows
- * the external-issuer note; a mintable deployment the caller cannot mint on shows a
- * short access note; only when both hold does the Create button render.
+ * The keys-card header control. Without the mint grant, a status line says minting is
+ * not permitted; with it, a non-mintable deployment shows the disabled control and the
+ * external-issuer note; otherwise the Create button renders.
  */
 function CreateKeyControl({
-  readOnly,
+  canWriteKeys,
   deploymentMintable,
-  projectionMintable,
   onCreate,
 }: {
-  readonly readOnly: boolean;
+  readonly canWriteKeys: boolean;
   readonly deploymentMintable: boolean;
-  readonly projectionMintable: boolean;
   readonly onCreate: () => void;
 }): ReactNode {
-  if (readOnly) return null;
+  if (!canWriteKeys) {
+    return (
+      <span role="status" className="tai-muted">
+        Your access does not permit minting keys.
+      </span>
+    );
+  }
   if (!deploymentMintable) {
     return (
       <div style={createGateStyle}>
@@ -90,9 +97,6 @@ function CreateKeyControl({
         <span style={createNoteStyle}>Keys are managed at the external issuer</span>
       </div>
     );
-  }
-  if (!projectionMintable) {
-    return <span style={createNoteStyle}>Your access does not permit minting keys.</span>;
   }
   return (
     <Button type="button" variant="primary" onClick={onCreate}>
@@ -162,15 +166,15 @@ function ApiKeysDialogHost({
 }
 
 export interface ApiKeysTabProps {
-  readonly readOnly: boolean;
   /** The deployment's public marker, served on the caller's projection — never a scope. */
   readonly publicId: string;
 }
 
-export function ApiKeysTab({ readOnly, publicId }: ApiKeysTabProps): ReactNode {
+export function ApiKeysTab({ publicId }: ApiKeysTabProps): ReactNode {
   const api = useApi();
   const { state: capabilityState } = useCapabilities();
-  const canMintRoute = useCanWrite(MINT_ROUTE, 'POST');
+  const canWriteKeys = projectionCanMint(capabilityState, useCanWrite(MINT_ROUTE, 'POST'));
+  const canReadHistory = useCanWrite(POLICY_VERSIONS_ROUTE, 'GET');
 
   const keysQuery = useQuery({
     queryKey: tokensPayloadKey,
@@ -180,13 +184,13 @@ export function ApiKeysTab({ readOnly, publicId }: ApiKeysTabProps): ReactNode {
     queryKey: scopesKey,
     queryFn: ({ signal }) => api.listScopes(signal),
   });
-  // Whether this deployment can MINT keys locally. Fetched only when the create
-  // path can render (a read-only viewer never consumes it), so a failing
-  // capabilities endpoint never blocks the key list they can still view.
+  // Whether this deployment can MINT keys locally. Fetched only with the mint grant
+  // (a caller without it never consumes it), so a failing capabilities endpoint never
+  // blocks the key list they can still view.
   const capabilitiesQuery = useQuery({
     queryKey: authCapabilitiesKey,
     queryFn: ({ signal }) => api.getAuthCapabilities(signal),
-    enabled: !readOnly,
+    enabled: canWriteKeys,
   });
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -198,9 +202,9 @@ export function ApiKeysTab({ readOnly, publicId }: ApiKeysTabProps): ReactNode {
   const [revokeUser, setRevokeUser] = useState<string | null>(null);
   const [policyUser, setPolicyUser] = useState<string | null>(null);
 
-  // The capabilities query is disabled (perpetually pending, never failed) in
-  // readOnly mode, so it only joins the whole-tab gates for the mint path.
-  if (keysQuery.isError || scopesQuery.isError || (!readOnly && capabilitiesQuery.isError)) {
+  // The capabilities query is disabled (perpetually pending, never failed) without
+  // the mint grant, so it only joins the whole-tab gates with the grant.
+  if (keysQuery.isError || scopesQuery.isError || (canWriteKeys && capabilitiesQuery.isError)) {
     const error = keysQuery.error ?? scopesQuery.error ?? capabilitiesQuery.error;
     return (
       <ErrorState
@@ -213,7 +217,11 @@ export function ApiKeysTab({ readOnly, publicId }: ApiKeysTabProps): ReactNode {
       />
     );
   }
-  if (keysQuery.isPending || scopesQuery.isPending || (!readOnly && capabilitiesQuery.isPending)) {
+  if (
+    keysQuery.isPending ||
+    scopesQuery.isPending ||
+    (canWriteKeys && capabilitiesQuery.isPending)
+  ) {
     return <Spinner label="Loading API keys" />;
   }
 
@@ -221,22 +229,21 @@ export function ApiKeysTab({ readOnly, publicId }: ApiKeysTabProps): ReactNode {
   const scopes = scopesQuery.data;
   const scopeIds = scopeIdsOf(scopes, publicId);
   // Whether THIS deployment can mint locally (validator-only deployments cannot);
-  // absent in readOnly mode, where the create control is hidden.
-  const deploymentMintable = !readOnly && capabilitiesQuery.data?.mintable === true;
-  const projectionMintable = projectionCanMint(capabilityState, canMintRoute);
-  const canMint = deploymentMintable && projectionMintable;
+  // read only with the mint grant.
+  const deploymentMintable = capabilitiesQuery.data?.mintable === true;
+  const canMint = canWriteKeys && deploymentMintable;
   const dialogScopeIds = mintableScopeIds(scopeIds, capabilityState);
 
   return (
     <div style={stackStyle}>
       <KeysTable
         keys={keys}
-        readOnly={readOnly}
+        readOnly={!canWriteKeys}
+        historyVisible={canReadHistory}
         headerAction={
           <CreateKeyControl
-            readOnly={readOnly}
+            canWriteKeys={canWriteKeys}
             deploymentMintable={deploymentMintable}
-            projectionMintable={projectionMintable}
             onCreate={() => {
               setCreateOpen(true);
             }}
@@ -248,7 +255,7 @@ export function ApiKeysTab({ readOnly, publicId }: ApiKeysTabProps): ReactNode {
       />
 
       {scopesMapperVisible(capabilityState) ? (
-        <ScopesMapper scopes={scopes} readOnly={readOnly} publicId={publicId} />
+        <ScopesMapper scopes={scopes} readOnly={!canWriteKeys} publicId={publicId} />
       ) : null}
 
       <ApiKeysDialogHost
@@ -265,7 +272,7 @@ export function ApiKeysTab({ readOnly, publicId }: ApiKeysTabProps): ReactNode {
         policyUser={policyUser}
         scopeIds={scopeIds}
         publicId={publicId}
-        readOnly={readOnly}
+        readOnly={!canWriteKeys}
         onClose={() => {
           setMinted(null);
           setEditPayload(null);

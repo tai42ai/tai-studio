@@ -142,16 +142,14 @@ export interface RegisteredPage extends PageContribution {
 }
 
 /**
- * The sidebar section a nav entry renders in. A named core section groups the
- * entry there, after that section's core rows. An absent field or any value that
- * is not a live core section renders the entry in the shared "Plugins" section that
- * follows the core sections (alongside every other undeclared plugin entry),
- * placed after the core sections. The shell tolerates an unknown value at runtime
- * (a bundle newer than this host), falling back to that shared section, so the
- * field is a placement hint, never a hard contract.
+ * The sidebar section a nav entry renders in. The core sections render in this
+ * order: Capabilities, Connections, Doors, Activity, Administration. A named core
+ * section groups the entry there, after that section's core rows. An absent field
+ * or any value that is not a core section renders the entry in the shared
+ * "Plugins" section, placed after the core sections.
  */
 export type NavEntrySection =
-  'Capabilities' | 'Connections' | 'Triggers' | 'Activity' | 'Administration';
+  'Capabilities' | 'Connections' | 'Doors' | 'Activity' | 'Administration';
 
 export interface NavEntryContribution {
   /**
@@ -162,9 +160,8 @@ export interface NavEntryContribution {
   readonly path: string;
   readonly title: string;
   /**
-   * Optional target sidebar section (see {@link NavEntrySection}); absent ⇒ the
-   * shared "Plugins" section. Additive — an older bundle omits it and stays
-   * on the same plugin API version.
+   * Optional target sidebar section (see {@link NavEntrySection}); omitted or
+   * unrecognised ⇒ the shared "Plugins" section.
    */
   readonly section?: NavEntrySection;
   /**

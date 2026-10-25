@@ -6,24 +6,25 @@
  * live in the SDK). It is PRESENTATIONAL: the caller fetches `available` and owns
  * the selected `value`; this component fetches nothing.
  *
- * The catalog is GROUPED by `kind`. A kind the catalog serves as not `multiple` is
+ * The catalog is GROUPED by `kind`: each kind is a group `Field` named
+ * "Kind: <kind>", described "(single-select)" when it is single-select. A kind the catalog serves as not `multiple` is
  * SINGLE-SELECT — checking one of its extensions replaces any other of that kind
  * already in the combo; a `multiple` kind is freely multi-select. Selection order is preserved (the combo is ordered — the
  * stacking order that produces the branch tool name), so a newly-checked extension
  * appends to the end and unchecking removes in place.
  *
  * SAFETY: an extension name AND its kind are server-supplied, so every name/kind
- * renders as TEXT through the DS `Checkbox`/`Badge` (React escapes it) — never an
+ * renders as TEXT through the DS `Checkbox`/`Field` (React escapes it) — never an
  * HTML sink. Pinned by a test.
  *
  * Geometry and ink come from the design-system layout classes (`tai-stack`,
- * `tai-row`, `tai-muted`); the component carries no palette of its own.
+ * `tai-row`) and `Field`; the component carries no palette of its own.
  */
 import type { Extension } from '@tai42/api-client';
 
-import { Badge } from './badge';
 import { Checkbox } from './checkbox';
-import { groupByKind, kindVariant } from './extension-grouping';
+import { groupByKind } from './extension-grouping';
+import { Field } from './field';
 import { EmptyState } from './primitives';
 
 export interface ExtensionPickerProps {
@@ -81,13 +82,12 @@ export function ExtensionPicker({
   return (
     <div data-testid={idPrefix} className="tai-stack">
       {groups.map((group) => (
-        <div key={group.kind} className="tai-stack tai-stack-2">
-          {/* The kind heading is a layout row, not prose: its badge names the kind
-              and the single-select qualifier rides beside it as secondary text. */}
-          <div className="tai-row">
-            <Badge variant={kindVariant(group.kind)}>{group.kind}</Badge>
-            {group.multiple ? null : <span className="tai-muted">(single-select)</span>}
-          </div>
+        <Field
+          key={group.kind}
+          group
+          label={`Kind: ${group.kind}`}
+          description={group.multiple ? undefined : '(single-select)'}
+        >
           <div className="tai-row">
             {group.members.map((extension) => (
               <Checkbox
@@ -101,7 +101,7 @@ export function ExtensionPicker({
               />
             ))}
           </div>
-        </div>
+        </Field>
       ))}
     </div>
   );

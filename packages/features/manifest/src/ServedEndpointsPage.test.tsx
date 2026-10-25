@@ -18,7 +18,7 @@ function served(transport: string) {
 }
 
 describe('ServedEndpointsPage', () => {
-  it('renders the Connections page header', async () => {
+  it('renders the page header', async () => {
     const client = {
       listSubMcp: vi.fn().mockResolvedValue({}),
       listTools: vi.fn().mockResolvedValue(TOOLS),

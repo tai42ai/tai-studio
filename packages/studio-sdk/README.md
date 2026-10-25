@@ -27,8 +27,9 @@ pnpm add @tai42/studio-sdk
 - `@tai42/studio-sdk/schema-form` — a form-only `SchemaForm` entry for bundling
   consumers that want the form without the barrel. It imports no CSS by design —
   a subpath consumer loads `tokens.css` and `components.css` explicitly.
-- `@tai42/studio-sdk/testing` — test-only helpers: a registry reset and
-  `installJsdomStubs()`, which fills the browser APIs jsdom omits.
+- `@tai42/studio-sdk/testing` — test-only helpers: a registry reset,
+  `installJsdomStubs()`, which fills the browser APIs jsdom omits, and
+  `destructiveColorOffences()`, the destructive-emphasis rule below.
 - `@tai42/studio-sdk/tokens.css` — the design-token stylesheet. It also emits the
   canonical `@layer` order, so a host imports it FIRST.
 - `@tai42/studio-sdk/fonts.css` — the self-hosted Inter Variable and Geist Mono
@@ -107,8 +108,8 @@ than the SDK — it compiles Tailwind v4, whose output needs `@property` and
 
 `tokens.css` is the styling API: a plugin styles against these names and gets
 whichever half the viewer's theme resolves to. The names are also exported as
-`TOKEN_NAMES` (86 of them), and the list grows additively — a rename or a removal
-bumps the SDK compatibility version.
+`TOKEN_NAMES` (79 of them). A new name is not a break; a rename or a removal is a
+breaking change that bumps `STUDIO_PLUGIN_API_VERSION`.
 
 The light value is the token; the dark value sits beside it under a
 `--tai-dark-` name that a plugin never reads. Two blocks put the dark half into
@@ -196,22 +197,18 @@ icons; the `-fill` members are for fills and charts and carry `on-fill` ink.
 | `--tai-color-syntax-number`    | `var(--tai-color-accent)`     | _(same)_             |
 | `--tai-color-syntax-bool`      | `var(--tai-color-warn-text)`  | _(same)_             |
 
-**Legacy slots.** The names a plugin already styles against. `primary`,
-`success` and `warning` re-point at the members of the contract above that keep
-them legible; `danger` is its own destructive emphasis — a deep red that runs
-darker than the brand accent in both themes so a destructive control is never
-mistaken for the primary one, with a white label and a hover a shade deeper.
+**Destructive emphasis.** A fill for the destructive button only, never text:
+error text takes `--tai-color-err-text`. It is a deep red that runs darker than
+the brand accent in both themes, so a destructive control is never mistaken for
+the primary one, with a white label and a hover a shade deeper. A plugin checks its
+own styles against this rule with `destructiveColorOffences()` from
+`@tai42/studio-sdk/testing`.
 
-| Token                        | Light                        | Dark      |
-| ---------------------------- | ---------------------------- | --------- |
-| `--tai-color-primary`        | `var(--tai-color-accent)`    | _(same)_  |
-| `--tai-color-primary-text`   | `var(--tai-color-on-accent)` | _(same)_  |
-| `--tai-color-danger`         | `#991b1b`                    | `#dc2626` |
-| `--tai-color-danger-text`    | `#ffffff`                    | `#ffffff` |
-| `--tai-color-danger-hover`   | `#7f1d1d`                    | `#b91c1c` |
-| `--tai-color-danger-surface` | `var(--tai-color-err-tint)`  | _(same)_  |
-| `--tai-color-success`        | `var(--tai-color-ok-text)`   | _(same)_  |
-| `--tai-color-warning`        | `var(--tai-color-warn-text)` | _(same)_  |
+| Token                           | Light     | Dark      |
+| ------------------------------- | --------- | --------- |
+| `--tai-color-destructive`       | `#991b1b` | `#dc2626` |
+| `--tai-color-destructive-hover` | `#7f1d1d` | `#b91c1c` |
+| `--tai-color-on-destructive`    | `#ffffff` | `#ffffff` |
 
 **Spacing** (n × 4; there is deliberately no `space-7`). Authored in `rem` so a
 viewer's font-size preference scales them; the px column is the rendered size at
@@ -262,8 +259,7 @@ preference without reading the media query.
 | `--tai-motion-base`           | `250ms` |
 
 **Elevation.** Only the shadow COLOUR varies by theme; the geometry is written
-once, so a dark override cannot silently move an offset or a blur. `shadow-sm`
-and `shadow-md` are legacy slots that now alias the lift and overlay geometry.
+once, so a dark override cannot silently move an offset or a blur.
 
 | Token                        | Light                                         | Dark                |
 | ---------------------------- | --------------------------------------------- | ------------------- |
@@ -271,8 +267,6 @@ and `shadow-md` are legacy slots that now alias the lift and overlay geometry.
 | `--tai-shadow-overlay-color` | `rgb(0 0 0 / 0.16)`                           | `rgb(0 0 0 / 0.6)`  |
 | `--tai-shadow-lift`          | `0 12px 32px var(--tai-shadow-lift-color)`    | _(same)_            |
 | `--tai-shadow-overlay`       | `0 24px 48px var(--tai-shadow-overlay-color)` | _(same)_            |
-| `--tai-shadow-sm`            | `var(--tai-shadow-lift)`                      | _(same)_            |
-| `--tai-shadow-md`            | `var(--tai-shadow-overlay)`                   | _(same)_            |
 
 **Stacking.** `popover` and `tooltip` sit ABOVE the modal layers on purpose: both
 portal to the document body as siblings of a dialog and have to clear its scrim

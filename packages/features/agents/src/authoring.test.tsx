@@ -313,7 +313,11 @@ describe('authored-agents list', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: 'Run authored agent assistant' }),
     );
-    expect(await screen.findByTestId('run-read-only-note')).toBeInTheDocument();
+    const note = await screen.findByTestId('run-read-only-note');
+    expect(note).toHaveAttribute('role', 'status');
+    expect(note).toHaveTextContent(
+      'Running this agent is outside your access — it is shown read-only.',
+    );
     expect(screen.queryByRole('button', { name: 'Run' })).not.toBeInTheDocument();
     expect(streamAuthoredAgentRun).not.toHaveBeenCalled();
   });

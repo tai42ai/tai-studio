@@ -46,7 +46,7 @@ export function TopicVerifierForm(): ReactNode {
         style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}
       >
         {form.hooksQuery.isError ? (
-          <p role="alert" style={{ margin: 0, color: 'var(--tai-color-warning)' }}>
+          <p role="alert" style={{ margin: 0, color: 'var(--tai-color-warn-text)' }}>
             Could not load existing hooks: {errorMessage(form.hooksQuery.error)}. Topic suggestions
             and replace detection are unavailable; a bind will still replace any existing binding on
             this topic.

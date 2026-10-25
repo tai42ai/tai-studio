@@ -28,7 +28,7 @@ const dangerPanelStyle: CSSProperties = {
   padding: 'var(--tai-space-3)',
   borderRadius: 'var(--tai-radius-md)',
   border: '1px solid var(--tai-color-err-text)',
-  background: 'var(--tai-color-danger-surface)',
+  background: 'var(--tai-color-err-tint)',
   color: 'var(--tai-color-err-text)',
   fontSize: 'var(--tai-text-sm)',
 };

@@ -43,7 +43,7 @@ export function ConversationsPage({ search }: PageProps<'conversations'>): React
   return (
     <Stack gap={6}>
       <PageHeader
-        eyebrow="Activity"
+        eyebrow="Doors"
         title="Conversations"
         description="Threads and transcripts from every conversation route — the API door and each channel medium."
       />

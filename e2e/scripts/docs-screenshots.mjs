@@ -99,6 +99,9 @@
  *                  a record the backend does not hold: the resolved route answers 502 and
  *                  the missing-value panel renders.
  *   - manifest   — the manifest JSON tree (non-empty `user_tools`).
+ *   - served-endpoints — the Served endpoints registry: the sub-MCP list (empty, the
+ *                  runner seeds none) above its inline create form.
+ *   - storage    — the Storage browser over the seeded template files.
  *   - templates  — the seeded templates list + the rendered detail (deep-linked).
  *   - system     — the health badge (the health router is loaded before the SPA
  *                  catch-all, so it renders ops text, not index.html) plus the
@@ -116,11 +119,15 @@
  *   - member-action-result — a row action ("Send a new login link") run live against the
  *                  seeded pending invite, framing the one-time-secret result (the minted
  *                  invite link through CopyField).
+ *   - marketplace — the Marketplace list with the seeded generic plugin
+ *                  (acme/alerts-relay) from the minimal seeded registry.
  *   - marketplace-install — the Marketplace detail page's route-mounting install
  *                  dialog for the seeded generic plugin (acme/alerts-relay): the
  *                  resolved routes, the per-item base-prefix remap input, and the
  *                  public-route acceptance checkbox, all from the minimal seeded
  *                  registry the runner boots (MARKETPLACE_URL).
+ *   - connectors — the Connectors page: the Providers list above the Connections list
+ *                  (empty, the runner connects nothing).
  *   - connectors-add-server — the Connectors page with the "Add MCP server" dialog at its
  *                  review step, the single look-up answered by a route stub (the demo
  *                  backend has no OAuth-protected server to look up); nothing is added.
@@ -174,6 +181,10 @@
  *                  failure and seeds no schedule).
  *   - schedule-cron-error — the add-schedule dialog with a cron expression of the wrong
  *                  length, showing the field error (nothing is submitted).
+ *   - hooks      — the Hooks registry with the seeded consumer hook (`notes-updater`).
+ *   - interactions — the interactions inbox under the full key.
+ *   - notifications — the notifications inbox under the full key (nondeterministic: each
+ *                  row shows its server-stamped `created_at`).
  *   - hooks-trigger-link / -execution-key — the mint→QR dialog, and the register
  *                  form's execution-key picker.
  *   - login      — the credential screen, captured signed out.
@@ -1939,6 +1950,20 @@ const AUTHED_PAGES = [
   // A non-empty `user_tools` renders the manifest JSON tree with that key.
   { name: 'manifest', path: '/manifest', wait: 'text=user_tools' },
   {
+    // The Served endpoints registry: the sub-MCP list above its inline create form. The
+    // runner seeds no sub-MCP, so the list's empty state is the settled signal.
+    name: 'served-endpoints',
+    path: '/served-endpoints',
+    wait: 'text=No sub-MCP servers',
+  },
+  {
+    // The Storage browser over the storage-local root the runner points at the seeded
+    // template files; a seeded file's row proves the listing rendered.
+    name: 'storage',
+    path: '/storage',
+    wait: 'text=welcome-email.md',
+  },
+  {
     name: 'templates',
     path: '/templates?template=welcome-email.md',
     // The seeded template's list link (list pane is populated).
@@ -2087,6 +2112,13 @@ const AUTHED_PAGES = [
     },
   },
   {
+    // The Marketplace list: the minimal seeded registry (MARKETPLACE_URL) answers with
+    // one published plugin, so the card is the same on every run.
+    name: 'marketplace',
+    path: '/marketplace',
+    wait: 'text=Alerts Relay',
+  },
+  {
     // The Marketplace detail page's route-mounting install dialog for the seeded
     // generic route-carrying plugin (acme/alerts-relay), reached by deep-linking the
     // detail route then clicking Install. The dialog frames the whole flow the docs
@@ -2119,6 +2151,13 @@ const AUTHED_PAGES = [
         .getByText('I accept these routes are served without authentication')
         .waitFor({ state: 'visible', timeout: 8000 });
     },
+  },
+  {
+    // The Connectors page: the Providers list above the Connections list. The runner
+    // connects nothing, so the Connections empty state is the settled signal.
+    name: 'connectors',
+    path: '/connectors',
+    wait: 'section[aria-label="Connections"] >> text=No connections yet',
   },
   {
     // The Connectors page with the "Add MCP server" dialog at its review step: where the
@@ -2478,6 +2517,25 @@ const AUTHED_PAGES = [
     wait: 'text=/[1-9]\\d* tools\\b/',
   },
   {
+    // The interactions inbox under the full key. Waits on the pending question the runner
+    // seeds (docs-screenshots.sh).
+    name: 'interactions',
+    path: '/interactions',
+    wait: 'text=Approve the staging deploy',
+  },
+  {
+    // The notifications inbox under the full key. Waits on the notification the runner
+    // seeds (docs-screenshots.sh).
+    //
+    // Nondeterministic: the row renders its server-stamped `created_at`, so the shown
+    // timestamp differs every run. Gated out of the automated pipeline
+    // (SKIP_NONDETERMINISTIC_SHOTS); recaptured on a manual full run.
+    name: 'notifications',
+    nondeterministic: true,
+    path: '/notifications',
+    wait: 'text=Your nightly export finished',
+  },
+  {
     // The scoped interactions inbox: the server stream is audience-filtered to the
     // owned identity, so only the seeded audience-addressed question renders. Waits
     // on that question's text (seeded by docs-screenshots.sh).
@@ -2541,6 +2599,12 @@ const AUTHED_PAGES = [
         .locator('[data-testid="claim-link-qr"]')
         .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
     },
+  },
+  {
+    // The Hooks registry: the seeded consumer hook's row above the register form.
+    name: 'hooks',
+    path: '/hooks',
+    wait: 'text=notes-updater',
   },
   {
     // The trigger-link create flow: driven with the FULL key (the section + create

@@ -61,7 +61,8 @@ export function coreTabVisible(state: CapabilityState, prefixes: readonly string
  * their reads), then any plugin settings tabs — filtered by their capability
  * requirement, sorted by (pluginId, title), each wrapped in an {@link ErrorBoundary}
  * and carrying a collision-proof `plugin:{pluginId}:{id}` value. The effective
- * read-only flows to the core tabs only; a plugin tab's contract is `{ pluginId }`.
+ * read-only flows to the core tabs other than API keys, which gates its writes on the
+ * caller's mint grant; a plugin tab's contract is `{ pluginId }`.
  */
 export function buildSettingsTabs(input: {
   readonly readOnly: boolean;
@@ -95,7 +96,7 @@ export function buildSettingsTabs(input: {
   tabs.push({
     value: 'api-keys',
     label: 'API keys',
-    content: <ApiKeysTab readOnly={readOnly} publicId={input.projection.public_resource_id} />,
+    content: <ApiKeysTab publicId={input.projection.public_resource_id} />,
   });
   if (input.backupVisible) {
     tabs.push({ value: 'backup', label: 'Backup', content: <BackupTab readOnly={readOnly} /> });

@@ -4,6 +4,7 @@
  * and drives real client-side transitions.
  */
 import type { PluginContext, RouteToken } from '@tai42/studio-sdk';
+import { STUDIO_PLUGIN_API_VERSION } from '@tai42/studio-sdk';
 import { getPluginHostState } from '@tai42/studio-sdk/host';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
 import { screen, waitFor, within } from '@testing-library/react';
@@ -149,7 +150,7 @@ describe('shell plugin nav', () => {
     return {
       name: 'acme',
       version: '1.0.0',
-      api_version: 1,
+      api_version: STUDIO_PLUGIN_API_VERSION,
       mounts: {},
       entry: 'index.js',
       integrity: { 'index.js': 'sha384-abc' },

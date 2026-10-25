@@ -16657,7 +16657,7 @@ export interface NavEntryContribution {
 }
 
 // @public
-export type NavEntrySection = 'Capabilities' | 'Connections' | 'Triggers' | 'Activity' | 'Administration';
+export type NavEntrySection = 'Capabilities' | 'Connections' | 'Doors' | 'Activity' | 'Administration';
 
 // @public
 export interface NavigateOptions {
@@ -27785,7 +27785,7 @@ export interface StructuredOutputProps {
 }
 
 // @public
-export const STUDIO_PLUGIN_API_VERSION = 1;
+export const STUDIO_PLUGIN_API_VERSION = 2;
 
 // @public (undocumented)
 type StudioPluginListingEntry = z.infer<typeof studioPluginListingEntry>;
@@ -28512,7 +28512,7 @@ export interface THProps extends ThHTMLAttributes<HTMLTableCellElement>, Numeric
 }
 
 // @public
-export const TOKEN_NAMES: readonly ["--tai-color-bg", "--tai-color-surface", "--tai-color-surface-raised", "--tai-color-surface-disabled", "--tai-color-code-bg", "--tai-color-border", "--tai-color-border-strong", "--tai-color-control-border", "--tai-color-border-disabled", "--tai-color-text", "--tai-color-heading", "--tai-color-text-muted", "--tai-color-text-disabled", "--tai-color-placeholder", "--tai-color-decor", "--tai-color-accent", "--tai-color-accent-hover", "--tai-color-accent-on-tint", "--tai-color-on-accent", "--tai-color-accent-tint", "--tai-color-ok-text", "--tai-color-err-text", "--tai-color-warn-text", "--tai-color-ok-fill", "--tai-color-err-fill", "--tai-color-warn-fill", "--tai-color-ok-tint", "--tai-color-err-tint", "--tai-color-warn-tint", "--tai-color-on-fill", "--tai-color-focus-ring", "--tai-color-scrim", "--tai-color-prose-link", "--tai-color-prose-link-hover", "--tai-color-syntax-key", "--tai-color-syntax-string", "--tai-color-syntax-number", "--tai-color-syntax-bool", "--tai-color-primary", "--tai-color-primary-text", "--tai-color-danger", "--tai-color-danger-text", "--tai-color-danger-hover", "--tai-color-danger-surface", "--tai-color-success", "--tai-color-warning", "--tai-space-1", "--tai-space-2", "--tai-space-3", "--tai-space-4", "--tai-space-5", "--tai-space-6", "--tai-space-8", "--tai-radius-sm", "--tai-radius-code", "--tai-radius-md", "--tai-radius-tile", "--tai-radius-lg", "--tai-radius-overlay", "--tai-radius-full", "--tai-font-sans", "--tai-font-mono", "--tai-text-display", "--tai-text-xl", "--tai-text-section", "--tai-text-lg", "--tai-text-md", "--tai-text-sm", "--tai-text-code", "--tai-text-xs", "--tai-control-height", "--tai-control-height-coarse", "--tai-motion-fast", "--tai-motion-base", "--tai-shadow-lift-color", "--tai-shadow-overlay-color", "--tai-shadow-lift", "--tai-shadow-overlay", "--tai-shadow-sm", "--tai-shadow-md", "--tai-z-sticky", "--tai-z-dropdown", "--tai-z-overlay", "--tai-z-dialog", "--tai-z-popover", "--tai-z-tooltip"];
+export const TOKEN_NAMES: readonly ["--tai-color-bg", "--tai-color-surface", "--tai-color-surface-raised", "--tai-color-surface-disabled", "--tai-color-code-bg", "--tai-color-border", "--tai-color-border-strong", "--tai-color-control-border", "--tai-color-border-disabled", "--tai-color-text", "--tai-color-heading", "--tai-color-text-muted", "--tai-color-text-disabled", "--tai-color-placeholder", "--tai-color-decor", "--tai-color-accent", "--tai-color-accent-hover", "--tai-color-accent-on-tint", "--tai-color-on-accent", "--tai-color-accent-tint", "--tai-color-ok-text", "--tai-color-err-text", "--tai-color-warn-text", "--tai-color-ok-fill", "--tai-color-err-fill", "--tai-color-warn-fill", "--tai-color-ok-tint", "--tai-color-err-tint", "--tai-color-warn-tint", "--tai-color-on-fill", "--tai-color-focus-ring", "--tai-color-scrim", "--tai-color-prose-link", "--tai-color-prose-link-hover", "--tai-color-syntax-key", "--tai-color-syntax-string", "--tai-color-syntax-number", "--tai-color-syntax-bool", "--tai-color-destructive", "--tai-color-destructive-hover", "--tai-color-on-destructive", "--tai-space-1", "--tai-space-2", "--tai-space-3", "--tai-space-4", "--tai-space-5", "--tai-space-6", "--tai-space-8", "--tai-radius-sm", "--tai-radius-code", "--tai-radius-md", "--tai-radius-tile", "--tai-radius-lg", "--tai-radius-overlay", "--tai-radius-full", "--tai-font-sans", "--tai-font-mono", "--tai-text-display", "--tai-text-xl", "--tai-text-section", "--tai-text-lg", "--tai-text-md", "--tai-text-sm", "--tai-text-code", "--tai-text-xs", "--tai-control-height", "--tai-control-height-coarse", "--tai-motion-fast", "--tai-motion-base", "--tai-shadow-lift-color", "--tai-shadow-overlay-color", "--tai-shadow-lift", "--tai-shadow-overlay", "--tai-z-sticky", "--tai-z-dropdown", "--tai-z-overlay", "--tai-z-dialog", "--tai-z-popover", "--tai-z-tooltip"];
 
 // @public (undocumented)
 export type TokenName = (typeof TOKEN_NAMES)[number];

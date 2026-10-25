@@ -227,7 +227,7 @@ interface NavEntryContribution {
 }
 
 // @public
-type NavEntrySection = 'Capabilities' | 'Connections' | 'Triggers' | 'Activity' | 'Administration';
+type NavEntrySection = 'Capabilities' | 'Connections' | 'Doors' | 'Activity' | 'Administration';
 
 // @public (undocumented)
 interface PageContribution {
