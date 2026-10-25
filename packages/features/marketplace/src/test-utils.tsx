@@ -1,10 +1,15 @@
 /**
  * Test harness for the marketplace feature. `renderWithProviders` wraps the unit
  * under test in the exact provider stack the shell supplies at runtime — a
- * retry-disabled TanStack Query client, the SDK's raw `ApiProvider` (a stub
- * client), `ThemeProvider`, and a `NavigationProvider` whose `navigate` is a spy
- * so navigation can be asserted. Only test dependencies are imported here; no
- * production module is stubbed.
+ * retry-disabled TanStack Query client, the auth + capability contexts, the SDK's
+ * raw `ApiProvider` (a stub client), `ThemeProvider`, and a `NavigationProvider`
+ * whose `navigate` is a spy so navigation can be asserted. Only test dependencies
+ * are imported here; no production module is stubbed.
+ *
+ * The install, update, uninstall and upgrade-all controls gate on the capability
+ * projection. A session key is seeded and `getMe` answers the given projection —
+ * an administrator's by default, so every write control is admitted; a test of a
+ * missing grant passes a scoped one.
  */
 import type {
   ApiClient,
@@ -16,9 +21,16 @@ import type {
   MarketplacePluginDetail,
   MarketplaceSearchPage,
   MarketplaceSearchRow,
+  MeProjection,
 } from '@tai42/api-client';
 import type { NavigationContextValue, RouteSearch, RouteToken } from '@tai42/studio-sdk';
-import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
+import {
+  ApiProvider,
+  AuthProvider,
+  CapabilityProvider,
+  NavigationProvider,
+  ThemeProvider,
+} from '@tai42/studio-sdk';
 import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, type RenderResult, screen } from '@testing-library/react';
@@ -33,37 +45,78 @@ export interface RenderWithProvidersResult extends RenderResult {
   readonly queryClient: QueryClient;
 }
 
+/** The session key `AuthProvider` seeds from, set so `CapabilityProvider` fetches. */
+const SESSION_KEY = 'tai-studio.apiKey';
+
+/** A scoped (non-admin) projection reaching only `routes`. */
+export function scopedProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return {
+    access_control_enabled: true,
+    user_id: 'u-test',
+    owner_user_id: null,
+    principal: { user_id: 'u-test', kind: 'human', display_name: 'Test User' },
+    admin: false,
+    public_resource_id: 'public',
+    scopes: [],
+    routes: [],
+    route_patterns: [],
+    sub_mcp: [],
+    tools: [],
+    agents: [],
+    mintable: false,
+    ...overrides,
+  };
+}
+
+/** An administrator's projection: every write control admitted. */
+export function adminProjection(): MeProjection {
+  return scopedProjection({ admin: true });
+}
+
+/** Seed the session key and answer `getMe` with `projection`. */
+function withProjection(client: StubApiClient, projection: MeProjection): ApiClient {
+  globalThis.sessionStorage.setItem(SESSION_KEY, 'sk-test');
+  // The stub only implements the methods exercised by a given test; the cast
+  // asserts the shape the SDK context expects.
+  return { ...client, getMe: () => Promise.resolve(projection) } as ApiClient;
+}
+
 export function renderWithProviders(
   ui: ReactElement,
-  { client }: { client: StubApiClient },
+  {
+    client,
+    projection = adminProjection(),
+  }: { readonly client: StubApiClient; readonly projection?: MeProjection },
 ): RenderWithProvidersResult {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const navigate = vi.fn();
-  // The stub only implements the methods exercised by a given test; the cast
-  // asserts the shape the SDK context expects.
-  const apiClient = client as ApiClient;
+  const apiClient = withProjection(client, projection);
 
   // The stack is a `wrapper`, not part of the rendered element: RTL's `rerender`
   // replaces only the element, so a wrapper keeps the providers (and the query
   // cache) alive across a re-render with new props.
   const wrapper = ({ children }: { readonly children: ReactNode }): ReactElement => (
     <QueryClientProvider client={queryClient}>
-      <ApiProvider value={apiClient}>
-        <ThemeProvider>
-          <NavigationProvider
-            value={{
-              navigate,
-              resolvePath: () => '/x',
-              navigatePlugin: vi.fn(),
-              resolvePluginPath: () => '/x',
-            }}
-          >
-            {children}
-          </NavigationProvider>
-        </ThemeProvider>
-      </ApiProvider>
+      <AuthProvider>
+        <ApiProvider value={apiClient}>
+          <CapabilityProvider>
+            <ThemeProvider>
+              <NavigationProvider
+                value={{
+                  navigate,
+                  resolvePath: () => '/x',
+                  navigatePlugin: vi.fn(),
+                  resolvePluginPath: () => '/x',
+                }}
+              >
+                {children}
+              </NavigationProvider>
+            </ThemeProvider>
+          </CapabilityProvider>
+        </ApiProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 
@@ -84,12 +137,17 @@ export function renderWithLiveUrl<T extends RouteToken>(
   {
     client,
     initialSearch,
-  }: { readonly client: StubApiClient; readonly initialSearch: RouteSearch<T> },
+    projection = adminProjection(),
+  }: {
+    readonly client: StubApiClient;
+    readonly initialSearch: RouteSearch<T>;
+    readonly projection?: MeProjection;
+  },
 ): RenderResult {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const apiClient = client as ApiClient;
+  const apiClient = withProjection(client, projection);
 
   function Harness(): ReactElement {
     const [search, setSearch] = useState<RouteSearch<T>>(initialSearch);
@@ -107,11 +165,15 @@ export function renderWithLiveUrl<T extends RouteToken>(
     );
     return (
       <QueryClientProvider client={queryClient}>
-        <ApiProvider value={apiClient}>
-          <ThemeProvider>
-            <NavigationProvider value={value}>{page(search)}</NavigationProvider>
-          </ThemeProvider>
-        </ApiProvider>
+        <AuthProvider>
+          <ApiProvider value={apiClient}>
+            <CapabilityProvider>
+              <ThemeProvider>
+                <NavigationProvider value={value}>{page(search)}</NavigationProvider>
+              </ThemeProvider>
+            </CapabilityProvider>
+          </ApiProvider>
+        </AuthProvider>
       </QueryClientProvider>
     );
   }
@@ -334,6 +396,7 @@ export const installReceipt = (ref: string): MarketplaceInstallResult => ({
   package: null,
   pip_output: null,
   reload: {
+    span_release_error: null,
     status: 'reloaded',
     env_keys: 0,
     recycle: null,
@@ -341,11 +404,6 @@ export const installReceipt = (ref: string): MarketplaceInstallResult => ({
     fanout: {
       mode: 'local-only',
       note: 'only this worker reloaded',
-      error: null,
-      local_only: null,
-      op: null,
-      reachable: null,
-      results: null,
     },
   },
 });

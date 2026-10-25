@@ -1,6 +1,6 @@
 /**
  * The per-role grant editor: a tri-state selector per GRANTABLE feature group, the
- * admin-only (purely-fenced) groups listed read-only below, and a Save that persists
+ * groups no per-role level governs listed read-only below, and a Save that persists
  * the draft grant map via `updateRole`. Keyed by role name in the parent, so
  * switching roles remounts and re-seeds the draft from the selected role's grants.
  *
@@ -12,7 +12,6 @@
  */
 import type { GrantLevel, RoleBody, RoleGrants } from '@tai42/api-client';
 import {
-  Badge,
   Button,
   errorMessage,
   ErrorState,
@@ -63,12 +62,12 @@ const noteStyle: CSSProperties = {
 export function RoleGrantEditor({
   role,
   grantableGroups,
-  adminOnlyGroups,
+  levelFreeGroups,
   disabled,
 }: {
   readonly role: RoleBody;
   readonly grantableGroups: readonly FeatureGroup[];
-  readonly adminOnlyGroups: readonly FeatureGroup[];
+  readonly levelFreeGroups: readonly FeatureGroup[];
   readonly disabled: boolean;
 }): ReactNode {
   const api = useApi();
@@ -123,18 +122,18 @@ export function RoleGrantEditor({
         ))
       )}
 
-      {adminOnlyGroups.length > 0 ? (
+      {levelFreeGroups.length > 0 ? (
         <>
-          <h4 style={subHeadingStyle}>Admin-only feature groups</h4>
+          <h4 style={subHeadingStyle}>Feature groups no per-role level governs</h4>
           <p style={noteStyle}>
-            These groups carry only fenced or sensitive routes — the access gate reserves them for
-            admins, so no per-role level can open them.
+            An admin-only route is reserved for admins by its action class or by the control-plane
+            ceiling; a self-service route is kept by every role; a public route is open to everyone
+            without a login. A level cannot open or close these.
           </p>
-          {adminOnlyGroups.map((group) => (
+          {levelFreeGroups.map((group) => (
             <div key={group.tag} style={groupStyle}>
               <div style={groupHeaderStyle}>
                 <strong>{group.tag}</strong>
-                <Badge variant="warning">admin-only</Badge>
               </div>
               <RouteDetail routes={group.routes} />
             </div>

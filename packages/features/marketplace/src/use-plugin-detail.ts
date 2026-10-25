@@ -1,28 +1,38 @@
 /** The plugin-detail state machine: the detail/installed/advisory reads, the
- * install/update/uninstall mutations, the active dialog, and the last receipt. */
-import type { MarketplaceInstallBody, MarketplaceInstallResult } from '@tai42/api-client';
-import { featureDisabledMessage, isFeatureDisabled, useApi } from '@tai42/studio-sdk';
+ * uninstall mutation, the active dialog, and the last receipt. Install and update run
+ * through the SDK's `useInstallAction` inside their forms; the host hears back here. */
+import type { MarketplaceInstallResult } from '@tai42/api-client';
+import {
+  featureDisabledMessage,
+  installedMarketplacePluginsKey,
+  isFeatureDisabled,
+  marketplacePluginKey,
+  useApi,
+} from '@tai42/studio-sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { marketplaceAdvisoriesKey, marketplaceInstalledKey, marketplacePluginKey } from './keys';
+import { marketplaceAdvisoriesKey } from './keys';
 import type { ActionResult, ActiveAction } from './plugin-detail-data';
 
 /**
- * The install/update/uninstall mutations plus the store-off refusal message. Each
- * success records the receipt, closes the dialog, and invalidates the whole query
- * cache — a pip install/uninstall + reload can stale ANY server-derived read.
+ * The host side of every action: each success records the receipt, closes the dialog,
+ * and invalidates the whole query cache — a pip install/uninstall + reload can stale
+ * ANY server-derived read. The store-off refusal message reads the last failed
+ * install/update and the uninstall error.
  */
-function usePluginMutations(
+function usePluginActions(
   refValue: string,
   setActiveAction: (action: ActiveAction | null) => void,
   setResult: (result: ActionResult) => void,
 ) {
   const api = useApi();
   const queryClient = useQueryClient();
+  const [installFailure, setInstallFailure] = useState<unknown>(null);
 
   const onInstallSuccess = (receipt: MarketplaceInstallResult, verb: string): void => {
     setActiveAction(null);
+    setInstallFailure(null);
     setResult({
       verb,
       ref: receipt.ref,
@@ -30,27 +40,11 @@ function usePluginMutations(
       notes: receipt.notes,
       advisories: receipt.advisories,
       routes: receipt.routes,
+      reload: receipt.reload,
     });
     void queryClient.invalidateQueries();
   };
 
-  // The install/update body minus the ref the mutation supplies: the env dialog adds
-  // the preview's missing_env values + secret marks, the mount dialog adds the chosen
-  // route bases + public-route consent; a plain install/update sends none.
-  const installMutation = useMutation({
-    mutationFn: (body: Omit<MarketplaceInstallBody, 'ref'>) =>
-      api.installMarketplacePlugin({ ref: refValue, ...body }),
-    onSuccess: (receipt) => {
-      onInstallSuccess(receipt, 'Installed');
-    },
-  });
-  const updateMutation = useMutation({
-    mutationFn: (body: Omit<MarketplaceInstallBody, 'ref'>) =>
-      api.updateMarketplacePlugin({ ref: refValue, ...body }),
-    onSuccess: (receipt) => {
-      onInstallSuccess(receipt, 'Updated');
-    },
-  });
   const uninstallMutation = useMutation({
     mutationFn: () => api.uninstallMarketplacePlugin({ ref: refValue }),
     onSuccess: (receipt) => {
@@ -62,6 +56,7 @@ function usePluginMutations(
         notes: receipt.notes,
         advisories: [],
         routes: [],
+        reload: receipt.reload,
       });
       void queryClient.invalidateQueries();
     },
@@ -70,13 +65,26 @@ function usePluginMutations(
   // The marketplace install store is unconfigured: an install/update/uninstall
   // answered with a 501 `marketplace-not-configured`. The muted OFF note replaces the
   // write buttons; browse/detail reads never need the store, so they stay untouched.
-  const storeRefusal = [installMutation.error, updateMutation.error, uninstallMutation.error].find(
-    isFeatureDisabled,
-  );
+  const storeRefusal = [installFailure, uninstallMutation.error].find(isFeatureDisabled);
   const storeRefusalMessage =
     storeRefusal !== undefined ? featureDisabledMessage(storeRefusal) : null;
 
-  return { installMutation, updateMutation, uninstallMutation, storeRefusalMessage };
+  return {
+    onInstalled: (receipt: MarketplaceInstallResult) => {
+      onInstallSuccess(receipt, 'Installed');
+    },
+    onUpdated: (receipt: MarketplaceInstallResult) => {
+      onInstallSuccess(receipt, 'Updated');
+    },
+    onInstallFailed: setInstallFailure,
+    /** Forget the failures a dialog recorded, on its close. */
+    resetFailures: () => {
+      setInstallFailure(null);
+      uninstallMutation.reset();
+    },
+    uninstallMutation,
+    storeRefusalMessage,
+  };
 }
 
 export function usePluginDetail(refValue: string) {
@@ -94,7 +102,7 @@ export function usePluginDetail(refValue: string) {
     enabled: slash >= 0,
   });
   const installedQuery = useQuery({
-    queryKey: marketplaceInstalledKey,
+    queryKey: installedMarketplacePluginsKey,
     queryFn: ({ signal }) => api.listInstalledMarketplacePlugins(signal),
     enabled: slash >= 0,
   });
@@ -104,13 +112,10 @@ export function usePluginDetail(refValue: string) {
     enabled: slash >= 0,
   });
 
-  const { installMutation, updateMutation, uninstallMutation, storeRefusalMessage } =
-    usePluginMutations(refValue, setActiveAction, setResult);
+  const actions = usePluginActions(refValue, setActiveAction, setResult);
 
   const closeAction = (): void => {
-    if (activeAction === 'install') installMutation.reset();
-    if (activeAction === 'update') updateMutation.reset();
-    if (activeAction === 'uninstall') uninstallMutation.reset();
+    actions.resetFailures();
     setActiveAction(null);
   };
 
@@ -119,13 +124,11 @@ export function usePluginDetail(refValue: string) {
     detailQuery,
     installedQuery,
     advisoriesQuery,
-    installMutation,
-    updateMutation,
-    uninstallMutation,
+    actions,
     activeAction,
     openAction: setActiveAction,
     result,
-    storeRefusalMessage,
+    storeRefusalMessage: actions.storeRefusalMessage,
     closeAction,
   };
 }

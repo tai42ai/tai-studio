@@ -25,7 +25,13 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
-import { openAddServerReview, seedCredential } from './helpers';
+import {
+  openAddServerReview,
+  openConnectFlow,
+  openHeldPresetDelete,
+  openRouteDialog,
+  seedCredential,
+} from './helpers';
 
 needs();
 
@@ -39,8 +45,6 @@ const FEATURE_ROUTES = [
   '/tools',
   '/agents',
   '/presets',
-  '/extensions',
-  '/templates',
   '/connectors',
   '/conversations',
   '/hooks',
@@ -139,10 +143,23 @@ for (const scheme of ['light', 'dark'] as const) {
         expect(theme, `data-theme did not resolve to ${scheme} on ${route}`).toBe(scheme);
         await audit(route);
         if (route === '/connectors') {
-          // The Connectors page also carries the "Add MCP server" dialog, framed at its
-          // review step (the fullest of its two steps).
+          // The Connectors header action "Add a custom server" opens the "Add MCP server"
+          // dialog, framed at its review step (the fullest of its two steps).
           await openAddServerReview(page);
           await audit(`${route} (add MCP server, review step)`);
+          // The connect flow dialog at its Connect step: the stepper above the form.
+          await openConnectFlow(page);
+          await audit(`${route} (connect flow, connect step)`);
+        }
+        if (route === '/presets') {
+          // The delete confirm with the holder list that keeps Delete disabled.
+          await openHeldPresetDelete(page);
+          await audit(`${route} (delete preset, held)`);
+        }
+        if (route === '/conversations') {
+          // The route create dialog with its target and door pickers drawn.
+          await openRouteDialog(page);
+          await audit(`${route} (create route, pickers drawn)`);
         }
       }
 

@@ -42,14 +42,17 @@ export interface ProviderOptions extends Omit<RenderOptions, 'wrapper'> {
    * Supersedes `projection`; supplying either authenticates the session.
    */
   readonly getMe?: ApiClient['getMe'];
+  /** Fills the query cache before the first render, as another screen's earlier read would. */
+  readonly seed?: (queryClient: QueryClient) => void;
 }
 
 /** The session key `AuthProvider` seeds from, set so `CapabilityProvider` fetches. */
 const SESSION_KEY = 'tai-studio.apiKey';
 
 export function renderWithProviders(ui: ReactNode, options: ProviderOptions): RenderResult {
-  const { client, projection, getMe, ...renderOptions } = options;
+  const { client, projection, getMe, seed, ...renderOptions } = options;
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  seed?.(queryClient);
 
   // A projection (or explicit `getMe`) drives the capability context to `ready`:
   // seed a session key so `AuthProvider` is authenticated and `CapabilityProvider`
@@ -104,6 +107,7 @@ export function scopedProjection(overrides: Partial<MeProjection> = {}): MeProje
 }
 
 const baseProjection: MeProjection = {
+  access_control_enabled: true,
   user_id: 'u-test',
   owner_user_id: null,
   principal: null,
@@ -360,7 +364,9 @@ export function renderInbox(
     channel,
     answerInteraction: answer,
     reactInteraction: react,
-    listChannels: vi.fn().mockResolvedValue({ channels: ['telegram'] }),
+    listChannels: vi
+      .fn()
+      .mockResolvedValue({ channels: [{ name: 'telegram', identity_hint: null }] }),
     baseUrl,
   });
   // When a host reaction endpoint is given, mount the page beneath the config provider the

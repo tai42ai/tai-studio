@@ -60,8 +60,7 @@ export function AuthoredRunView({
   const run = useAuthoredAgentRun(target.name);
   // Projection ⊆ gate: the authored run POSTs the dynamic per-agent authored-run route,
   // which the plain-agent `projection.agents` list cannot vouch for, so gate it directly.
-  // A dynamic route is not method-expressible, so — the house static-placeholder idiom —
-  // the templated path resolves to a full-projection gate.
+  // The gate reads the route's template path with `POST`.
   const canRun = useCanWrite(apiRoutes.post_api_agents_authored_name_runs.path, 'POST');
   const detailQuery = useQuery({
     queryKey: authoredPresetKey(target.name),

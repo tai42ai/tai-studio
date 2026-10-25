@@ -3,6 +3,7 @@
  * key a contract-bearing recurring fire runs as) and the four door-contract jq fields.
  */
 import {
+  type ExecutionKeyBinding,
   ExecutionKeyPicker,
   type ExecutionKeyQuery,
   type TemplatedTextCatalog,
@@ -15,18 +16,22 @@ import type { ScheduleContractState } from './use-schedule-contract';
 export interface ScheduleContractSectionProps {
   readonly contract: ScheduleContractState;
   readonly keysQuery: ExecutionKeyQuery;
+  /** How the dialog binds its key (`useExecutionKeyBinding()`). */
+  readonly binding: ExecutionKeyBinding;
   readonly templatedTextTemplates: TemplatedTextCatalog;
 }
 
 export function ScheduleContractSection({
   contract,
   keysQuery,
+  binding,
   templatedTextTemplates,
 }: ScheduleContractSectionProps): ReactNode {
   return (
     <>
       <ExecutionKeyPicker
         query={keysQuery}
+        binding={binding}
         value={contract.executionKey}
         onValueChange={contract.setExecutionKey}
         error={contract.executionKeyError ?? undefined}

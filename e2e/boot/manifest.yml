@@ -49,6 +49,14 @@ routers_modules:
   # compose Redis (boot.sh points `CONVERSATIONS_REDIS_URL` at db 5), so this needs
   # no Postgres schema; with nothing seeded the routes read returns an empty list.
   - tai42_skeleton.routers.conversations
+  # Agents (`/api/agents*`) and channels (`/api/channels`). The conversation route
+  # create dialog draws an agent picker and a channel picker from these two reads;
+  # without them both pickers show a "not found" error in place of their lists, and
+  # the channel picker never offers the reference plugin's `synthetic` channel
+  # registered under `channel_modules` below. No agent plugin is loaded, so the
+  # agents read answers an empty list.
+  - tai42_skeleton.routers.agents
+  - tai42_skeleton.routers.channels
   - tai42_skeleton.routers.tools
   # The tool-metadata overlay (`/api/tool-meta`). The tools page GETs this on mount
   # to merge each tool's display name / folder / user tags / visibility over the
@@ -164,8 +172,18 @@ monitoring_module: docs_demo_monitoring
 # --- Tool extensions --------------------------------------------------------
 # `ask_external` wraps a callback_url-taking tool into an external human-in-the-
 # loop question; the interactions inbox surfaces the external-link card for it.
+# `studio_demo_label` is the reference plugin's wrapper with one declared setting;
+# the extension-set builder renders its settings form.
 extensions_modules:
   - tai42_skeleton.extensions.builtin.ask_external
+  - reference_plugin.extensions
+
+# --- Channels ---------------------------------------------------------------
+# The reference plugin's `synthetic` channel: a registered channel the server
+# accepts a conversation route on, so the plugin's route panel renders on that
+# route's drill-in. It reaches no medium; every send on it raises.
+channel_modules:
+  - reference_plugin.channels
 
 # --- Tools ------------------------------------------------------------------
 # The reference plugin's demo tools (studio_demo_echo has a custom panel;
@@ -192,9 +210,9 @@ tools:
     module: tai42_skeleton.tools.builtin.interactions
 
 # --- Curated built-in tools -------------------------------------------------
-# The tools the authoring surfaces offer; it rides the `{mcp, user_tools}` preserved
-# manifest view the Manifest screen renders as a JSON tree, so a populated list is
-# what gives that screen a non-empty tree to exercise.
+# The tools the authoring surfaces offer; it rides the preserved manifest view
+# the Manifest screen renders as a JSON tree, so a populated list is what gives
+# that screen a non-empty tree to exercise.
 user_tools:
   - parking_ask
   - parking_ask_resume

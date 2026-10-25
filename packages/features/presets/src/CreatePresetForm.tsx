@@ -9,19 +9,28 @@
  *  3. `fixed_kwargs` — a JSON textarea with a loud parse (a malformed body blocks
  *     submit and shows the parser message, never a silent empty bake).
  *  4. `tags` — free-text chips, written to the tool_meta overlay AFTER the create
- *     succeeds (not a create-body field).
+ *     succeeds (not a create-body field). Drawn only when the caller may write the
+ *     overlay; without that grant the create sends no tags.
  *  5. `extensions` — the `ExtensionComboBuilder`; OMITTED from the body when empty.
+ *  6. the input schema, the input map, the output schema and the output map — each
+ *     optional and OMITTED when unset. The pairing, compile and render rules are the
+ *     server's; its verdict shows through the submit feedback and Validate.
  *
  * On success it invalidates the presets list AND the tools master list (a create
  * binds a live tool), closes, and navigates the detail to the new preset.
  */
-import type { PresetExtensionElement, StateBinding } from '@tai42/api-client';
+import {
+  apiRoutes,
+  type PresetExtensionElement,
+  type StateBinding,
+  type TemplatedText,
+} from '@tai42/api-client';
 import {
   Dialog,
   Field,
-  SchemaEditor,
   type SchemaEditorChange,
   StateBindingSection,
+  useCanWrite,
   useFeatureOff,
 } from '@tai42/studio-sdk';
 import { type ReactNode, type SyntheticEvent, useState } from 'react';
@@ -31,6 +40,7 @@ import { PresetBaseToolField } from './PresetBaseToolField';
 import { PresetEnrichmentErrors } from './PresetEnrichmentErrors';
 import { PresetFormActions } from './PresetFormActions';
 import { PresetIdentityFields } from './PresetIdentityFields';
+import { PresetIoFields } from './PresetIoFields';
 import { PresetKwargsEditor } from './PresetKwargsEditor';
 import { PresetSubmitFeedback } from './PresetSubmitFeedback';
 import { TagsInput } from './tags';
@@ -43,16 +53,26 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
   // The overlay tags input is HIDDEN when the tool_meta store is OFF: an author must
   // not type categorization tags that the OFF overlay would silently drop.
   const toolMetaOff = useFeatureOff('tool_meta');
+  // The tags land through the overlay write after the create; a caller without that
+  // grant is not offered the field, and the create sends no tags.
+  const canWriteTags = useCanWrite(apiRoutes.patch_api_tool_meta_tools_tool_name.path, 'PATCH');
+  const showTags = !toolMetaOff && canWriteTags;
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [base, setBase] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [combos, setCombos] = useState<PresetExtensionElement[][]>([]);
+  const [inputSchema, setInputSchema] = useState<SchemaEditorChange>({
+    schema: null,
+    valid: true,
+  });
+  const [inputMap, setInputMap] = useState<TemplatedText | null>(null);
   const [outputSchema, setOutputSchema] = useState<SchemaEditorChange>({
     schema: null,
     valid: true,
   });
+  const [outputMap, setOutputMap] = useState<TemplatedText | null>(null);
   // The optional door-layer state binding applied around every run of this preset.
   const [stateBinding, setStateBinding] = useState<StateBinding | null>(null);
   const [kwargsText, setKwargsText] = useState('{}');
@@ -83,12 +103,15 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
       base,
       combos,
       kwargsText,
+      inputSchema,
+      inputMap,
       outputSchema,
+      outputMap,
       stateBinding,
       extensionsValid,
       kwargsRowsValid,
     },
-    tags,
+    tags: showTags ? tags : [],
     onClose,
     setKwargsError,
   });
@@ -140,11 +163,11 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
           idPrefix="create-preset-kwargs"
         />
 
-        {toolMetaOff ? null : (
+        {showTags ? (
           <Field label="Tags" description="Categorization labels for this preset.">
             <TagsInput value={tags} onChange={setTags} />
           </Field>
-        )}
+        ) : null}
 
         <ExtensionsField
           value={combos}
@@ -152,13 +175,19 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
           onValidityChange={setExtensionsValid}
         />
 
-        <SchemaEditor
-          value={outputSchema.schema}
-          onChange={setOutputSchema}
-          requireTitle={false}
-          label="Output schema"
-          description="An optional JSON Schema the preset enforces on its tool's structured output."
-          idPrefix="create-preset-output-schema"
+        <PresetIoFields
+          inputSchema={inputSchema}
+          onInputSchemaChange={setInputSchema}
+          inputMap={inputMap}
+          onInputMapChange={setInputMap}
+          outputSchema={outputSchema}
+          onOutputSchemaChange={setOutputSchema}
+          outputMap={outputMap}
+          onOutputMapChange={setOutputMap}
+          inputSchemaDescription="An optional JSON Schema for what callers send. An input map needs one."
+          outputSchemaDescription="An optional JSON Schema the preset enforces on its tool's structured output."
+          templates={binding.templatedTextTemplates}
+          idPrefix="create-preset"
         />
 
         <StateBindingSection value={stateBinding} onChange={setStateBinding} {...binding} />
@@ -176,7 +205,7 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
           canValidate={canValidate}
           validatePending={validate.isPending}
           createPending={create.isPending}
-          outputValid={outputSchema.valid}
+          schemasValid={inputSchema.valid && outputSchema.valid}
           extensionsValid={extensionsValid}
           kwargsRowsValid={kwargsRowsValid}
           versioningDisabled={versioningDisabled}

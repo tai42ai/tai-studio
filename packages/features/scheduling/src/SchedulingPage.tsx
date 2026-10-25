@@ -3,7 +3,8 @@
  * `ScheduleListRow` rows) in a table — Name, Schedule, Status, Tool — with an add
  * dialog, a per-row delete-with-confirm flow, and a refresh action. A row carrying the
  * backend's last scheduling failure shows a warning `Error` badge whose tooltip names it. The server clock (`getServerDateTime`) is shown so
- * operators can reason about cron timing.
+ * operators can reason about cron timing. A deep link's `schedule` marks that row, or
+ * says above the table that no schedule has the name.
  *
  * Two independent honesty states:
  *  - the LIST is served by a backend plugin; when none is installed the endpoint
@@ -42,7 +43,7 @@ import {
   useApi,
 } from '@tai42/studio-sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { AddScheduleDialog } from './AddScheduleDialog';
 import { schedulesKey, serverDateTimeKey } from './keys';
@@ -166,7 +167,56 @@ function DeleteScheduleDialog({ name, onClose }: { name: string; onClose: () => 
   );
 }
 
-function ScheduleTable({ schedules }: { schedules: readonly ScheduleListRow[] }): ReactNode {
+function ScheduleRow({
+  item,
+  highlighted,
+  onDelete,
+}: {
+  readonly item: ScheduleListRow;
+  readonly highlighted: boolean;
+  readonly onDelete: (name: string) => void;
+}): ReactNode {
+  const rowRef = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    if (highlighted) rowRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [highlighted]);
+  return (
+    <TR
+      ref={rowRef}
+      aria-current={highlighted ? 'true' : undefined}
+      style={highlighted ? { background: 'var(--tai-color-accent-tint)' } : undefined}
+    >
+      <TD className="tai-table-id">{item.name}</TD>
+      <TD className="tai-mono">{scheduleSummary(item.cadence)}</TD>
+      <TD>
+        <Badge variant={item.enabled ? 'success' : 'neutral'}>
+          {item.enabled ? 'Enabled' : 'Disabled'}
+        </Badge>
+        {item.error !== null ? <ScheduleErrorBadge error={item.error} /> : null}
+      </TD>
+      <TD className="tai-mono">{item.tool}</TD>
+      <TD>
+        <Button
+          variant="ghost"
+          aria-label={`Delete schedule ${item.name}`}
+          onClick={() => {
+            onDelete(item.name);
+          }}
+        >
+          Delete
+        </Button>
+      </TD>
+    </TR>
+  );
+}
+
+function ScheduleTable({
+  schedules,
+  highlight,
+}: {
+  readonly schedules: readonly ScheduleListRow[];
+  readonly highlight: string | undefined;
+}): ReactNode {
   const [deleting, setDeleting] = useState<string | null>(null);
 
   return (
@@ -184,28 +234,12 @@ function ScheduleTable({ schedules }: { schedules: readonly ScheduleListRow[] })
           </THead>
           <TBody>
             {schedules.map((item) => (
-              <TR key={item.name}>
-                <TD className="tai-table-id">{item.name}</TD>
-                <TD className="tai-mono">{scheduleSummary(item.cadence)}</TD>
-                <TD>
-                  <Badge variant={item.enabled ? 'success' : 'neutral'}>
-                    {item.enabled ? 'Enabled' : 'Disabled'}
-                  </Badge>
-                  {item.error !== null ? <ScheduleErrorBadge error={item.error} /> : null}
-                </TD>
-                <TD className="tai-mono">{item.tool}</TD>
-                <TD>
-                  <Button
-                    variant="ghost"
-                    aria-label={`Delete schedule ${item.name}`}
-                    onClick={() => {
-                      setDeleting(item.name);
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </TD>
-              </TR>
+              <ScheduleRow
+                key={item.name}
+                item={item}
+                highlighted={item.name === highlight}
+                onDelete={setDeleting}
+              />
             ))}
           </TBody>
         </Table>
@@ -222,10 +256,15 @@ function ScheduleTable({ schedules }: { schedules: readonly ScheduleListRow[] })
   );
 }
 
-export function SchedulingPage(_props: PageProps<'scheduling'>): ReactNode {
+export function SchedulingPage({ search }: PageProps<'scheduling'>): ReactNode {
   const api = useApi();
   const query = useQuery({ queryKey: schedulesKey, queryFn: () => api.listSchedules() });
   const [addOpen, setAddOpen] = useState(false);
+  const linkedSchedule = search.schedule;
+  const linkedMissing =
+    linkedSchedule !== undefined &&
+    query.isSuccess &&
+    !query.data.some((item) => item.name === linkedSchedule);
 
   const noBackend = query.isError && query.error instanceof ApiError && query.error.status === 501;
 
@@ -252,6 +291,12 @@ export function SchedulingPage(_props: PageProps<'scheduling'>): ReactNode {
         }
       />
       <ServerClock />
+
+      {linkedMissing ? (
+        <p role="status" style={{ margin: 0 }}>
+          {`No schedule named '${linkedSchedule}'.`}
+        </p>
+      ) : null}
 
       {query.isPending ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
@@ -285,7 +330,7 @@ export function SchedulingPage(_props: PageProps<'scheduling'>): ReactNode {
           />
         </Card>
       ) : (
-        <ScheduleTable schedules={query.data} />
+        <ScheduleTable schedules={query.data} highlight={linkedSchedule} />
       )}
 
       {addOpen ? (

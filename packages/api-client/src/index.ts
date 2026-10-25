@@ -5,7 +5,13 @@
  * validated and every failure throws. No caching of its own — server state
  * lives in TanStack Query in the feature packages.
  */
-export type { AgentEvent, AgentSummary, ParsedAgentEvent, UnknownAgentEvent } from './agents';
+export type {
+  AgentEvent,
+  AgentListing,
+  AgentSummary,
+  ParsedAgentEvent,
+  UnknownAgentEvent,
+} from './agents';
 export { agentEventSchema, parseAgentFrame, parseAgentTranscript } from './agents';
 export type {
   AddServerArgs,
@@ -24,6 +30,7 @@ export type {
   MarketplaceInstallPreviewBody,
   MarketplaceSearchQuery,
   MarketplaceUninstallBody,
+  McpToolFilter,
   MetricsQuery,
   PinRoutePublicBody,
   RoleCreateBody,
@@ -91,6 +98,7 @@ export type {
   BackupNewApiKeys,
   BackupSectionReport,
   ChannelConversationRouteCreate,
+  ChannelEntry,
   Channels,
   ChannelTemplate,
   ChoiceWording,
@@ -153,6 +161,7 @@ export type {
   FreshLife,
   GrantLevel,
   HeldPendingSave,
+  HoldersPreview,
   HookList,
   HookParams,
   HookRegister,
@@ -172,6 +181,7 @@ export type {
   LoginMethods,
   LoginResult,
   LogoutResult,
+  ManifestExtensionSettings,
   ManifestMcpEntry,
   MarketplaceAdvisory,
   MarketplaceDelivery,
@@ -200,6 +210,8 @@ export type {
   MarketplaceUpgradeAllResult,
   MarketplaceUpgradeAllRow,
   MarketplaceVersion,
+  McpAdvertisedTool,
+  McpAdvertisedTools,
   McpEnvRef,
   McpEnvRefs,
   McpReloadResult,
@@ -228,8 +240,8 @@ export type {
   PresetBody,
   PresetDetail,
   PresetExtensionElement,
+  PresetHolderAction,
   PresetRecord,
-  PresetReferees,
   PresetRenamed,
   PresetValidation,
   PresetVersion,
@@ -250,6 +262,7 @@ export type {
   RecycleEntry,
   RecycleRoll,
   RecycleStop,
+  ReferenceHolder,
   ReloadConfigResult,
   RemoveProviderResult,
   ResolvedSpanValue,
@@ -260,6 +273,7 @@ export type {
   RoleVersions,
   RouteAction,
   RouteEntry,
+  RouteRoleReach,
   Run,
   RunAnswer,
   RunSpan,
@@ -301,6 +315,7 @@ export type {
   StatusWording,
   StorageInfo,
   StorageResourceStat,
+  StoredEntry,
   StudioPluginListingEntry,
   SubjectPage,
   SubjectRow,
@@ -309,6 +324,7 @@ export type {
   TargetConversationConfig,
   TemplateDeclarations,
   TemplatedText,
+  TemplateEntry,
   TemplateJq,
   TemplateJqApplyResult,
   TemplateJqResult,

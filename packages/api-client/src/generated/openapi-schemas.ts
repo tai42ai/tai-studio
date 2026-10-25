@@ -190,7 +190,7 @@ export type RecycleStop = z.infer<typeof recycleStop>;
 export const recycleRoll = z.object({ "fresh": z.array(freshLife), "recycle": z.array(recycleEntry), "recycle_stopped": recycleStop.nullable().default(null) });
 export type RecycleRoll = z.infer<typeof recycleRoll>;
 
-export const applyResponse = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "env_keys": z.number().int(), "fanout": fanoutSummary, "recycle": recycleRoll.nullable().default(null), "status": z.string() });
+export const applyResponse = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "env_keys": z.number().int(), "fanout": fanoutSummary, "recycle": recycleRoll.nullable().default(null), "span_release_error": z.string().nullable().default(null), "status": z.string() });
 export type ApplyResponse = z.infer<typeof applyResponse>;
 
 export const applyResult = z.object({ "applied": z.boolean(), "data": z.record(z.string(), z.unknown()).nullable().default(null), "seq": z.number().nullable().default(null), "skipped": z.array(z.record(z.string(), z.unknown())).default([]) }).strict();
@@ -238,7 +238,7 @@ export type BackupExportDocument = z.infer<typeof backupExportDocument>;
 export const backupImport = z.object({ "document": z.record(z.string(), z.unknown()), "mode": z.enum(["skip","overwrite"]).default("skip"), "sections": z.array(z.string()) });
 export type BackupImport = z.infer<typeof backupImport>;
 
-export const backupSectionReport = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "created": z.number().int().default(0), "details": z.record(z.string(), z.unknown()).default({}), "errors": z.array(z.string()).default([]), "fanout": fanoutSummary.nullable().default(null), "recycle": recycleRoll.nullable().default(null), "skipped": z.number().int().default(0), "updated": z.number().int().default(0) }).strict();
+export const backupSectionReport = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "created": z.number().int().default(0), "details": z.record(z.string(), z.unknown()).default({}), "errors": z.array(z.string()).default([]), "fanout": fanoutSummary.nullable().default(null), "recycle": recycleRoll.nullable().default(null), "skipped": z.number().int().default(0), "span_release_error": z.string().nullable().default(null), "updated": z.number().int().default(0) }).strict();
 export type BackupSectionReport = z.infer<typeof backupSectionReport>;
 
 export const backupImportResult = z.object({ "ok": z.boolean(), "sections": z.record(z.string(), backupSectionReport) });
@@ -262,7 +262,10 @@ export type ChannelConversationRouteCreate = z.infer<typeof channelConversationR
 export const channelConversationRouteView = z.object({ "callback_url": z.null().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.string().regex(new RegExp("^[^:]*[^:\\s][^:]*$")), "door": z.literal("channel"), "execution_key": z.string().min(1), "execution_key_fingerprint": z.string(), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.string().regex(new RegExp("\\S")), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "reply_texts": replyTexts.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
 export type ChannelConversationRouteView = z.infer<typeof channelConversationRouteView>;
 
-export const channelListing = z.object({ "channels": z.array(z.string()) });
+export const channelEntry = z.object({ "identity_hint": z.string().nullable(), "name": z.string() });
+export type ChannelEntry = z.infer<typeof channelEntry>;
+
+export const channelListing = z.object({ "channels": z.array(channelEntry) });
 export type ChannelListing = z.infer<typeof channelListing>;
 
 export const checkpointSweepResult = z.object({ "finished_minutes": z.number().int(), "finished_swept": z.array(z.string()), "provider": z.string(), "skipped": z.string().nullable().default(null), "spared": z.array(z.string()), "swept_count": z.number().int(), "waiting_minutes": z.number().int(), "waiting_swept": z.array(z.string()) });
@@ -376,7 +379,7 @@ export type DetachAck = z.infer<typeof detachAck>;
 export const dirDeleted = z.object({ "deleted": z.boolean(), "dir": z.string() });
 export type DirDeleted = z.infer<typeof dirDeleted>;
 
-export const disconnectResponse = z.object({ "connection_id": z.string(), "fanout": z.record(z.string(), z.unknown()).nullable().default(null), "removed_manifest_entries": z.array(z.string()), "upstream_revoke_outcome": z.enum(["success","failed","skipped"]), "upstream_revoke_status": z.number().int().nullable().default(null) });
+export const disconnectResponse = z.object({ "connection_id": z.string(), "fanout": z.record(z.string(), z.unknown()).nullable().default(null), "removed_manifest_entries": z.array(z.string()), "span_release_error": z.string().nullable().default(null), "upstream_revoke_outcome": z.enum(["success","failed","skipped"]), "upstream_revoke_status": z.number().int().nullable().default(null) });
 export type DisconnectResponse = z.infer<typeof disconnectResponse>;
 
 export const discoverServerRequest = z.object({ "provider_id": z.string().nullable().default(null), "url": z.string().nullable().default(null) });
@@ -403,7 +406,7 @@ export type EraseAck = z.infer<typeof eraseAck>;
 export const error = z.object({ "code": z.string().optional(), "error": z.string() });
 export type Error = z.infer<typeof error>;
 
-export const extensionView = z.object({ "kind": z.string(), "multiple": z.boolean(), "name": z.string() });
+export const extensionView = z.object({ "config_schema": z.record(z.string(), z.unknown()).nullable(), "kind": z.string(), "multiple": z.boolean(), "name": z.string() });
 export type ExtensionView = z.infer<typeof extensionView>;
 
 export const extensionListing = z.array(extensionView);
@@ -450,6 +453,12 @@ export type FormField = z.infer<typeof formField>;
 
 export const formMethod = z.object({ "fields": z.array(formField).min(1), "id": z.string().min(1), "purpose": z.enum(["login","invite"]).default("login"), "shape": z.literal("form").default("form"), "submit_path": z.string(), "title": z.string().min(1) }).strict();
 export type FormMethod = z.infer<typeof formMethod>;
+
+export const referenceHolder = z.object({ "kind": z.string().min(1), "locator": z.record(z.string(), z.union([z.string(), z.number().int()])).default({}), "name": z.string().min(1), "summary": z.string().min(1) }).strict();
+export type ReferenceHolder = z.infer<typeof referenceHolder>;
+
+export const holdersPreview = z.object({ "action": z.enum(["rename","delete","detach"]), "holders": z.array(referenceHolder) });
+export type HoldersPreview = z.infer<typeof holdersPreview>;
 
 export const hookListView = z.object({ "items": z.array(hookParams), "topic_verifiers": z.record(z.string(), jsonValue), "total": z.number().int(), "trigger_auth": z.record(z.string(), z.enum(["public","verifier","token","token+api_key","out-of-service"])) });
 export type HookListView = z.infer<typeof hookListView>;
@@ -562,6 +571,12 @@ export type LogoutResult = z.infer<typeof logoutResult>;
 export const mCPConfig = z.object({ "args": z.array(z.string()).default([]), "command": z.string().nullable().default(null), "env": z.record(z.string(), z.string()).default({}), "headers": z.record(z.string(), z.string()).default({}), "type": z.string().nullable().default(null), "uds": z.string().nullable().default(null), "url": z.string().nullable().default(null) }).strict();
 export type MCPConfig = z.infer<typeof mCPConfig>;
 
+export const manifestExtensionMap = z.object({ "extensions": z.record(z.string(), z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())])))), "title": z.string() });
+export type ManifestExtensionMap = z.infer<typeof manifestExtensionMap>;
+
+export const manifestExtensionSettings = z.object({ "api_tools": z.record(z.string(), z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())])))), "backend_module": z.string().nullable(), "extensions_modules": z.array(z.string()), "mcp": z.array(manifestExtensionMap), "tools": z.array(manifestExtensionMap) });
+export type ManifestExtensionSettings = z.infer<typeof manifestExtensionSettings>;
+
 export const manifestReplace = z.object({ "manifest_text": z.string() });
 export type ManifestReplace = z.infer<typeof manifestReplace>;
 
@@ -576,6 +591,12 @@ export type MarketplaceUninstall = z.infer<typeof marketplaceUninstall>;
 
 export const marketplaceUpdate = z.object({ "accept_public_routes": z.boolean().default(false), "env": z.record(z.string(), z.string()).nullable().default(null), "ref": z.string(), "route_mounts": z.record(z.string(), z.string()).nullable().default(null), "secret_keys": z.array(z.string()).nullable().default(null), "version": z.string().nullable().default(null) });
 export type MarketplaceUpdate = z.infer<typeof marketplaceUpdate>;
+
+export const mcpAdvertisedTool = z.object({ "bound": z.boolean(), "description": z.string().nullable(), "name": z.string(), "selected": z.boolean(), "title": z.string().nullable(), "unbound_reason": z.enum(["server_failed","not_loaded","preset_conflict","unusable_schema","not_listed_at_bind"]).nullable() });
+export type McpAdvertisedTool = z.infer<typeof mcpAdvertisedTool>;
+
+export const mcpAdvertisedTools = z.object({ "exclude": z.array(z.string()), "include": z.array(z.string()), "title": z.string(), "tools": z.array(mcpAdvertisedTool), "unadvertised": z.array(z.string()) });
+export type McpAdvertisedTools = z.infer<typeof mcpAdvertisedTools>;
 
 export const taiMCPConfig = z.object({ "config": mCPConfig, "exclude": z.array(z.string()).default([]), "extensions": z.record(z.string(), z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())])))).default({}), "include": z.array(z.string()).default([]), "managed": connectorRef.nullable().default(null), "title": z.string() }).strict();
 export type TaiMCPConfig = z.infer<typeof taiMCPConfig>;
@@ -600,6 +621,9 @@ export type McpStatusSnapshot = z.infer<typeof mcpStatusSnapshot>;
 
 export const mcpTargets = z.object({ "targets": z.array(z.string()).nullable().default(null) });
 export type McpTargets = z.infer<typeof mcpTargets>;
+
+export const mcpToolFilterUpdate = z.object({ "exclude": z.array(z.string()).default([]), "include": z.array(z.string()).default([]) });
+export type McpToolFilterUpdate = z.infer<typeof mcpToolFilterUpdate>;
 
 export const memberActionDescriptor = z.object({ "destructive": z.boolean(), "input_schema": z.record(z.string(), z.unknown()), "key": z.string().min(1), "label": z.string(), "result_schema": z.record(z.string(), z.unknown()), "scope": z.enum(["page","member_row","invite_row"]) }).strict();
 export type MemberActionDescriptor = z.infer<typeof memberActionDescriptor>;
@@ -661,7 +685,7 @@ export type OAuthFailed = z.infer<typeof oAuthFailed>;
 export const oAuthNotConfigured = z.object({ "kind": z.literal("not_configured") });
 export type OAuthNotConfigured = z.infer<typeof oAuthNotConfigured>;
 
-export const oAuthSuccess = z.object({ "connection_id": z.string(), "fanout": fanoutSummary, "kind": z.literal("success"), "return_url": z.string() });
+export const oAuthSuccess = z.object({ "connection_id": z.string(), "fanout": fanoutSummary, "kind": z.literal("success"), "return_url": z.string(), "span_release_error": z.string().nullable().default(null) });
 export type OAuthSuccess = z.infer<typeof oAuthSuccess>;
 
 export const oAuthCompletionResult = z.discriminatedUnion("kind", [oAuthNotConfigured, oAuthCancelled, oAuthFailed, oAuthSuccess]);
@@ -694,7 +718,7 @@ export type PasswordCredential = z.infer<typeof passwordCredential>;
 export const patchSubServicesRequest = z.object({ "enabled_sub_services": z.array(z.string()).min(1).max(64), "return_url": z.string().nullable().default(null) });
 export type PatchSubServicesRequest = z.infer<typeof patchSubServicesRequest>;
 
-export const patchSubServicesResponse = z.object({ "added_manifest_entries": z.array(z.string()).default([]), "authorize_url": z.string().nullable().default(null), "connection_id": z.string(), "consent_required": z.boolean(), "enabled_sub_services": z.array(z.string()), "fanout": z.record(z.string(), z.unknown()).nullable().default(null), "flow_id": z.string().nullable().default(null), "removed_manifest_entries": z.array(z.string()).default([]) });
+export const patchSubServicesResponse = z.object({ "added_manifest_entries": z.array(z.string()).default([]), "authorize_url": z.string().nullable().default(null), "connection_id": z.string(), "consent_required": z.boolean(), "enabled_sub_services": z.array(z.string()), "fanout": z.record(z.string(), z.unknown()).nullable().default(null), "flow_id": z.string().nullable().default(null), "removed_manifest_entries": z.array(z.string()).default([]), "span_release_error": z.string().nullable().default(null) });
 export type PatchSubServicesResponse = z.infer<typeof patchSubServicesResponse>;
 
 export const patternEntry = z.object({ "open_prefix": z.string().nullable(), "pattern": z.string(), "scope_id": z.string() });
@@ -721,29 +745,26 @@ export type PolicyRollback = z.infer<typeof policyRollback>;
 export const policyRollbackResult = z.object({ "active_version": z.number().int(), "user_id": z.string() });
 export type PolicyRollbackResult = z.infer<typeof policyRollbackResult>;
 
-export const preservedManifestView = z.object({ "mcp": z.array(z.record(z.string(), z.unknown())), "user_tools": z.array(z.string()) });
+export const preservedManifestView = z.object({ "extension_settings": manifestExtensionSettings, "mcp": z.array(z.record(z.string(), z.unknown())), "user_tools": z.array(z.string()) });
 export type PreservedManifestView = z.infer<typeof preservedManifestView>;
 
-export const presetCreate = z.object({ "base_tool": z.string(), "description": z.string(), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))).default([]), "fixed_kwargs": z.record(z.string(), z.unknown()).default({}), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "name": z.string(), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "state_binding": stateBinding.nullable().default(null) });
+export const presetCreate = z.object({ "base_tool": z.string(), "description": z.string(), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))).default([]), "fixed_kwargs": z.record(z.string(), z.unknown()).default({}), "input_map": z.union([templatedText, z.string(), z.null()]).default(null), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "name": z.string(), "output_map": z.union([templatedText, z.string(), z.null()]).default(null), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "state_binding": stateBinding.nullable().default(null) });
 export type PresetCreate = z.infer<typeof presetCreate>;
 
-export const presetCreateResult = z.object({ "active_version": z.number().int(), "base_tool": z.string(), "conflicted": z.boolean(), "conflicted_reason": z.string().nullable(), "description": z.string(), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))), "fanout": fanoutSummary, "input_schema": z.record(z.string(), z.unknown()).nullable(), "name": z.string(), "output_schema": z.record(z.string(), z.unknown()).nullable(), "used_by": z.array(z.string()), "uses": z.array(z.string()) });
+export const presetCreateResult = z.object({ "active_version": z.number().int(), "base_tool": z.string(), "conflicted": z.boolean(), "conflicted_reason": z.string().nullable(), "description": z.string(), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))), "fanout": fanoutSummary, "input_map": z.union([templatedText, z.string(), z.null()]), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]), "name": z.string(), "output_map": z.union([templatedText, z.string(), z.null()]), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]), "used_by": z.array(z.string()), "uses": z.array(z.string()) });
 export type PresetCreateResult = z.infer<typeof presetCreateResult>;
 
 export const presetDeleteResult = z.object({ "deleted": z.boolean(), "fanout": fanoutSummary, "name": z.string() });
 export type PresetDeleteResult = z.infer<typeof presetDeleteResult>;
 
-export const presetDetailView = z.object({ "active_version": z.number().int(), "base_tool": z.string(), "conflicted": z.boolean(), "conflicted_reason": z.string().nullable(), "description": z.string(), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))), "fixed_kwargs": z.record(z.string(), z.unknown()), "input_schema": z.record(z.string(), z.unknown()).nullable(), "name": z.string(), "output_schema": z.record(z.string(), z.unknown()).nullable(), "used_by": z.array(z.string()), "uses": z.array(z.string()) });
+export const presetDetailView = z.object({ "active_version": z.number().int(), "base_tool": z.string(), "conflicted": z.boolean(), "conflicted_reason": z.string().nullable(), "description": z.string(), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))), "fixed_kwargs": z.record(z.string(), z.unknown()), "input_map": z.union([templatedText, z.string(), z.null()]), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]), "name": z.string(), "output_map": z.union([templatedText, z.string(), z.null()]), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]), "used_by": z.array(z.string()), "uses": z.array(z.string()) });
 export type PresetDetailView = z.infer<typeof presetDetailView>;
 
-export const presetRecordView = z.object({ "active_version": z.number().int(), "base_tool": z.string(), "conflicted": z.boolean(), "conflicted_reason": z.string().nullable(), "description": z.string(), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))), "input_schema": z.record(z.string(), z.unknown()).nullable(), "name": z.string(), "output_schema": z.record(z.string(), z.unknown()).nullable(), "used_by": z.array(z.string()), "uses": z.array(z.string()) });
+export const presetRecordView = z.object({ "active_version": z.number().int(), "base_tool": z.string(), "conflicted": z.boolean(), "conflicted_reason": z.string().nullable(), "description": z.string(), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))), "input_map": z.union([templatedText, z.string(), z.null()]), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]), "name": z.string(), "output_map": z.union([templatedText, z.string(), z.null()]), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]), "used_by": z.array(z.string()), "uses": z.array(z.string()) });
 export type PresetRecordView = z.infer<typeof presetRecordView>;
 
 export const presetRecordList = z.array(presetRecordView);
 export type PresetRecordList = z.infer<typeof presetRecordList>;
-
-export const presetRefereesResult = z.object({ "name": z.string(), "referees": z.array(z.string()) });
-export type PresetRefereesResult = z.infer<typeof presetRefereesResult>;
 
 export const presetRename = z.object({ "new_name": z.string() });
 export type PresetRename = z.infer<typeof presetRename>;
@@ -757,13 +778,13 @@ export type PresetRollback = z.infer<typeof presetRollback>;
 export const presetRollbackResult = z.object({ "active_version": z.number().int(), "fanout": fanoutSummary, "name": z.string() });
 export type PresetRollbackResult = z.infer<typeof presetRollbackResult>;
 
-export const presetValidate = z.object({ "base_tool": z.string().nullable().default(null), "description": z.string().nullable().default(null), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))).nullable().default(null), "fixed_kwargs": z.record(z.string(), z.unknown()).nullable().default(null), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "name": z.string(), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "state_binding": stateBinding.nullable().default(null) });
+export const presetValidate = z.object({ "base_tool": z.string().nullable().default(null), "description": z.string().nullable().default(null), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))).nullable().default(null), "fixed_kwargs": z.record(z.string(), z.unknown()).nullable().default(null), "input_map": z.union([templatedText, z.string(), z.null()]).default(null), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "name": z.string(), "output_map": z.union([templatedText, z.string(), z.null()]).default(null), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "state_binding": stateBinding.nullable().default(null) });
 export type PresetValidate = z.infer<typeof presetValidate>;
 
 export const presetValidateVerdict = z.object({ "error": z.string().nullable(), "valid": z.boolean() });
 export type PresetValidateVerdict = z.infer<typeof presetValidateVerdict>;
 
-export const presetVersionSave = z.object({ "description": z.string().nullable().default(null), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))).nullable().default(null), "fixed_kwargs": z.record(z.string(), z.unknown()).nullable().default(null), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "state_binding": stateBinding.nullable().default(null) });
+export const presetVersionSave = z.object({ "description": z.string().nullable().default(null), "extensions": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))).nullable().default(null), "fixed_kwargs": z.record(z.string(), z.unknown()).nullable().default(null), "input_map": z.union([templatedText, z.string(), z.null()]).default(null), "input_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "output_map": z.union([templatedText, z.string(), z.null()]).default(null), "output_schema": z.union([templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "state_binding": stateBinding.nullable().default(null) });
 export type PresetVersionSave = z.infer<typeof presetVersionSave>;
 
 export const presetVersionSaveResult = z.object({ "body": z.record(z.string(), z.unknown()), "created_at": z.string(), "fanout": fanoutSummary, "is_current": z.boolean().default(false), "tags": z.array(z.string()).default([]), "version": z.number().int() });
@@ -793,7 +814,7 @@ export type PrincipalRef = z.infer<typeof principalRef>;
 export const principalUpdate = z.object({ "disabled": z.boolean().nullable().default(null), "display_name": z.string().min(1).nullable().default(null) });
 export type PrincipalUpdate = z.infer<typeof principalUpdate>;
 
-export const profileApplyResponse = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "fanout": fanoutSummary, "fresh": z.array(freshLife), "hot": z.array(z.string()), "recycle": z.array(recycleEntry), "recycle_stopped": recycleStop.nullable().default(null), "refused": z.array(z.string()) });
+export const profileApplyResponse = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "fanout": fanoutSummary, "fresh": z.array(freshLife), "hot": z.array(z.string()), "recycle": z.array(recycleEntry), "recycle_stopped": recycleStop.nullable().default(null), "refused": z.array(z.string()), "span_release_error": z.string().nullable().default(null) });
 export type ProfileApplyResponse = z.infer<typeof profileApplyResponse>;
 
 export const profileDiffChange = z.object({ "key": z.string(), "new": z.string(), "old": z.string() });
@@ -832,7 +853,7 @@ export type RouteEntry = z.infer<typeof routeEntry>;
 export const subMcpEntry = z.object({ "access_pattern": z.string(), "mount_url": z.string(), "slug": z.string(), "tools": z.array(z.string()), "transport": z.string() });
 export type SubMcpEntry = z.infer<typeof subMcpEntry>;
 
-export const projectionResult = z.object({ "admin": z.boolean(), "agents": z.array(z.string()), "mintable": z.boolean(), "owner_user_id": z.string().nullable(), "principal": principalRef.nullable(), "public_resource_id": z.string(), "route_patterns": z.array(patternEntry), "routes": z.array(routeEntry), "scopes": z.array(z.string()), "sub_mcp": z.array(subMcpEntry), "tools": z.array(z.string()), "user_id": z.string() });
+export const projectionResult = z.object({ "access_control_enabled": z.boolean(), "admin": z.boolean(), "agents": z.array(z.string()), "mintable": z.boolean(), "owner_user_id": z.string().nullable(), "principal": principalRef.nullable(), "public_resource_id": z.string(), "route_patterns": z.array(patternEntry), "routes": z.array(routeEntry), "scopes": z.array(z.string()), "sub_mcp": z.array(subMcpEntry), "tools": z.array(z.string()), "user_id": z.string() });
 export type ProjectionResult = z.infer<typeof projectionResult>;
 
 export const subServiceView = z.object({ "description": z.string().default(""), "display_name": z.string(), "id": z.string(), "scopes": z.array(z.string()).default([]) });
@@ -844,7 +865,7 @@ export type ProviderCatalogEntry = z.infer<typeof providerCatalogEntry>;
 export const providerCatalogResponse = z.object({ "categories": z.array(connectorCategoryView), "providers": z.array(providerCatalogEntry) });
 export type ProviderCatalogResponse = z.infer<typeof providerCatalogResponse>;
 
-export const providerMutationResponse = z.object({ "fanout": z.record(z.string(), z.unknown()).nullable().default(null), "provider": providerCatalogEntry });
+export const providerMutationResponse = z.object({ "fanout": z.record(z.string(), z.unknown()).nullable().default(null), "provider": providerCatalogEntry, "span_release_error": z.string().nullable().default(null) });
 export type ProviderMutationResponse = z.infer<typeof providerMutationResponse>;
 
 export const pruneResult = z.object({ "held": heldPendingSaveList.optional(), "pruned": z.record(z.string(), z.number().int()) });
@@ -877,7 +898,7 @@ export type ReloadConfigRequest = z.infer<typeof reloadConfigRequest>;
 export const reloadingError = z.object({ "error": z.literal("reloading — the server is applying a config reload; retry shortly"), "reloading": z.literal(true) });
 export type ReloadingError = z.infer<typeof reloadingError>;
 
-export const removeProviderResponse = z.object({ "fanout": z.record(z.string(), z.unknown()).nullable().default(null), "provider_id": z.string(), "removed_clients": z.number().int() });
+export const removeProviderResponse = z.object({ "fanout": z.record(z.string(), z.unknown()).nullable().default(null), "provider_id": z.string(), "removed_clients": z.number().int(), "span_release_error": z.string().nullable().default(null) });
 export type RemoveProviderResponse = z.infer<typeof removeProviderResponse>;
 
 export const removedByName = z.object({ "name": z.string(), "removed": z.boolean() });
@@ -934,7 +955,7 @@ export type RoleUpdate = z.infer<typeof roleUpdate>;
 export const roleVersionsView = z.object({ "audit": z.array(z.record(z.string(), jsonValue)), "versions": z.array(documentVersion) });
 export type RoleVersionsView = z.infer<typeof roleVersionsView>;
 
-export const routeMappingRow = z.object({ "action": z.enum(["read","write","fenced","secret"]).nullable(), "declared_public": z.boolean(), "mapped": z.string().nullable(), "methods": z.array(z.string()), "path": z.string(), "summary": z.string(), "tags": z.array(z.string()) });
+export const routeMappingRow = z.object({ "action": z.enum(["read","write","fenced","secret"]).nullable(), "declared_public": z.boolean(), "mapped": z.string().nullable(), "methods": z.array(z.string()), "path": z.string(), "role_reach": z.enum(["level","self_service","admin_only","public"]).nullable(), "summary": z.string(), "tags": z.array(z.string()) });
 export type RouteMappingRow = z.infer<typeof routeMappingRow>;
 
 export const routeMappingList = z.array(routeMappingRow);
@@ -1042,7 +1063,7 @@ export type SetupRequest = z.infer<typeof setupRequest>;
 export const setupResult = z.object({ "api_key": z.string(), "invite_token": z.string().nullable().default(null), "key_fingerprint": z.string(), "key_user_id": z.string(), "login_attached": z.boolean(), "login_path": z.string().nullable().default(null), "owner_user_id": z.string() }).strict();
 export type SetupResult = z.infer<typeof setupResult>;
 
-export const startConnectNoAuthResponse = z.object({ "added_manifest_entries": z.array(z.string()).default([]), "connection_id": z.string(), "fanout": z.record(z.string(), z.unknown()).nullable().default(null) });
+export const startConnectNoAuthResponse = z.object({ "added_manifest_entries": z.array(z.string()).default([]), "connection_id": z.string(), "fanout": z.record(z.string(), z.unknown()).nullable().default(null), "span_release_error": z.string().nullable().default(null) });
 export type StartConnectNoAuthResponse = z.infer<typeof startConnectNoAuthResponse>;
 
 export const startConnectResponse = z.object({ "authorize_url": z.string(), "flow_id": z.string() });
@@ -1135,11 +1156,23 @@ export type StateTemplateCatalogEntry = z.infer<typeof stateTemplateCatalogEntry
 export const stateTemplateCatalog = z.array(stateTemplateCatalogEntry);
 export type StateTemplateCatalog = z.infer<typeof stateTemplateCatalog>;
 
-export const storageInfo = z.object({ "module": z.string().nullable(), "present": z.boolean(), "provider": z.string().nullable() });
+export const storageInfo = z.object({ "module": z.string().nullable(), "present": z.boolean(), "provider": z.string().nullable(), "surfaces": z.array(z.enum(["storage","templates"])) });
 export type StorageInfo = z.infer<typeof storageInfo>;
 
 export const storageUpload = z.object({ "content_base64": z.string().nullable().default(null), "content_text": z.string().nullable().default(null), "id": z.string() });
 export type StorageUpload = z.infer<typeof storageUpload>;
+
+export const storedBinaryEntry = z.object({ "content_type": z.string().nullable(), "id": z.string(), "kind": z.literal("binary"), "size": z.number().int() });
+export type StoredBinaryEntry = z.infer<typeof storedBinaryEntry>;
+
+export const storedDocumentEntry = z.object({ "content": z.string(), "content_type": z.string().nullable(), "id": z.string(), "kind": z.literal("document"), "size": z.number().int() });
+export type StoredDocumentEntry = z.infer<typeof storedDocumentEntry>;
+
+export const storedTextEntry = z.object({ "content": z.string(), "content_type": z.string().nullable(), "id": z.string(), "kind": z.literal("text"), "size": z.number().int() });
+export type StoredTextEntry = z.infer<typeof storedTextEntry>;
+
+export const storedEntry = z.discriminatedUnion("kind", [storedTextEntry, storedDocumentEntry, storedBinaryEntry]);
+export type StoredEntry = z.infer<typeof storedEntry>;
 
 export const stringList = z.array(z.string());
 export type StringList = z.infer<typeof stringList>;
@@ -1171,6 +1204,9 @@ export type SubMcpRemovalResult = z.infer<typeof subMcpRemovalResult>;
 export const systemKindsListing = z.array(kindStatus);
 export type SystemKindsListing = z.infer<typeof systemKindsListing>;
 
+export const templateBinaryEntry = z.object({ "content_type": z.string().nullable(), "id": z.string(), "kind": z.literal("binary"), "schema": z.null().default(null), "size": z.number().int() });
+export type TemplateBinaryEntry = z.infer<typeof templateBinaryEntry>;
+
 export const templateDelete = z.object({ "path": z.string() });
 export type TemplateDelete = z.infer<typeof templateDelete>;
 
@@ -1180,11 +1216,17 @@ export type TemplateDeleteResult = z.infer<typeof templateDeleteResult>;
 export const templateDirDelete = z.object({ "path": z.string() });
 export type TemplateDirDelete = z.infer<typeof templateDirDelete>;
 
+export const templateDocumentEntry = z.object({ "content": z.string(), "content_type": z.string().nullable(), "id": z.string(), "kind": z.literal("document"), "schema": z.null().default(null), "size": z.number().int() });
+export type TemplateDocumentEntry = z.infer<typeof templateDocumentEntry>;
+
+export const templateTextEntry = z.object({ "content": z.string(), "content_type": z.string().nullable(), "id": z.string(), "kind": z.literal("text"), "schema": z.record(z.string(), jsonValue).nullable(), "schema_error": z.string().nullable(), "size": z.number().int() });
+export type TemplateTextEntry = z.infer<typeof templateTextEntry>;
+
+export const templateEntry = z.discriminatedUnion("kind", [templateTextEntry, templateDocumentEntry, templateBinaryEntry]);
+export type TemplateEntry = z.infer<typeof templateEntry>;
+
 export const templateFetch = z.object({ "template_id": z.string() });
 export type TemplateFetch = z.infer<typeof templateFetch>;
-
-export const templateFetchView = z.object({ "schema": z.record(z.string(), jsonValue), "template": z.string() });
-export type TemplateFetchView = z.infer<typeof templateFetchView>;
 
 export const templateJqApplyResult = z.object({ "applied": z.boolean(), "data": z.record(z.string(), z.unknown()).nullable().default(null), "name": z.string(), "seq": z.number().nullable().default(null), "skipped": z.array(z.record(z.string(), z.unknown())).default([]) }).strict();
 export type TemplateJqApplyResult = z.infer<typeof templateJqApplyResult>;
@@ -1230,6 +1272,9 @@ export type TokenPayloadRow = z.infer<typeof tokenPayloadRow>;
 
 export const tokenPayloadList = z.array(tokenPayloadRow);
 export type TokenPayloadList = z.infer<typeof tokenPayloadList>;
+
+export const toolExtensionCombosModified = z.object({ "available": z.array(extensionView), "combos": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))), "span_release_error": z.string().nullable() });
+export type ToolExtensionCombosModified = z.infer<typeof toolExtensionCombosModified>;
 
 export const toolExtensionCombosModify = z.object({ "add": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))).default([]), "remove": z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())]))).default([]) });
 export type ToolExtensionCombosModify = z.infer<typeof toolExtensionCombosModify>;
@@ -1309,7 +1354,7 @@ export type TriggerLinkListView = z.infer<typeof triggerLinkListView>;
 export const uninstallResult = z.object({ "notes": z.array(z.string()), "ref": z.string(), "reload": applyResponse.nullable(), "uninstalled": z.boolean() });
 export type UninstallResult = z.infer<typeof uninstallResult>;
 
-export const upgradeRow = z.object({ "detail": z.string(), "outcome": z.enum(["upgraded","up-to-date","no-compatible-version","failed"]), "ref": z.string() });
+export const upgradeRow = z.object({ "detail": z.string(), "outcome": z.enum(["upgraded","up-to-date","no-compatible-version","failed"]), "ref": z.string(), "span_release_error": z.string().nullable() });
 export type UpgradeRow = z.infer<typeof upgradeRow>;
 
 export const upgradeAllResult = z.object({ "results": z.array(upgradeRow) });
@@ -1442,7 +1487,7 @@ export const responseSchemas = {
   get_api_plugins: studioPluginListing,
   get_api_presets: presetRecordList,
   get_api_presets_name: presetDetailView,
-  get_api_presets_name_referees: presetRefereesResult,
+  get_api_presets_name_referees: holdersPreview,
   get_api_presets_name_versions: documentVersionList,
   get_api_presets_name_versions_version: documentVersion,
   get_api_resources_get: resourceContent,
@@ -1457,6 +1502,7 @@ export const responseSchemas = {
   get_api_states_name: servedStateView,
   get_api_states_name_attachments: stateAttachmentList,
   get_api_states_name_attachments_template: stateAttachmentRow,
+  get_api_states_name_attachments_template_referees: holdersPreview,
   get_api_states_name_consumers: stateConsumerList,
   get_api_states_name_records_check: recordCheckPage,
   get_api_states_name_records_target_kind_target_name_kind_key: stateRecordOrNull,
@@ -1465,6 +1511,7 @@ export const responseSchemas = {
   get_api_states_name_stats: stateStats,
   get_api_states_name_subjects: stateSubjectsPage,
   get_api_storage: storageInfo,
+  get_api_storage_entries_resource_id: storedEntry,
   get_api_storage_resources: resourceList,
   get_api_storage_resources_resource_id_stat: resourceStat,
   get_api_sub_mcp: subMcpMapListing,
@@ -1537,6 +1584,7 @@ export const responseSchemas = {
   post_api_mcp_config_entries: applyResponse,
   post_api_mcp_config_secret_env: applyResponse,
   post_api_mcp_status_reload_failed: fleetResult,
+  post_api_mcp_status_title_advertised_tools: mcpAdvertisedTools,
   post_api_mcp_status_title_deregister: fleetResult,
   post_api_mcp_status_title_reload: fleetResult,
   post_api_notifications: notifyResult,
@@ -1560,14 +1608,14 @@ export const responseSchemas = {
   post_api_states_name_records_validate: recordValidation,
   post_api_storage_resources: resourceStored,
   post_api_sub_mcp: subMcpRegistrationResult,
-  post_api_template: templateFetchView,
+  post_api_template: templateEntry,
   post_api_tool_meta_folders: folderRecord,
   post_api_tool_meta_folders_folder_id_move: folderRecord,
   post_api_tool_meta_folders_folder_id_rename: folderRecord,
   post_api_tool_runs: runSubmitted,
   post_api_tools_config_entries: applyResponse,
   post_api_tools_name_extensions: applyResponse,
-  post_api_tools_name_extensions_combos: toolExtensionsView,
+  post_api_tools_name_extensions_combos: toolExtensionCombosModified,
   post_api_tools_reload: fleetResult,
   post_api_tools_remove: fleetResult,
   post_api_upload_template: templateUploadResult,
@@ -1580,6 +1628,7 @@ export const responseSchemas = {
   put_api_conversations_persons_person_id_locale: person,
   put_api_conversations_route_name_thread_mode: threadModeSetResult,
   put_api_hooks_topics_topic_verifier: topicVerifierView,
+  put_api_mcp_config_entries_title_tool_filter: applyResponse,
   put_api_presets_name_versions_version_tags: presetVersionTagsResult,
   put_api_state_templates_name: stateTemplateDocument,
   put_api_states_name: stateDeclarationPutResponse,

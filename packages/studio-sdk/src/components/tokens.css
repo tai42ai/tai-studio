@@ -147,11 +147,14 @@
     /* -- Semantic ----------------------------------------------------------
        The `-text` members are the ONLY ones legible as text, dots, or icons;
        the `-fill` members are for fills and charts and carry `on-fill` ink
-       labels in both themes. */
-    --tai-color-ok-text: #047857;
+       labels in both themes. A badge label is a `-text` member over its own
+       tint, and that tint can sit on a row that is tinted too (a hovered or
+       highlighted row, a diff row), so the values are set to clear 4.5:1 there:
+       `badge-contrast.test.tsx` computes every such stack in both themes. */
+    --tai-color-ok-text: #065f46;
     --tai-dark-color-ok-text: #34d399;
     --tai-color-err-text: #b91c1c;
-    --tai-dark-color-err-text: #f87171;
+    --tai-dark-color-err-text: #fca5a5;
     --tai-color-warn-text: #92400e;
     --tai-dark-color-warn-text: #fbbf24;
     --tai-color-ok-fill: #10b981;
@@ -271,9 +274,9 @@
        be opened from whatever layer is on top — so a listbox or a tip raised
        from inside a dialog has to clear that dialog's scrim to be usable.
        `dropdown` is the rung reserved for an in-flow menu surface — one that
-       stacks against the page rather than being portalled. Nothing in this repo
-       is on it; it is part of the published scale so a plugin's own menu has a
-       rung to sit on instead of inventing a number. */
+       stacks against the page rather than being portalled. `ActionMenu`'s list
+       sits on it, and it is part of the published scale so a plugin's own menu
+       has a rung to sit on instead of inventing a number. */
     --tai-z-sticky: 10;
     --tai-z-dropdown: 20;
     --tai-z-overlay: 30;

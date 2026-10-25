@@ -2,6 +2,7 @@
 import { z } from 'zod';
 
 import * as openapi from '../generated/openapi-schemas';
+import { reloadConfigResult } from './manifest-mcp';
 
 // The registry's listing, search, version, detail and advisory shapes are hand-written: the
 // skeleton passes the upstream registry's bodies through as opaque values. The installed,
@@ -299,10 +300,12 @@ export type MarketplaceMountedRoute = z.infer<typeof marketplaceMountedRoute>;
  * non-critical `advisories` ride BOTH the install and update receipts.
  * `routes` is the mounted-route list — empty for a plugin that registers none.
  * `package`, `reload` and `pip_output` carry the installed package, the config reload
- * and the raw install log.
+ * and the raw install log; the reload's fan-out parses into its three modes so a
+ * failed propagation reaches the fleet report.
  */
 export const marketplaceInstallResult = openapi.installResult.extend({
   advisories: z.array(marketplaceAdvisory),
+  reload: reloadConfigResult,
 });
 export type MarketplaceInstallResult = z.infer<typeof marketplaceInstallResult>;
 
@@ -348,5 +351,7 @@ export type MarketplaceInstallPreview = z.infer<typeof marketplaceInstallPreview
  * provider still selected by its env var); render them like the install
  * receipt's notes. `reload` is `null` when the plugin wrote no manifest entry to remove.
  */
-export const marketplaceUninstallResult = openapi.uninstallResult;
+export const marketplaceUninstallResult = openapi.uninstallResult.extend({
+  reload: reloadConfigResult.nullable(),
+});
 export type MarketplaceUninstallResult = z.infer<typeof marketplaceUninstallResult>;

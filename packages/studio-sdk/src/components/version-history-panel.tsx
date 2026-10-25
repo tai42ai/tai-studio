@@ -82,6 +82,12 @@ export interface VersionHistoryPanelProps {
    * state. Omitted ⇒ no edit affordance (tags stay read-only).
    */
   readonly onEditTags?: (version: number, tags: string[]) => Promise<void>;
+  /**
+   * A version to point the reader at (a deep link names it): its row is marked
+   * `aria-current="true"` on the accent tint and scrolled into view. Omitted ⇒ no
+   * row is marked.
+   */
+  readonly highlightVersion?: number;
 }
 
 /** The initially-selected version: the current one, else the first listed. */
@@ -168,6 +174,7 @@ export function VersionHistoryPanel({
   readOnly = false,
   rollbackConfirmDescription,
   onEditTags,
+  highlightVersion,
 }: VersionHistoryPanelProps): ReactNode {
   const [selected, setSelected] = useState<number | null>(() => initialSelection(versions));
   const [confirming, setConfirming] = useState<number | null>(null);
@@ -246,6 +253,7 @@ export function VersionHistoryPanel({
                   compareArmed={compareFrom === entry.version}
                   readOnly={readOnly}
                   canEditTags={onEditTags !== undefined}
+                  highlighted={entry.version === highlightVersion}
                   onView={view}
                   onCompare={compare}
                   onEditTags={setEditingTags}

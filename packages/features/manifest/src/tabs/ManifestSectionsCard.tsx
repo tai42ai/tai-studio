@@ -7,8 +7,8 @@
  *    add or replace one entry by title, or remove one by title.
  *  - `POST /api/api-tools` — add/remove names on the include/exclude lists by delta.
  *
- * There is NO read door for these sections (the manifest read serves only `mcp` +
- * `user_tools`), so this is a deliberate DELTA surface: an entry is added by pasting
+ * The manifest read serves `mcp`, `user_tools` and the extension settings, never the
+ * `tools`/`agents` entries or the `api_tools` lists, so this is a deliberate DELTA surface: an entry is added by pasting
  * its JSON (title validated client-side) and removed by naming its title; an api-tools
  * name is added to / removed from a list by name. Every write crosses the config
  * pipeline and reloads the fleet, so a save re-reads the manifest artifact and reports
@@ -114,7 +114,11 @@ function EntrySectionEditor({
       {addMutation.isError ? <ErrorState message={errorMessage(addMutation.error)} /> : null}
       {addMutation.isSuccess ? (
         <FleetReport
-          summary={summarizeFleetFanout(addMutation.data.fanout, addMutation.data.awaiting_respawn)}
+          summary={summarizeFleetFanout(
+            addMutation.data.fanout,
+            addMutation.data.awaiting_respawn,
+            addMutation.data.span_release_error,
+          )}
         />
       ) : null}
 
@@ -150,6 +154,7 @@ function EntrySectionEditor({
               summary={summarizeFleetFanout(
                 removeMutation.data.fanout,
                 removeMutation.data.awaiting_respawn,
+                removeMutation.data.span_release_error,
               )}
             />
           ) : null}
@@ -264,7 +269,13 @@ function ApiToolsEditor({ api }: { readonly api: ApiClient }): ReactNode {
       </div>
       {edit.isError ? <ErrorState message={errorMessage(edit.error)} /> : null}
       {edit.isSuccess ? (
-        <FleetReport summary={summarizeFleetFanout(edit.data.fanout, edit.data.awaiting_respawn)} />
+        <FleetReport
+          summary={summarizeFleetFanout(
+            edit.data.fanout,
+            edit.data.awaiting_respawn,
+            edit.data.span_release_error,
+          )}
+        />
       ) : null}
     </Stack>
   );
@@ -281,10 +292,8 @@ export function ManifestSectionsCard(): ReactNode {
   const canAgents = useCanWrite(apiRoutes.post_api_agents_config_entries.path, 'POST');
   const canApiTools = useCanWrite(apiRoutes.post_api_api_tools.path, 'POST');
   // Remove rides a DYNAMIC per-title door (`DELETE /api/{…}-config/entries/{title}`),
-  // distinct from add's POST. A dynamic route is not method-expressible in a scoped
-  // projection, so — following the house approach for a templated write route — the
-  // interpolated path resolves to a full-projection gate; under-showing a scoped
-  // caller's remove is safe (projection ⊆ gate).
+  // distinct from add's POST, gated on its template path with `DELETE` (projection ⊆
+  // gate).
   const canRemoveTools = useCanWrite(
     apiRoutes.delete_api_tools_config_entries_title.path,
     'DELETE',

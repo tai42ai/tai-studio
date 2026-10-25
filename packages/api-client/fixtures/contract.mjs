@@ -79,7 +79,7 @@ export const MUTATION_FIXTURES = [
     name: 'template-detail',
     path: '/api/template',
     file: 'mutations/template-detail.json',
-    schema: 'templateDetail',
+    schema: 'templateEntry',
   },
   {
     name: 'upload-template',

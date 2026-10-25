@@ -16,7 +16,7 @@ bash e2e/scripts/docs-screenshots.sh
 Outputs:
 
 - `tai-docs/images/studio/*.png` — the documentation screens × 2 themes.
-- `tai-studio/docs/screenshots/*.png` — the 5 shell screens the README embeds,
+- `tai-studio/docs/screenshots/*.png` — the 4 shell screens,
   from the same capture.
 
 Assumes sibling checkouts of the `tai42` monorepo (skeleton at `core/skeleton`,
@@ -37,7 +37,6 @@ router plus the real plugins so no screen is empty:
 | Screen                                        | Populated by                                                                                             |
 | --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | tools / tool-run                              | the reference-plugin demo tools                                                                          |
-| extensions                                    | `ask_external` + the `prometheus_metrics` wrapper                                                        |
 | settings                                      | the auto-populated settings schema                                                                       |
 | settings-access                               | the API keys tab's Access control card: the boot's `studio` scope, every unmapped route, the public pins |
 | settings-env-recycle                          | the Environment tab's save report from a forced worker-recycle roll (the demo stack runs bare)           |
@@ -45,8 +44,9 @@ router plus the real plugins so no screen is empty:
 | backup-restore-recycle-stopped                | the Backup import report from a forced stopped env-restore roll and its awaiting-a-restart verdict       |
 | agents                                        | `tools_agent` (from `tai42-agents`)                                                                      |
 | dashboard                                     | the seeded `docs_demo_monitoring` backend (real trend + by-model)                                        |
-| manifest                                      | a non-empty `user_tools` set                                                                             |
-| templates                                     | `tai42-storage-local` + the seeded templates in `templates/`                                             |
+| manifest                                      | a non-empty `user_tools` set, the loaded `ask_external` and the manifest's extension settings            |
+| storage                                       | `tai42-storage-local` + the seeded files in `templates/`                                                 |
+| storage-delete-held                           | the seeded hook `gate-watch`, whose condition names `jq/gate`                                            |
 | system                                        | the `health` + `metrics` routers (loaded before the SPA catch-all)                                       |
 | system-kinds                                  | the `system_kinds` router's `/api/system/kinds` (Plugin-kinds table)                                     |
 | members / member-action-\*                    | the generic Members directory + the accounts provider's declared member actions (seeded membership)      |
@@ -83,5 +83,5 @@ fixture; the read path the dashboard renders from is production code. See
 ### Contents
 
 - `manifest.yml` — the docs-demo skeleton manifest.
-- `templates/` — seeded template files for the Templates screen.
+- `templates/` — seeded files for the Storage screen.
 - `monitoring-plugin/` — the seeded, self-contained monitoring backend.

@@ -77,6 +77,7 @@ function stubClient(methods: Stub): ApiClient {
 }
 function saved(): ReturnType<ApiClient['setEnvConfig']> {
   return Promise.resolve({
+    span_release_error: null,
     status: 'reloaded',
     env_keys: 1,
     awaiting_respawn: [],

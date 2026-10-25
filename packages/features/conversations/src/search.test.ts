@@ -20,6 +20,13 @@ describe('sanitizeSearch', () => {
     expect(sanitizeSearch(filtered)).toBe(filtered);
   });
 
+  it('keeps a landing config by identity and drops a config beside a route', () => {
+    const landing = { config: 'agent:assistant' };
+    expect(sanitizeSearch(landing)).toBe(landing);
+    expect(sanitizeSearch({ route: 'chat', config: 'agent:assistant' })).toEqual({ route: 'chat' });
+    expect(sanitizeSearch({ config: ' ' })).toEqual({});
+  });
+
   it('keeps the filters when a route scopes them', () => {
     const filtered = { route: 'chat', status: 'delivered' as const, address: '+1555', q: 'widget' };
     expect(sanitizeSearch(filtered)).toEqual(filtered);

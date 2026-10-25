@@ -5,7 +5,7 @@
 ```ts
 
 import type { ComponentType } from 'react';
-import type { z } from 'zod';
+import { z } from 'zod';
 
 // @public
 type ChannelConversationRoute = Extract<ConversationRouteView, {
@@ -83,8 +83,8 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>>>;
     target_kind: z.ZodEnum<{
-        tool: "tool";
         agent: "agent";
+        tool: "tool";
     }>;
     target_name: z.ZodString;
     turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
@@ -152,8 +152,8 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>>>;
     target_kind: z.ZodEnum<{
-        tool: "tool";
         agent: "agent";
+        tool: "tool";
     }>;
     target_name: z.ZodString;
     turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
@@ -164,6 +164,24 @@ export function getContributions(): PluginContributions;
 
 // @public
 export function getPluginHostState(): PluginLoaderState;
+
+// @public
+interface HolderLinkContribution {
+    // (undocumented)
+    readonly kind: string;
+    // (undocumented)
+    readonly resolve: (holder: ReferenceHolder) => HolderLinkTarget;
+}
+
+// @public
+interface HolderLinkTarget {
+    // (undocumented)
+    readonly pagePath: string;
+    // (undocumented)
+    readonly params?: string;
+    // (undocumented)
+    readonly search?: PluginSearch;
+}
 
 // @public
 export interface LoadedPlugin {
@@ -181,6 +199,7 @@ type MeProjection = z.infer<typeof meProjection>;
 
 // @public
 const meProjection: z.ZodObject<{
+    access_control_enabled: z.ZodBoolean;
     admin: z.ZodBoolean;
     agents: z.ZodArray<z.ZodString>;
     mintable: z.ZodBoolean;
@@ -242,6 +261,7 @@ interface PageContribution {
 
 // @public
 interface PluginContext {
+    registerHolderLink(contribution: HolderLinkContribution): void;
     registerNavEntry(contribution: NavEntryContribution): void;
     registerPage(contribution: PageContribution): void;
     registerRoutePanel(contribution: RoutePanelContribution): void;
@@ -252,6 +272,7 @@ interface PluginContext {
 
 // @public
 interface PluginContributions {
+    readonly holderLinks: ReadonlyMap<string, RegisteredHolderLink>;
     // (undocumented)
     readonly navEntries: readonly RegisteredNavEntry[];
     // (undocumented)
@@ -302,6 +323,26 @@ interface PluginPageProps {
     // (undocumented)
     readonly pluginId: string;
     readonly search?: Record<string, unknown>;
+}
+
+// @public
+type PluginSearch = Record<string, unknown>;
+
+// @public (undocumented)
+type ReferenceHolder = z.infer<typeof referenceHolder>;
+
+// @public
+const referenceHolder: z.ZodObject<{
+    kind: z.ZodString;
+    locator: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>>;
+    name: z.ZodString;
+    summary: z.ZodString;
+}, z.core.$strict>;
+
+// @public
+interface RegisteredHolderLink extends HolderLinkContribution {
+    // (undocumented)
+    readonly pluginId: string;
 }
 
 // @public

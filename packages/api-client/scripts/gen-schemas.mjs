@@ -535,7 +535,7 @@ const generateRoutes = (spec) => {
     '//',
     "// The platform's core routes by operationId. A placeholder written `{name:path}` matches",
     '// across `/` separators (the server names its converter on the parameter).',
-    "import { encodeSegment } from '../http';",
+    "import { encodePathPart, encodeSegment } from '../http';",
     '',
     'export const apiRoutes = {',
   ];
@@ -587,7 +587,7 @@ const generateRoutes = (spec) => {
     '    if (value === undefined) throw new Error(`buildPath: missing param ${name} for ${template}`);',
   );
   lines.push(
-    "    return multi ? value.split('/').map(encodeSegment).join('/') : encodeSegment(value);",
+    "    return multi ? value.split('/').map(encodePathPart).join('/') : encodeSegment(value);",
   );
   lines.push('  });');
   lines.push('}');

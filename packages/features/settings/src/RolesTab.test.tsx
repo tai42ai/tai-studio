@@ -1,27 +1,25 @@
 /**
  * RolesTab tests: the pure grouping/level helpers, and the rendered surface — the
  * per-feature-GROUP tri-state grant editor (driven by the route catalog's `tags` +
- * `action` join), the admin-only markers a `fenced`/`secret` action produces, the
- * reserved-admin read-only guard, the save-as-grant-map flow, and the read-only
- * effective-access view.
+ * `role_reach` join), the groups no level governs listed read-only with each route's
+ * reach badge (admin-only, self-service, public — a public route badged inside a
+ * mixed group too), the reserved-admin read-only guard, the save-as-grant-map flow,
+ * and the read-only effective-access view.
  */
 import type { ApiClient, AuthRoute, RoleBody, RoleGrants } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  baseTierLabel,
-  effectiveLevelsOf,
-  featureGroupsOf,
-  isGrantableAction,
-} from './role-grants';
+import { baseTierLabel, effectiveLevelsOf, featureGroupsOf } from './role-grants';
 import { RolesTab } from './RolesTab';
 import { decorBorderedControls, renderWithProviders } from './test-utils';
 
 // -- fixtures ----------------------------------------------------------------
 
-function route(partial: Pick<AuthRoute, 'path' | 'action'> & Partial<AuthRoute>): AuthRoute {
+function route(
+  partial: Pick<AuthRoute, 'path' | 'action' | 'role_reach'> & Partial<AuthRoute>,
+): AuthRoute {
   return {
     methods: ['GET'],
     mapped: null,
@@ -33,25 +31,111 @@ function route(partial: Pick<AuthRoute, 'path' | 'action'> & Partial<AuthRoute>)
 }
 
 /**
- * A catalog covering the three group shapes: `tools` (purely grantable), `config`
- * (MIXED — a grantable read/write plus a `fenced` mutation and a `secret` read), and
- * `marketplace` (purely `fenced` — admin-only, non-grantable).
+ * A catalog covering every group shape: `tools` (only `level` routes), `config`
+ * (MIXED — `level` routes plus admin-only fenced and secret ones), `hooks` (MIXED —
+ * a `level` read plus a public trigger), and the groups no level governs:
+ * `marketplace` (admin-only), `access-control` (self-service plus admin-only),
+ * `users` (self-service only) and `health` (public only).
  */
 function catalog(): AuthRoute[] {
   return [
-    route({ path: '/api/tools', methods: ['GET'], action: 'read', tags: ['tools'] }),
-    route({ path: '/api/tools/schedules', methods: ['POST'], action: 'write', tags: ['tools'] }),
-    route({ path: '/api/config', methods: ['GET'], action: 'read', tags: ['config'] }),
-    route({ path: '/api/config/env', methods: ['POST'], action: 'fenced', tags: ['config'] }),
-    route({ path: '/api/config/env', methods: ['GET'], action: 'secret', tags: ['config'] }),
+    route({
+      path: '/api/tools',
+      methods: ['GET'],
+      action: 'read',
+      role_reach: 'level',
+      tags: ['tools'],
+    }),
+    route({
+      path: '/api/tools/schedules',
+      methods: ['POST'],
+      action: 'write',
+      role_reach: 'level',
+      tags: ['tools'],
+    }),
+    route({
+      path: '/api/config',
+      methods: ['GET'],
+      action: 'read',
+      role_reach: 'level',
+      tags: ['config'],
+    }),
+    route({
+      path: '/api/config/env',
+      methods: ['POST'],
+      action: 'fenced',
+      role_reach: 'admin_only',
+      tags: ['config'],
+    }),
+    route({
+      path: '/api/config/env',
+      methods: ['GET'],
+      action: 'secret',
+      role_reach: 'admin_only',
+      tags: ['config'],
+    }),
     route({
       path: '/api/marketplace/install',
       methods: ['POST'],
       action: 'fenced',
+      role_reach: 'admin_only',
       tags: ['marketplace'],
+    }),
+    route({
+      path: '/api/auth/api-keys',
+      methods: ['POST'],
+      action: 'write',
+      role_reach: 'self_service',
+      tags: ['access-control'],
+    }),
+    route({
+      path: '/api/auth/scopes',
+      methods: ['POST'],
+      action: 'write',
+      role_reach: 'admin_only',
+      tags: ['access-control'],
+    }),
+    route({
+      path: '/api/auth/users/me/password',
+      methods: ['PUT'],
+      action: 'write',
+      role_reach: 'self_service',
+      tags: ['users'],
+    }),
+    route({
+      path: '/health',
+      methods: ['GET'],
+      action: 'read',
+      role_reach: 'public',
+      declared_public: true,
+      tags: ['health'],
+    }),
+    route({
+      path: '/api/hooks',
+      methods: ['GET'],
+      action: 'read',
+      role_reach: 'level',
+      tags: ['hooks'],
+    }),
+    route({
+      path: '/trigger/{token}',
+      methods: ['POST'],
+      action: 'write',
+      role_reach: 'public',
+      declared_public: true,
+      tags: ['hooks'],
     }),
   ];
 }
+
+/** The `li` of the read-only route detail that lists `METHOD path`. */
+function routeRow(label: string): HTMLElement {
+  const row = screen.getByText(label, { selector: '.tai-mono' }).closest('li');
+  if (row === null) throw new Error(`no route row for ${label}`);
+  return row;
+}
+
+const LEVEL_FREE_HEADING = 'Feature groups no per-role level governs';
 
 function role(overrides: Partial<RoleBody> = {}): RoleBody {
   return {
@@ -85,25 +169,18 @@ async function selectRole(user: ReturnType<typeof userEvent.setup>, name: string
 // -- pure helpers ------------------------------------------------------------
 
 describe('RolesTab helpers', () => {
-  it('groups the catalog by tag and marks grantable vs purely-fenced', () => {
+  it('groups the catalog by tag and marks a group grantable only when a level opens a route', () => {
     const groups = featureGroupsOf(catalog());
     const byTag = Object.fromEntries(groups.map((g) => [g.tag, g]));
+    // A group with at least one `level` route is grantable, mixed groups included.
     expect(byTag.tools?.grantable).toBe(true);
-    expect(byTag.tools?.hasFenced).toBe(false);
-    // config mixes a grantable read/write with a fenced + secret route → still grantable.
     expect(byTag.config?.grantable).toBe(true);
-    expect(byTag.config?.hasFenced).toBe(true);
-    // marketplace is purely fenced → not grantable.
+    expect(byTag.hooks?.grantable).toBe(true);
+    // A group whose routes are all admin-only, self-service or public is not.
     expect(byTag.marketplace?.grantable).toBe(false);
-    expect(byTag.marketplace?.hasFenced).toBe(true);
-  });
-
-  it('classifies only read/write as grantable actions', () => {
-    expect(isGrantableAction('read')).toBe(true);
-    expect(isGrantableAction('write')).toBe(true);
-    expect(isGrantableAction('fenced')).toBe(false);
-    expect(isGrantableAction('secret')).toBe(false);
-    expect(isGrantableAction(null)).toBe(false);
+    expect(byTag['access-control']?.grantable).toBe(false);
+    expect(byTag.users?.grantable).toBe(false);
+    expect(byTag.health?.grantable).toBe(false);
   });
 
   it('reads a granted level and fails a missing tag closed to none', () => {
@@ -123,7 +200,7 @@ describe('RolesTab helpers', () => {
 // -- rendered surface --------------------------------------------------------
 
 describe('RolesTab', () => {
-  it('renders one tri-state selector per grantable group, none for a purely-fenced group', async () => {
+  it('renders one tri-state selector per grantable group, none for a group no level governs', async () => {
     const user = userEvent.setup();
     renderWithProviders(<RolesTab readOnly={false} />, {
       client: baseStub([role({ grants: { tools: 'write' } })]),
@@ -140,10 +217,58 @@ describe('RolesTab', () => {
     expect(
       within(screen.getByRole('group', { name: 'config' })).getByRole('radiogroup'),
     ).toBeInTheDocument();
-    // The purely-fenced group has NO grant control.
-    expect(screen.queryByRole('group', { name: 'marketplace' })).not.toBeInTheDocument();
-    // ...and is surfaced under the admin-only section instead.
-    expect(screen.getByText('Admin-only feature groups')).toBeInTheDocument();
+    // A group no level governs has NO grant control...
+    for (const tag of ['marketplace', 'access-control', 'users', 'health']) {
+      expect(screen.queryByRole('group', { name: tag })).not.toBeInTheDocument();
+    }
+    // ...and is listed under its own heading, each route badged by its reach.
+    expect(screen.getByRole('heading', { name: LEVEL_FREE_HEADING })).toBeInTheDocument();
+    expect(
+      within(routeRow('POST /api/auth/api-keys')).getByText('self-service'),
+    ).toBeInTheDocument();
+    expect(
+      within(routeRow('PUT /api/auth/users/me/password')).getByText('self-service'),
+    ).toBeInTheDocument();
+    expect(within(routeRow('POST /api/auth/scopes')).getByText('admin-only')).toBeInTheDocument();
+    expect(
+      within(routeRow('POST /api/marketplace/install')).getByText('admin-only'),
+    ).toBeInTheDocument();
+  });
+
+  it('lists a public-only group without a level and badges public routes in a mixed group', async () => {
+    const user = userEvent.setup();
+    const updateRole = vi.fn(() => Promise.resolve(role({ grants: { tools: 'read' } })));
+    renderWithProviders(<RolesTab readOnly={false} />, {
+      client: baseStub([role({ grants: { tools: 'write' } })], { updateRole }),
+    });
+    await selectRole(user, 'editor');
+
+    // `health` has no radio group; it is listed below the heading, its route badged public.
+    expect(screen.queryByRole('group', { name: 'health' })).not.toBeInTheDocument();
+    const heading = screen.getByRole('heading', { name: LEVEL_FREE_HEADING });
+    const healthRow = routeRow('GET /health');
+    expect(
+      heading.compareDocumentPosition(healthRow) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(within(healthRow).getByText('public')).toBeInTheDocument();
+
+    // The mixed `hooks` group keeps its radio group; its public trigger is badged public.
+    expect(
+      within(screen.getByRole('group', { name: 'hooks' })).getByRole('radiogroup'),
+    ).toBeInTheDocument();
+    const triggerRow = routeRow('POST /trigger/{token}');
+    expect(within(triggerRow).getByText('public')).toBeInTheDocument();
+    expect(
+      heading.compareDocumentPosition(triggerRow) & Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy();
+
+    // The save carries the level-governed groups only: no `health` key, no public key.
+    const tools = within(screen.getByRole('group', { name: 'tools' })).getByRole('radiogroup');
+    await user.click(within(tools).getByRole('radio', { name: 'read' }));
+    await user.click(screen.getByRole('button', { name: 'Save grants' }));
+    expect(updateRole).toHaveBeenCalledWith('editor', {
+      grants: { tools: 'read', config: 'none', hooks: 'none' },
+    });
   });
 
   it('seeds the selector from the role grant map', async () => {
@@ -172,7 +297,7 @@ describe('RolesTab', () => {
     await user.click(screen.getByRole('button', { name: 'Save grants' }));
 
     expect(updateRole).toHaveBeenCalledWith('editor', {
-      grants: { tools: 'read', config: 'none' },
+      grants: { tools: 'read', config: 'none', hooks: 'none' },
     });
   });
 

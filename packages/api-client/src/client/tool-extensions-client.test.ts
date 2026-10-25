@@ -53,10 +53,10 @@ const localOnly = {
 const getData = {
   combos: [['marka'], ['marka', 'markb']],
   available: [
-    { name: 'argswrap', kind: 'wrapper', multiple: true },
-    { name: 'backendx', kind: 'backend', multiple: false },
-    { name: 'marka', kind: 'wrapper', multiple: true },
-    { name: 'markb', kind: 'wrapper', multiple: true },
+    { name: 'argswrap', kind: 'wrapper', multiple: true, config_schema: null },
+    { name: 'backendx', kind: 'backend', multiple: false, config_schema: null },
+    { name: 'marka', kind: 'wrapper', multiple: true, config_schema: null },
+    { name: 'markb', kind: 'wrapper', multiple: true, config_schema: null },
   ],
 };
 
@@ -67,7 +67,12 @@ describe('tool-extensions client transport', () => {
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/tools/shout/extensions');
     expect(out.combos).toEqual([['marka'], ['marka', 'markb']]);
-    expect(out.available[1]).toEqual({ name: 'backendx', kind: 'backend', multiple: false });
+    expect(out.available[1]).toEqual({
+      name: 'backendx',
+      kind: 'backend',
+      multiple: false,
+      config_schema: null,
+    });
   });
 
   it('getToolExtensions encodes the tool name in the path', async () => {
@@ -141,7 +146,7 @@ describe('tool-extensions client transport', () => {
 
   it('getToolExtensions parses a config-bearing combo element ({ name, config })', async () => {
     const configElement = {
-      name: 'output_schema',
+      name: 'shape_ext',
       config: { schema: { type: 'object', title: 'Weather' } },
     };
     const { client } = harness(() =>
@@ -153,7 +158,7 @@ describe('tool-extensions client transport', () => {
 
   it('setToolExtensions POSTs a config-bearing combo verbatim', async () => {
     const configElement = {
-      name: 'output_schema',
+      name: 'shape_ext',
       config: { schema: { type: 'object', title: 'Weather' } },
     };
     const { client, captured } = harness(() =>
@@ -169,6 +174,15 @@ describe('tool-extensions client transport', () => {
     // `combos` as a flat list of strings (not list-of-combos) is a contract drift.
     const { client } = harness(() =>
       jsonResponse({ data: { combos: ['marka', 'markb'], available: [] } }),
+    );
+    await expect(client.getToolExtensions('shout')).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('throws ApiSchemaError on a catalog item without config_schema', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: { combos: [], available: [{ name: 'marka', kind: 'wrapper', multiple: true }] },
+      }),
     );
     await expect(client.getToolExtensions('shout')).rejects.toBeInstanceOf(ApiSchemaError);
   });

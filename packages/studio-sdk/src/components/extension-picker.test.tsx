@@ -7,10 +7,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { ExtensionPicker } from './extension-picker';
 
 const CATALOG: Extension[] = [
-  { name: 'marka', kind: 'wrapper', multiple: true },
-  { name: 'markb', kind: 'wrapper', multiple: true },
-  { name: 'backendx', kind: 'backend', multiple: false },
-  { name: 'backendy', kind: 'backend', multiple: false },
+  { name: 'marka', kind: 'wrapper', multiple: true, config_schema: null },
+  { name: 'markb', kind: 'wrapper', multiple: true, config_schema: null },
+  { name: 'backendx', kind: 'backend', multiple: false, config_schema: null },
+  { name: 'backendy', kind: 'backend', multiple: false, config_schema: null },
 ];
 
 /** A controlled harness so the checked state reflects each toggle. */
@@ -102,10 +102,20 @@ describe('ExtensionPicker', () => {
   it('single-selects whichever kind the server serves as not multiple', async () => {
     const user = userEvent.setup();
     const served: Extension[] = [
-      { name: 'routea', kind: 'router', multiple: false },
-      { name: 'routeb', kind: 'router', multiple: false },
-      { name: 'backendx', kind: 'backend', multiple: true },
-      { name: 'backendy', kind: 'backend', multiple: true },
+      { name: 'routea', kind: 'router', multiple: false, config_schema: null },
+      { name: 'routeb', kind: 'router', multiple: false, config_schema: null },
+      {
+        name: 'backendx',
+        kind: 'backend',
+        multiple: true,
+        config_schema: null,
+      },
+      {
+        name: 'backendy',
+        kind: 'backend',
+        multiple: true,
+        config_schema: null,
+      },
     ];
     function Served() {
       const [value, setValue] = useState<string[]>([]);
@@ -129,7 +139,14 @@ describe('ExtensionPicker', () => {
     const payload = '<script>alert(1)</script>';
     const { container } = render(
       <ExtensionPicker
-        available={[{ name: payload, kind: 'wrapper', multiple: true }]}
+        available={[
+          {
+            name: payload,
+            kind: 'wrapper',
+            multiple: true,
+            config_schema: null,
+          },
+        ]}
         value={[payload]}
         onChange={vi.fn()}
       />,

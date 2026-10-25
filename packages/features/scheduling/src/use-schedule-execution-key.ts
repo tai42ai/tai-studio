@@ -7,11 +7,13 @@ import type { TokensPayload } from '@tai42/api-client';
 import { tokensPayloadKey, useApi } from '@tai42/studio-sdk';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
-/** The api-key list; one shared request for the schedule dialog. */
-export function useScheduleExecutionKeys(): UseQueryResult<TokensPayload> {
+/** The api-key list; one shared request for the schedule dialog. It runs only while
+ *  `enabled` (the key field shows under a checked binding). */
+export function useScheduleExecutionKeys(enabled: boolean): UseQueryResult<TokensPayload> {
   const api = useApi();
   return useQuery({
     queryKey: tokensPayloadKey,
     queryFn: ({ signal }) => api.listTokensPayload(signal),
+    enabled,
   });
 }

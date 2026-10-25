@@ -10,24 +10,12 @@ export const RESERVED_ADMIN_ROLE = 'admin';
 /** The tri-state grant levels, low→high — the selector options and the display order. */
 export const GRANT_LEVELS: readonly GrantLevel[] = ['none', 'read', 'write'];
 
-/** Whether a route's action class is GRANTABLE (a per-tag level opens it). */
-export function isGrantableAction(action: AuthRoute['action']): boolean {
-  return action === 'read' || action === 'write';
-}
-
-/** Whether a route's action class is ADMIN-ONLY (fenced/secret; never grantable). */
-export function isFencedAction(action: AuthRoute['action']): boolean {
-  return action === 'fenced' || action === 'secret';
-}
-
 /** One feature group: a tag, the routes that carry it, and its grantability. */
 export interface FeatureGroup {
   readonly tag: string;
   readonly routes: readonly AuthRoute[];
-  /** At least one route under the tag is `read`/`write` — the tag gets a tri-state. */
+  /** At least one route under the tag has `role_reach` `level` — the tag gets a tri-state. */
   readonly grantable: boolean;
-  /** At least one route under the tag is `fenced`/`secret` — those are admin-only. */
-  readonly hasFenced: boolean;
 }
 
 /**
@@ -53,8 +41,7 @@ export function featureGroupsOf(routes: readonly AuthRoute[]): FeatureGroup[] {
       return {
         tag,
         routes: sorted,
-        grantable: sorted.some((route) => isGrantableAction(route.action)),
-        hasFenced: sorted.some((route) => isFencedAction(route.action)),
+        grantable: sorted.some((route) => route.role_reach === 'level'),
       };
     })
     .sort((a, b) => a.tag.localeCompare(b.tag));

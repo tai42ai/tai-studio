@@ -27,13 +27,17 @@
  *                  `studio_demo_echo`'s plugin panel because core routes do not
  *                  wait on plugin load — the custom panel races the route mount —
  *                  whereas the auto-form always renders, keeping this reproducible.
+ *   - run-subject — the run panel's optional Subject section, expanded (nothing is run).
+ *   - run-caller-asks — the run panel's caller-asks result for `parking_ask`, one row per
+ *                  ask with its prompt and copyable id.
+ *   - run-caller-asks-many — the same list with many long asks, each prompt on one line
+ *                  inside the list's bounded, scrolling height.
  *   - run-answer-unreadable — the sync run panel's unreadable-answer panel (its Details
  *                  open), via a forced `POST /api/run-tool` body the live server never
  *                  answers (a bare value with no `kind`).
  *   - run-answer-parked-unreadable — the background card of a parked run whose stored
  *                  answer is in an older format (its Details open), via forced
  *                  `GET /api/tool-runs` / `GET /api/tool-runs/{id}` payloads.
- *   - extensions — the extension catalog (`ask_external`).
  *   - settings   — the config workbench from `GET /api/config/*` (settings schema).
  *   - profiles   — the Settings page's Profiles tab: the seeded `production` profile
  *                  row (name + description) from `GET /api/config/profiles`. The action
@@ -59,6 +63,10 @@
  *                  `studio_demo_echo` presets, the master pane rendered full-width (no
  *                  selection). The version detail is NOT shot — its version panel stamps
  *                  a server `created_at` that would churn every run.
+ *   - preset-kwargs-{fields,json} — the create-preset dialog's fixed-kwargs editor, in
+ *                  its fields view and its raw JSON view.
+ *   - preset-maps — the create-preset dialog after authoring an input schema, an input
+ *                  map and an output map.
  *   - states-{list,declaration,templates,records,consumers,record} — the platform state
  *                  store (`GET /api/states*`, `/api/state-templates`): the seeded `notes`
  *                  state's list row, its Declaration / Templates / Records / Consumers
@@ -98,11 +106,15 @@
  *   - trace-reference-missing — the same trace's `follow_up` step, whose reference names
  *                  a record the backend does not hold: the resolved route answers 502 and
  *                  the missing-value panel renders.
- *   - manifest   — the manifest JSON tree (non-empty `user_tools`).
+ *   - manifest   — the manifest document, its "MCP servers" block and its Extensions
+ *                  section (non-empty `user_tools`, the loaded `ask_external`, the
+ *                  manifest's extension settings).
  *   - served-endpoints — the Served endpoints registry: the sub-MCP list (empty, the
  *                  runner seeds none) above its inline create form.
- *   - storage    — the Storage browser over the seeded template files.
- *   - templates  — the seeded templates list + the rendered detail (deep-linked).
+ *   - storage    — the Storage browser over the seeded files, with the seeded
+ *                  welcome-email.md open in the detail (deep-linked).
+ *   - storage-delete-held — the Delete dialog of the seeded `jq/gate`, refused because
+ *                  the seeded `gate-watch` hook's condition names it: the holder list.
  *   - system     — the health badge (the health router is loaded before the SPA
  *                  catch-all, so it renders ops text, not index.html) plus the
  *                  populated Plugin kinds table.
@@ -126,11 +138,15 @@
  *                  resolved routes, the per-item base-prefix remap input, and the
  *                  public-route acceptance checkbox, all from the minimal seeded
  *                  registry the runner boots (MARKETPLACE_URL).
- *   - connectors — the Connectors page: the Providers list above the Connections list
- *                  (empty, the runner connects nothing).
- *   - connectors-add-server — the Connectors page with the "Add MCP server" dialog at its
- *                  review step, the single look-up answered by a route stub (the demo
- *                  backend has no OAuth-protected server to look up); nothing is added.
+ *   - connectors — the Connectors page: the directory (a provider with two stubbed
+ *                  connections, a never-connected provider, the MCP entries, the
+ *                  marketplace listings) above "Your connections".
+ *   - connectors-pick-tools — the connect flow at Pick tools for a hand-added server, its
+ *                  advertised tools answered by a route stub; nothing is saved.
+ *   - connectors-add-server — the Connectors page with the "Add MCP server" dialog, opened
+ *                  from the header's "Add a custom server", at its review step, the single
+ *                  look-up answered by a route stub (the demo backend has no
+ *                  OAuth-protected server to look up); nothing is added.
  *   - conversations — the conversation monitor at its deepest level: a seeded route's
  *                  thread list beside one thread's transcript, both populated by the
  *                  real turns the runner drives through the authed api door.
@@ -168,10 +184,21 @@
  *   - web-words — the same panel's words section on `relay`, with the route's own words
  *                  for its entry-refused page and its busy sentence stored through the
  *                  real words door.
- *   - conversation-route-agent-contract — the route CREATE dialog for an agent target,
- *                  framing the five door-contract jq fields and the execution key.
+ *   - conversation-route-agent-contract — the route CREATE dialog for the `tools_agent`
+ *                  target on the `web` channel door, framing the execution key (the first
+ *                  listed one) and the five door-contract jq fields.
  *   - conversation-route-reply-texts — the same CREATE dialog framing its Reply texts
  *                  group, with the failed-turn and pairing-code words filled in.
+ *   - conversation-route-channel-hint — the CREATE dialog's Door group on the `web`
+ *                  channel, with that channel's identity hint under "Our identity".
+ *   - conversation-route-no-grant — the CREATE dialog's Target group when `GET /api/agents`
+ *                  answers 403 (forced): the Agent picker's refused note.
+ *   - conversation-route-key-not-own — the EDIT dialog's Execution key field for an admin
+ *                  session on a stub route bound to `svc-other`: the unlisted-key line and
+ *                  the not-your-identity line (the live session answer with a fixed `user_id`).
+ *   - conversation-route-own-identity — the CREATE dialog's Execution key field with the
+ *                  session's own identity picked and an empty key list (forced): the own-
+ *                  identity hint and the empty-list note.
  *   - schedule-contract — the add-schedule dialog framing its door-contract section (the
  *                  execution-key picker + the four jq fields), backed by the RQ scheduling
  *                  backend the docs-demo boot installs.
@@ -293,6 +320,65 @@ const ERROR_SELECTOR = '[role="alert"]:has-text("Something went wrong")';
 async function pickFirstExecutionKey(page, scope) {
   await scope.getByRole('combobox', { name: 'Execution key' }).click();
   await page.getByRole('option').first().click();
+}
+
+/** The fixed identity the session frames name in place of the minted key's own `user_id`. */
+const FRAMED_SESSION_USER = 'studio-docs-admin';
+
+/**
+ * Serve `GET /api/auth/me` as the live projection with `fields` laid over it, so a frame
+ * draws a fixed session identity whatever the capture key resolves to. A live answer that
+ * is not a projection fails the capture loudly.
+ */
+async function stubSessionFields(page, fields) {
+  await page.route(
+    (url) => url.pathname === '/api/auth/me',
+    async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      const response = await route.fetch();
+      if (!response.ok()) {
+        throw new Error(`GET /api/auth/me answered ${String(response.status())}`);
+      }
+      const body = await response.json();
+      if (typeof body.data?.user_id !== 'string') {
+        throw new Error(`GET /api/auth/me carried no projection: ${JSON.stringify(body)}`);
+      }
+      await route.fulfill({ response, json: { ...body, data: { ...body.data, ...fields } } });
+    },
+  );
+}
+
+/** A route dialog field's whole block (label, description, control and lines): a single
+ * field's label is a `label`, a group's a `span`. */
+function routeDialogField(page, label, { group = false } = {}) {
+  return page
+    .getByRole('dialog')
+    .locator(`.tai-field:has(> ${group ? 'span' : 'label'}:text-is("${label}"))`);
+}
+
+/** Open the route CREATE dialog and pick an agent target through the pickers. */
+async function openAgentRouteDialog(page) {
+  await page.getByRole('button', { name: 'Create route' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('textbox', { name: 'Route name' }).fill('events');
+  await pickRouteOption(page, dialog, 'Target kind', 'Agent');
+  return dialog;
+}
+
+/** Pick `option` in the route dialog's combobox named `name`. */
+async function pickRouteOption(page, dialog, name, option) {
+  await dialog.getByRole('combobox', { name, exact: true }).click();
+  await page.getByRole('option', { name: option, exact: true }).click();
+}
+
+/** Fill the channel door on the demo's `web` channel. */
+async function fillWebDoor(page, dialog) {
+  await pickRouteOption(page, dialog, 'Door', 'Channel');
+  await pickRouteOption(page, dialog, 'Channel', 'web');
+  await dialog.getByRole('textbox', { name: 'Our identity' }).fill('events');
 }
 
 /**
@@ -1015,6 +1101,98 @@ const ADD_SERVER_LOOKUP = {
   redirect_uri: null,
 };
 
+// The scene the `connectors` and `connectors-pick-tools` frames stub: a provider with
+// two connections (aliases `work` and `personal`), one never-connected provider, and a
+// hand-added server beside the connections' entries; the marketplace listings come
+// from the registry the runner boots.
+const CONNECTORS_SCENE_PROVIDERS = [
+  {
+    id: 'acme_files',
+    display_name: 'Acme files',
+    description: 'Read and write files in an Acme workspace.',
+    icon_url: null,
+    kind: 'oauth',
+    origin: 'system',
+    category: 'tools',
+    sub_services: [{ id: 'default', display_name: 'Files', description: '', scopes: [] }],
+    config_fields: [],
+  },
+  {
+    id: 'acme_calendar',
+    display_name: 'Acme calendar',
+    description: 'Read and create events in an Acme calendar.',
+    icon_url: null,
+    kind: 'oauth',
+    origin: 'system',
+    category: 'tools',
+    sub_services: [{ id: 'default', display_name: 'Calendar', description: '', scopes: [] }],
+    config_fields: [],
+  },
+];
+const CONNECTORS_SCENE_CONNECTIONS = ['work', 'personal'].map((alias) => ({
+  connection_id: `conn-${alias}`,
+  provider_id: 'acme_files',
+  alias,
+  kind: 'oauth',
+  account_identity: `${alias}@example.com`,
+  enabled_sub_services: ['default'],
+  granted_scopes: [],
+  unreachable_sub_services: [],
+  auth_health_state: 'healthy',
+  created_at: '2026-08-01T00:00:00.000Z',
+}));
+const CONNECTORS_SCENE_SERVER = 'docs-search';
+const CONNECTORS_SCENE_TOOLS = ['search', 'fetch_page', 'list_sources'];
+
+/** A preserved-manifest MCP entry, managed by `connectionId` when one is given. */
+function sceneMcpEntry(title, connectionId) {
+  return {
+    title,
+    config: { transport: 'streamable-http', url: `https://mcp.example.com/${title}` },
+    include: [],
+    exclude: [],
+    managed:
+      connectionId === null
+        ? null
+        : { connection_id: connectionId, provider_id: 'acme_files', sub_service: 'default' },
+  };
+}
+
+/** Stub the Connectors scene's providers, connections, manifest entries and live status. */
+async function stubConnectorsScene(page) {
+  const entries = [
+    ...CONNECTORS_SCENE_CONNECTIONS.map((c) =>
+      sceneMcpEntry(`acme-files-${c.alias}`, c.connection_id),
+    ),
+    sceneMcpEntry(CONNECTORS_SCENE_SERVER, null),
+  ];
+  await stubGet(page, '/api/connectors/providers', {
+    providers: CONNECTORS_SCENE_PROVIDERS,
+    categories: [{ id: 'tools', display_name: 'Tools', sort_order: 1 }],
+  });
+  await stubGet(page, '/api/connectors/connections', {
+    items: CONNECTORS_SCENE_CONNECTIONS,
+    total: CONNECTORS_SCENE_CONNECTIONS.length,
+    unhealthy: 0,
+  });
+  await stubGet(page, '/api/manifest/preserved', {
+    mcp: entries,
+    user_tools: [],
+    extension_settings: {
+      extensions_modules: [],
+      backend_module: null,
+      tools: [],
+      mcp: [],
+      api_tools: {},
+    },
+  });
+  await stubGet(page, '/api/mcp-status', {
+    bound: Object.fromEntries(entries.map((entry) => [entry.title, CONNECTORS_SCENE_TOOLS])),
+    failed: [],
+    health: {},
+  });
+}
+
 /** The stored environment the `settings-env-recycle` scene's tab reads (forced, so the
  * shot frames rows rather than the demo stack's empty store). */
 const ENV_SAVE_STORED = {
@@ -1120,13 +1298,13 @@ const BACKUP_RESTORE_STOPPED = {
 };
 
 /** The forced export answer of the `backup-export-section-errors` scene: the document
- * with one section exported and the `templates` section named, with its message, in its
+ * with one section exported and the `storage` section named, with its message, in its
  * `errors` map (the docs-demo storage backend fails no read on demand). */
 const BACKUP_EXPORT_SECTION_ERRORS = {
   version: 1,
   created_at: '2026-01-01T00:00:00Z',
   sections: { env: { TAI_BUS_HEARTBEAT_TTL: '20' } },
-  errors: { templates: 'storage read failed: connection refused' },
+  errors: { storage: 'storage read failed: connection refused' },
 };
 
 /** The forced response of a profile apply whose recycle roll stopped (the
@@ -1306,37 +1484,34 @@ const AUTHED_PAGES = [
   },
   {
     // The conversation-route CREATE dialog for an AGENT target, framing the door-contract
-    // section: the five inline jq fields (Start / Reply / Cancel / Resume / Extras) an
-    // asking route carries, plus the execution key. The action opens the dialog, picks an
-    // agent target and a channel door, fills the required delivery fields, then scrolls the
-    // door-contract section into view. Nothing is submitted, so no backend state is touched
-    // and the frame is deterministic (the seeded route makes the page's Create button show,
-    // but the dialog's own fields are all blank/typed here).
+    // section: the execution key and the five inline jq fields (Start / Reply / Cancel /
+    // Resume / Extras) an asking route carries. The action opens the dialog and drives the
+    // pickers: target `tools_agent`, the channel door on `web`, a typed identity and the
+    // first listed execution key, then scrolls the section into view. Nothing is
+    // submitted, so no backend state is touched. The first listed key varies with the
+    // keys' creation times, so the frame is nondeterministic.
     name: 'conversation-route-agent-contract',
     path: '/conversations',
     wait: 'button:has-text("Create route")',
+    nondeterministic: true,
     // The dialog is modal (the background nav goes inert), so the plugin-nav wait is
     // meaningless — the dialog's own waits are the stable signal.
     awaitPluginNav: false,
     action: async (page) => {
-      await page.getByRole('button', { name: 'Create route' }).click();
-      const dialog = page.getByRole('dialog');
-      await dialog.getByRole('textbox', { name: 'Route name' }).fill('events');
-      const pickVariant = async (groupName, optionName) => {
-        await dialog.getByRole('group', { name: groupName }).getByRole('combobox').click();
-        await page.getByRole('option', { name: optionName }).click();
-      };
-      await pickVariant('Target', 'agent');
-      await dialog.getByRole('textbox', { name: /^Agent name\b/ }).fill('assistant');
-      await pickVariant('Door', 'channel');
-      await dialog.getByRole('textbox', { name: /^Channel\b/ }).fill('whatsapp');
-      await dialog.getByRole('textbox', { name: /^Our identity\b/ }).fill('+15550000000');
-      await dialog.getByRole('textbox', { name: 'Execution key' }).fill('svc-events');
+      const dialog = await openAgentRouteDialog(page);
+      await pickRouteOption(page, dialog, 'Agent', 'tools_agent');
+      await fillWebDoor(page, dialog);
+      await pickFirstExecutionKey(page, dialog);
       // The door-contract jq fields are the shot's subject: wait on the Reply-expression
-      // field and scroll it into view so the section is framed.
-      const contractField = dialog.getByText('Reply expression', { exact: true });
-      await contractField.waitFor({ state: 'visible', timeout: 8000 });
-      await contractField.scrollIntoViewIfNeeded();
+      // field and scroll the execution key to the top so the section is framed.
+      await dialog
+        .getByText('Reply expression', { exact: true })
+        .waitFor({ state: 'visible', timeout: 8000 });
+      await routeDialogField(page, 'Execution key').evaluate((el) => {
+        el.scrollIntoView({ block: 'start' });
+      });
+      // Move the pointer off the dialog so no field wears the hover border.
+      await page.mouse.move(0, 0);
     },
   },
   {
@@ -1351,19 +1526,9 @@ const AUTHED_PAGES = [
     // meaningless — the dialog's own waits are the stable signal.
     awaitPluginNav: false,
     action: async (page) => {
-      await page.getByRole('button', { name: 'Create route' }).click();
-      const dialog = page.getByRole('dialog');
-      await dialog.getByRole('textbox', { name: 'Route name' }).fill('events');
-      const pickVariant = async (groupName, optionName) => {
-        await dialog.getByRole('group', { name: groupName }).getByRole('combobox').click();
-        await page.getByRole('option', { name: optionName }).click();
-      };
-      await pickVariant('Target', 'agent');
-      await dialog.getByRole('textbox', { name: /^Agent name\b/ }).fill('assistant');
-      await pickVariant('Door', 'channel');
-      await dialog.getByRole('textbox', { name: /^Channel\b/ }).fill('whatsapp');
-      await dialog.getByRole('textbox', { name: /^Our identity\b/ }).fill('+15550000000');
-      await dialog.getByRole('textbox', { name: 'Execution key' }).fill('svc-events');
+      const dialog = await openAgentRouteDialog(page);
+      await pickRouteOption(page, dialog, 'Agent', 'tools_agent');
+      await fillWebDoor(page, dialog);
       const replyTexts = dialog.getByRole('group', { name: 'Reply texts' });
       await replyTexts
         .getByRole('textbox', { name: /^Failed turn\b/ })
@@ -1379,6 +1544,118 @@ const AUTHED_PAGES = [
         el.scrollIntoView({ block: 'start' });
       });
     },
+  },
+  {
+    // The route CREATE dialog framing its Door group once the `web` channel is picked: the
+    // "Our identity" field's description is that channel's own declared identity hint.
+    name: 'conversation-route-channel-hint',
+    path: '/conversations',
+    wait: 'button:has-text("Create route")',
+    awaitPluginNav: false,
+    action: async (page) => {
+      const dialog = await openAgentRouteDialog(page);
+      await fillWebDoor(page, dialog);
+      await dialog
+        .getByText('Any name you choose', { exact: false })
+        .waitFor({ state: 'visible', timeout: 8000 });
+      // Drop the typed field's focus ring and the pointer's hover border from the frame.
+      await dialog.getByRole('textbox', { name: 'Our identity' }).blur();
+      await page.mouse.move(0, 0);
+    },
+    frame: (page) => routeDialogField(page, 'Door', { group: true }),
+  },
+  {
+    // The route CREATE dialog framing its Target group when the session may not list
+    // agents: `GET /api/agents` answers 403, so the Agent picker draws its refused note.
+    name: 'conversation-route-no-grant',
+    path: '/conversations',
+    wait: 'button:has-text("Create route")',
+    awaitPluginNav: false,
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/agents',
+        async (route) => {
+          if (route.request().method() !== 'GET') {
+            await route.fallback();
+            return;
+          }
+          await route.fulfill({ status: 403, json: { error: 'Forbidden' } });
+        },
+      );
+    },
+    action: async (page) => {
+      const dialog = await openAgentRouteDialog(page);
+      await dialog
+        .getByText('This session cannot list agents', { exact: false })
+        .waitFor({ state: 'visible', timeout: 8000 });
+      await page.mouse.move(0, 0);
+    },
+    frame: (page) => routeDialogField(page, 'Target', { group: true }),
+  },
+  {
+    // The route EDIT dialog framing its Execution key field for an admin session whose
+    // stored route runs as another identity: the key is not a listed key of this session,
+    // and the field says whose identity it is not. The routes list carries one stub route
+    // bound to `svc-other`; the session answer is the live one with a fixed `user_id`.
+    name: 'conversation-route-key-not-own',
+    path: '/conversations',
+    wait: `button[aria-label="Edit route ${STUB_CHANNEL_ROUTE.route_name}"]`,
+    awaitPluginNav: false,
+    setup: async (page) => {
+      await stubGet(
+        page,
+        '/api/conversations',
+        pageOf([{ ...STUB_CHANNEL_ROUTE, execution_key: 'svc-other' }]),
+      );
+      await stubSessionFields(page, { user_id: FRAMED_SESSION_USER });
+    },
+    action: async (page) => {
+      await page
+        .getByRole('button', { name: `Edit route ${STUB_CHANNEL_ROUTE.route_name}` })
+        .click();
+      await page
+        .getByRole('dialog')
+        .getByText(`svc-other is not this session's identity (${FRAMED_SESSION_USER}).`)
+        .waitFor({ state: 'visible', timeout: 8000 });
+      await page.mouse.move(0, 0);
+    },
+    frame: (page) => routeDialogField(page, 'Execution key'),
+  },
+  {
+    // The route CREATE dialog framing its Execution key field with this session's own
+    // identity picked, for an api-key session whose owner holds no listed keys: the field
+    // says the route runs as that identity with its live grants, and how to mint a
+    // narrower key. The key list is stubbed empty and the session answer is the live one
+    // laid over with the key's owner and principal.
+    name: 'conversation-route-own-identity',
+    path: '/conversations',
+    wait: 'button:has-text("Create route")',
+    awaitPluginNav: false,
+    setup: async (page) => {
+      await stubGet(page, '/api/auth/tokens-payload', []);
+      await stubSessionFields(page, {
+        user_id: FRAMED_SESSION_USER,
+        owner_user_id: 'docs-owner',
+        principal: { user_id: 'docs-owner', display_name: 'docs-owner', kind: 'human' },
+      });
+    },
+    action: async (page) => {
+      const dialog = await openAgentRouteDialog(page);
+      await pickRouteOption(
+        page,
+        dialog,
+        'Execution key',
+        `${FRAMED_SESSION_USER} — this session's identity`,
+      );
+      await dialog
+        .getByText(
+          `This runs as this session's own identity, ${FRAMED_SESSION_USER}, with its live grants.`,
+          { exact: true },
+        )
+        .waitFor({ state: 'visible', timeout: 8000 });
+      await page.mouse.move(0, 0);
+    },
+    frame: (page) => routeDialogField(page, 'Execution key'),
   },
   {
     // The add-schedule dialog framing its door-contract section: the execution-key picker
@@ -1460,7 +1737,6 @@ const AUTHED_PAGES = [
       await cronError.evaluate((el) => el.scrollIntoView({ block: 'center' }));
     },
   },
-  { name: 'extensions', path: '/extensions', wait: 'text=ask_external' },
   { name: 'settings', path: '/settings', wait: 'text=LoggingSettings' },
   {
     // The Settings page's Profiles tab. The Settings tab renders first (its
@@ -1605,7 +1881,7 @@ const AUTHED_PAGES = [
   {
     // The Backup tab's Export card after an export whose document names a failed
     // section: the file still downloads, and the warning under the section checklist
-    // names the `templates` section with its message. The export answer is the forced
+    // names the `storage` section with its message. The export answer is the forced
     // document above; the section checklist is live. The Export card is captured whole.
     name: 'backup-export-section-errors',
     path: '/settings',
@@ -1675,6 +1951,67 @@ const AUTHED_PAGES = [
       await dialog.getByRole('button', { name: 'JSON' }).click();
       await dialog.getByLabel('Fixed kwargs JSON').waitFor({ state: 'visible', timeout: 8000 });
       await frameKwargsEditor(page);
+    },
+  },
+  {
+    // The create-preset dialog after authoring the preset's input and output: an input
+    // schema for what callers send, the input map that turns that input into the base
+    // tool's arguments, and the output map that reshapes the tool's result. The section
+    // runs from the Input schema label to the Output map; the viewport grows to hold it
+    // whole and the Input schema field is scrolled to the dialog's top. Nothing is
+    // submitted, so no backend state is touched.
+    name: 'preset-maps',
+    path: '/presets',
+    wait: 'button:has-text("Create preset")',
+    awaitPluginNav: false,
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Create preset' }).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByRole('textbox', { name: 'Name' }).fill('greet_visitor');
+      await dialog.getByRole('textbox', { name: /Description/ }).fill('Greets a visitor by name.');
+      await dialog.getByRole('combobox', { name: /Base tool/ }).click();
+      await page.getByRole('option', { name: 'studio_demo_form' }).first().click();
+      // Laid out by hand to fit the editor's ten rows, so the whole schema shows.
+      await dialog
+        .getByLabel('Input schema JSON')
+        .fill(
+          [
+            '{',
+            '  "type": "object",',
+            '  "properties": {',
+            '    "who": { "type": "string", "description": "Who to greet." }',
+            '  },',
+            '  "required": ["who"],',
+            '  "additionalProperties": false',
+            '}',
+          ].join('\n'),
+        );
+      await dialog
+        .getByTestId('binding-jq-input-map')
+        .getByRole('textbox')
+        .first()
+        .fill('{name: .who, mood: "cheerful"}');
+      const outputMap = dialog.getByTestId('binding-jq-output-map');
+      await outputMap.getByRole('textbox').first().fill('{text: .greeting}');
+      await outputMap.getByRole('textbox').first().blur();
+      await page.mouse.move(0, 0);
+      const inputSchema = dialog.getByTestId('create-preset-input-schema');
+      const top = await inputSchema.evaluate((el) => el.getBoundingClientRect().top);
+      const bottom = await outputMap.evaluate((el) => el.getBoundingClientRect().bottom);
+      const scroller = await inputSchema.evaluate((el) => {
+        let node = el.parentElement;
+        while (node && node.scrollHeight <= node.clientHeight) node = node.parentElement;
+        if (!node) throw new Error('preset-maps: the create dialog has no scrolling body');
+        return node.getBoundingClientRect().height;
+      });
+      const grow = Math.max(0, Math.ceil(bottom - top - scroller) + 48);
+      if (grow > 0) {
+        await page.setViewportSize({ width: VIEWPORT.width, height: VIEWPORT.height + grow });
+        await page.waitForTimeout(200);
+      }
+      await inputSchema.evaluate((el) => {
+        el.scrollIntoView({ block: 'start' });
+      });
     },
   },
   // --- States screens (the platform state store) -------------------------------
@@ -1947,8 +2284,23 @@ const AUTHED_PAGES = [
       await showResolved(page, 'A referenced value is missing from the monitoring backend');
     },
   },
-  // A non-empty `user_tools` renders the manifest JSON tree with that key.
-  { name: 'manifest', path: '/manifest', wait: 'text=user_tools' },
+  // A non-empty `user_tools` renders the manifest JSON tree with that key; the "MCP
+  // servers" block lists the mounted servers above its config editor; the Extensions
+  // section lists the loaded `ask_external` and the manifest's extension settings.
+  {
+    name: 'manifest',
+    path: '/manifest',
+    wait: 'text=user_tools',
+    action: async (page) => {
+      await page
+        .getByRole('region', { name: 'MCP servers' })
+        .getByText('Mounted servers')
+        .waitFor({ state: 'visible', timeout: 8000 });
+      const section = page.getByRole('region', { name: 'Extensions' });
+      await section.getByText('Loaded extensions').waitFor({ state: 'visible', timeout: 8000 });
+      await section.getByText('ask_external').first().waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
   {
     // The Served endpoints registry: the sub-MCP list above its inline create form. The
     // runner seeds no sub-MCP, so the list's empty state is the settled signal.
@@ -1958,21 +2310,29 @@ const AUTHED_PAGES = [
   },
   {
     // The Storage browser over the storage-local root the runner points at the seeded
-    // template files; a seeded file's row proves the listing rendered.
+    // files, deep-linked to one: the list row and the detail's content both render.
     name: 'storage',
-    path: '/storage',
-    wait: 'text=welcome-email.md',
-  },
-  {
-    name: 'templates',
-    path: '/templates?template=welcome-email.md',
-    // The seeded template's list link (list pane is populated).
-    wait: '[aria-label="Open template welcome-email.md"]',
-    // The deep link opens the detail pane; wait for the rendered template body so
-    // NEITHER pane is an empty state ("No template selected").
+    path: '/storage?id=welcome-email.md',
+    wait: '[aria-label="Open welcome-email.md"]',
     action: async (page) => {
       await page.locator('text=Subject:').first().waitFor({ state: 'visible', timeout: 8000 });
     },
+  },
+  {
+    // The seeded `jq/gate` is named by the seeded `gate-watch` hook's condition, so its
+    // Delete is refused and the dialog lists the hook. The dialog is captured whole.
+    name: 'storage-delete-held',
+    path: '/storage?id=jq/gate',
+    wait: '[aria-label="Delete jq/gate"]',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Delete jq/gate' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Delete resource' });
+      await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
+      await dialog
+        .getByText('Still used by — remove these first:')
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+    frame: (page) => page.getByRole('dialog', { name: 'Delete resource' }),
   },
   {
     name: 'system',
@@ -1992,8 +2352,8 @@ const AUTHED_PAGES = [
   {
     // The System page's "Plugin kinds" table — the same /system route as
     // above, but scrolled to and focused on the kinds card. The card queries
-    // `GET /api/system/kinds` (the docs-demo mounts `system_kinds`), which always
-    // returns nine rows; a failed query renders the card's own inline ErrorState
+    // `GET /api/system/kinds` (the docs-demo mounts `system_kinds`), which returns
+    // one row per pluggable kind and per gated feature; a failed query renders the card's own inline ErrorState
     // (NOT the global "Something went wrong" guard), so the wait selector below is
     // what proves the table is POPULATED — the accounts row's serving provider
     // `accounts-postgres`, a string only the kinds table carries.
@@ -2153,21 +2513,84 @@ const AUTHED_PAGES = [
     },
   },
   {
-    // The Connectors page: the Providers list above the Connections list. The runner
-    // connects nothing, so the Connections empty state is the settled signal.
+    // The Connectors page: the directory (a provider with its two connections and "Add
+    // another account", a never-connected provider, the connections' and a hand-added
+    // server's entries, and the registry's marketplace listings) above "Your
+    // connections". The stubbed connections' rows are the settled signal.
     name: 'connectors',
     path: '/connectors',
-    wait: 'section[aria-label="Connections"] >> text=No connections yet',
+    wait: 'text=Your connections',
+    setup: stubConnectorsScene,
+    action: async (page) => {
+      await page
+        .getByRole('button', { name: 'Add another account' })
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+      await page
+        .getByRole('list', { name: 'Connections to Acme files' })
+        .getByRole('button', { name: 'Pick tools for personal' })
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+    },
   },
   {
-    // The Connectors page with the "Add MCP server" dialog at its review step: where the
-    // server signs in, its app registration, and the prefilled name, identifier and scopes.
-    // The single look-up call is answered by a route stub — the docs-demo backend has no
+    // The connect flow at Pick tools for the hand-added server: the tools it advertises,
+    // each with its tick. The advertised read is a probe of the server, answered by a
+    // route stub; nothing is saved. Modal (background nav inert), so the plugin-nav wait
+    // is skipped.
+    name: 'connectors-pick-tools',
+    path: '/connectors',
+    wait: 'text=Your connections',
+    awaitPluginNav: false,
+    setup: async (page) => {
+      await stubConnectorsScene(page);
+      await page.route(
+        (url) => url.pathname === `/api/mcp-status/${CONNECTORS_SCENE_SERVER}/advertised-tools`,
+        (route) =>
+          route.fulfill({
+            json: {
+              data: {
+                title: CONNECTORS_SCENE_SERVER,
+                include: [],
+                exclude: [],
+                unadvertised: [],
+                tools: CONNECTORS_SCENE_TOOLS.map((name) => ({
+                  name,
+                  title: null,
+                  description: null,
+                  bound: true,
+                  selected: true,
+                  unbound_reason: null,
+                })),
+              },
+            },
+          }),
+      );
+    },
+    action: async (page) => {
+      await page
+        .getByRole('row')
+        .filter({ has: page.locator(`[data-directory-row="server:${CONNECTORS_SCENE_SERVER}"]`) })
+        .getByRole('button', { name: 'Pick tools' })
+        .click();
+      const dialog = page.getByRole('dialog', { name: `Pick tools: ${CONNECTORS_SCENE_SERVER}` });
+      const all = dialog.getByRole('checkbox', {
+        name: 'Mount every tool, including tools the server adds later',
+      });
+      await all.waitFor({ state: 'visible', timeout: 8000 });
+      await all.click();
+      await dialog
+        .getByRole('checkbox', { name: 'list_sources' })
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
+  {
+    // The Connectors page with the "Add MCP server" dialog, opened from the header's "Add a
+    // custom server", at its review step: where the server signs in, its app registration,
+    // and the prefilled name, identifier and scopes. The single look-up call is answered by a route stub — the docs-demo backend has no
     // OAuth-protected server to look up — and nothing is added, so the frame is
     // deterministic. Modal (background nav inert), so the plugin-nav wait is skipped.
     name: 'connectors-add-server',
     path: '/connectors',
-    wait: 'button:has-text("Add MCP server")',
+    wait: 'button:has-text("Add a custom server")',
     awaitPluginNav: false,
     setup: async (page) => {
       await page.route(
@@ -2176,11 +2599,7 @@ const AUTHED_PAGES = [
       );
     },
     action: async (page) => {
-      await page
-        .getByRole('region', { name: 'Providers' })
-        .getByRole('button', { name: 'Add MCP server' })
-        .first()
-        .click();
+      await page.getByRole('button', { name: 'Add a custom server' }).click();
       const dialog = page.getByRole('dialog', { name: 'Add MCP server' });
       await dialog.getByLabel('Server address').fill(ADD_SERVER_LOOKUP.url);
       await dialog.getByRole('button', { name: 'Look up' }).click();

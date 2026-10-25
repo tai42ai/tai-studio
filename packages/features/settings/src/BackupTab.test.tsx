@@ -114,7 +114,7 @@ describe('BackupTab', () => {
       created_at: '2026-07-05T00:00:00Z',
       sections: { manifest: {} },
       errors: {
-        templates: "Template 'logo.png' is not a text template: binary content",
+        storage: "storage read failed: resource 'logo.png' could not be read",
         webhooks: 'webhook store unavailable',
       },
     };
@@ -137,10 +137,10 @@ describe('BackupTab', () => {
     expect(
       within(warning).getByText('Backup downloaded, but 2 sections failed to export'),
     ).toBeInTheDocument();
-    const templates = within(warning).getByTestId('export-error-templates');
-    expect(within(templates).getByText('templates')).toBeInTheDocument();
+    const storage = within(warning).getByTestId('export-error-storage');
+    expect(within(storage).getByText('storage')).toBeInTheDocument();
     expect(
-      within(templates).getByText("Template 'logo.png' is not a text template: binary content"),
+      within(storage).getByText("storage read failed: resource 'logo.png' could not be read"),
     ).toBeInTheDocument();
     const webhooks = within(warning).getByTestId('export-error-webhooks');
     expect(within(webhooks).getByText('webhook store unavailable')).toBeInTheDocument();
@@ -152,6 +152,7 @@ describe('BackupTab', () => {
       ok: true,
       sections: {
         manifest: {
+          span_release_error: null,
           created: 1,
           updated: 0,
           skipped: 0,
@@ -162,6 +163,7 @@ describe('BackupTab', () => {
           awaiting_respawn: [],
         },
         env: {
+          span_release_error: null,
           created: 0,
           updated: 0,
           skipped: 1,
@@ -243,6 +245,7 @@ describe('BackupTab', () => {
       ok: false,
       sections: {
         env: {
+          span_release_error: null,
           created: 0,
           updated: 0,
           skipped: 0,
@@ -274,6 +277,7 @@ describe('BackupTab', () => {
       ok: false,
       sections: {
         env: {
+          span_release_error: null,
           created: 0,
           updated: 0,
           skipped: 0,
@@ -304,6 +308,7 @@ describe('BackupTab', () => {
       ok: true,
       sections: {
         env: {
+          span_release_error: null,
           created: 0,
           updated: 1,
           skipped: 0,
@@ -366,6 +371,7 @@ describe('BackupTab', () => {
       ok: true,
       sections: {
         env: {
+          span_release_error: null,
           created: 0,
           updated: 1,
           skipped: 0,

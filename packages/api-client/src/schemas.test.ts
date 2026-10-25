@@ -599,12 +599,14 @@ describe('interactionsPage schema — the paged pending inbox', () => {
 describe('channels schema', () => {
   it('accepts an empty and a populated catalog', () => {
     expect(schemas.channels.parse({ channels: [] }).channels).toEqual([]);
-    expect(schemas.channels.parse({ channels: ['telegram'] }).channels).toEqual(['telegram']);
+    expect(
+      schemas.channels.parse({ channels: [{ name: 'telegram', identity_hint: null }] }).channels,
+    ).toEqual([{ name: 'telegram', identity_hint: null }]);
   });
 
   it('rejects a non-array / non-string member', () => {
     expect(() => schemas.channels.parse({ channels: 'telegram' })).toThrow();
-    expect(() => schemas.channels.parse({ channels: [1] })).toThrow();
+    expect(() => schemas.channels.parse({ channels: ['telegram'] })).toThrow();
   });
 });
 
@@ -720,6 +722,7 @@ describe('route catalog + public-pin schemas', () => {
         summary: 'x',
         action: 'read',
         declared_public: false,
+        role_reach: 'level',
       },
       {
         path: '/b',
@@ -729,6 +732,7 @@ describe('route catalog + public-pin schemas', () => {
         summary: '',
         action: 'write',
         declared_public: false,
+        role_reach: 'level',
       },
       {
         path: '/c',
@@ -738,6 +742,7 @@ describe('route catalog + public-pin schemas', () => {
         summary: 'y',
         action: 'fenced',
         declared_public: false,
+        role_reach: 'admin_only',
       },
       {
         path: '/d',
@@ -747,6 +752,7 @@ describe('route catalog + public-pin schemas', () => {
         summary: 'z',
         action: 'secret',
         declared_public: false,
+        role_reach: 'admin_only',
       },
       {
         path: '/e',
@@ -756,6 +762,7 @@ describe('route catalog + public-pin schemas', () => {
         summary: '',
         action: null,
         declared_public: true,
+        role_reach: null,
       },
     ]);
     expect(parsed[0]?.mapped).toBe('s1');
@@ -767,8 +774,12 @@ describe('route catalog + public-pin schemas', () => {
     expect(parsed[0]?.action).toBe('read');
     expect(parsed[2]?.action).toBe('fenced');
     expect(parsed[3]?.action).toBe('secret');
-    // An unregistered/ungated path carries no metadata: empty tags, null action.
+    // The server's role reach: what opens the route for a non-admin role.
+    expect(parsed[0]?.role_reach).toBe('level');
+    expect(parsed[2]?.role_reach).toBe('admin_only');
+    // An unregistered/ungated path carries no metadata: empty tags, null action and reach.
     expect(parsed[4]?.action).toBeNull();
+    expect(parsed[4]?.role_reach).toBeNull();
     // A route its registration declares public is marked so the mapper never offers it.
     expect(parsed[4]?.declared_public).toBe(true);
     expect(parsed[0]?.declared_public).toBe(false);
@@ -793,6 +804,7 @@ describe('route catalog + public-pin schemas', () => {
           summary: '',
           action: 'read',
           declared_public: false,
+          role_reach: 'level',
         },
       ]),
     ).toThrow();
@@ -809,6 +821,30 @@ describe('route catalog + public-pin schemas', () => {
           summary: '',
           action: 'destructive',
           declared_public: false,
+          role_reach: 'level',
+        },
+      ]),
+    ).toThrow();
+  });
+
+  it('names the four role reaches and rejects (loudly) a row whose reach is outside them', () => {
+    expect(schemas.routeRoleReach.options).toEqual([
+      'level',
+      'self_service',
+      'admin_only',
+      'public',
+    ]);
+    expect(() =>
+      schemas.authRoutes.parse([
+        {
+          path: '/a',
+          methods: ['GET'],
+          mapped: null,
+          tags: [],
+          summary: '',
+          action: 'read',
+          declared_public: false,
+          role_reach: 'grantable',
         },
       ]),
     ).toThrow();

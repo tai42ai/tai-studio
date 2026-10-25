@@ -50,6 +50,8 @@ const record = {
   extensions: [],
   output_schema: null,
   input_schema: null,
+  input_map: null,
+  output_map: null,
   conflicted: false,
   conflicted_reason: null,
   uses: [],
@@ -140,6 +142,8 @@ describe('preset client transport', () => {
         extensions: [],
         output_schema: null,
         input_schema: null,
+        input_map: null,
+        output_map: null,
       },
       tags: [],
       created_at: 'now',
@@ -162,6 +166,8 @@ describe('preset client transport', () => {
         extensions: [],
         output_schema: null,
         input_schema: null,
+        input_map: null,
+        output_map: null,
       },
       tags: [],
       created_at: 'now',
@@ -186,6 +192,8 @@ describe('preset client transport', () => {
         extensions: [],
         output_schema: null,
         input_schema: null,
+        input_map: null,
+        output_map: null,
       },
       tags: [],
       created_at: 'now',
@@ -210,6 +218,8 @@ describe('preset client transport', () => {
         extensions: [],
         output_schema: null,
         input_schema: null,
+        input_map: null,
+        output_map: null,
         state_binding: null,
       },
       tags: [],
@@ -243,6 +253,8 @@ describe('preset client transport', () => {
         extensions: [],
         output_schema: null,
         input_schema: null,
+        input_map: null,
+        output_map: null,
         state_binding: null,
       },
       tags: [],
@@ -264,6 +276,8 @@ describe('preset client transport', () => {
         extensions: [],
         output_schema: null,
         input_schema: null,
+        input_map: null,
+        output_map: null,
         state_binding: null,
       },
       tags: [],
@@ -360,6 +374,8 @@ describe('preset client transport', () => {
         extensions: [],
         output_schema: null,
         input_schema: null,
+        input_map: null,
+        output_map: null,
       },
       tags: [],
       created_at: 'now',
@@ -382,6 +398,8 @@ describe('preset client transport', () => {
         extensions: [],
         output_schema: null,
         input_schema: null,
+        input_map: null,
+        output_map: null,
       },
       tags: [],
       created_at: 'now',
@@ -394,14 +412,20 @@ describe('preset client transport', () => {
     expect(out.version).toBe(2);
   });
 
-  it('getPresetReferees GETs the referees route and parses the list', async () => {
+  it('getPresetReferees GETs the referees route for the action and parses the holders', async () => {
+    const holder = {
+      kind: 'preset',
+      name: 'nightly',
+      locator: { preset: 'nightly' },
+      summary: 'base of preset nightly',
+    };
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { name: 'weather', referees: ['a', 'b'] } }),
+      jsonResponse({ data: { action: 'delete', holders: [holder] } }),
     );
-    const out = await client.getPresetReferees('weather');
+    const out = await client.getPresetReferees('weather', 'delete');
     expect(captured[0]?.method).toBe('GET');
-    expect(captured[0]?.url).toBe('/api/presets/weather/referees');
-    expect(out.referees).toEqual(['a', 'b']);
+    expect(captured[0]?.url).toBe('/api/presets/weather/referees?action=delete');
+    expect(out.holders).toEqual([holder]);
   });
 
   it('validatePreset POSTs the draft to the validate route and parses the verdict', async () => {

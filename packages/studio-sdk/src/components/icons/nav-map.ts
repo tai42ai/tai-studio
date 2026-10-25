@@ -11,7 +11,6 @@ import {
   ConversationsIcon,
   DashboardIcon,
   DatabaseIcon,
-  ExtensionsIcon,
   HooksIcon,
   InteractionsIcon,
   ManifestIcon,
@@ -24,7 +23,6 @@ import {
   SettingsIcon,
   StorageIcon,
   SystemIcon,
-  TemplatesIcon,
   ToolsIcon,
 } from './nav-marks';
 
@@ -39,8 +37,6 @@ export const NAV_ICONS: Readonly<Record<Exclude<RouteToken, 'login'>, IconCompon
   agents: AgentsIcon,
   presets: PresetsIcon,
   states: DatabaseIcon,
-  extensions: ExtensionsIcon,
-  templates: TemplatesIcon,
   connectors: ConnectorsIcon,
   servedEndpoints: ServedEndpointsIcon,
   hooks: HooksIcon,

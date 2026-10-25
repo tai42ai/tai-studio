@@ -4,7 +4,6 @@
  */
 export { AddServerDialog } from './add-server-dialog';
 export { ClientCredentialsDialog } from './client-credentials-dialog';
-export { ConnectDialog } from './connect-dialog';
 export { ConnectionDetail } from './connection-detail';
 export { ConnectorsPage } from './connectors-page';
 export { connectionKey, CONNECTIONS_KEY, PROVIDERS_KEY } from './keys';

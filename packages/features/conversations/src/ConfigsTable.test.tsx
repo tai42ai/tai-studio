@@ -321,4 +321,29 @@ describe('ConfigsTable — write gating (projection ⊆ gate)', () => {
       screen.getByRole('button', { name: 'Delete config agent:assistant' }),
     ).toBeInTheDocument();
   });
+
+  describe('landing on a named config', () => {
+    const configs = () => ({
+      listConversationConfigs: vi.fn().mockResolvedValue({
+        items: [makeConfig(), makeConfig({ target_kind: 'tool', target_name: 'relay' })],
+        total: 2,
+      }),
+    });
+
+    it('marks the named row and no other', async () => {
+      renderWithProviders(<ConfigsTable highlight="tool:relay" />, { client: configs() });
+      const cell = await screen.findByText('tool: relay');
+      expect(cell.closest('tr')).toHaveAttribute('aria-current', 'true');
+      expect(screen.getByText('agent: assistant').closest('tr')).not.toHaveAttribute(
+        'aria-current',
+      );
+      expect(screen.queryByText(/^No config named/)).not.toBeInTheDocument();
+    });
+
+    it('says so when no config has that name', async () => {
+      renderWithProviders(<ConfigsTable highlight="agent:gone" />, { client: configs() });
+      expect(await screen.findByText("No config named 'agent:gone'.")).toBeInTheDocument();
+      expect(document.querySelector('tr[aria-current]')).toBeNull();
+    });
+  });
 });

@@ -1,66 +1,71 @@
-/** The storage browser's per-resource and per-directory dialogs: stat, delete
- * resource, and delete directory. */
+/** The Storage screen's delete dialogs: one object, and one directory. A delete the
+ * server refuses because something still names the object answers 409 with its
+ * holders; the dialog stays open and lists them as links. */
 import {
   ConfirmDialog,
-  Dialog,
   errorMessage,
   ErrorState,
-  JsonTree,
-  Skeleton,
+  HolderList,
   useApi,
+  useAppNavigate,
 } from '@tai42/studio-sdk';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
-import { storageResourcesKey, storageStatKey } from './keys';
+import { listKey, storageEntryKey, storageEntryRoot, templateNamesKey } from './keys';
 import { monoStyle } from './storage-view';
+import type { StorageDoor } from './use-storage-doors';
 
-/**
- * A dialog showing one resource's stat fields (`statStorageResource`) rendered as a
- * `JsonTree`. The stat is fetched on open; a `content_type: null` (unknown suffix)
- * renders without error.
- */
-export function StatDialog({ id, onClose }: { id: string; onClose: () => void }): ReactNode {
-  const api = useApi();
-  const stat = useQuery({
-    queryKey: storageStatKey(id),
-    queryFn: ({ signal }) => api.statStorageResource(id, signal),
-  });
-
+/** A refused delete: the headline (the first line when holders follow) and the list. */
+function DeleteRefusal({
+  error,
+  subject,
+  onNavigate,
+}: {
+  readonly error: Error;
+  readonly subject: string;
+  readonly onNavigate: () => void;
+}): ReactNode {
+  const holders = useApi().holdersFromError(error);
+  const message = errorMessage(error);
+  if (holders === null) return <ErrorState message={message} />;
   return (
-    <Dialog
-      title="Resource stat"
-      open
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-    >
-      <p style={{ margin: '0 0 var(--tai-space-3)', ...monoStyle }}>{id}</p>
-      {stat.isPending ? (
-        <Skeleton height={64} />
-      ) : stat.isError ? (
-        <ErrorState message={errorMessage(stat.error)} onRetry={() => void stat.refetch()} />
-      ) : (
-        <JsonTree data={stat.data} defaultExpanded label={`Metadata for ${id}`} />
-      )}
-    </Dialog>
+    <>
+      <ErrorState message={message.split('\n')[0] ?? message} />
+      <HolderList
+        holders={holders}
+        lead="Still used by — remove these first:"
+        label={`Holders of ${subject}`}
+        onNavigate={onNavigate}
+      />
+    </>
   );
 }
 
-/** The danger confirm that removes one resource and invalidates the id list. */
+/** The danger confirm that removes one object through the delete door. */
 export function DeleteResourceDialog({
   id,
+  door,
+  onDeleted,
   onClose,
 }: {
-  id: string;
-  onClose: () => void;
+  readonly id: string;
+  readonly door: StorageDoor;
+  readonly onDeleted: () => void;
+  readonly onClose: () => void;
 }): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
   const remove = useMutation({
-    mutationFn: () => api.deleteStorageResource(id),
+    mutationFn: async (): Promise<void> => {
+      if (door === 'storage') await api.deleteStorageResource(id);
+      else await api.deleteTemplate(id);
+    },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: storageResourcesKey });
+      void queryClient.invalidateQueries({ queryKey: listKey(door) });
+      void queryClient.invalidateQueries({ queryKey: templateNamesKey });
+      queryClient.removeQueries({ queryKey: storageEntryKey(id) });
+      onDeleted();
       onClose();
     },
   });
@@ -75,27 +80,47 @@ export function DeleteResourceDialog({
       }}
       onClose={onClose}
       isPending={remove.isPending}
-      error={remove.error}
     >
       <p style={{ margin: 0 }}>
         Delete <strong style={monoStyle}>{id}</strong>? This cannot be undone.
       </p>
+      {remove.isError ? (
+        <DeleteRefusal error={remove.error} subject={id} onNavigate={onClose} />
+      ) : null}
     </ConfirmDialog>
   );
 }
 
 /**
  * The delete-directory confirm for one folder prefix: a danger confirm that removes
- * the whole subtree (`deleteStorageDir`) and invalidates the id list. A rejected
- * delete renders the server message verbatim.
+ * the whole subtree and invalidates the list and every object's detail. When the open
+ * object lived under the prefix, the selection clears. A rejected delete renders the
+ * server message verbatim.
  */
-export function DeleteDirDialog({ dir, onClose }: { dir: string; onClose: () => void }): ReactNode {
+export function DeleteDirDialog({
+  dir,
+  door,
+  selected,
+  onClose,
+}: {
+  readonly dir: string;
+  readonly door: StorageDoor;
+  readonly selected: string | undefined;
+  readonly onClose: () => void;
+}): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
+  const navigate = useAppNavigate();
   const remove = useMutation({
-    mutationFn: () => api.deleteStorageDir(dir),
+    mutationFn: async (): Promise<void> => {
+      if (door === 'storage') await api.deleteStorageDir(dir);
+      else await api.deleteTemplateDir(dir);
+    },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: storageResourcesKey });
+      void queryClient.invalidateQueries({ queryKey: listKey(door) });
+      void queryClient.invalidateQueries({ queryKey: templateNamesKey });
+      queryClient.removeQueries({ queryKey: storageEntryRoot });
+      if (selected?.startsWith(`${dir}/`)) navigate('storage');
       onClose();
     },
   });
@@ -110,12 +135,14 @@ export function DeleteDirDialog({ dir, onClose }: { dir: string; onClose: () => 
       }}
       onClose={onClose}
       isPending={remove.isPending}
-      error={remove.error}
     >
       <p style={{ margin: 0 }}>
         Delete <strong style={monoStyle}>{dir}</strong> and everything under it? This cannot be
         undone.
       </p>
+      {remove.isError ? (
+        <DeleteRefusal error={remove.error} subject={dir} onNavigate={onClose} />
+      ) : null}
     </ConfirmDialog>
   );
 }

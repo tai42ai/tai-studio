@@ -32,18 +32,15 @@ export const TOKEN_REQUIREMENTS = {
   agents: { anyOf: ['/api/agents'] },
   presets: { anyOf: ['/api/presets'] },
   states: { anyOf: ['/api/states', '/api/state-templates'] },
-  extensions: { anyOf: ['/api/extensions'] },
   interactions: { anyOf: ['/api/interactions'] },
   notifications: { anyOf: ['/api/notifications'] },
   conversations: { anyOf: ['/api/conversations'] },
   connectors: { anyOf: ['/api/connectors', '/api/mcp-status'] },
   servedEndpoints: { anyOf: ['/api/sub-mcp'] },
   hooks: { anyOf: ['/api/hooks'] },
-  templates: { anyOf: ['/api/templates'] },
-  // The storage nav opens the management page, so it keys off the management
-  // surface — NOT the presence read `/api/storage`, which is mounted in every
-  // deployment (a presence-only deploy has no management page to show).
-  storage: { anyOf: ['/api/storage/resources'] },
+  // Either grant's list opens the screen. The presence read `/api/storage` is
+  // mounted in every deployment, so it opens nothing.
+  storage: { anyOf: ['/api/storage/resources', '/api/templates'] },
   manifest: { anyOf: ['/api/manifest'] },
   // The generic Members listing is strictly admin-only (`secret`), so a non-admin
   // projection never covers its route and the nav entry is hidden — not `'always'`,

@@ -28,12 +28,16 @@ import { PresetDetailDialogs } from './PresetDetailDialogs';
 import { PresetDetailHeader } from './PresetDetailHeader';
 import { PresetRecordFields } from './PresetRecordFields';
 import { PresetVersions } from './PresetVersions';
+import { StoredPresetFault } from './StoredPresetFault';
 
 export function PresetDetail({
   name,
+  version,
   headingRef,
 }: {
   readonly name: string;
+  /** The version a deep link points at, marked in the version history. */
+  readonly version?: number;
   // Focus target for the page's master/detail focus management: the parent moves
   // focus here on a client-side selection (WCAG 2.4.3). Optional so the detail stays
   // usable standalone.
@@ -68,9 +72,15 @@ export function PresetDetail({
     );
   }
   if (query.isError) {
+    // A stored row the server cannot read fails every presets read until it is gone.
+    const faulted = api.storedPresetFaultFromError(query.error);
     return (
       <Card>
-        <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
+        {faulted !== null ? (
+          <StoredPresetFault error={query.error} name={faulted} selected={name} />
+        ) : (
+          <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
+        )}
       </Card>
     );
   }
@@ -135,7 +145,7 @@ export function PresetDetail({
       {conflicted ? null : (
         <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
           <h3 style={{ margin: 0, fontSize: 'var(--tai-text-md)' }}>Version history</h3>
-          <PresetVersions name={preset.name} />
+          <PresetVersions name={preset.name} version={version} />
         </section>
       )}
 

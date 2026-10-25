@@ -5,11 +5,20 @@
  * `value=`), `ThemeProvider`, `SystemKindsProvider` (so `useFeatureOff('states')`
  * reads a seeded kind-status table), and a `NavigationProvider` whose `navigate` is a
  * spy. Only test dependencies are imported here; no production module is stubbed.
+ *
+ * A `projection` seeds the capability context to `ready` (a session key is set and
+ * `getMe` answers it); with none `getMe` never settles, so the context stays `loading`.
  */
-import type { ApiClient, KindStatus } from '@tai42/api-client';
+import {
+  type ApiClient,
+  createApiClient,
+  type KindStatus,
+  type MeProjection,
+} from '@tai42/api-client';
 import {
   ApiProvider,
   AuthProvider,
+  CapabilityProvider,
   NavigationProvider,
   SystemKindsProvider,
   ThemeProvider,
@@ -19,6 +28,11 @@ import { render, type RenderResult, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { expect, type Mock, vi } from 'vitest';
+
+/** The real refusal readers of a client: a stub client carries them so a refused write
+ * reads its holders exactly as the served client does. */
+const { holdersFromError, storedPresetFaultFromError } = createApiClient({ getToken: () => null });
+const refusalReaders = { holdersFromError, storedPresetFaultFromError };
 
 /** A stub client: only the methods the unit under test calls need to be present. */
 export type StubApiClient = Partial<ApiClient>;
@@ -38,7 +52,13 @@ export function renderWithProviders(
     client,
     navigate: navigateOverride,
     systemKinds,
-  }: { client: StubApiClient; navigate?: Mock; systemKinds?: readonly KindStatus[] },
+    projection,
+  }: {
+    client: StubApiClient;
+    navigate?: Mock;
+    systemKinds?: readonly KindStatus[];
+    projection?: MeProjection;
+  },
 ): RenderWithProvidersResult {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -49,36 +69,44 @@ export function renderWithProviders(
   // key so `AuthProvider` is authenticated and `SystemKindsProvider` fetches. With no
   // table the context stays `loading` and every feature reads not-off — the shape
   // every pre-gating test expects.
-  if (systemKinds !== undefined) {
+  if (systemKinds !== undefined || projection !== undefined) {
     globalThis.sessionStorage.setItem(SESSION_KEY, 'sk-test');
   } else {
     globalThis.sessionStorage.removeItem(SESSION_KEY);
   }
   // The stub only implements the methods exercised by a given test; the cast asserts
   // the shape the SDK context expects.
-  const apiClient = (
-    systemKinds !== undefined
-      ? { ...client, getSystemKinds: () => Promise.resolve([...systemKinds]) }
-      : client
-  ) as ApiClient;
+  const apiClient = {
+    ...refusalReaders,
+    ...client,
+    ...(systemKinds === undefined
+      ? { getSystemKinds: client.getSystemKinds ?? (() => Promise.resolve([])) }
+      : { getSystemKinds: () => Promise.resolve([...systemKinds]) }),
+    getMe: () =>
+      projection === undefined
+        ? new Promise<MeProjection>(() => undefined)
+        : Promise.resolve(projection),
+  } as ApiClient;
 
   const result = render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ApiProvider value={apiClient}>
           <SystemKindsProvider>
-            <ThemeProvider>
-              <NavigationProvider
-                value={{
-                  navigate,
-                  resolvePath: () => '/x',
-                  navigatePlugin,
-                  resolvePluginPath: () => '/x',
-                }}
-              >
-                {ui}
-              </NavigationProvider>
-            </ThemeProvider>
+            <CapabilityProvider>
+              <ThemeProvider>
+                <NavigationProvider
+                  value={{
+                    navigate,
+                    resolvePath: () => '/x',
+                    navigatePlugin,
+                    resolvePluginPath: () => '/x',
+                  }}
+                >
+                  {ui}
+                </NavigationProvider>
+              </ThemeProvider>
+            </CapabilityProvider>
           </SystemKindsProvider>
         </ApiProvider>
       </AuthProvider>
@@ -86,6 +114,26 @@ export function renderWithProviders(
   );
 
   return { ...result, navigate, navigatePlugin, queryClient };
+}
+
+/** A total (admin / gate-off) projection: every surface reachable. */
+export function fullProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return {
+    access_control_enabled: true,
+    user_id: 'u-test',
+    owner_user_id: null,
+    principal: null,
+    admin: true,
+    public_resource_id: 'public',
+    scopes: [],
+    routes: [],
+    route_patterns: [],
+    sub_mcp: [],
+    tools: [],
+    agents: [],
+    mintable: false,
+    ...overrides,
+  };
 }
 
 /** A kind-status row marking `states` OFF, for the feature-disabled gating tests. */

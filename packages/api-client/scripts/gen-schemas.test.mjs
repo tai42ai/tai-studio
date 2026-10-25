@@ -327,6 +327,18 @@ describe('buildPath', () => {
     ).toBe('/api/storage/resources/a%20b/c/stat');
   });
 
+  it('keeps an empty part of a path parameter as typed', () => {
+    expect(
+      buildPath('/api/storage/resources/{resource_id:path}/stat', { resource_id: 'a//b' }),
+    ).toBe('/api/storage/resources/a//b/stat');
+  });
+
+  it('throws on a `.` or `..` part of a path parameter', () => {
+    const path = '/api/storage/resources/{resource_id:path}/stat';
+    expect(() => buildPath(path, { resource_id: 'a/./b' })).toThrow("must not be '.' or '..'");
+    expect(() => buildPath(path, { resource_id: '../b' })).toThrow("must not be '.' or '..'");
+  });
+
   it('throws on a missing parameter', () => {
     expect(() => buildPath('/api/conversations/{route_name}/threads', {})).toThrow(
       'buildPath: missing param route_name for /api/conversations/{route_name}/threads',

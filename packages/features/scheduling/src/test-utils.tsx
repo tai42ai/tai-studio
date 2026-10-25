@@ -1,12 +1,23 @@
 /**
  * Shared test harness: render a feature tree inside the exact provider stack the
  * shell supplies at runtime — a fresh QueryClient (retries off so a rejected query
- * surfaces the error state immediately), the typed API client, the theme, and a
- * stub navigation context.
+ * surfaces the error state immediately), `AuthProvider` + `CapabilityProvider`, the
+ * typed API client, the theme, and a stub navigation context.
+ *
+ * A `projection` seeds the capability context to `ready`: a session key is set so
+ * `AuthProvider` is authenticated and `CapabilityProvider` fetches a stubbed `getMe`.
+ * With no projection the context stays `loading`, so the execution-key field is
+ * pending and its list is not read.
  */
-import type { ApiClient, ScheduleListRow, ToolTagEntry } from '@tai42/api-client';
+import type { ApiClient, MeProjection, ScheduleListRow, ToolTagEntry } from '@tai42/api-client';
 import { servedConstants } from '@tai42/api-client';
-import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
+import {
+  ApiProvider,
+  AuthProvider,
+  CapabilityProvider,
+  NavigationProvider,
+  ThemeProvider,
+} from '@tai42/studio-sdk';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderOptions, type RenderResult, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -15,29 +26,44 @@ import { expect, vi } from 'vitest';
 
 export interface ProviderOptions extends Omit<RenderOptions, 'wrapper'> {
   readonly client: ApiClient;
+  readonly projection?: MeProjection;
 }
 
+/** The session key `useAuth` reads/writes; set so `CapabilityProvider` fetches. */
+const SESSION_KEY = 'tai-studio.apiKey';
+
 export function renderWithProviders(ui: ReactNode, options: ProviderOptions): RenderResult {
-  const { client, ...renderOptions } = options;
+  const { client, projection, ...renderOptions } = options;
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  if (projection !== undefined) {
+    globalThis.sessionStorage.setItem(SESSION_KEY, 'sk-test');
+  } else {
+    globalThis.sessionStorage.removeItem(SESSION_KEY);
+  }
+  const apiClient =
+    projection !== undefined ? { ...client, getMe: () => Promise.resolve(projection) } : client;
 
   function Wrapper({ children }: { children: ReactNode }): ReactNode {
     return (
       <QueryClientProvider client={queryClient}>
-        <ApiProvider value={client}>
-          <ThemeProvider>
-            <NavigationProvider
-              value={{
-                navigate: vi.fn(),
-                resolvePath: () => '/x',
-                navigatePlugin: vi.fn(),
-                resolvePluginPath: () => '/x',
-              }}
-            >
-              {children}
-            </NavigationProvider>
-          </ThemeProvider>
-        </ApiProvider>
+        <AuthProvider>
+          <ApiProvider value={apiClient}>
+            <CapabilityProvider>
+              <ThemeProvider>
+                <NavigationProvider
+                  value={{
+                    navigate: vi.fn(),
+                    resolvePath: () => '/x',
+                    navigatePlugin: vi.fn(),
+                    resolvePluginPath: () => '/x',
+                  }}
+                >
+                  {children}
+                </NavigationProvider>
+              </ThemeProvider>
+            </CapabilityProvider>
+          </ApiProvider>
+        </AuthProvider>
       </QueryClientProvider>
     );
   }
@@ -60,9 +86,8 @@ export function makeClient(overrides: Partial<ApiClient>): ApiClient {
     constants: servedConstants,
     listToolTags: vi.fn(() => Promise.resolve([])),
     listToolMeta: vi.fn(() => Promise.resolve({ folders: [], meta: [] })),
-    // The add-schedule dialog always mounts the shared execution-key picker; default it
-    // to an empty key list (a plain "no keys" note, no combobox or error control) so a
-    // test that does not exercise the picker is not slowed by its retrying read.
+    // The add-schedule dialog reads the key list under a checked binding; default it to
+    // an empty list so a test that does not exercise the picker needs no stub.
     listTokensPayload: vi.fn(() => Promise.resolve([])),
     ...overrides,
   } as ApiClient;
@@ -131,4 +156,41 @@ export async function clickWhenInteractable(
     expect(pointerEventsBlocked(element)).toBe(false);
   });
   await user.click(element);
+}
+
+/** A key session's projection with access control on (`owner_user_id` set, that owner as `principal`). */
+export function keySessionProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return {
+    access_control_enabled: true,
+    user_id: 'alice-key',
+    owner_user_id: 'alice',
+    principal: { user_id: 'alice', display_name: 'Alice', kind: 'human' },
+    admin: false,
+    public_resource_id: 'public',
+    scopes: [],
+    routes: [],
+    route_patterns: [],
+    sub_mcp: [],
+    tools: [],
+    agents: [],
+    mintable: false,
+    ...overrides,
+  };
+}
+
+/** An account session's projection: the account `alice` itself (no owner claim, its own `principal`). */
+export function accountSessionProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return keySessionProjection({ user_id: 'alice', owner_user_id: null, ...overrides });
+}
+
+/** A deployment with access control off: every session is the fill identity `__no_auth__`. */
+export function gateOffProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return keySessionProjection({
+    access_control_enabled: false,
+    user_id: '__no_auth__',
+    owner_user_id: null,
+    principal: null,
+    admin: true,
+    ...overrides,
+  });
 }

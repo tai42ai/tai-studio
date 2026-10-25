@@ -59,6 +59,14 @@ function blank(candidate: string | undefined): boolean {
   return (candidate ?? '').trim() === '';
 }
 
+/** The route-name field's create-path description. */
+export const ROUTE_NAME_DESCRIPTION =
+  'A ":"-free slug (lowercase letters, digits, hyphens) — the route\'s stable identity. It cannot be changed later.';
+
+/** The callback-URL field's description. */
+export const CALLBACK_URL_DESCRIPTION =
+  'Optional. The absolute https URL the signed answer callback is delivered to. Leave blank for a poll-only route.';
+
 /** The `route_name` property — a free slug on create, fixed (read-only) on edit. */
 function routeNameProperty(fixed: string | undefined): JsonSchema {
   if (fixed !== undefined) {
@@ -67,8 +75,7 @@ function routeNameProperty(fixed: string | undefined): JsonSchema {
   return {
     ...documentConstraints(API_VARIANT.properties.route_name),
     title: 'Route name',
-    description:
-      'A ":"-free slug (lowercase letters, digits, hyphens) — the route\'s stable identity. It cannot be changed later.',
+    description: ROUTE_NAME_DESCRIPTION,
   };
 }
 
@@ -118,6 +125,13 @@ function doorContractJqProperties(startDescription: string): Record<string, Json
   };
 }
 
+/** The start-expression helper text per target kind: an agent run's kwargs vs a tool dispatch's. */
+const START_DESCRIPTION: Readonly<Record<'agent' | 'tool', string>> = {
+  agent:
+    "Optional jq mapping the inbound turn to the agent run's kwargs — the route owns the thread. Blank runs the agent on the raw turn.",
+  tool: "Optional jq mapping the inbound turn to the tool's keyword arguments; blank uses { message, sender }.",
+};
+
 /** The `agent`-kind branch of the discriminated `target` union. */
 function targetAgentVariant(): JsonSchema {
   return {
@@ -131,9 +145,7 @@ function targetAgentVariant(): JsonSchema {
         title: 'Agent name',
         description: 'A registered agent the turn runs as a threaded conversation.',
       },
-      ...doorContractJqProperties(
-        "Optional jq mapping the inbound turn to the agent run's kwargs — the route owns the thread. Blank runs the agent on the raw turn.",
-      ),
+      ...doorContractJqProperties(START_DESCRIPTION.agent),
     },
   };
 }
@@ -151,9 +163,7 @@ function targetToolVariant(): JsonSchema {
         title: 'Tool name',
         description: 'A registered tool dispatched statelessly per message.',
       },
-      ...doorContractJqProperties(
-        "Optional jq mapping the inbound turn to the tool's keyword arguments; blank uses { message, sender }.",
-      ),
+      ...doorContractJqProperties(START_DESCRIPTION.tool),
     },
   };
 }
@@ -179,8 +189,7 @@ function deliveryApiVariant(): JsonSchema {
       callback_url: {
         ...documentConstraints(API_VARIANT.properties.callback_url),
         title: 'Callback URL',
-        description:
-          'Optional. The absolute https URL the signed answer callback is delivered to. Leave blank for a poll-only route.',
+        description: CALLBACK_URL_DESCRIPTION,
       },
     },
   };
@@ -310,6 +319,35 @@ export function routeFormSchema(fixedRouteName?: string): JsonSchema {
       delivery: deliverySchema(),
       overlap: overlapProperty(),
       execution_key: executionKeyProperty(),
+      initial_mode: initialModeProperty(),
+      turns_per_hour_override: turnsPerHourProperty(),
+      reply_texts: replyTextsProperty(),
+    },
+  };
+}
+
+/**
+ * The part of the route form a `SchemaForm` renders: the five door-contract jq fields of
+ * the picked target kind (grouped under `target` as "Expressions"; absent until a kind is
+ * picked), the overlap policy, the initial mode, the turn-rate override and the reply
+ * texts. The route name, the target kind and name, the door and its delivery fields, and
+ * the execution key are authored by the dialog's own fields; `routeFormSchema` stays the
+ * whole value's validation schema.
+ */
+export function routeSettingsSchema(targetKind: 'agent' | 'tool' | undefined): JsonSchema {
+  return {
+    type: 'object',
+    properties: {
+      ...(targetKind === undefined
+        ? {}
+        : {
+            target: {
+              type: 'object',
+              title: 'Expressions',
+              properties: doorContractJqProperties(START_DESCRIPTION[targetKind]),
+            },
+          }),
+      overlap: overlapProperty(),
       initial_mode: initialModeProperty(),
       turns_per_hour_override: turnsPerHourProperty(),
       reply_texts: replyTextsProperty(),

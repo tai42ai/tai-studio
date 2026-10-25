@@ -37,6 +37,7 @@ import {
   errorMessage,
   ErrorState,
   FleetReport,
+  RecycleRollSection,
   ScrollRegion,
   Spinner,
   Table,
@@ -54,7 +55,6 @@ import { type CSSProperties, type ReactNode, useId, useRef, useState } from 'rea
 import { checklistStyle, headingStyle, noteStyle, warningStyle } from './backup-styles';
 import { ExportCard, ExportSectionList } from './BackupExportCard';
 import { backupSectionsKey } from './keys';
-import { RecycleRollSection } from './RecycleRollSection';
 
 const stackStyle: CSSProperties = {
   display: 'flex',
@@ -149,7 +149,11 @@ function ImportReportTable({ report }: { readonly report: BackupImportReport }):
   const fleetReports = entries
     .map(([name, section]) => ({
       name,
-      summary: summarizeFleetFanout(section.fanout, section.awaiting_respawn),
+      summary: summarizeFleetFanout(
+        section.fanout,
+        section.awaiting_respawn,
+        section.span_release_error,
+      ),
     }))
     .filter((entry) => entry.summary !== null);
   const recycleRolls = entries.flatMap(([name, section]) =>

@@ -9,6 +9,9 @@
  * A `thread` with no `route` names nothing the API can be asked for. Rather than
  * render a state that cannot exist, the page REPAIRS the URL — the source of
  * truth — back to the legal search.
+ *
+ * A `config` (no `route`) opens the landing's "Per-target configs" tab and marks that
+ * config's row, so a config is linkable too.
  */
 import { PageHeader, type PageProps, Stack, Tabs, useAppNavigate } from '@tai42/studio-sdk';
 import { type ReactNode, useEffect } from 'react';
@@ -24,7 +27,7 @@ export function ConversationsPage({ search }: PageProps<'conversations'>): React
   const navigate = useAppNavigate();
   const cleaned = sanitizeSearch(search);
   const repaired = cleaned !== search;
-  const { route, thread, status, address, q } = cleaned;
+  const { route, thread, status, address, q, config } = cleaned;
   const focus = useSelectionFocus(route, routeRowLabel);
 
   // An illegal pair can only arrive from the URL (a shared or hand-edited link).
@@ -37,8 +40,8 @@ export function ConversationsPage({ search }: PageProps<'conversations'>): React
   // and pushes again — a page that cannot be left backwards.
   useEffect(() => {
     if (repaired)
-      navigate('conversations', { route, thread, status, address, q }, { replace: true });
-  }, [repaired, route, thread, status, address, q, navigate]);
+      navigate('conversations', { route, thread, status, address, q, config }, { replace: true });
+  }, [repaired, route, thread, status, address, q, config, navigate]);
 
   return (
     <Stack gap={6}>
@@ -53,17 +56,22 @@ export function ConversationsPage({ search }: PageProps<'conversations'>): React
         // listing. They are tabs (not stacked sections) so only the open one reads
         // its door: on a no-backend deployment each shows its own "off" note, and
         // three of those stacked would be noise; and the picker stays the default,
-        // so a drill back always lands on it. The tab is ephemeral admin state, not
-        // a URL param — the linkable state here is the route/thread drill, which
-        // leaves this landing entirely.
+        // so a drill back always lands on it. A `config` link opens the configs tab
+        // on that config's row; otherwise the open tab is ephemeral admin state.
         <Tabs
+          key={config ?? ''}
+          defaultValue={config !== undefined ? 'configs' : 'routes'}
           items={[
             {
               value: 'routes',
               label: 'Routes',
               content: <RoutesTable listRef={focus.listRef} />,
             },
-            { value: 'configs', label: 'Per-target configs', content: <ConfigsTable /> },
+            {
+              value: 'configs',
+              label: 'Per-target configs',
+              content: <ConfigsTable highlight={config} />,
+            },
             { value: 'failed', label: 'Failed deliveries', content: <FailedMessages /> },
           ]}
         />

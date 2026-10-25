@@ -589,3 +589,87 @@ describe('plugin registry — routeBase', () => {
     expect(contributions.routePanels.has('synthetic')).toBe(true);
   });
 });
+
+describe('plugin registry — holder links', () => {
+  const flowNode = {
+    kind: 'flow node',
+    resolve: (holder: { name: string }) => ({ pagePath: 'flows', params: holder.name }),
+  };
+
+  it('commits a resolver keyed by its kind, stamped with the plugin', async () => {
+    await loadPlugin(
+      'acme',
+      (ctx) => {
+        ctx.registerHolderLink(flowNode);
+      },
+      NO_HOST_INPUTS,
+    );
+    const link = getContributions().holderLinks.get('flow node');
+    expect(link?.pluginId).toBe('acme');
+    expect(
+      link?.resolve({ kind: 'flow node', name: 'f', locator: { node: 'n1' }, summary: 's' }),
+    ).toEqual({ pagePath: 'flows', params: 'f' });
+  });
+
+  it('throws on a core kind, committing nothing', async () => {
+    await expect(
+      loadPlugin(
+        'acme',
+        (ctx) => {
+          ctx.registerHolderLink({ ...flowNode, kind: 'preset' });
+        },
+        NO_HOST_INPUTS,
+      ),
+    ).rejects.toThrow('holder kind “preset” is a core kind; the shell links it');
+    expect(getContributions().holderLinks.size).toBe(0);
+  });
+
+  it('throws on a kind registered twice inside one plugin', async () => {
+    await expect(
+      loadPlugin(
+        'acme',
+        (ctx) => {
+          ctx.registerHolderLink(flowNode);
+          ctx.registerHolderLink(flowNode);
+        },
+        NO_HOST_INPUTS,
+      ),
+    ).rejects.toThrow('a holder link is already registered for kind “flow node”');
+    expect(getContributions().holderLinks.size).toBe(0);
+  });
+
+  it('throws when a second plugin claims a kind another plugin already links', async () => {
+    await loadPlugin(
+      'acme',
+      (ctx) => {
+        ctx.registerHolderLink(flowNode);
+      },
+      NO_HOST_INPUTS,
+    );
+    await expect(
+      loadPlugin(
+        'globex',
+        (ctx) => {
+          ctx.registerHolderLink(flowNode);
+        },
+        NO_HOST_INPUTS,
+      ),
+    ).rejects.toThrow('a holder link is already registered for kind “flow node”');
+    expect(getContributions().holderLinks.get('flow node')?.pluginId).toBe('acme');
+  });
+
+  it('seals registerHolderLink once register settles', async () => {
+    let late: (() => void) | undefined;
+    await loadPlugin(
+      'acme',
+      (ctx) => {
+        late = () => {
+          ctx.registerHolderLink(flowNode);
+        };
+      },
+      NO_HOST_INPUTS,
+    );
+    expect(() => late?.()).toThrow();
+    expect(getContributions().holderLinks.size).toBe(0);
+  });
+});

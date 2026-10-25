@@ -50,6 +50,7 @@ function harness(responder: () => Response, token: string | null = 'k') {
 }
 
 const FULL_PROJECTION = {
+  access_control_enabled: true,
   user_id: 'admin',
   owner_user_id: null,
   principal: null,

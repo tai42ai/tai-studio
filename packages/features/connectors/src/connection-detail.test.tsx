@@ -61,6 +61,8 @@ describe('ConnectionDetail', () => {
       authorize_url: null,
       added_manifest_entries: [],
       removed_manifest_entries: [],
+      fanout: null,
+      span_release_error: null,
     });
     renderWithProviders(<ConnectionDetail connectionId="conn-1" />, {
       client: baseClient({ patchSubServices }),
@@ -146,6 +148,7 @@ describe('ConnectionDetail', () => {
       kind: 'success',
       connection_id: 'conn-1',
       return_url: '/x',
+      span_release_error: null,
       fanout: {
         mode: 'fleet',
         op: 'reload_config',
@@ -192,6 +195,7 @@ describe('ConnectionDetail', () => {
       upstream_revoke_outcome: 'success',
       upstream_revoke_status: 200,
       removed_manifest_entries: [],
+      span_release_error: null,
       fanout: null,
     });
     const { nav } = renderWithProviders(<ConnectionDetail connectionId="conn-1" />, {
@@ -220,6 +224,7 @@ describe('ConnectionDetail', () => {
       upstream_revoke_outcome: 'success',
       upstream_revoke_status: 200,
       removed_manifest_entries: ['mcp:github'],
+      span_release_error: null,
       fanout: {
         mode: 'fleet',
         op: 'reload_config',
@@ -295,6 +300,8 @@ describe('ConnectionDetail', () => {
       authorize_url: null,
       added_manifest_entries: [],
       removed_manifest_entries: [],
+      fanout: null,
+      span_release_error: null,
     });
     renderWithProviders(<ConnectionDetail connectionId="conn-1" />, {
       client: baseClient({ patchSubServices }),
@@ -317,6 +324,7 @@ describe('ConnectionDetail', () => {
       upstream_revoke_outcome: 'failed',
       upstream_revoke_status: 401,
       removed_manifest_entries: [],
+      span_release_error: null,
       fanout: null,
     });
     const { nav } = renderWithProviders(<ConnectionDetail connectionId="conn-1" />, {
@@ -343,6 +351,7 @@ describe('ConnectionDetail', () => {
       upstream_revoke_outcome: 'skipped',
       upstream_revoke_status: null,
       removed_manifest_entries: [],
+      span_release_error: null,
       fanout: null,
     });
     const { nav } = renderWithProviders(<ConnectionDetail connectionId="conn-1" />, {

@@ -14,6 +14,7 @@ import {
   routeFormErrors,
   routeFormSchema,
   type RouteFormValue,
+  routeSettingsSchema,
   routeToFormValue,
 } from './route-schema';
 import { makeRoute } from './test-utils';
@@ -554,5 +555,56 @@ describe('reply texts', () => {
       pairing_linked: 'Linked.',
       rejected_too_large: 'Too big.',
     });
+  });
+});
+
+describe('routeSettingsSchema', () => {
+  const JQ_FIELDS = ['start_expr', 'reply_expr', 'cancel_expr', 'resume_expr', 'extras_expr'];
+
+  it('renders no expressions until a target kind is picked', () => {
+    expect(Object.keys(routeSettingsSchema(undefined).properties ?? {})).toEqual([
+      'overlap',
+      'initial_mode',
+      'turns_per_hour_override',
+      'reply_texts',
+    ]);
+  });
+
+  it.each(['agent', 'tool'] as const)(
+    'groups the five jq fields of a %s target as "Expressions", first',
+    (kind) => {
+      const schema = routeSettingsSchema(kind);
+      expect(Object.keys(schema.properties ?? {})).toEqual([
+        'target',
+        'overlap',
+        'initial_mode',
+        'turns_per_hour_override',
+        'reply_texts',
+      ]);
+      const target = schema.properties?.target;
+      expect(target?.title).toBe('Expressions');
+      expect(Object.keys(target?.properties ?? {})).toEqual(JQ_FIELDS);
+    },
+  );
+
+  it("carries each kind's start description, the same text the validation schema holds", () => {
+    const variants = routeFormSchema().properties?.target?.oneOf ?? [];
+    for (const [index, kind] of (['agent', 'tool'] as const).entries()) {
+      expect(routeSettingsSchema(kind).properties?.target?.properties?.start_expr).toEqual(
+        variants[index]?.properties?.start_expr,
+      );
+    }
+    expect(
+      routeSettingsSchema('agent').properties?.target?.properties?.start_expr?.description,
+    ).not.toBe(routeSettingsSchema('tool').properties?.target?.properties?.start_expr?.description);
+  });
+
+  it('holds none of the fields the dialog authors itself', () => {
+    const keys = Object.keys(routeSettingsSchema('agent').properties ?? {});
+    for (const authored of ['route_name', 'delivery', 'execution_key']) {
+      expect(keys).not.toContain(authored);
+    }
+    const target = routeSettingsSchema('tool').properties?.target?.properties ?? {};
+    expect(Object.keys(target)).not.toContain('target_name');
   });
 });

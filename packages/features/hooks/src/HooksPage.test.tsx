@@ -13,6 +13,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { HooksPage } from './HooksPage';
 import {
+  accountSessionProjection,
   apiKey,
   clickWhenInteractable,
   fullProjection,
@@ -56,7 +57,10 @@ describe('HooksPage — list', () => {
         trigger_auth: { 'events.created': 'public' },
       }),
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     const row = (await screen.findByText('notify-event')).closest('tr');
     // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
@@ -90,7 +94,10 @@ describe('HooksPage — list', () => {
         trigger_auth: { 'events.created': 'token+api_key' },
       }),
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     const row = (await screen.findByText('keyed-hook')).closest('tr');
     const cells = within(row as HTMLElement);
@@ -123,7 +130,10 @@ describe('HooksPage — list', () => {
       listHookVerifiers: vi.fn().mockResolvedValue([]),
       listHooks: vi.fn().mockResolvedValue({ items: [hook({ name: 'plain-hook' })], total: 1 }),
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('plain-hook');
     expect(screen.queryByText('condition')).not.toBeInTheDocument();
@@ -136,7 +146,10 @@ describe('HooksPage — list', () => {
       listHookVerifiers: vi.fn().mockResolvedValue([]),
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     expect(await screen.findByText('No hooks registered')).toBeInTheDocument();
   });
@@ -147,7 +160,10 @@ describe('HooksPage — list', () => {
       listHookVerifiers: vi.fn().mockResolvedValue([]),
       listHooks: vi.fn().mockRejectedValue(new Error('boom: list failed')),
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     // Scoped to the list card: a sibling form warns on the same failed query.
     const list = (await screen.findByRole('heading', { name: 'Registered hooks' })).closest(
@@ -166,7 +182,10 @@ describe('HooksPage — topic filter', () => {
       listHooks,
       listHookVerifiers: vi.fn().mockResolvedValue([]),
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     // Initial load lists all hooks with no topic argument.
     await waitFor(() => {
@@ -192,7 +211,10 @@ describe('HooksPage — register', () => {
       registerHook,
       listHookVerifiers: vi.fn().mockResolvedValue([]),
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('No hooks registered');
     await fillRegisterRequired(user);
@@ -230,7 +252,10 @@ describe('HooksPage — register', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       registerHook,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('No hooks registered');
     await fillRegisterRequired(user);
@@ -252,7 +277,10 @@ describe('HooksPage — register', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       registerHook,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('No hooks registered');
     await fillRegisterRequired(user);
@@ -272,7 +300,10 @@ describe('HooksPage — register', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       registerHook,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('No hooks registered');
     await fillRegisterRequired(user);
@@ -293,7 +324,10 @@ describe('HooksPage — register', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       registerHook,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('No hooks registered');
     await fillRegisterRequired(user);
@@ -314,10 +348,13 @@ describe('HooksPage — register', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       registerHook,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('No hooks registered');
-    await user.click(screen.getByRole('button', { name: 'Register' }));
+    await clickWhenInteractable(user, screen.getByRole('button', { name: 'Register' }));
 
     expect(await screen.findByText('A name is required.')).toBeInTheDocument();
     expect(screen.getByText('A topic is required.')).toBeInTheDocument();
@@ -335,7 +372,10 @@ describe('HooksPage — register: execution key + trigger auth', () => {
       listHookVerifiers: vi.fn().mockResolvedValue([]),
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await openSelect(user, 'Execution key');
     expect(
@@ -353,7 +393,10 @@ describe('HooksPage — register: execution key + trigger auth', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       registerHook,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('No hooks registered');
     await fillRegisterRequired(user);
@@ -375,7 +418,10 @@ describe('HooksPage — register: execution key + trigger auth', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       registerHook,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('No hooks registered');
     await fillRegisterRequired(user);
@@ -393,7 +439,10 @@ describe('HooksPage — register: execution key + trigger auth', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       registerHook,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('No hooks registered');
     await fillRegisterRequired(user);
@@ -416,7 +465,10 @@ describe('HooksPage — register: execution key + trigger auth', () => {
       listHookVerifiers: vi.fn().mockResolvedValue(['shared_secret']),
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0, topic_verifiers: {} }),
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByRole('combobox', { name: 'Execution key' });
     expect(screen.queryByText('An execution key is required.')).not.toBeInTheDocument();
@@ -432,7 +484,10 @@ describe('HooksPage — register: execution key + trigger auth', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0, topic_verifiers: {} }),
       registerHook,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('No hooks registered');
     await fillRegisterRequired(user);
@@ -457,7 +512,10 @@ describe('HooksPage — register: execution key + trigger auth', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0, topic_verifiers: {} }),
       registerHook,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('No hooks registered');
     await fillRegisterRequired(user);
@@ -484,7 +542,10 @@ describe('HooksPage — register: execution key + trigger auth', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       registerHook,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('No hooks registered');
     await user.type(screen.getByLabelText('Name'), 'greet');
@@ -507,7 +568,10 @@ describe('HooksPage — register: execution key + trigger auth', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       registerHook,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('No hooks registered');
     await waitFor(() => {
@@ -524,7 +588,10 @@ describe('HooksPage — register: execution key + trigger auth', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       registerHook,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     expect(await screen.findByText('keys boom')).toBeInTheDocument();
     await waitFor(() => {
@@ -540,7 +607,10 @@ describe('HooksPage — register: execution key + trigger auth', () => {
       listHookVerifiers: vi.fn().mockResolvedValue([]),
       listHooks,
     };
-    const { queryClient } = renderWithProviders(<HooksPage search={{}} />, { client });
+    const { queryClient } = renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('No hooks registered');
     // One cache entry, observed by both surfaces — never a duplicate/parallel key.
@@ -555,9 +625,16 @@ describe('HooksPage — register: execution key + trigger auth', () => {
       listHookVerifiers: vi.fn().mockResolvedValue([]),
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
-    expect(await screen.findByText(/No api keys available to run as/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        /No api keys of yours are listed\. You are signed in as an account, not an api key/,
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Register' })).toBeDisabled();
   });
 });
@@ -609,7 +686,10 @@ describe('HooksPage — topic verifiers', () => {
         },
       }),
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     const binding = await screen.findByTestId('topic-verifier-events.created');
     expect(within(binding).getByText('events.created')).toBeInTheDocument();
@@ -625,7 +705,10 @@ describe('HooksPage — topic verifiers', () => {
       listHookVerifiers: vi.fn().mockResolvedValue([]),
       listHooks: vi.fn().mockResolvedValue({ items: [hook({ name: 'plain-hook' })], total: 1 }),
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('plain-hook');
     expect(screen.queryByTestId('topic-verifiers')).not.toBeInTheDocument();
@@ -646,7 +729,10 @@ describe('HooksPage — bind topic verifier', () => {
       listHookVerifiers,
       setTopicVerifier,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await user.type(
       within(screen.getByRole('form', { name: 'Bind topic verifier' })).getByLabelText('Topic'),
@@ -685,7 +771,10 @@ describe('HooksPage — bind topic verifier', () => {
       listHookVerifiers,
       setTopicVerifier,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await user.type(
       within(screen.getByRole('form', { name: 'Bind topic verifier' })).getByLabelText('Topic'),
@@ -710,7 +799,10 @@ describe('HooksPage — bind topic verifier', () => {
       listHooks,
       listHookVerifiers,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     expect(await screen.findByText('No webhook verifiers registered.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Bind verifier' })).toBeDisabled();
@@ -724,7 +816,10 @@ describe('HooksPage — bind topic verifier', () => {
       listHooks,
       listHookVerifiers,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     expect(await screen.findByText('verifiers boom')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
@@ -741,7 +836,10 @@ describe('HooksPage — bind topic verifier', () => {
       listHookVerifiers,
       setTopicVerifier,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByRole('button', { name: 'Bind verifier' });
     // No topic, no verifier picked.
@@ -762,7 +860,10 @@ describe('HooksPage — bind topic verifier', () => {
       listHookVerifiers,
       setTopicVerifier,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await user.type(
       within(screen.getByRole('form', { name: 'Bind topic verifier' })).getByLabelText('Topic'),
@@ -790,7 +891,10 @@ describe('HooksPage — bind topic verifier', () => {
       listHookVerifiers,
       setTopicVerifier,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await user.type(
       within(screen.getByRole('form', { name: 'Bind topic verifier' })).getByLabelText('Topic'),
@@ -816,7 +920,10 @@ describe('HooksPage — bind topic verifier', () => {
       listHooks,
       listHookVerifiers,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByRole('button', { name: 'Bind verifier' });
     await user.type(
@@ -833,7 +940,10 @@ describe('HooksPage — bind topic verifier', () => {
       listHookVerifiers: vi.fn().mockResolvedValue(['shared_secret']),
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0, topic_verifiers: {} }),
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     const topic = within(screen.getByRole('form', { name: 'Bind topic verifier' })).getByLabelText(
       'Topic',
@@ -863,7 +973,10 @@ describe('HooksPage — unbind topic verifier', () => {
       listHookVerifiers,
       deleteTopicVerifier,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await user.click(
       await screen.findByRole('button', { name: 'Unbind verifier from events.created' }),
@@ -895,7 +1008,10 @@ describe('HooksPage — unbind topic verifier', () => {
       listHookVerifiers,
       deleteTopicVerifier,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await user.click(
       await screen.findByRole('button', { name: 'Unbind verifier from events.created' }),
@@ -923,7 +1039,10 @@ describe('HooksPage — unbind topic verifier', () => {
       listHookVerifiers,
       deleteTopicVerifier,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await user.click(
       await screen.findByRole('button', { name: 'Unbind verifier from events.created' }),
@@ -956,7 +1075,10 @@ describe('HooksPage — unbind topic verifier', () => {
       listHookVerifiers: vi.fn().mockResolvedValue(['shared_secret']),
       deleteTopicVerifier,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     // Topic A: open the confirm, unbind, and it fails loudly.
     await user.click(
@@ -996,7 +1118,10 @@ describe('HooksPage — delete', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [hook({ name: 'notify-event' })], total: 1 }),
       unregisterHook,
     };
-    renderWithProviders(<HooksPage search={{}} />, { client });
+    renderWithProviders(<HooksPage search={{}} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await screen.findByText('notify-event');
     expect(unregisterHook).not.toHaveBeenCalled();

@@ -1,18 +1,23 @@
 /** Page-level tests for the Storage surface: honesty layers, folder folding,
  * navigation, and the in-memory filter with its URL commit. */
 import type { ApiClient } from '@tai42/api-client';
-import type { NavigationContextValue, RouteSearch, RouteToken } from '@tai42/studio-sdk';
-import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { RouteSearch, RouteToken } from '@tai42/studio-sdk';
 import { render, type RenderResult, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { type ReactElement, type ReactNode, useMemo, useState } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { type ReactElement, useMemo, useState } from 'react';
+import { afterEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 import { StoragePage } from './StoragePage';
+import {
+  fullProjection,
+  newQueryClient,
+  renderWithProviders,
+  StorageProviders,
+} from './test-utils';
 
 afterEach(() => {
   vi.clearAllMocks();
+  vi.unstubAllGlobals();
   // The explorer persists its list/card choice per surface; clear it so each test
   // starts in the default list view.
   globalThis.localStorage.clear();
@@ -20,31 +25,9 @@ afterEach(() => {
 
 function renderPage(
   ui: ReactElement,
-  { client, navigate = vi.fn() }: { client: ApiClient; navigate?: () => void },
+  { client, navigate = vi.fn() }: { client: ApiClient; navigate?: Mock },
 ): RenderResult {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const wrapper = ({ children }: { children: ReactNode }): ReactElement => (
-    <QueryClientProvider client={queryClient}>
-      <ApiProvider value={client}>
-        <ThemeProvider>
-          <NavigationProvider
-            value={{
-              navigate,
-              resolvePath: () => '/x',
-              navigatePlugin: vi.fn(),
-              resolvePluginPath: () => '/x',
-            }}
-          >
-            {children}
-          </NavigationProvider>
-        </ThemeProvider>
-      </ApiProvider>
-    </QueryClientProvider>
-  );
-  // The stack is a `wrapper`, not part of the rendered element: RTL's `rerender`
-  // replaces only the element, so a wrapper keeps the providers (and the query
-  // cache) alive across a re-render with new props.
-  return render(ui, { wrapper });
+  return renderWithProviders(ui, { client, navigate });
 }
 
 /** A stub client from a partial method set; an unstubbed call throws, flagging it. */
@@ -59,35 +42,32 @@ function stubClient(overrides: Partial<ApiClient>): ApiClient {
  */
 function LiveUrlStoragePage({ client }: { readonly client: ApiClient }): ReactElement {
   const [search, setSearch] = useState<RouteSearch<'storage'>>({});
-  const queryClient = useMemo(
-    () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
-    [],
-  );
-  const value = useMemo(
-    () => ({
-      navigate: (_token: RouteToken, next?: RouteSearch<'storage'>) => {
-        setSearch(next ?? {});
-      },
-      resolvePath: () => '/x',
-      navigatePlugin: vi.fn(),
-      resolvePluginPath: () => '/x',
-    }),
+  const queryClient = useMemo(() => newQueryClient(), []);
+  const projection = useMemo(() => fullProjection(), []);
+  const navigate = useMemo(
+    () => (_token: RouteToken, next?: RouteSearch<'storage'>) => {
+      setSearch(next ?? {});
+    },
     [],
   );
   return (
-    <QueryClientProvider client={queryClient}>
-      <ApiProvider value={client}>
-        <ThemeProvider>
-          <NavigationProvider value={value as NavigationContextValue}>
-            <StoragePage search={search} />
-          </NavigationProvider>
-        </ThemeProvider>
-      </ApiProvider>
-    </QueryClientProvider>
+    <StorageProviders
+      client={client}
+      projection={projection}
+      navigate={navigate as never}
+      queryClient={queryClient}
+    >
+      <StoragePage search={search} />
+    </StorageProviders>
   );
 }
 
-const presentInfo = { present: true as const, provider: 'FsStorage', module: 'plugin.storage' };
+const presentInfo = {
+  present: true as const,
+  provider: 'FsStorage',
+  module: 'plugin.storage',
+  surfaces: ['storage' as const, 'templates' as const],
+};
 
 describe('StoragePage', () => {
   it('renders the empty state when no provider is installed', async () => {
@@ -348,5 +328,44 @@ describe('StoragePage', () => {
     expect(input.isConnected).toBe(true);
     expect(document.activeElement).toBe(input);
     expect(input).toHaveValue('a.tx');
+  });
+
+  it('opening a resource moves focus to its detail heading, and Back returns it to the row', async () => {
+    // Single-pane band (below 1024, not phone): the Back link shows.
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query !== '(max-width: 639px)',
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }));
+    const user = userEvent.setup();
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt'] }),
+      readStorageResource: vi.fn().mockResolvedValue({
+        kind: 'text',
+        id: 'a.txt',
+        content_type: 'text/plain',
+        size: 1,
+        content: 'x',
+      }),
+    });
+    render(<LiveUrlStoragePage client={client} />);
+
+    await user.click(await screen.findByRole('link', { name: 'Open a.txt' }));
+
+    const heading = await screen.findByRole('heading', { level: 2, name: 'a.txt' });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(heading);
+    });
+
+    await user.click(screen.getByRole('link', { name: 'All resources' }));
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole('link', { name: 'Open a.txt' }));
+    });
   });
 });

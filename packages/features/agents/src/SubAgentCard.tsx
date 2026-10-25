@@ -1,4 +1,5 @@
 import type { PresetRecord } from '@tai42/api-client';
+import type { ToolListQuery } from '@tai42/studio-sdk';
 import { Button, Card, Field, Textarea, TextInput } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
@@ -12,7 +13,7 @@ const spacerStyle = { marginLeft: 'auto' };
 /** One inline sub-agent editor card (name + prompt + tools + presets). */
 export function SubAgentCard({
   spec,
-  toolNames,
+  toolsQuery,
   tagsByTool,
   displayNames,
   presetRecords,
@@ -22,7 +23,7 @@ export function SubAgentCard({
   index,
 }: {
   readonly spec: InlineSubAgentSpec;
-  readonly toolNames: readonly string[];
+  readonly toolsQuery: ToolListQuery;
   readonly tagsByTool?: Readonly<Record<string, readonly string[]>>;
   readonly displayNames?: Readonly<Record<string, string>>;
   readonly presetRecords: readonly PresetRecord[];
@@ -70,7 +71,7 @@ export function SubAgentCard({
         </Field>
         <Field label="Tools" group>
           <MultiToolPicker
-            toolNames={toolNames}
+            query={toolsQuery}
             tagsByTool={tagsByTool}
             displayNames={displayNames}
             value={spec.tool_names}

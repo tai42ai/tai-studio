@@ -1,17 +1,9 @@
 /**
- * Pure catalog-shaping helpers for the extensions surface. Kept free of React so
- * the grouping logic is unit-tested directly.
- *
- * The `/api/extensions` catalog is a flat list of `{ name, kind, multiple }` entries,
- * one per registered extension. `groupByKind` groups the catalog by extension KIND,
- * each group carrying the served `multiple` flag of its kind — the grouping the
- * `ExtensionPicker` and the read-only extensions catalog (`features/extensions`)
- * both render.
- * `kindVariant` maps each serialized `kind` value to a design-system Badge variant.
+ * Pure catalog-shaping helpers for the extension catalog: `groupByKind` groups the flat
+ * `{ name, kind, multiple }` list by kind, each group carrying its kind's served
+ * `multiple` flag. Kept free of React so it is unit-tested directly.
  */
 import type { Extension } from '@tai42/api-client';
-
-import type { BadgeProps } from './badge';
 
 /** One extension `kind` and every catalog entry of that kind. */
 export interface ExtensionKindGroup {
@@ -52,19 +44,4 @@ export function groupByKind(extensions: readonly Extension[]): ExtensionKindGrou
       members: [...group.members].sort((a, b) => a.name.localeCompare(b.name)),
     }))
     .sort((a, b) => a.kind.localeCompare(b.kind));
-}
-
-/**
- * Map a serialized extension `kind` to a Badge variant. Known skeleton kinds get
- * a themed color; any unrecognized kind falls back to the neutral variant (the
- * Badge itself also neutral-fallbacks, but choosing here keeps the mapping
- * explicit and testable).
- */
-export function kindVariant(kind: string): NonNullable<BadgeProps['variant']> {
-  const known: Record<string, NonNullable<BadgeProps['variant']>> = {
-    wrapper: 'primary',
-    transformer: 'success',
-    backend: 'warning',
-  };
-  return known[kind] ?? 'neutral';
 }

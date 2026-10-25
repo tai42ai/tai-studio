@@ -14,8 +14,8 @@ function stubClient(methods: Stub): ApiClient {
 }
 
 // The scope mapper reads path/methods/mapped/declared_public; the route catalog's
-// feature-tag join fields (tags/summary/action) and `declared_public: false` default
-// here so a fixture states only what it tests.
+// feature-tag join fields (tags/summary/action/role_reach) and `declared_public: false`
+// default here so a fixture states only what it tests.
 type RouteInput = Pick<AuthRoute, 'path' | 'methods' | 'mapped'> & Partial<AuthRoute>;
 function routes(...entries: RouteInput[]): AuthRoute[] {
   return entries.map((entry) => ({
@@ -23,6 +23,7 @@ function routes(...entries: RouteInput[]): AuthRoute[] {
     summary: '',
     action: null,
     declared_public: false,
+    role_reach: entry.declared_public === true ? ('public' as const) : null,
     ...entry,
   }));
 }

@@ -47,21 +47,6 @@ export const PresetsIcon: IconComponent = (props) => (
   </Icon>
 );
 
-/** Extensions: a jigsaw piece — knob above, socket to the right. */
-export const ExtensionsIcon: IconComponent = (props) => (
-  <Icon {...props}>
-    <path d="M9.5 6.5a2.2 2.2 0 0 1 4.4 0v.7h4.3a1.3 1.3 0 0 1 1.3 1.3v3.4H18a2.2 2.2 0 0 0 0 4.4h1.5v2.8a1.3 1.3 0 0 1-1.3 1.3H5.8a1.3 1.3 0 0 1-1.3-1.3V8.5a1.3 1.3 0 0 1 1.3-1.3h3.7z" />
-  </Icon>
-);
-
-/** Templates: a stack of two sheets, the front one offset. */
-export const TemplatesIcon: IconComponent = (props) => (
-  <Icon {...props}>
-    <path d="M8 8V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-3" />
-    <rect x="3" y="8" width="13" height="13" rx="2" />
-  </Icon>
-);
-
 /** Connectors: a two-pin power plug on its lead. */
 export const ConnectorsIcon: IconComponent = (props) => (
   <Icon {...props}>

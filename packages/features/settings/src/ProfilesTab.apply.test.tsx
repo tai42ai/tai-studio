@@ -63,6 +63,7 @@ function cleanDiff(): {
  * self-deferred applier line, empty refused, a lone-worker fanout. */
 function applyReport(): ReturnType<ApiClient['applySettingsProfile']> {
   return Promise.resolve({
+    span_release_error: null,
     hot: ['APP_TITLE'],
     recycle: [
       { detail: null, name: 'serve-1', kind: 'serve', status: 'recycled', generation_before: 4 },
@@ -198,6 +199,7 @@ describe('ProfilesTab — apply', () => {
         refused: [] as string[],
         recycle_stopped: null,
         awaiting_respawn: [],
+        span_release_error: null,
         fanout: { mode: 'local-only' as const, note: 'only this worker reloaded' },
       }),
     );
@@ -237,6 +239,7 @@ describe('ProfilesTab — apply', () => {
         refused: ['TAI_APP_PROVIDERS'],
         recycle_stopped: null,
         awaiting_respawn: [],
+        span_release_error: null,
         fanout: { mode: 'local-only' as const, note: 'only this worker reloaded' },
       }),
     );
@@ -396,6 +399,7 @@ function rolledApply(
 ): ReturnType<ApiClient['applySettingsProfile']> {
   const moved = { status: 'ok', env_keys: 2, awaiting_respawn: ['BACKEND_MANIFEST_KEY'] };
   return Promise.resolve({
+    span_release_error: null,
     hot: [],
     recycle: [
       {

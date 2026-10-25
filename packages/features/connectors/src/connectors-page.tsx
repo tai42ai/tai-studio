@@ -1,297 +1,56 @@
 /**
- * The Connectors surface. Two sections — PROVIDERS you can connect to (grouped by
- * category, each showing its existing connection state), and existing CONNECTIONS —
- * plus a routed detail view. Selecting a connection sets the `connection` search param
- * (the shell owns the route); the detail view renders when that param is present.
+ * The Connectors screen: one searchable directory of the outside apps (connector
+ * providers), the MCP servers the manifest configures, and the marketplace listings
+ * not installed yet, then the "Your connections" list, plus the routed connection
+ * detail. Selecting a connection sets the `connection` search param (the shell owns
+ * the route); the detail view renders when that param is present.
  *
- * An administrator also reaches the provider door here: "Add MCP server" adds a server
- * by its address, a provider added that way can be removed, and a provider whose app is
- * registered by hand takes its client credentials. One gate (`useConnectorAdmin`) hides
- * every such control from anyone else.
+ * Each directory read is gated on its own route: a read the session cannot reach is
+ * a muted status line and the cards the other reads can draw still show; a failed
+ * read is an `ErrorState` with a Retry for that read alone.
  *
  * When a popup-blocked sign-in redirected the whole tab, the provider round-trips back
  * here with its result on the URL; {@link ConnectorsPage} completes that exchange on
- * arrival (see {@link useOAuthRedirectResume}).
- *
- * Server state flows through TanStack Query: each section shows a loading skeleton, a
- * shared empty state, or a LOUD, always-visible error surface — a failed request or a
- * zod mismatch is never a silent empty render, and a 401 is not special-cased here.
+ * arrival and reopens the connect flow at Pick tools for the returned connection.
  */
-import type {
-  ConnectionView,
-  ConnectorCategoryView,
-  FleetReportSummary,
-  ProviderView,
-} from '@tai42/api-client';
+import type { FleetReportSummary, ProviderView } from '@tai42/api-client';
+import { isFleetReportFailure } from '@tai42/api-client';
 import type { PageProps } from '@tai42/studio-sdk';
 import {
-  AppLink,
-  Badge,
   Button,
-  Card,
+  ConfirmDialog,
   EmptyState,
+  errorMessage,
   ErrorState,
   FleetReport,
   PageHeader,
-  Skeleton,
   Stack,
+  useDebouncedValue,
 } from '@tai42/studio-sdk';
-import { useApi } from '@tai42/studio-sdk';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
 import { AddServerDialog } from './add-server-dialog';
 import { ClientCredentialsDialog } from './client-credentials-dialog';
-import { ConnectDialog } from './connect-dialog';
+import { ConnectFlowDialog, type FlowTarget } from './connect-flow-dialog';
 import { ConnectionDetail } from './connection-detail';
-import { connectionKey, CONNECTIONS_KEY, PROVIDERS_KEY } from './keys';
-import { McpServersSection } from './mcp-servers';
+import {
+  DirectoryExplorer,
+  readCoverage,
+  ReadFailures,
+  StatusLines,
+  YourConnections,
+} from './directory-panels';
+import { type DirectoryActions, useDirectoryGrants } from './entry-status';
+import { connectionKey } from './keys';
 import { Notice } from './notice';
 import { useOAuthRedirectResume } from './oauth';
-import { NoProviders, type ProviderActions, ProviderCard } from './provider-card';
-import { NeedsMorePermissions, RemoveProviderDialog } from './provider-controls';
-import { useConnectorAdmin } from './use-add-server-dialog';
+import { RemoveProviderDialog } from './provider-controls';
+import { directoryRows, useDirectoryReads } from './use-directory';
+import { useMcpServerActions } from './use-mcp-server-actions';
 
-const HEALTH_VARIANT: Record<ConnectionView['auth_health_state'], string> = {
-  healthy: 'success',
-  reconnect_required: 'warning',
-  refresh_failing: 'danger',
-};
-
-/** A category grouping of providers, in the order the section renders them. */
-interface ProviderGroup {
-  readonly id: string;
-  readonly label: string;
-  readonly providers: ProviderView[];
-}
-
-/**
- * Group providers under their categories, ordered by the catalog's `sort_order`, with
- * any provider whose category has no grouping row kept (never dropped) under its raw
- * category id at the end — the operator never loses sight of a provider.
- */
-function groupByCategory(
-  providers: ProviderView[],
-  categories: ConnectorCategoryView[],
-): ProviderGroup[] {
-  const byCategory = new Map<string, ProviderView[]>();
-  for (const provider of providers) {
-    const bucket = byCategory.get(provider.category) ?? [];
-    bucket.push(provider);
-    byCategory.set(provider.category, bucket);
-  }
-  const groups: ProviderGroup[] = [];
-  const seen = new Set<string>();
-  for (const category of [...categories].sort((a, b) => a.sort_order - b.sort_order)) {
-    const bucket = byCategory.get(category.id);
-    if (bucket !== undefined && bucket.length > 0) {
-      groups.push({ id: category.id, label: category.display_name, providers: bucket });
-      seen.add(category.id);
-    }
-  }
-  for (const [id, bucket] of byCategory) {
-    if (!seen.has(id)) groups.push({ id, label: id, providers: bucket });
-  }
-  return groups;
-}
-
-function SectionHeading({ children }: { children: ReactNode }): ReactNode {
-  return (
-    <h2 className="tai-section-title" style={{ margin: '0 0 var(--tai-space-3)' }}>
-      {children}
-    </h2>
-  );
-}
-
-function LoadingRows(): ReactNode {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
-      <Skeleton height={64} />
-      <Skeleton height={64} />
-      <Skeleton height={64} />
-    </div>
-  );
-}
-
-function ProvidersSection({
-  actions,
-  onAdd,
-}: {
-  actions: ProviderActions;
-  onAdd: () => void;
-}): ReactNode {
-  const api = useApi();
-  const query = useQuery({
-    queryKey: PROVIDERS_KEY,
-    queryFn: ({ signal }) => api.listProviders(signal),
-  });
-  // The per-provider connection state is joined client-side from the connections list
-  // (same key as the section below — one request, shared cache).
-  const connectionsQuery = useQuery({
-    queryKey: CONNECTIONS_KEY,
-    queryFn: ({ signal }) => api.listConnections(signal),
-  });
-
-  let body: ReactNode;
-  if (query.isPending) {
-    body = <LoadingRows />;
-  } else if (query.isError) {
-    body = (
-      <ErrorState
-        message={query.error instanceof Error ? query.error.message : 'Failed to load providers.'}
-        onRetry={() => void query.refetch()}
-      />
-    );
-  } else if (query.data.providers.length === 0) {
-    body = <NoProviders isAdmin={actions.isAdmin} onAdd={onAdd} />;
-  } else {
-    const connectionsByProvider = new Map<string, ConnectionView[]>();
-    for (const connection of connectionsQuery.data?.items ?? []) {
-      const bucket = connectionsByProvider.get(connection.provider_id) ?? [];
-      bucket.push(connection);
-      connectionsByProvider.set(connection.provider_id, bucket);
-    }
-    const groups = groupByCategory(query.data.providers, query.data.categories);
-    body = (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
-        {groups.map((group) => (
-          <div key={group.id}>
-            <h3
-              style={{
-                margin: '0 0 var(--tai-space-2)',
-                fontSize: 'var(--tai-text-sm)',
-                fontWeight: 600,
-                color: 'var(--tai-color-text-muted)',
-              }}
-            >
-              {group.label}
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
-              {group.providers.map((provider) => (
-                <ProviderCard
-                  key={provider.id}
-                  provider={provider}
-                  connections={connectionsByProvider.get(provider.id) ?? []}
-                  connectionsUnavailable={connectionsQuery.isError}
-                  actions={actions}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <section aria-label="Providers">
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'baseline',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 'var(--tai-space-2)',
-        }}
-      >
-        <SectionHeading>Providers</SectionHeading>
-        {actions.isAdmin ? <Button onClick={onAdd}>Add MCP server</Button> : null}
-      </div>
-      {body}
-    </section>
-  );
-}
-
-function ConnectionsSection(): ReactNode {
-  const api = useApi();
-  const query = useQuery({
-    queryKey: CONNECTIONS_KEY,
-    queryFn: ({ signal }) => api.listConnections(signal),
-  });
-  // The empty copy branches on provider availability, so the section reads the same
-  // providers list the section above does (same key — one request, shared cache).
-  const providers = useQuery({
-    queryKey: PROVIDERS_KEY,
-    queryFn: ({ signal }) => api.listProviders(signal),
-  });
-
-  let body: ReactNode;
-  if (query.isPending) {
-    body = <LoadingRows />;
-  } else if (query.isError) {
-    body = (
-      <ErrorState
-        message={query.error instanceof Error ? query.error.message : 'Failed to load connections.'}
-        onRetry={() => void query.refetch()}
-      />
-    );
-  } else if (query.data.items.length === 0) {
-    body =
-      providers.data?.providers.length === 0 ? (
-        <EmptyState
-          title="No connections yet"
-          description="Install a connector plugin from the marketplace, then connect it here."
-          action={
-            <AppLink
-              to="marketplace"
-              search={{ kind: 'connector' }}
-              className="tai-btn tai-btn-secondary"
-            >
-              Browse marketplace
-            </AppLink>
-          }
-        />
-      ) : (
-        <EmptyState
-          title="No connections yet"
-          description="Connect a provider above to get started."
-        />
-      );
-  } else {
-    body = (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
-        {query.data.items.map((connection) => (
-          <Card key={connection.connection_id}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 'var(--tai-space-4)',
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}>
-                  <AppLink to="connectors" search={{ connection: connection.connection_id }}>
-                    {connection.alias}
-                  </AppLink>
-                  <Badge variant={HEALTH_VARIANT[connection.auth_health_state]}>
-                    {connection.auth_health_state}
-                  </Badge>
-                </div>
-                <p
-                  style={{ margin: 'var(--tai-space-1) 0 0', color: 'var(--tai-color-text-muted)' }}
-                >
-                  {connection.provider_id}
-                  {connection.account_identity !== null ? ` · ${connection.account_identity}` : ''}
-                </p>
-                <NeedsMorePermissions connection={connection} />
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <section aria-label="Connections">
-      <SectionHeading>Connections</SectionHeading>
-      {body}
-    </section>
-  );
-}
+const SEARCH_DEBOUNCE_MS = 300;
 
 /** A page-level confirmation after a provider-door change. */
 interface PageNotice {
@@ -299,109 +58,200 @@ interface PageNotice {
   readonly message: string;
 }
 
-/** The provider-door dialogs the list opens, one at a time, and the page notice. */
-function useProviderDoor() {
-  const [connectProvider, setConnectProvider] = useState<ProviderView | null>(null);
+type ServerActions = ReturnType<typeof useMcpServerActions>;
+
+/** The confirmation that detaches a server and its tools from the live registry. */
+function DeregisterDialog({
+  title,
+  serverActions,
+  onClose,
+}: {
+  readonly title: string;
+  readonly serverActions: ServerActions;
+  readonly onClose: () => void;
+}): ReactNode {
+  return (
+    <ConfirmDialog
+      title="Deregister MCP server"
+      confirmLabel="Deregister"
+      pendingLabel={`Deregistering ${title}`}
+      onConfirm={() => {
+        serverActions.deregister.mutate(title);
+      }}
+      onClose={onClose}
+      isPending={serverActions.deregister.isPending}
+      error={serverActions.deregister.error}
+      confirmVariant="danger"
+    >
+      <p style={{ margin: 0 }}>
+        Detach <strong style={{ fontFamily: 'var(--tai-font-mono)' }}>{title}</strong> and its tools
+        from the live registry? This leaves the manifest entry in place — reload it once the server
+        is healthy to re-attach.
+      </p>
+      {serverActions.deregisterReport !== null ? (
+        <div style={{ marginTop: 'var(--tai-space-3)' }}>
+          <FleetReport summary={serverActions.deregisterReport} action="deregister" />
+        </div>
+      ) : null}
+    </ConfirmDialog>
+  );
+}
+
+/** The outcome of a reload started from an entry: its error, or its fleet report. */
+function ReloadOutcome({ serverActions }: { readonly serverActions: ServerActions }): ReactNode {
+  return (
+    <>
+      {serverActions.reload.isError ? (
+        <ErrorState message={errorMessage(serverActions.reload.error)} />
+      ) : null}
+      {serverActions.reloadReport !== null ? (
+        <FleetReport summary={serverActions.reloadReport} action="reload" />
+      ) : null}
+    </>
+  );
+}
+
+function ConnectorsList({
+  flow,
+  setFlow,
+}: {
+  flow: FlowTarget | null;
+  setFlow: (target: FlowTarget | null) => void;
+}): ReactNode {
+  const [query, setQuery] = useState('');
+  const [selectedTags, setSelectedTags] = useState<readonly string[]>([]);
+  const debouncedQuery = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
+  const reads = useDirectoryReads(debouncedQuery);
+  const grants = useDirectoryGrants();
+  const serverActions = useMcpServerActions();
+
   const [adding, setAdding] = useState(false);
   const [credentialsFor, setCredentialsFor] = useState<ProviderView | null>(null);
   const [removing, setRemoving] = useState<ProviderView | null>(null);
+  const [deregistering, setDeregistering] = useState<string | null>(null);
   const [notice, setNotice] = useState<PageNotice | null>(null);
-  const onAdded = (provider: ProviderView, automatic: boolean): void => {
-    setAdding(false);
-    if (automatic) {
-      setConnectProvider(provider);
-      return;
-    }
-    setNotice({
-      title: 'Server added',
-      message: 'Set its client credentials before anyone can connect.',
-    });
-  };
-  const openCredentials = (provider: ProviderView): void => {
-    setConnectProvider(null);
-    setCredentialsFor(provider);
-  };
-  return {
-    connectProvider,
-    setConnectProvider,
-    adding,
-    setAdding,
-    credentialsFor,
-    setCredentialsFor,
-    removing,
-    setRemoving,
-    notice,
-    setNotice,
-    onAdded,
-    openCredentials,
-  };
-}
 
-function ConnectorsList(): ReactNode {
-  const door = useProviderDoor();
-  const isAdmin = useConnectorAdmin();
-  const actions: ProviderActions = {
-    isAdmin,
-    onConnect: door.setConnectProvider,
-    onCredentials: door.openCredentials,
-    onRemove: door.setRemoving,
+  const { allRefused, noCards } = readCoverage(reads);
+  if (allRefused) {
+    return (
+      <EmptyState
+        title="Connectors are not available"
+        description="This screen lists the outside apps and MCP servers this deployment can connect and mount, and the connections made to them. It needs read access to GET /api/connectors/providers, GET /api/connectors/connections, GET /api/manifest/preserved or GET /api/mcp-status; ask an administrator to grant it."
+      />
+    );
+  }
+
+  const actions: DirectoryActions = {
+    openFlow: setFlow,
+    onCredentials: (provider) => {
+      setFlow(null);
+      setCredentialsFor(provider);
+    },
+    onRemove: setRemoving,
+    onReload: (title) => {
+      serverActions.reload.mutate(title);
+    },
+    onDeregister: (title) => {
+      serverActions.deregister.reset();
+      setDeregistering(title);
+    },
   };
+  const openAdd = (): void => {
+    setAdding(true);
+  };
+
   return (
     <Stack gap={6}>
-      <PageHeader eyebrow="Connections" title="Connectors" />
-      {door.notice !== null ? (
-        <Notice
-          notice={{ kind: 'success', message: door.notice.message }}
-          title={door.notice.title}
-          onDismiss={() => {
-            door.setNotice(null);
-          }}
-        />
-      ) : null}
-      {/* The unified page lists every sourced MCP server (mounted status + manifest
-          config, each row showing how it was added) alongside the provider connectors
-          below — one surface for all the tool sources the deployment mounts. */}
-      <McpServersSection />
-      <ProvidersSection
-        actions={actions}
-        onAdd={() => {
-          door.setAdding(true);
-        }}
+      <PageHeader
+        eyebrow="Connections"
+        title="Connectors"
+        {...(grants.isAdmin
+          ? { actions: <Button onClick={openAdd}>Add a custom server</Button> }
+          : {})}
       />
-      <ConnectionsSection />
-      {door.connectProvider !== null ? (
-        <ConnectDialog
-          provider={door.connectProvider}
-          onClose={() => {
-            door.setConnectProvider(null);
+      {notice !== null ? (
+        <Notice
+          notice={{ kind: 'success', message: notice.message }}
+          title={notice.title}
+          onDismiss={() => {
+            setNotice(null);
           }}
-          onSetClientCredentials={door.openCredentials}
         />
       ) : null}
-      {door.adding ? (
+      <StatusLines reads={reads} grants={grants} noCards={noCards} />
+      <ReadFailures reads={reads} />
+      <ReloadOutcome serverActions={serverActions} />
+      {noCards ? null : (
+        <DirectoryExplorer
+          rows={directoryRows(reads)}
+          reads={reads}
+          grants={grants}
+          actions={actions}
+          query={query}
+          onQueryChange={setQuery}
+          selectedTags={selectedTags}
+          onTagsChange={setSelectedTags}
+          onAdd={openAdd}
+        />
+      )}
+      <YourConnections
+        state={reads.connections}
+        noProviders={reads.providers.status === 'ready' && reads.providers.data.length === 0}
+      />
+      {flow !== null ? (
+        <ConnectFlowDialog
+          target={flow}
+          reads={reads}
+          onClose={() => {
+            setFlow(null);
+          }}
+          onSetClientCredentials={actions.onCredentials}
+        />
+      ) : null}
+
+      {adding ? (
         <AddServerDialog
           onClose={() => {
-            door.setAdding(false);
+            setAdding(false);
           }}
-          onAdded={door.onAdded}
+          onAdded={(provider, automatic) => {
+            setAdding(false);
+            if (automatic) {
+              setFlow({ kind: 'provider', provider });
+              return;
+            }
+            setNotice({
+              title: 'Server added',
+              message: 'Set its client credentials before anyone can connect.',
+            });
+          }}
         />
       ) : null}
-      {door.credentialsFor !== null ? (
+      {credentialsFor !== null ? (
         <ClientCredentialsDialog
-          provider={door.credentialsFor}
+          provider={credentialsFor}
           onClose={() => {
-            door.setCredentialsFor(null);
+            setCredentialsFor(null);
           }}
           onSaved={() => {
-            door.setNotice({ title: 'Saved', message: 'Client credentials saved.' });
+            setNotice({ title: 'Saved', message: 'Client credentials saved.' });
           }}
         />
       ) : null}
-      {door.removing !== null ? (
+      {removing !== null ? (
         <RemoveProviderDialog
-          provider={door.removing}
+          provider={removing}
           onClose={() => {
-            door.setRemoving(null);
+            setRemoving(null);
+          }}
+        />
+      ) : null}
+      {deregistering !== null ? (
+        <DeregisterDialog
+          title={deregistering}
+          serverActions={serverActions}
+          onClose={() => {
+            setDeregistering(null);
           }}
         />
       ) : null}
@@ -414,16 +264,19 @@ export function ConnectorsPage(props: PageProps<'connectors'>): ReactNode {
   const selected = props.search.connection;
   const detailId = selected !== undefined && selected !== '' ? selected : null;
   const queryClient = useQueryClient();
-  // Finish a popup-blocked redirect flow whose provider round-trip returned here. A
-  // reconnect/patch flow returns to a connection's detail, so its cached record is
-  // invalidated too; the connections list is always invalidated inside the hook.
+  const [flow, setFlow] = useState<FlowTarget | null>(null);
+  // A redirect resume returning to a connection's detail (a reconnect or a
+  // sub-service change) refreshes that record and shows a failed fleet report there;
+  // one returning to the directory reopens the flow at Pick tools.
   const [resumeFleet, setResumeFleet] = useState<FleetReportSummary | null>(null);
   const resume = useOAuthRedirectResume({
-    onSuccess: (fleet) => {
+    onSuccess: (fleet, connectionId) => {
       if (detailId !== null) {
         void queryClient.invalidateQueries({ queryKey: connectionKey(detailId) });
+        setResumeFleet(isFleetReportFailure(fleet) ? fleet : null);
+        return;
       }
-      setResumeFleet(fleet !== null && fleet.status !== 'converged' ? fleet : null);
+      setFlow({ kind: 'resumed', connectionId, fleet });
     },
   });
 
@@ -433,7 +286,11 @@ export function ConnectorsPage(props: PageProps<'connectors'>): ReactNode {
         <Notice notice={resume.notice} onDismiss={resume.clearNotice} />
       ) : null}
       {resumeFleet !== null ? <FleetReport summary={resumeFleet} /> : null}
-      {detailId !== null ? <ConnectionDetail connectionId={detailId} /> : <ConnectorsList />}
+      {detailId !== null ? (
+        <ConnectionDetail connectionId={detailId} />
+      ) : (
+        <ConnectorsList flow={flow} setFlow={setFlow} />
+      )}
     </Stack>
   );
 }

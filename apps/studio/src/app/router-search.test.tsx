@@ -1,7 +1,8 @@
 /**
  * The router's typed URL-search parsing, exercised through the built route tree:
  * each route's `validateSearch` (from `route-search`) lands its parsed shape on the
- * match, and a malformed hand-edited URL is tolerated rather than thrown.
+ * match, and a malformed hand-edited URL is tolerated rather than thrown. The deep
+ * links that name one row (a preset version, a hook, a schedule, a config) parse here too.
  */
 import type { RouteSearch } from '@tai42/studio-sdk';
 import { createMemoryHistory } from '@tanstack/react-router';
@@ -78,5 +79,87 @@ describe('observability search parsing', () => {
     expect(search.tab).toBeUndefined();
     expect(search.tags).toBeUndefined();
     expect(search.trace).toBeUndefined();
+  });
+});
+
+describe('storage search parsing', () => {
+  async function loadStorageSearch(url: string): Promise<RouteSearch<'storage'>> {
+    const loader = createPluginLoader({
+      api: { listStudioPlugins: () => Promise.resolve([]) },
+      importModule: () => Promise.resolve(undefined),
+      loadStylesheet: () => Promise.resolve(() => undefined),
+      onUnauthorized: () => undefined,
+    });
+    const router = buildRouter({
+      plugins: loader,
+      getAuth: () => ({
+        token: 't',
+        isAuthenticated: true,
+        login: () => undefined,
+        logout: () => undefined,
+      }),
+      history: createMemoryHistory({ initialEntries: [url] }),
+    });
+    await router.load();
+    const search: unknown = router.state.matches.at(-1)?.search;
+    return search as RouteSearch<'storage'>;
+  }
+
+  it('parses the selected object id and the filter', async () => {
+    expect(await loadStorageSearch('/storage?id=docs%2Fa.md&q=docs')).toEqual({
+      id: 'docs/a.md',
+      q: 'docs',
+    });
+  });
+
+  it('drops a non-string id', async () => {
+    expect(await loadStorageSearch('/storage?id=5')).toEqual({ id: undefined, q: undefined });
+  });
+});
+
+describe('deep-link search parsing', () => {
+  async function loadSearch(url: string): Promise<unknown> {
+    const loader = createPluginLoader({
+      api: { listStudioPlugins: () => Promise.resolve([]) },
+      importModule: () => Promise.resolve(undefined),
+      loadStylesheet: () => Promise.resolve(() => undefined),
+      onUnauthorized: () => undefined,
+    });
+    const router = buildRouter({
+      plugins: loader,
+      getAuth: () => ({
+        token: 't',
+        isAuthenticated: true,
+        login: () => undefined,
+        logout: () => undefined,
+      }),
+      history: createMemoryHistory({ initialEntries: [url] }),
+    });
+    await router.load();
+    return router.state.matches.at(-1)?.search;
+  }
+
+  it('parses a preset version as a number and drops a garbage one', async () => {
+    expect(await loadSearch('/presets?preset=paris&version=3')).toEqual({
+      preset: 'paris',
+      version: 3,
+    });
+    expect(await loadSearch('/presets?preset=paris&version=abc')).toEqual({
+      preset: 'paris',
+      version: undefined,
+    });
+  });
+
+  it('parses the named hook and schedule', async () => {
+    expect(await loadSearch('/hooks?hook=notify-event')).toEqual({ hook: 'notify-event' });
+    expect(await loadSearch('/scheduling?schedule=nightly')).toEqual({ schedule: 'nightly' });
+    expect(await loadSearch('/hooks')).toEqual({ hook: undefined });
+  });
+
+  it('parses the named conversation config', async () => {
+    expect(await loadSearch('/conversations?config=agent%3Aassistant')).toMatchObject({
+      config: 'agent:assistant',
+      route: undefined,
+    });
   });
 });

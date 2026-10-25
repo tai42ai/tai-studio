@@ -29,7 +29,7 @@
  * (`useBreakpoint().isSinglePane`) exactly one pane shows, driven by `data-pane`.
  * Selecting a tool moves focus to the detail heading; Back returns focus to the list.
  */
-import { type ApiPathPrefix, type ToolMetaPatch } from '@tai42/api-client';
+import { apiRoutes, type ToolMetaPatch } from '@tai42/api-client';
 import {
   ArrowLeftIcon,
   Button,
@@ -67,7 +67,7 @@ import type { ToolView } from './toolView';
 import { useToolCatalog } from './useToolCatalog';
 
 /** The overlay-write door the edit affordance is gated on (merge-patch a tool's row). */
-const TOOL_META_WRITE_ROUTE: ApiPathPrefix = '/api/tool-meta/tools';
+const TOOL_META_WRITE_ROUTE = apiRoutes.patch_api_tool_meta_tools_tool_name;
 
 function ToolList({
   selected,
@@ -87,7 +87,8 @@ function ToolList({
   // store answers the overlay write with a 501 `tool-meta-not-configured`, so once a
   // write has revealed the store off, the per-row edit affordance is withdrawn — a
   // write it can only refuse is never offered.
-  const canWrite = useCanWrite(TOOL_META_WRITE_ROUTE, 'PATCH') && !metaWriteDisabled;
+  const canWrite =
+    useCanWrite(TOOL_META_WRITE_ROUTE.path, TOOL_META_WRITE_ROUTE.method) && !metaWriteDisabled;
   const { state } = useCapabilities();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const catalog = useToolCatalog(state);

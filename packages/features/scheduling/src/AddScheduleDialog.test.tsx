@@ -13,14 +13,21 @@
 // loaded runner cannot push a keystroke chain past the suite timeout, and no
 // timer-scheduled keystroke can outlive its test to leak into the next. No
 // assertion depends on typing cadence.
-import { ApiError } from '@tai42/api-client';
+import { type ApiClient, ApiError } from '@tai42/api-client';
 import { deferred, StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AddScheduleDialog } from './AddScheduleDialog';
-import { makeClient, renderWithProviders, schedulableTags } from './test-utils';
+import {
+  accountSessionProjection,
+  gateOffProjection,
+  keySessionProjection,
+  makeClient,
+  renderWithProviders,
+  schedulableTags,
+} from './test-utils';
 
 /**
  * Open the shared `ToolPicker` (a Radix combobox portalled to body). The trigger is
@@ -369,7 +376,7 @@ describe('AddScheduleDialog — tools list error', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(await within(dialog).findByText('tools unavailable')).toBeInTheDocument();
-    expect(within(dialog).queryByRole('combobox')).toBeNull();
+    expect(within(dialog).queryByRole('combobox', { name: 'Tool' })).toBeNull();
 
     await user.click(within(dialog).getByRole('button', { name: 'Retry' }));
     expect(listToolTags).toHaveBeenCalledTimes(2);
@@ -410,7 +417,7 @@ describe('AddScheduleDialog — hidden-tool exclusion', () => {
 });
 
 describe('AddScheduleDialog — nothing schedulable', () => {
-  it('disables the tool picker with its placeholder and the schedulable explanation', async () => {
+  it('states that no tool can be scheduled in place of the picker, with the schedulable explanation', async () => {
     const client = makeClient({
       listToolTags: vi
         .fn()
@@ -421,11 +428,11 @@ describe('AddScheduleDialog — nothing schedulable', () => {
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
 
     const dialog = await screen.findByRole('dialog');
-    const combobox = within(dialog).getByRole('combobox', { name: 'Tool' });
-    await waitFor(() => {
-      expect(combobox).toHaveTextContent('No tool can be scheduled');
-    });
-    expect(combobox).toBeDisabled();
+    expect(await within(dialog).findByText('No tool can be scheduled.')).toHaveAttribute(
+      'role',
+      'status',
+    );
+    expect(within(dialog).queryByRole('combobox', { name: 'Tool' })).toBeNull();
     expect(
       within(dialog).getByText(
         "A tool can be scheduled when it carries the scheduling backend's schedule extension.",
@@ -517,5 +524,180 @@ describe('AddScheduleDialog — close paths', () => {
     await waitFor(() => {
       expect(onClose).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe('AddScheduleDialog — execution-key binding', () => {
+  const KEY_REQUIRED =
+    'A door-contract jq (start / cancel / resume / extras) needs an execution key.';
+  const forbiddenKeys = (): Promise<never> => Promise.reject(new ApiError('forbidden', 403));
+
+  async function fillSchedule(
+    user: UserEvent,
+    dialog: HTMLElement,
+    { startJq = true }: { readonly startJq?: boolean } = {},
+  ): Promise<void> {
+    await user.type(within(dialog).getByLabelText('Name'), 'nightly-report');
+    await pickTool(user, dialog, 'run_report');
+    await user.type(within(dialog).getByLabelText('Cron expression'), '0 2 * * *');
+    if (startJq) await user.type(within(dialog).getByRole('textbox', { name: 'Start' }), '.id');
+  }
+
+  function keyClient(listTokensPayload: ApiClient['listTokensPayload']) {
+    const addSchedule = vi.fn().mockResolvedValue({});
+    const client = makeClient({
+      listToolTags: vi.fn().mockResolvedValue(schedulableTags('run_report')),
+      listTokensPayload,
+      addSchedule,
+    });
+    return { client, addSchedule };
+  }
+
+  it(
+    'access control off: no key field; a door-contract create carries the fill identity',
+    async () => {
+      const user = userEvent.setup({ delay: null });
+      const { client, addSchedule } = keyClient(vi.fn().mockResolvedValue([]));
+      renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, {
+        client,
+        projection: gateOffProjection(),
+      });
+
+      const dialog = await screen.findByRole('dialog');
+      await fillSchedule(user, dialog);
+      expect(within(dialog).queryByText('Execution key')).not.toBeInTheDocument();
+      await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
+
+      await waitFor(() => {
+        expect(addSchedule).toHaveBeenCalledOnce();
+      });
+      expect(addSchedule.mock.calls[0]?.[0]).toMatchObject({ execution_key: '__no_auth__' });
+      expect(client.listTokensPayload).not.toHaveBeenCalled();
+    },
+    SUBMIT_FLOW_TIMEOUT_MS,
+  );
+
+  it(
+    'access control off: a create with no door contract carries no execution key',
+    async () => {
+      const user = userEvent.setup({ delay: null });
+      const { client, addSchedule } = keyClient(vi.fn().mockResolvedValue([]));
+      renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, {
+        client,
+        projection: gateOffProjection(),
+      });
+
+      const dialog = await screen.findByRole('dialog');
+      await fillSchedule(user, dialog, { startJq: false });
+      await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
+
+      await waitFor(() => {
+        expect(addSchedule).toHaveBeenCalledOnce();
+      });
+      expect(addSchedule.mock.calls[0]?.[0]).not.toHaveProperty('execution_key');
+    },
+    SUBMIT_FLOW_TIMEOUT_MS,
+  );
+
+  for (const [label, read] of [
+    ['an empty key list', () => vi.fn().mockResolvedValue([])],
+    ['a refused key list', () => vi.fn().mockImplementation(forbiddenKeys)],
+  ] as const) {
+    it(
+      `a key session over ${label} creates as its own identity`,
+      async () => {
+        const user = userEvent.setup({ delay: null });
+        const { client, addSchedule } = keyClient(read());
+        renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, {
+          client,
+          projection: keySessionProjection(),
+        });
+
+        const dialog = await screen.findByRole('dialog');
+        await fillSchedule(user, dialog);
+        const picker = within(dialog).getByRole('combobox', { name: 'Execution key' });
+        await waitFor(() => {
+          expect(picker).toBeEnabled();
+        });
+        await user.click(picker);
+        await user.click(
+          await screen.findByRole('option', { name: "alice-key — this session's identity" }),
+        );
+        await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
+
+        await waitFor(() => {
+          expect(addSchedule).toHaveBeenCalledOnce();
+        });
+        expect(addSchedule.mock.calls[0]?.[0]).toMatchObject({ execution_key: 'alice-key' });
+      },
+      SUBMIT_FLOW_TIMEOUT_MS,
+    );
+
+    it(
+      `a key session over ${label} with the key left blank shows the field error`,
+      async () => {
+        const user = userEvent.setup({ delay: null });
+        const { client, addSchedule } = keyClient(read());
+        renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, {
+          client,
+          projection: keySessionProjection(),
+        });
+
+        const dialog = await screen.findByRole('dialog');
+        await fillSchedule(user, dialog);
+        await waitFor(() => {
+          expect(within(dialog).getByRole('combobox', { name: 'Execution key' })).toBeEnabled();
+        });
+        await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
+
+        expect(await within(dialog).findByText(KEY_REQUIRED)).toBeInTheDocument();
+        expect(addSchedule).not.toHaveBeenCalled();
+      },
+      SUBMIT_FLOW_TIMEOUT_MS,
+    );
+  }
+
+  it('an account session over an empty key list reads the account note', async () => {
+    const { client } = keyClient(vi.fn().mockResolvedValue([]));
+    renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
+
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      await within(dialog).findByText(
+        'No api keys of yours are listed. You are signed in as an account, not an api key, so your own identity cannot be picked here. Mint a key on the settings API-keys tab first.',
+      ),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByRole('combobox', { name: 'Execution key' })).toBeNull();
+  });
+
+  it('a refused key list shows the no-grant note with no Retry; an account session gets no option', async () => {
+    const { client } = keyClient(vi.fn().mockImplementation(forbiddenKeys));
+    renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
+
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      await within(dialog).findByText(
+        'This session cannot list api keys. Picking one needs read access to GET /api/auth/tokens-payload; ask an administrator to grant it.',
+      ),
+    ).toHaveAttribute('role', 'status');
+    expect(within(dialog).queryByRole('button', { name: 'Retry' })).toBeNull();
+    expect(within(dialog).queryByRole('combobox', { name: 'Execution key' })).toBeNull();
+  });
+
+  it('with no projection the key field is pending and the key list is not read', async () => {
+    const { client } = keyClient(vi.fn().mockResolvedValue([]));
+    renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
+
+    const dialog = await screen.findByRole('dialog');
+    const picker = within(dialog).getByRole('combobox', { name: 'Execution key' });
+    expect(picker).toBeDisabled();
+    expect(picker).toHaveTextContent('Loading keys…');
+    expect(client.listTokensPayload).not.toHaveBeenCalled();
   });
 });

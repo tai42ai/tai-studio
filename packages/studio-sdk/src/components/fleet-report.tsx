@@ -23,6 +23,11 @@
  * server-supplied string (a worker name, an error/detail message) renders as escaped
  * React text, never an HTML sink.
  *
+ * Whatever the status, a `spanReleaseError` (the config store did not release its exclusive
+ * write span after the persist) renders its own `role="alert"` panel with the store's
+ * error: the change landed, but a later write can block or be refused until the writer
+ * process exits.
+ *
  * Whatever the status, a worker whose reload named recycle-class settings awaiting a
  * respawn is listed in a warning status panel beside it: the reload applied every other
  * change, and those settings take effect only when that worker restarts.
@@ -79,9 +84,9 @@ const OUTCOME_STATUS: Record<FleetFailureOutcome, StatusTone> = {
 };
 
 /**
- * Render a fleet broadcast's failure state and its workers awaiting a respawn. Returns
- * `null` for an absent report or a converged one with no worker awaiting a respawn
- * (nothing to warn about) so callers can always mount it unconditionally beside their
+ * Render a fleet broadcast's failure state, an unreleased write span, and its workers
+ * awaiting a respawn. Returns `null` for an absent report or a converged one with no
+ * unreleased span and no worker awaiting a respawn (nothing to warn about) so callers can always mount it unconditionally beside their
  * own success line.
  */
 export interface FleetReportProps {
@@ -235,6 +240,26 @@ function AwaitingRespawnReport({
   );
 }
 
+/**
+ * The loud panel for a write span the config store did not release: the change landed,
+ * but the store may hold the span until the writer process exits.
+ */
+function SpanReleaseReport({ error }: { readonly error: string }): ReactNode {
+  return (
+    <div role="alert" className="tai-error-state tai-stack tai-stack-2">
+      <strong className="tai-status tai-status-err">
+        <XCircleIcon />
+        The config store did not release its write lock
+      </strong>
+      <p>
+        The change was saved, but the store may hold its write lock until the server process that
+        wrote it exits. Until then another config change can wait or be refused.
+      </p>
+      <p className="tai-code-block tai-code-block-wrap">{error}</p>
+    </div>
+  );
+}
+
 function FailureReport({
   summary,
   action,
@@ -269,10 +294,19 @@ function FailureReport({
 
 export function FleetReport({ summary, action = 'save' }: FleetReportProps): ReactNode {
   if (summary === null) return null;
-  if (summary.status === 'converged' && summary.awaiting.length === 0) return null;
+  if (
+    summary.status === 'converged' &&
+    summary.awaiting.length === 0 &&
+    summary.spanReleaseError === null
+  ) {
+    return null;
+  }
   return (
     <>
       <FailureReport summary={summary} action={action} />
+      {summary.spanReleaseError !== null ? (
+        <SpanReleaseReport error={summary.spanReleaseError} />
+      ) : null}
       {summary.awaiting.length > 0 ? <AwaitingRespawnReport awaiting={summary.awaiting} /> : null}
     </>
   );

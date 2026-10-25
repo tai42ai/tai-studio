@@ -20,12 +20,12 @@ needs();
 
 const STORAGE_FAILURE = 'storage read failed: connection refused';
 
-/** The export answer: one section exported, the `templates` section failed. */
+/** The export answer: one section exported, the `storage` section failed. */
 const EXPORT_DOCUMENT = {
   version: 1,
   created_at: '2026-01-01T00:00:00Z',
   sections: { env: { TAI_BUS_HEARTBEAT_TTL: '20' } },
-  errors: { templates: STORAGE_FAILURE },
+  errors: { storage: STORAGE_FAILURE },
 };
 
 test('an export with a failed section downloads the file and names the section with its message', async ({
@@ -51,7 +51,7 @@ test('an export with a failed section downloads the file and names the section w
   await expect(warning).toBeVisible();
   await expect(warning).toContainText('Backup downloaded, but 1 section failed to export');
   await expect(warning).toContainText('This section is not in the downloaded file.');
-  const row = warning.getByTestId('export-error-templates');
-  await expect(row).toContainText('templates');
+  const row = warning.getByTestId('export-error-storage');
+  await expect(row).toContainText('storage');
   await expect(row).toContainText(STORAGE_FAILURE);
 });

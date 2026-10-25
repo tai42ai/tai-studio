@@ -15,7 +15,7 @@
  * SAFETY: a preset carries arbitrary server-supplied strings, so every cell renders
  * them as ESCAPED text through the DS components, never an HTML sink.
  */
-import type { PresetRecord } from '@tai42/api-client';
+import { apiRoutes, type PresetRecord } from '@tai42/api-client';
 import {
   AppLink,
   Badge,
@@ -37,13 +37,15 @@ import {
   TR,
   useApi,
   useAppNavigate,
+  useCanWrite,
   useFeatureOffMessage,
 } from '@tai42/studio-sdk';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { type CSSProperties, type ReactNode, useState } from 'react';
 
 import { CreatePresetForm } from './CreatePresetForm';
 import { presetsListKey, presetToolMetaKey } from './keys';
+import { StoredPresetFault } from './StoredPresetFault';
 import { TagChips } from './tags';
 
 /** A tool's overlay projection the table cells read: its display name + user tags. */
@@ -188,6 +190,91 @@ function PresetTable({
   );
 }
 
+/**
+ * The list's body below its header: the versioning OFF note, the loading rows, the
+ * stored-row fault or a read error, the empty state, or the active and conflicted tables.
+ */
+function PresetsListBody({
+  query,
+  versioningOffMessage,
+  overlayByTool,
+  selected,
+}: {
+  readonly query: UseQueryResult<PresetRecord[]>;
+  readonly versioningOffMessage: string | null;
+  readonly overlayByTool: ReadonlyMap<string, OverlayDetail>;
+  readonly selected: string | undefined;
+}): ReactNode {
+  const api = useApi();
+  const faulted = query.isError ? api.storedPresetFaultFromError(query.error) : null;
+  const active = (query.data ?? []).filter((preset) => !preset.conflicted);
+  const conflicted = (query.data ?? []).filter((preset) => preset.conflicted);
+
+  return versioningOffMessage !== null ? (
+    // The versioning store is OFF, so the preset store is empty and create is
+    // refused: stand the muted OFF note where the create-oriented empty state and
+    // its "Create a preset…" call to action would otherwise mislead.
+    <Card>
+      <FeatureDisabled feature="Preset versioning" message={versioningOffMessage} />
+    </Card>
+  ) : query.isPending ? (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
+      <Skeleton height={32} />
+      <Skeleton height={32} />
+      <Skeleton height={32} />
+    </div>
+  ) : query.isError ? (
+    faulted !== null ? (
+      <StoredPresetFault error={query.error} name={faulted} selected={selected} />
+    ) : (
+      <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
+    )
+  ) : query.data.length === 0 ? (
+    <Card>
+      <EmptyState
+        title="No presets yet"
+        description="Create a preset to bind a base tool with fixed kwargs into a new named tool."
+      />
+    </Card>
+  ) : (
+    <>
+      <Card>
+        {active.length > 0 ? (
+          <PresetTable presets={active} overlayByTool={overlayByTool} selected={selected} />
+        ) : (
+          <EmptyState
+            title="No active presets"
+            description="Every preset is currently conflicted — resolve them below."
+          />
+        )}
+      </Card>
+
+      {conflicted.length > 0 ? (
+        <Card>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}
+            data-testid="presets-conflicted-section"
+          >
+            <h3
+              style={{
+                margin: 0,
+                fontSize: 'var(--tai-text-md)',
+                color: 'var(--tai-color-err-text)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 'var(--tai-space-2)',
+              }}
+            >
+              Conflicted <Badge variant="danger">{conflicted.length}</Badge>
+            </h3>
+            <PresetTable presets={conflicted} overlayByTool={overlayByTool} selected={selected} />
+          </div>
+        </Card>
+      ) : null}
+    </>
+  );
+}
+
 export function PresetsList({ selected }: { readonly selected: string | undefined }): ReactNode {
   const api = useApi();
   const query = useQuery({ queryKey: presetsListKey, queryFn: () => api.listPresets() });
@@ -206,16 +293,13 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
   // server's own `detail` line is the remediation message.
   const versioningOffMessage = useFeatureOffMessage('versioning');
   const versioningOff = versioningOffMessage !== null;
-
+  const canCreate = useCanWrite(apiRoutes.post_api_presets.path);
   const overlayByTool = new Map<string, OverlayDetail>(
     (metaQuery.data?.meta ?? []).map((row) => [
       row.tool_name,
       { displayName: row.display_name, tags: row.tags },
     ]),
   );
-
-  const active = (query.data ?? []).filter((preset) => !preset.conflicted);
-  const conflicted = (query.data ?? []).filter((preset) => preset.conflicted);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
@@ -233,7 +317,7 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
             {query.isFetching ? <Spinner label="Refreshing" /> : null}
             Refresh
           </Button>
-          {versioningOff ? null : (
+          {versioningOff || !canCreate ? null : (
             <Button
               type="button"
               variant="primary"
@@ -247,69 +331,26 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
         </div>
       </header>
 
-      {versioningOffMessage !== null ? (
-        // The versioning store is OFF, so the preset store is empty and create is
-        // refused: stand the muted OFF note where the create-oriented empty state and
-        // its "Create a preset…" call to action would otherwise mislead.
-        <Card>
-          <FeatureDisabled feature="Preset versioning" message={versioningOffMessage} />
-        </Card>
-      ) : query.isPending ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
-          <Skeleton height={32} />
-          <Skeleton height={32} />
-          <Skeleton height={32} />
-        </div>
-      ) : query.isError ? (
-        <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
-      ) : query.data.length === 0 ? (
-        <Card>
-          <EmptyState
-            title="No presets yet"
-            description="Create a preset to bind a base tool with fixed kwargs into a new named tool."
-          />
-        </Card>
-      ) : (
-        <>
-          <Card>
-            {active.length > 0 ? (
-              <PresetTable presets={active} overlayByTool={overlayByTool} selected={selected} />
-            ) : (
-              <EmptyState
-                title="No active presets"
-                description="Every preset is currently conflicted — resolve them below."
-              />
-            )}
-          </Card>
+      {/* Off for everyone wins over the caller's own access line. */}
+      {!versioningOff && !canCreate ? (
+        <p
+          role="status"
+          style={{
+            margin: 0,
+            color: 'var(--tai-color-text-muted)',
+            fontSize: 'var(--tai-text-sm)',
+          }}
+        >
+          Creating presets is outside your access — presets are shown read-only.
+        </p>
+      ) : null}
 
-          {conflicted.length > 0 ? (
-            <Card>
-              <div
-                style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}
-                data-testid="presets-conflicted-section"
-              >
-                <h3
-                  style={{
-                    margin: 0,
-                    fontSize: 'var(--tai-text-md)',
-                    color: 'var(--tai-color-err-text)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 'var(--tai-space-2)',
-                  }}
-                >
-                  Conflicted <Badge variant="danger">{conflicted.length}</Badge>
-                </h3>
-                <PresetTable
-                  presets={conflicted}
-                  overlayByTool={overlayByTool}
-                  selected={selected}
-                />
-              </div>
-            </Card>
-          ) : null}
-        </>
-      )}
+      <PresetsListBody
+        query={query}
+        versioningOffMessage={versioningOffMessage}
+        overlayByTool={overlayByTool}
+        selected={selected}
+      />
 
       {createOpen ? (
         <CreatePresetForm

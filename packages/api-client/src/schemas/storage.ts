@@ -4,9 +4,18 @@ import type { z } from 'zod';
 import * as openapi from '../generated/openapi-schemas';
 
 /** `GET /api/storage` — the storage-provider identity, or the absent sentinel
- * (`present: false`, a 200) when no storage-provider plugin is installed. */
+ * (`present: false`, a 200) when no storage-provider plugin is installed; `surfaces`
+ * names the mounted doors (`storage`, `templates`) the caller's grants reach. */
 export const storageInfo = openapi.storageInfo;
 export type StorageInfo = z.infer<typeof storageInfo>;
+
+/**
+ * `GET /api/storage/entries/{id}` — one stored object as the server classifies it: a
+ * `text` or `document` entry carries its (extracted) content, a `binary` entry only its
+ * type and size. An unknown `kind` throws `ApiSchemaError`.
+ */
+export const storedEntry = openapi.storedEntry;
+export type StoredEntry = z.infer<typeof storedEntry>;
 
 /** `GET /api/storage/resources` — the full sorted resource-id list. */
 export const storageResourceList = openapi.resourceList;

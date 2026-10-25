@@ -60,6 +60,7 @@ export function TriggerLinkForm({ form, onClose }: TriggerLinkFormProps): ReactN
       </Field>
       <ExecutionKeyPicker
         query={form.keysQuery}
+        binding={form.binding}
         value={form.executionKey}
         onValueChange={form.setExecutionKey}
         error={

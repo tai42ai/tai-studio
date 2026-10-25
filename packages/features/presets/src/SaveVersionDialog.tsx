@@ -2,7 +2,7 @@
  * The SAVE-NEW-VERSION dialog. Pre-fills every field from the preset's ACTIVE body
  * and sends ONLY the fields the user changed (an untouched field is omitted so the
  * route carries the active value forward; a cleared extensions list is an explicit
- * `[]`, a cleared output schema / removed binding an explicit `null`). Submit is
+ * `[]`, a cleared schema or map / removed binding an explicit `null`). Submit is
  * disabled until at least one field is dirty. The seed/dirty/mutation logic lives in
  * {@link useSaveVersionDraft}; this composes the fields.
  *
@@ -18,7 +18,6 @@ import {
   errorMessage,
   ErrorState,
   Field,
-  SchemaEditor,
   Spinner,
   StateBindingSection,
   TextInput,
@@ -26,6 +25,7 @@ import {
 import type { ReactNode, SyntheticEvent } from 'react';
 
 import { ExtensionsField } from './ExtensionsField';
+import { PresetIoFields } from './PresetIoFields';
 import { PresetKwargsEditor } from './PresetKwargsEditor';
 import { usePresetEnvKeys } from './usePresetEnvKeys';
 import { useSaveVersionDraft } from './useSaveVersionDraft';
@@ -96,13 +96,19 @@ export function SaveVersionDialog({
           onValidityChange={draft.setExtensionsValid}
         />
 
-        <SchemaEditor
-          value={draft.outputSchema.schema}
-          onChange={draft.setOutputSchema}
-          requireTitle={false}
-          label="Output schema"
-          description="The JSON Schema enforced on this tool's structured output. Clear it to drop the schema; leave it to carry the current one forward."
-          idPrefix="save-version-output-schema"
+        <PresetIoFields
+          inputSchema={draft.inputSchema}
+          onInputSchemaChange={draft.setInputSchema}
+          inputMap={draft.inputMap}
+          onInputMapChange={draft.setInputMap}
+          outputSchema={draft.outputSchema}
+          onOutputSchemaChange={draft.setOutputSchema}
+          outputMap={draft.outputMap}
+          onOutputMapChange={draft.setOutputMap}
+          inputSchemaDescription="An optional JSON Schema for what callers send. An input map needs one. Clear it to drop the schema; leave it to carry the current one forward."
+          outputSchemaDescription="The JSON Schema enforced on this tool's structured output. Clear it to drop the schema; leave it to carry the current one forward."
+          templates={binding.templatedTextTemplates}
+          idPrefix="save-version"
         />
 
         {/* The active binding rides the current version body; a failed version read
@@ -152,7 +158,7 @@ export function SaveVersionDialog({
             disabled={
               save.isPending ||
               !dirty ||
-              !draft.outputSchema.valid ||
+              !draft.schemasValid ||
               !draft.extensionsValid ||
               !draft.kwargsRowsValid ||
               descriptionInvalid

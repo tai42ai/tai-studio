@@ -61,6 +61,8 @@ describe('TOKEN_REQUIREMENTS map', () => {
     // management route `/api/storage/resources` instead.
     expect(tokenCovered(scoped(['/api/storage/resources']), 'storage')).toBe(true);
     expect(tokenCovered(scoped(['/api/storage']), 'storage')).toBe(false);
+    // The templates grant's list opens the same screen.
+    expect(tokenCovered(scoped(['/api/templates']), 'storage')).toBe(true);
   });
 
   it('contributionCovered: full shows all; absent ⇒ full-only; declared ⇒ any-of', () => {
@@ -149,7 +151,7 @@ describe('grouped nav structure', () => {
   const SECTIONS = ['Capabilities', 'Connections', 'Doors', 'Activity', 'Administration'] as const;
 
   const SECTION_LINKS: Record<(typeof SECTIONS)[number], readonly string[]> = {
-    Capabilities: ['Tools', 'Agents', 'Presets', 'Extensions', 'Templates'],
+    Capabilities: ['Tools', 'Agents', 'Presets'],
     Connections: ['Connectors'],
     Doors: ['Conversations', 'Hooks', 'Scheduling', 'Served endpoints', 'States'],
     Activity: ['Interactions', 'Notifications'],

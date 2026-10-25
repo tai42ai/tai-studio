@@ -5,6 +5,7 @@
  * submit attempt.
  */
 import {
+  type ExecutionKeyBinding,
   ExecutionKeyPicker,
   type ExecutionKeyQuery,
   Field,
@@ -27,6 +28,8 @@ export interface HookIdentityFieldsProps {
   readonly trimmedName: string;
   /** The api-key list read the execution-key picker renders. */
   readonly keysQuery: ExecutionKeyQuery;
+  /** How the form binds its key (`useExecutionKeyBinding()`). */
+  readonly binding: ExecutionKeyBinding;
 }
 
 export function HookIdentityFields({
@@ -35,6 +38,7 @@ export function HookIdentityFields({
   replacesExisting,
   trimmedName,
   keysQuery,
+  binding,
 }: HookIdentityFieldsProps): ReactNode {
   const { submitted } = fields;
   return (
@@ -74,6 +78,7 @@ export function HookIdentityFields({
       </Field>
       <ExecutionKeyPicker
         query={keysQuery}
+        binding={binding}
         value={fields.executionKey}
         onValueChange={fields.setExecutionKey}
         error={submitted && missing.executionKey ? 'An execution key is required.' : undefined}

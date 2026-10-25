@@ -9,11 +9,13 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { tokensPayloadKey } from './keys';
 
-/** The api-key list; the picker and its host form share one request. */
-export function useExecutionKeys(): UseQueryResult<TokensPayload> {
+/** The api-key list; the picker and its host form share one request. It runs only while `enabled`
+ *  (the key field shows under a checked binding). */
+export function useExecutionKeys(enabled: boolean): UseQueryResult<TokensPayload> {
   const api = useApi();
   return useQuery({
     queryKey: tokensPayloadKey,
     queryFn: ({ signal }) => api.listTokensPayload(signal),
+    enabled,
   });
 }

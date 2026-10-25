@@ -224,7 +224,11 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
             Extensions applied.
           </p>
           <FleetReport
-            summary={summarizeFleetFanout(save.data.fanout, save.data.awaiting_respawn)}
+            summary={summarizeFleetFanout(
+              save.data.fanout,
+              save.data.awaiting_respawn,
+              save.data.span_release_error,
+            )}
           />
         </>
       ) : null}

@@ -49,6 +49,19 @@ describe('drill levels', () => {
     expect(screen.getByRole('link', { name: 'Open route chat' })).toBeInTheDocument();
   });
 
+  it('?config= opens the configs tab on that config', async () => {
+    renderWithProviders(<ConversationsPage search={{ config: 'agent:assistant' }} />, {
+      client: {
+        ...fullClient(),
+        listConversationConfigs: vi.fn().mockResolvedValue({ items: [makeConfig()], total: 1 }),
+      },
+    });
+
+    const cell = await screen.findByText('agent: assistant');
+    expect(cell.closest('tr')).toHaveAttribute('aria-current', 'true');
+    expect(screen.queryByTestId('conversation-routes-table')).toBeNull();
+  });
+
   it('level 2: ?route= is the route thread list with no transcript selected', async () => {
     renderWithProviders(<ConversationsPage search={{ route: 'chat' }} />, {
       client: fullClient(),

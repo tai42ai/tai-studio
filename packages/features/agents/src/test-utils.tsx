@@ -115,6 +115,7 @@ export function scopedProjection(overrides: Partial<MeProjection> = {}): MeProje
 }
 
 const baseProjection: MeProjection = {
+  access_control_enabled: true,
   user_id: 'u-test',
   owner_user_id: null,
   principal: null,
@@ -175,6 +176,8 @@ export function presetRecord(overrides: Partial<PresetRecord> = {}): PresetRecor
     extensions: [],
     output_schema: null,
     input_schema: null,
+    input_map: null,
+    output_map: null,
     conflicted: false,
     conflicted_reason: null,
     uses: [],
@@ -303,6 +306,8 @@ export const presetDetail = (over: Partial<PresetDetail> = {}): PresetDetail => 
   extensions: [],
   output_schema: null,
   input_schema: null,
+  input_map: null,
+  output_map: null,
   conflicted: false,
   conflicted_reason: null,
   uses: [],

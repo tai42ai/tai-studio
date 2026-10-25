@@ -11,7 +11,5 @@ export function inboxKey(pageSize: number): readonly ['interactions', 'inbox', n
   return ['interactions', 'inbox', pageSize];
 }
 
-/** Key for the installed channel-plugin name list. */
-export function channelsKey(): readonly ['channels'] {
-  return ['channels'];
-}
+/** The installed channel-plugin list, shared with the route form. */
+export { channelsListKey } from '@tai42/studio-sdk';

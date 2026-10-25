@@ -1,14 +1,12 @@
-/** Page-level tests for the Storage surface: stat, upload (text + files), download,
- * and the delete / delete-directory confirms with their invalidations. */
-import type { ApiClient } from '@tai42/api-client';
-import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, type RenderResult, screen, waitFor, within } from '@testing-library/react';
+/** Page-level tests for the Storage surface: upload (text + files), the detail's
+ * download, and the delete / delete-directory confirms with their invalidations. */
+import { type ApiClient, ApiError } from '@tai42/api-client';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { type ReactElement, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { StoragePage } from './StoragePage';
+import { renderWithProviders } from './test-utils';
 
 const downloadBlob = vi.hoisted(() => vi.fn());
 
@@ -24,60 +22,23 @@ afterEach(() => {
   globalThis.localStorage.clear();
 });
 
-function renderPage(
-  ui: ReactElement,
-  { client, navigate = vi.fn() }: { client: ApiClient; navigate?: () => void },
-): RenderResult {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const wrapper = ({ children }: { children: ReactNode }): ReactElement => (
-    <QueryClientProvider client={queryClient}>
-      <ApiProvider value={client}>
-        <ThemeProvider>
-          <NavigationProvider
-            value={{
-              navigate,
-              resolvePath: () => '/x',
-              navigatePlugin: vi.fn(),
-              resolvePluginPath: () => '/x',
-            }}
-          >
-            {children}
-          </NavigationProvider>
-        </ThemeProvider>
-      </ApiProvider>
-    </QueryClientProvider>
-  );
-  // The stack is a `wrapper`, not part of the rendered element: RTL's `rerender`
-  // replaces only the element, so a wrapper keeps the providers (and the query
-  // cache) alive across a re-render with new props.
-  return render(ui, { wrapper });
-}
-
 /** A stub client from a partial method set; an unstubbed call throws, flagging it. */
 function stubClient(overrides: Partial<ApiClient>): ApiClient {
   return overrides as ApiClient;
 }
 
-const presentInfo = { present: true as const, provider: 'FsStorage', module: 'plugin.storage' };
+const presentInfo = {
+  present: true as const,
+  provider: 'FsStorage',
+  module: 'plugin.storage',
+  surfaces: ['storage' as const, 'templates' as const],
+};
+
+function textEntry(id: string) {
+  return { kind: 'text' as const, id, content_type: 'text/plain', size: 1, content: 'x' };
+}
 
 describe('StoragePage', () => {
-  it('expands a resource stat, including a null content_type', async () => {
-    const user = userEvent.setup();
-    const client = stubClient({
-      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
-      listStorageResources: vi.fn().mockResolvedValue({ resources: ['blob'] }),
-      statStorageResource: vi.fn().mockResolvedValue({ id: 'blob', content_type: null }),
-    });
-    renderPage(<StoragePage search={{}} />, { client });
-
-    await screen.findByRole('table');
-    await user.click(screen.getByRole('button', { name: 'Stat blob' }));
-
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(/content_type/)).toBeInTheDocument();
-    expect(within(dialog).getByText('null')).toBeInTheDocument();
-  });
-
   it('uploads text content and invalidates the list', async () => {
     const user = userEvent.setup();
     const list = vi
@@ -90,7 +51,7 @@ describe('StoragePage', () => {
       listStorageResources: list,
       uploadStorageResource: upload,
     });
-    renderPage(<StoragePage search={{}} />, { client });
+    renderWithProviders(<StoragePage search={{}} />, { client });
 
     await screen.findByText('No resources');
     await user.click(screen.getByRole('button', { name: 'Upload' }));
@@ -115,7 +76,7 @@ describe('StoragePage', () => {
       listStorageResources: vi.fn().mockResolvedValue({ resources: [] }),
       uploadStorageResource: upload,
     });
-    renderPage(<StoragePage search={{}} />, { client });
+    renderWithProviders(<StoragePage search={{}} />, { client });
 
     await screen.findByText('No resources');
     await user.click(screen.getByRole('button', { name: 'Upload' }));
@@ -146,7 +107,7 @@ describe('StoragePage', () => {
       listStorageResources: vi.fn().mockResolvedValue({ resources: [] }),
       uploadStorageResource: upload,
     });
-    renderPage(<StoragePage search={{}} />, { client });
+    renderWithProviders(<StoragePage search={{}} />, { client });
 
     await screen.findByText('No resources');
     await user.click(screen.getByRole('button', { name: 'Upload' }));
@@ -177,7 +138,7 @@ describe('StoragePage', () => {
       listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt'] }),
       uploadStorageResource: upload,
     });
-    renderPage(<StoragePage search={{}} />, { client });
+    renderWithProviders(<StoragePage search={{}} />, { client });
 
     await screen.findByRole('table');
     await user.click(screen.getByRole('button', { name: 'Upload' }));
@@ -205,7 +166,7 @@ describe('StoragePage', () => {
       listStorageResources: vi.fn().mockResolvedValue({ resources: [] }),
       uploadStorageResource: upload,
     });
-    renderPage(<StoragePage search={{}} />, { client });
+    renderWithProviders(<StoragePage search={{}} />, { client });
 
     await screen.findByText('No resources');
     await user.click(screen.getByRole('button', { name: 'Upload' }));
@@ -244,7 +205,7 @@ describe('StoragePage', () => {
         listStorageResources: vi.fn().mockResolvedValue({ resources: [] }),
         uploadStorageResource: vi.fn(),
       });
-      renderPage(<StoragePage search={{}} />, { client });
+      renderWithProviders(<StoragePage search={{}} />, { client });
 
       await screen.findByText('No resources');
       await user.click(screen.getByRole('button', { name: 'Upload' }));
@@ -272,7 +233,7 @@ describe('StoragePage', () => {
       listStorageResources: vi.fn().mockResolvedValue({ resources: [] }),
       uploadStorageResource: vi.fn().mockRejectedValue(new Error(message)),
     });
-    renderPage(<StoragePage search={{}} />, { client });
+    renderWithProviders(<StoragePage search={{}} />, { client });
 
     await screen.findByText('No resources');
     await user.click(screen.getByRole('button', { name: 'Upload' }));
@@ -290,14 +251,17 @@ describe('StoragePage', () => {
     const client = stubClient({
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
       listStorageResources: vi.fn().mockResolvedValue({ resources: ['nested/b.bin'] }),
+      readStorageResource: vi.fn().mockResolvedValue({
+        kind: 'binary',
+        id: 'nested/b.bin',
+        content_type: null,
+        size: 1,
+      }),
       downloadStorageResource: vi.fn().mockResolvedValue(blob),
     });
-    renderPage(<StoragePage search={{}} />, { client });
+    renderWithProviders(<StoragePage search={{ id: 'nested/b.bin' }} />, { client });
 
-    // The resource lives in a folder; open it, then download from inside.
-    await screen.findByRole('table');
-    await user.click(screen.getByRole('button', { name: 'nested' }));
-    await user.click(screen.getByRole('button', { name: 'Download nested/b.bin' }));
+    await user.click(await screen.findByRole('button', { name: 'Download nested/b.bin' }));
 
     await waitFor(() => {
       expect(downloadBlob).toHaveBeenCalledWith(blob, 'b.bin');
@@ -309,19 +273,20 @@ describe('StoragePage', () => {
     const client = stubClient({
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
       listStorageResources: vi.fn().mockResolvedValue({ resources: ['gone'] }),
+      readStorageResource: vi.fn().mockResolvedValue(textEntry('gone')),
       downloadStorageResource: vi.fn().mockRejectedValue(new Error("resource 'gone' not found")),
     });
-    renderPage(<StoragePage search={{}} />, { client });
+    renderWithProviders(<StoragePage search={{ id: 'gone' }} />, { client });
 
-    await screen.findByRole('table');
-    await user.click(screen.getByRole('button', { name: 'Download gone' }));
+    await user.click(await screen.findByRole('button', { name: 'Download gone' }));
 
     expect(await screen.findByText("resource 'gone' not found")).toBeInTheDocument();
     expect(downloadBlob).not.toHaveBeenCalled();
   });
 
-  it('deletes a resource after confirm and invalidates the list', async () => {
+  it('deletes a resource from its detail, invalidates the list and clears the selection', async () => {
     const user = userEvent.setup();
+    const navigate = vi.fn();
     const list = vi
       .fn()
       .mockResolvedValueOnce({ resources: ['a.txt'] })
@@ -330,12 +295,12 @@ describe('StoragePage', () => {
     const client = stubClient({
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
       listStorageResources: list,
+      readStorageResource: vi.fn().mockResolvedValue(textEntry('a.txt')),
       deleteStorageResource: del,
     });
-    renderPage(<StoragePage search={{}} />, { client });
+    renderWithProviders(<StoragePage search={{ id: 'a.txt', q: 'a' }} />, { client, navigate });
 
-    await screen.findByRole('table');
-    await user.click(screen.getByRole('button', { name: 'Delete a.txt' }));
+    await user.click(await screen.findByRole('button', { name: 'Delete a.txt' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
@@ -345,19 +310,48 @@ describe('StoragePage', () => {
     await waitFor(() => {
       expect(list).toHaveBeenCalledTimes(2);
     });
+    expect(navigate).toHaveBeenCalledWith('storage', { q: 'a' });
   });
 
-  it('wears the low-emphasis (ghost) style on both the resource and directory Delete rows', async () => {
+  it('keeps a held delete open and lists what still names the object', async () => {
+    const user = userEvent.setup();
+    const message = "resource 'a.txt' is still referenced — held by:\n  hook 'h1'";
+    const refusal = new ApiError(message, 409, 'resource-in-use', undefined, {
+      error: message,
+      holders: [{ kind: 'hook', name: 'h1', locator: {}, summary: "hook 'h1'" }],
+    });
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt'] }),
+      readStorageResource: vi.fn().mockResolvedValue(textEntry('a.txt')),
+      deleteStorageResource: vi.fn().mockRejectedValue(refusal),
+    });
+    renderWithProviders(<StoragePage search={{ id: 'a.txt' }} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Delete a.txt' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    expect(
+      await within(dialog).findByText("resource 'a.txt' is still referenced — held by:"),
+    ).toBeInTheDocument();
+    const holders = within(dialog).getByRole('list', { name: 'Holders of a.txt' });
+    expect(within(holders).getByRole('link', { name: "hook 'h1'" })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeEnabled();
+  });
+
+  it('wears the low-emphasis (ghost) style on both the resource and directory Delete actions', async () => {
     const client = stubClient({
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
       listStorageResources: vi.fn().mockResolvedValue({ resources: ['reports/x.csv', 'a.txt'] }),
+      readStorageResource: vi.fn().mockResolvedValue(textEntry('a.txt')),
     });
-    renderPage(<StoragePage search={{}} />, { client });
+    renderWithProviders(<StoragePage search={{ id: 'a.txt' }} />, { client });
 
     await screen.findByRole('table');
-    // Row-level destructive actions stay low-emphasis; the danger emphasis lives in the
-    // ConfirmDialog's confirm button, not on the persistent row/folder controls.
-    const resourceDelete = screen.getByRole('button', { name: 'Delete a.txt' });
+    // Persistent destructive actions stay low-emphasis; the danger emphasis lives in the
+    // ConfirmDialog's confirm button.
+    const resourceDelete = await screen.findByRole('button', { name: 'Delete a.txt' });
     expect(resourceDelete).toHaveClass('tai-btn-ghost');
     expect(resourceDelete).not.toHaveClass('tai-btn-danger');
 
@@ -378,7 +372,7 @@ describe('StoragePage', () => {
       listStorageResources: list,
       deleteStorageDir: delDir,
     });
-    renderPage(<StoragePage search={{}} />, { client });
+    renderWithProviders(<StoragePage search={{}} />, { client });
 
     await screen.findByRole('table');
     // The delete-directory action rides the `reports` folder row for its own prefix.
@@ -402,7 +396,7 @@ describe('StoragePage', () => {
       listStorageResources: vi.fn().mockResolvedValue({ resources: ['reports/x.csv'] }),
       deleteStorageDir: vi.fn().mockRejectedValue(new Error(message)),
     });
-    renderPage(<StoragePage search={{}} />, { client });
+    renderWithProviders(<StoragePage search={{}} />, { client });
 
     await screen.findByRole('table');
     await user.click(screen.getByRole('button', { name: 'Delete directory reports' }));

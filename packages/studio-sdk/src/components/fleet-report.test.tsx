@@ -20,6 +20,7 @@ describe('FleetReport', () => {
 
   it('renders nothing for a converged report (the caller shows its own success)', () => {
     const summary: FleetReportSummary = {
+      spanReleaseError: null,
       status: 'converged',
       awaiting: [],
       note: 'only this worker reloaded',
@@ -32,6 +33,7 @@ describe('FleetReport', () => {
 
   it('renders a loud alert naming every non-converged worker and its outcome', () => {
     const summary: FleetReportSummary = {
+      spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
@@ -62,6 +64,7 @@ describe('FleetReport', () => {
 
   it('renders the per-worker gap outcomes (resyncing / recycling / stale) with their labels and tone', () => {
     const summary: FleetReportSummary = {
+      spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
@@ -87,6 +90,7 @@ describe('FleetReport', () => {
 
   it('gives every state a mark AND a label, never color alone', () => {
     const summary: FleetReportSummary = {
+      spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
@@ -116,6 +120,7 @@ describe('FleetReport', () => {
 
   it('marks an unreachable bus as an error state', () => {
     const summary: FleetReportSummary = {
+      spanReleaseError: null,
       status: 'unreachable',
       awaiting: [],
       note: null,
@@ -134,6 +139,7 @@ describe('FleetReport', () => {
 
   it('renders a loud alert with the transport error when the bus was unreachable', () => {
     const summary: FleetReportSummary = {
+      spanReleaseError: null,
       status: 'unreachable',
       awaiting: [],
       note: null,
@@ -148,6 +154,7 @@ describe('FleetReport', () => {
 
   it('omits the error line when an unreachable report carries no message', () => {
     const summary: FleetReportSummary = {
+      spanReleaseError: null,
       status: 'unreachable',
       awaiting: [],
       note: null,
@@ -160,6 +167,7 @@ describe('FleetReport', () => {
 
   it('drops the "Change saved" framing and System-page pointer on a degraded reload action', () => {
     const summary: FleetReportSummary = {
+      spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
@@ -185,6 +193,7 @@ describe('FleetReport', () => {
 
   it('drops the "Change saved" framing and System-page pointer on an unreachable reload action', () => {
     const summary: FleetReportSummary = {
+      spanReleaseError: null,
       status: 'unreachable',
       awaiting: [],
       note: null,
@@ -202,6 +211,7 @@ describe('FleetReport', () => {
 
   it('points a degraded remove at re-running the remove, never a reload', () => {
     const summary: FleetReportSummary = {
+      spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
@@ -221,6 +231,7 @@ describe('FleetReport', () => {
 
   it('points an unreachable remove at re-running the remove, never a reload', () => {
     const summary: FleetReportSummary = {
+      spanReleaseError: null,
       status: 'unreachable',
       awaiting: [],
       note: null,
@@ -236,6 +247,7 @@ describe('FleetReport', () => {
 
   it('points a degraded deregister at re-running the deregister, never a reload', () => {
     const summary: FleetReportSummary = {
+      spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
@@ -256,6 +268,7 @@ describe('FleetReport', () => {
 
   it('points an unreachable deregister at re-running the deregister, never a reload', () => {
     const summary: FleetReportSummary = {
+      spanReleaseError: null,
       status: 'unreachable',
       awaiting: [],
       note: null,
@@ -275,6 +288,7 @@ describe('FleetReport', () => {
 
   it('keeps the alert, its mark and its per-worker labels', () => {
     const summary: FleetReportSummary = {
+      spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
@@ -297,6 +311,7 @@ describe('FleetReport', () => {
     // the commonest degraded fleet there is. Both halves of the copy agree — the
     // headline's noun and the guidance line's subject and its pronoun.
     const degraded = (names: readonly string[]): FleetReportSummary => ({
+      spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
@@ -326,6 +341,7 @@ describe('FleetReport', () => {
 
 describe('FleetReport — workers awaiting a respawn', () => {
   const awaiting: FleetReportSummary = {
+    spanReleaseError: null,
     status: 'converged',
     awaiting: [
       { name: 'serve-1', keys: ['BACKEND_MANIFEST_KEY'] },

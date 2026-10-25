@@ -35,6 +35,10 @@
  *     summary beside a failed row carrying its reason and a Retry, from a fan-out with
  *     one thread held by a turn in flight.
  *
+ * The route dialog cases below the frames pick the target, the channel and the execution
+ * key from served lists under a served session, and read the create body or the lines the
+ * key picker draws.
+ *
  * Every door the surface reads is served through `page.route`, deterministically; other
  * routes and non-GET methods fall through to the live skeleton. The write capability is
  * granted by the boot credential, as for the preset and hook create dialogs.
@@ -51,6 +55,18 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
 import { seedCredential } from './helpers';
+import {
+  ACCOUNT_EMPTY_NOTE,
+  accountSession,
+  bodyOf,
+  gateOffSession,
+  nextRequest,
+  scopedKeySession,
+  serveWrite,
+  stubKeyList,
+  stubRead,
+  stubSession,
+} from './session-stubs';
 
 needs();
 
@@ -495,7 +511,12 @@ const FRAMES: readonly Frame[] = [
     name: 'conversation-route-edit',
     setup: async (page) => {
       await stubGet(page, '/api/conversations', pageOf([EDIT_ROUTE]));
-      await stubGet(page, '/api/storage', { present: true, provider: 'demo', module: 'demo' });
+      await stubGet(page, '/api/storage', {
+        present: true,
+        provider: 'demo',
+        module: 'demo',
+        surfaces: ['storage', 'templates'],
+      });
       await stubGet(page, '/api/templates', []);
     },
     action: async (page) => {
@@ -787,4 +808,188 @@ for (const theme of ['light', 'dark'] as const) {
 
 test.beforeAll(async () => {
   await mkdir(OUT_DIR, { recursive: true });
+});
+
+// ---- The route dialog's pickers and execution-key binding ----------------------
+// The dialog picks each name from the deployment's own list. These cases serve the
+// lists, the session and the create write through `page.route`, so they read the same
+// on any boot.
+
+/** The agent, channel and identity a picked route binds. */
+const PICKED = { agent: 'assistant', channel: 'web', identity: '+10000000000' } as const;
+
+/** The reach a scoped session needs to read the routes and create one through the pickers. */
+const ROUTE_DIALOG_REACH = [
+  { path: '/api/conversations', methods: ['GET'] },
+  { path: '/api/conversations/{route_name}', methods: ['POST'] },
+  { path: '/api/agents', methods: ['GET'] },
+  { path: '/api/tools', methods: ['GET'] },
+  { path: '/api/channels', methods: ['GET'] },
+  { path: '/api/auth/tokens-payload', methods: ['GET'] },
+] as const;
+
+/** Serve the agent, tool and channel lists the pickers read. */
+async function stubPickerLists(page: Page): Promise<void> {
+  await stubGet(page, '/api/agents', {
+    items: [
+      {
+        name: PICKED.agent,
+        description: '',
+        tool_name: `run_${PICKED.agent}`,
+        input_schema: {},
+        spec_runnable: false,
+      },
+    ],
+    total: 1,
+  });
+  await stubGet(page, '/api/tools', ['studio_demo_echo']);
+  await stubGet(page, '/api/channels', {
+    channels: [{ name: PICKED.channel, identity_hint: 'The address visitors message.' }],
+  });
+}
+
+/** Pick `option` in the combobox named `name` inside `dialog`. */
+async function pick(page: Page, dialog: Locator, name: string, option: string): Promise<void> {
+  await dialog.getByRole('combobox', { name, exact: true }).click();
+  await page.getByRole('option', { name: option, exact: true }).click();
+}
+
+/** Open the create dialog and fill a channel route to an agent through the pickers. */
+async function fillPickedRoute(page: Page, routeName: string): Promise<Locator> {
+  await page.getByRole('button', { name: 'Create route' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Route name').fill(routeName);
+  await pick(page, dialog, 'Target kind', 'Agent');
+  await pick(page, dialog, 'Agent', PICKED.agent);
+  await pick(page, dialog, 'Door', 'Channel');
+  await pick(page, dialog, 'Channel', PICKED.channel);
+  await dialog.getByLabel('Our identity').fill(PICKED.identity);
+  return dialog;
+}
+
+const isRouteWrite = (pathname: string): boolean =>
+  pathname.startsWith('/api/conversations/') && pathname.split('/').length === 4;
+
+/** The create door's answer for a channel route named `routeName`. */
+function written(routeName: string, executionKey: string): { readonly data: unknown } {
+  return {
+    data: {
+      route_name: routeName,
+      created: true,
+      callback_secret: null,
+      route: {
+        ...ROUTE_BASE,
+        route_name: routeName,
+        target_name: PICKED.agent,
+        channel: PICKED.channel,
+        our_identity: PICKED.identity,
+        execution_key: executionKey,
+        overlap: OVERLAP_DEFAULT,
+      },
+    },
+  };
+}
+
+test.describe('route dialog pickers', () => {
+  test.use({ viewport: VIEWPORT });
+
+  test.beforeEach(async ({ page }) => {
+    await seedCredential(page);
+    await stubGet(page, '/api/conversations', pageOf([]));
+    await stubPickerLists(page);
+  });
+
+  test('a key session over an empty key list creates the route as its own identity', async ({
+    page,
+  }) => {
+    await stubSession(page, scopedKeySession('alice', ROUTE_DIALOG_REACH));
+    await stubKeyList(page, { keys: [] });
+    await serveWrite(page, 'POST', isRouteWrite, written('picked-line', 'alice'));
+    await page.goto('/conversations');
+
+    const dialog = await fillPickedRoute(page, 'picked-line');
+    await pick(page, dialog, 'Execution key', "alice — this session's identity");
+    const write = nextRequest(page, 'POST', isRouteWrite);
+    await dialog.getByRole('button', { name: 'Create route' }).click();
+
+    const body = bodyOf(await write);
+    expect(body).toMatchObject({
+      execution_key: 'alice',
+      target_kind: 'agent',
+      target_name: PICKED.agent,
+      door: 'channel',
+      channel: PICKED.channel,
+      our_identity: PICKED.identity,
+    });
+  });
+
+  test('a session that cannot list agents reads the note in place of the agent list', async ({
+    page,
+  }) => {
+    await stubRead(page, '/api/agents', { status: 403, error: 'Forbidden' });
+    await page.goto('/conversations');
+
+    await page.getByRole('button', { name: 'Create route' }).click();
+    const dialog = page.getByRole('dialog');
+    await pick(page, dialog, 'Target kind', 'Agent');
+    await expect(
+      dialog.getByText(
+        'This session cannot list agents. Picking one needs read access to GET /api/agents; ask an administrator to grant it.',
+        { exact: true },
+      ),
+    ).toBeVisible();
+  });
+
+  test("a stored key that is not the session's identity is flagged before save", async ({
+    page,
+  }) => {
+    const bound = { ...ROUTE_BASE, route_name: 'bound-line', channel: PICKED.channel };
+    await stubGet(
+      page,
+      '/api/conversations',
+      pageOf([{ ...bound, execution_key: 'svc-x', overlap: OVERLAP_DEFAULT }]),
+    );
+    await stubSession(page, scopedKeySession('alice', ROUTE_DIALOG_REACH));
+    await stubKeyList(page, { keys: [] });
+    await page.goto('/conversations');
+
+    await page.getByRole('button', { name: 'Edit route bound-line' }).click();
+    await expect(
+      page
+        .getByRole('dialog')
+        .getByText(
+          "svc-x is not this session's identity (alice), so the server will refuse it on save.",
+        ),
+    ).toBeVisible();
+  });
+
+  test('an account session over an empty key list reads the note and is offered no identity', async ({
+    page,
+  }) => {
+    await stubSession(page, accountSession);
+    await stubKeyList(page, { keys: [] });
+    await page.goto('/conversations');
+
+    await page.getByRole('button', { name: 'Create route' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText(ACCOUNT_EMPTY_NOTE, { exact: true })).toBeVisible();
+    await expect(dialog.getByRole('combobox', { name: 'Execution key' })).toHaveCount(0);
+  });
+
+  test('with access control off the dialog shows no key field and sends the fill identity', async ({
+    page,
+  }) => {
+    await stubSession(page, gateOffSession);
+    await serveWrite(page, 'POST', isRouteWrite, written('open-line', '__no_auth__'));
+    await page.goto('/conversations');
+
+    const dialog = await fillPickedRoute(page, 'open-line');
+    await expect(dialog.getByText('Execution key', { exact: true })).toHaveCount(0);
+    const create = dialog.getByRole('button', { name: 'Create route' });
+    await expect(create).toBeEnabled();
+    const write = nextRequest(page, 'POST', isRouteWrite);
+    await create.click();
+
+    expect(bodyOf(await write).execution_key).toBe('__no_auth__');
+  });
 });

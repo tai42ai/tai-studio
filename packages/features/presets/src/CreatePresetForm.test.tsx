@@ -1,10 +1,10 @@
 /**
  * The create-preset form — assembling and submitting the body: identity + base
  * picker, the tagless create body (tags written to the overlay after), the
- * conflicted/hidden exclusions, output-schema + kwargs parsing, and the store-off
- * behaviour.
+ * conflicted/hidden exclusions, the schemas and jq maps, kwargs parsing, the store-off
+ * behaviour, and the Tags field shown only with the overlay write grant.
  */
-import { ApiError } from '@tai42/api-client';
+import { ApiError, apiRoutes } from '@tai42/api-client';
 import { toolsListKey } from '@tai42/studio-sdk';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -16,6 +16,7 @@ import {
   baseClient,
   fillCreatable,
   fillNameAndBase,
+  fullProjection,
   openBasePicker,
   record,
   renderWithProviders,
@@ -34,6 +35,7 @@ describe('CreatePresetForm', () => {
     });
     const client = baseClient({ createPreset, upsertToolMeta });
     const { navigate, queryClient } = renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
       client,
     });
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
@@ -76,6 +78,7 @@ describe('CreatePresetForm', () => {
       .fn()
       .mockRejectedValue(new ApiError('not configured', 501, 'tool-meta-not-configured'));
     const { navigate } = renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
       client: baseClient({ createPreset, upsertToolMeta }),
     });
 
@@ -99,6 +102,7 @@ describe('CreatePresetForm', () => {
     const createPreset = vi.fn().mockResolvedValue(record);
     const upsertToolMeta = vi.fn();
     const { navigate } = renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
       client: baseClient({ createPreset, upsertToolMeta }),
     });
 
@@ -121,6 +125,7 @@ describe('CreatePresetForm', () => {
     const createPreset = vi.fn().mockResolvedValue(record);
     const upsertToolMeta = vi.fn();
     const { navigate } = renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
       client: baseClient({ createPreset, upsertToolMeta }),
       // The kind-status table reports the overlay store OFF, so the tags input is
       // withdrawn PROACTIVELY — an author can never type tags the OFF overlay drops.
@@ -145,21 +150,20 @@ describe('CreatePresetForm', () => {
 
   it('KEEPS the tags input when the tool_meta kind is active', async () => {
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
       client: baseClient(),
       systemKinds: [{ kind: 'tool_meta', state: 'active', plugin: 'overlay', detail: '' }],
     });
-    // The input is present from the first render and stays present after the table
-    // resolves to a non-off state.
-    expect(screen.getByLabelText('Tags')).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByLabelText('Tags')).toBeInTheDocument();
-    });
+    // The input appears once the projection admits the overlay write and the kind
+    // table resolves to a non-off state.
+    expect(await screen.findByLabelText('Tags')).toBeInTheDocument();
   });
 
   it('blocks submit and shows the field error when the description is empty', async () => {
     const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
       client: baseClient({ createPreset }),
     });
 
@@ -177,6 +181,7 @@ describe('CreatePresetForm', () => {
     // `weather` carries a NATIVE tag; `radar` carries only an OVERLAY tag. The tag
     // filter lists the UNION, so a tag from either read proves the map is merged.
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
       client: baseClient({
         listTools: vi.fn().mockResolvedValue(['weather', 'radar']),
         listToolTags: vi
@@ -211,6 +216,7 @@ describe('CreatePresetForm', () => {
     // `weather` is a plain visible tool → offered.
     const user = userEvent.setup({ delay: null });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
       client: baseClient({
         listTools: vi.fn().mockResolvedValue(['weather', 'secret', 'radar']),
         listToolTags: vi.fn().mockResolvedValue([
@@ -244,7 +250,10 @@ describe('CreatePresetForm', () => {
     const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     const client = baseClient({ createPreset });
-    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
+      client,
+    });
 
     await fillCreatable(user);
     const schema = { type: 'object', title: 'Weather', properties: {} };
@@ -262,7 +271,10 @@ describe('CreatePresetForm', () => {
     const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     const client = baseClient({ createPreset });
-    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
+      client,
+    });
 
     await fillCreatable(user);
     fireEvent.change(screen.getByLabelText('Output schema JSON'), {
@@ -282,7 +294,10 @@ describe('CreatePresetForm', () => {
         new Error("output_schema is not a valid JSON Schema: 'type' must be a string"),
       );
     const client = baseClient({ createPreset });
-    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
+      client,
+    });
 
     await fillCreatable(user);
     fireEvent.change(screen.getByLabelText('Output schema JSON'), {
@@ -299,7 +314,10 @@ describe('CreatePresetForm', () => {
     const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     const client = baseClient({ createPreset });
-    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
+      client,
+    });
 
     await fillCreatable(user);
     // The raw-JSON view is where a malformed body can be authored; switch to it first.
@@ -318,7 +336,10 @@ describe('CreatePresetForm', () => {
     const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     const client = baseClient({ createPreset });
-    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
+      client,
+    });
 
     await fillCreatable(user);
     // Build a reference row: a key, the "Secret reference" type, and an existing env key
@@ -343,7 +364,10 @@ describe('CreatePresetForm', () => {
   });
 
   it('states in the Fixed kwargs help that a secret reference stores only the variable name', () => {
-    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client: baseClient() });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
+      client: baseClient(),
+    });
     const help = screen.getByText(/stores only the environment variable's name/i);
     expect(help).toHaveTextContent('stored in the clear');
   });
@@ -354,7 +378,10 @@ describe('CreatePresetForm', () => {
       .fn()
       .mockRejectedValue(new Error("preset 'paris_weather' already exists"));
     const client = baseClient({ createPreset });
-    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
+      client,
+    });
 
     await fillCreatable(user);
     await user.click(screen.getByRole('button', { name: 'Create preset' }));
@@ -380,7 +407,10 @@ describe('CreatePresetForm', () => {
         ),
       );
     const client = baseClient({ createPreset });
-    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
+      client,
+    });
 
     await fillCreatable(user);
     await user.click(screen.getByRole('button', { name: 'Create preset' }));
@@ -392,5 +422,70 @@ describe('CreatePresetForm', () => {
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getByRole('button', { name: 'Create preset' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Validate' })).toBeDisabled();
+  });
+
+  it('sends the input schema and both jq maps the author sets', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createPreset = vi.fn().mockResolvedValue(record);
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
+      client: baseClient({ createPreset }),
+    });
+
+    await fillCreatable(user);
+    const inputSchema = { type: 'object', properties: { town: { type: 'string' } } };
+    fireEvent.change(screen.getByLabelText('Input schema JSON'), {
+      target: { value: JSON.stringify(inputSchema) },
+    });
+    await user.type(screen.getByRole('textbox', { name: 'Input map' }), '.town');
+    await user.type(screen.getByRole('textbox', { name: 'Output map' }), '.temp');
+    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+
+    await waitFor(() => {
+      expect(createPreset).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input_schema: inputSchema,
+          input_map: { content: '.town' },
+          output_map: { content: '.temp' },
+        }),
+      );
+    });
+  });
+
+  it('blocks submit while the input schema is invalid JSON', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createPreset = vi.fn().mockResolvedValue(record);
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
+      client: baseClient({ createPreset }),
+    });
+
+    await fillCreatable(user);
+    fireEvent.change(screen.getByLabelText('Input schema JSON'), { target: { value: '{ broken' } });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    expect(createPreset).not.toHaveBeenCalled();
+  });
+
+  it('withholds Tags without PATCH on the overlay, and the create writes no tags', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createPreset = vi.fn().mockResolvedValue(record);
+    const upsertToolMeta = vi.fn();
+    const { navigate } = renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection({
+        admin: false,
+        routes: [{ path: apiRoutes.post_api_presets.path, methods: ['GET', 'POST'] }],
+      }),
+      client: baseClient({ createPreset, upsertToolMeta }),
+    });
+
+    await fillCreatable(user);
+    expect(screen.queryByLabelText('Tags')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
+    });
+    expect(upsertToolMeta).not.toHaveBeenCalled();
   });
 });

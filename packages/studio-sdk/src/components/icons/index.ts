@@ -64,7 +64,6 @@ export {
   ConversationsIcon,
   DashboardIcon,
   DatabaseIcon,
-  ExtensionsIcon,
   HooksIcon,
   InteractionsIcon,
   ManifestIcon,
@@ -78,7 +77,6 @@ export {
   SettingsIcon,
   StorageIcon,
   SystemIcon,
-  TemplatesIcon,
   ToolsIcon,
 } from './nav-marks';
 export { AlertTriangleIcon, CheckCircleIcon, PendingIcon, XCircleIcon } from './status-marks';

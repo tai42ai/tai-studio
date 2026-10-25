@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import { toolDisplayLabel } from '../hooks/useToolDisplayNames';
 import { Badge } from './badge';
 import { Field } from './field';
-import { Select, type SelectGroup } from './select';
+import { Select, type SelectGroup, type SelectOption } from './select';
 import { Tooltip } from './tooltip';
 
 /** The shared informational note every badge surface carries: declared, never enforced. */
@@ -80,6 +80,9 @@ interface ToolSelectProps {
   readonly disabled: boolean | undefined;
   readonly displayNames: Readonly<Record<string, string>> | undefined;
   readonly agentToolNames: ReadonlySet<string> | undefined;
+  /** An option drawn ahead of the list's own (a stored value the list does not carry). */
+  readonly leading: SelectOption | undefined;
+  readonly ariaDescribedBy: string | undefined;
 }
 
 /** The tool select: grouped by tag when `tagsByTool` is present, else a flat list.
@@ -94,32 +97,40 @@ export function ToolSelect({
   disabled,
   displayNames,
   agentToolNames,
+  leading,
+  ariaDescribedBy,
 }: ToolSelectProps): ReactNode {
   if (tagsByTool !== undefined) {
+    const groups = buildGroups(filtered, tagsByTool, displayNames, agentToolNames);
     return (
       <Select
-        groups={buildGroups(filtered, tagsByTool, displayNames, agentToolNames)}
+        groups={
+          leading === undefined ? groups : [{ label: leading.label, options: [leading] }, ...groups]
+        }
         value={value ?? ''}
         onValueChange={onChange}
         placeholder={placeholder}
         aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
         disabled={disabled}
       />
     );
   }
+  const options = filtered.map((name) => ({
+    value: name,
+    label: optionLabel(name, displayNames, agentToolNames),
+  }));
   return (
     <Select
       // Keep Radix controlled even when the caller's value is null: `''` matches no
       // item (placeholder still shows) and avoids the uncontrolled→controlled warning
       // a subsequent selection would otherwise trigger.
-      options={filtered.map((name) => ({
-        value: name,
-        label: optionLabel(name, displayNames, agentToolNames),
-      }))}
+      options={leading === undefined ? options : [leading, ...options]}
       value={value ?? ''}
       onValueChange={onChange}
       placeholder={placeholder}
       aria-label={ariaLabel}
+      aria-describedby={ariaDescribedBy}
       disabled={disabled}
     />
   );

@@ -87,6 +87,7 @@ function scopedProjection(overrides: Partial<MeProjection> = {}): MeProjection {
 }
 
 const BASE_PROJECTION: MeProjection = {
+  access_control_enabled: true,
   user_id: 'u-test',
   owner_user_id: null,
   principal: null,
@@ -260,6 +261,24 @@ describe('SystemPage', () => {
     // A null plugin renders the em-dash placeholder, never "null".
     expect(within(storageRow as HTMLElement).getByText('—')).toBeInTheDocument();
     expect(screen.getByText('NoOpMonitoring — no recorder plugin installed')).toBeInTheDocument();
+  });
+
+  it('renders the files feature row off, with the install line as its detail', async () => {
+    const install =
+      "tai42-skeleton 'files' resource loading requires the 'files' optional dependencies (magika, pandas, " +
+      'langchain-community, pypdf, docx2txt, openpyxl, tabulate, beautifulsoup4, python-pptx, striprtf, odfpy, ' +
+      "ebooklib). Install them with: pip install 'tai42-skeleton[files]'";
+    const client = stubClient({
+      getSystemKinds: vi
+        .fn()
+        .mockResolvedValue([{ kind: 'files', state: 'off', plugin: null, detail: install }]),
+    });
+    renderWithProviders(<SystemPage search={{}} />, { client });
+
+    const row = (await screen.findByText('files')).closest('tr');
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getByText('off')).toHaveAttribute('data-variant', 'neutral');
+    expect(within(row as HTMLElement).getByText(install)).toBeInTheDocument();
   });
 
   it('surfaces a loud error state when the kinds endpoint rejects', async () => {

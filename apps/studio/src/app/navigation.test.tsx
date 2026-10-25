@@ -54,9 +54,7 @@ describe('shell navigation', () => {
     const nav = makeNav();
     expect(nav.resolvePath('tools', { tool: 'echo' })).toBe('/tools?tool=echo');
     expect(nav.resolvePath('connectors', { connection: 'c1' })).toBe('/connectors?connection=c1');
-    expect(nav.resolvePath('templates', { template: 'welcome.md' })).toBe(
-      '/templates?template=welcome.md',
-    );
+    expect(nav.resolvePath('storage', { id: 'welcome.md' })).toBe('/storage?id=welcome.md');
   });
 
   it('resolvePluginPath builds a plugin deep-link href with the sub-path and search', () => {

@@ -387,6 +387,7 @@ const CONTAINER_STRIPS = [
   '.tai-explorer-controls',
   '.tai-explorer-folder',
   '.tai-explorer-pagination',
+  '.tai-stepper',
 ];
 
 /**
@@ -439,6 +440,8 @@ const CALLER_SIZED_ITEMS = [
   '.tai-nav-link',
   '.tai-segment',
   '.tai-select-trigger',
+  '.tai-stepper-button',
+  '.tai-action-menu-item',
 ];
 
 /**
@@ -472,6 +475,10 @@ const NOT_CALLER_SIZED: Readonly<Record<string, string>> = {
     'a fixed 1rem box with flex: none; its label is a sibling .tai-choice, not content of its own',
   '.tai-radio':
     'a fixed 1rem box with flex: none; its label is a sibling .tai-choice, not content of its own',
+  '.tai-stepper-step':
+    'holds the 2 px connector bar and one .tai-stepper-button; the step label is the button text, which the button breaks',
+  '.tai-stepper-marker':
+    'a fixed 24 px circle with flex-shrink: 0 holding a step number or a 14 px mark',
 };
 
 /**
@@ -633,7 +640,7 @@ describe('narrow-viewport contract', () => {
     expect([scoped, unconditionalValues(scoped, 'overflow-wrap').length]).not.toEqual([scoped, 0]);
     // The floor half, asserted as the EFFECT rather than as a spelling. What the
     // control needs back inside a table is a minimum that is not `0` — the
-    // eight that carry `min-width: 0` get it from the group's `auto`, and
+    // ten that carry `min-width: 0` get it from the group's `auto`, and
     // `.tai-segment` already has it in its own 28 px / 44 px pointer target,
     // which the group deliberately does not overwrite (see the sheet). Reading
     // the effect rather than the literal `auto` is what lets that one rule be
@@ -689,6 +696,8 @@ describe('narrow-viewport contract', () => {
         'the same clip pattern applied to a grouped jq field label — never painted, so it cannot push anything',
       '.tai-brand-label':
         'the product name, a constant this repo owns and deliberately keeps on one line',
+      '.tai-stepper-step:not(.tai-stepper-step-current)':
+        'the same clip pattern applied below 640 px to every stepper step but the current one — never painted, so it cannot push anything',
       '.tai-table .tai-chip':
         'a tag chip inside a table stays one token — the cell wraps between chips, never inside one, so a hyphenated tag does not split across two lines; outside a table the chip keeps overflow-wrap: anywhere so it cannot push the document at 320 px',
     };

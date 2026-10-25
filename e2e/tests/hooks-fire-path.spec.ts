@@ -5,6 +5,11 @@
  * back from the row. (Pass-role refusal, unreachable as admin, is pinned in the
  * unit suite.)
  *
+ * The session cases serve `GET /api/auth/me`, the api-key list and the register write
+ * through `page.route`: a key session binds its own identity over an empty or refused key
+ * list, an account session reads the account note with Register disabled, and with access
+ * control off the form shows no key field and sends the fill identity.
+ *
  * The door-display and verifier-bind assertions below depend on the skeleton
  * populating the topic → door map, so they run against the booted skeleton this
  * config starts, not against a stub.
@@ -12,7 +17,19 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
-import { API_KEY, EXECUTION_KEY_ID, loginViaUi, pickExecutionKey } from './helpers';
+import { API_KEY, EXECUTION_KEY_ID, loginViaUi, pickExecutionKey, seedCredential } from './helpers';
+import {
+  ACCOUNT_EMPTY_NOTE,
+  accountSession,
+  bodyOf,
+  gateOffSession,
+  KEY_LIST_FORBIDDEN_NOTE,
+  keySession,
+  nextRequest,
+  serveWrite,
+  stubKeyList,
+  stubSession,
+} from './session-stubs';
 
 needs('kind:identity', 'kind:webhook_verifiers:github', 'mutable', 'setting:hooks');
 
@@ -43,7 +60,7 @@ test('register a hook with a bound execution key, and see it run AS that key', a
   await page.goto('/hooks');
 
   const name = `e2e-runs-as-${Date.now().toString(36)}`;
-  await fillRegisterForm(page, { name, topic: 'e2e-hook-plain', tool: 'echo' });
+  await fillRegisterForm(page, { name, topic: 'e2e-hook-plain', tool: 'studio_demo_echo' });
   await registerForm(page).getByRole('button', { name: 'Register' }).click();
 
   const row = hookRow(page, name);
@@ -75,7 +92,7 @@ test('bind a verifier to a topic, then a hook on it shows the verifier-signed do
   await expect(page.getByTestId(`topic-verifier-${topic}`)).toBeVisible();
 
   // A hook on that topic inherits the topic's server-derived door.
-  await fillRegisterForm(page, { name, topic, tool: 'echo' });
+  await fillRegisterForm(page, { name, topic, tool: 'studio_demo_echo' });
   await registerForm(page).getByRole('button', { name: 'Register' }).click();
   const row = hookRow(page, name);
   await expect(row).toBeVisible();
@@ -105,7 +122,7 @@ test("a key the server refuses to bind surfaces the server's message VERBATIM", 
   const form = registerForm(page);
   await form.getByLabel('Name').fill(name);
   await form.getByLabel('Topic').fill('e2e-hook-refused');
-  await form.getByLabel('Tool', { exact: true }).fill('echo');
+  await form.getByLabel('Tool', { exact: true }).fill('studio_demo_echo');
   await pickExecutionKey(page, form, conditionalKeyId);
 
   const refusal = page.waitForResponse(
@@ -124,4 +141,88 @@ test("a key the server refuses to bind surfaces the server's message VERBATIM", 
   // Rendered exactly as the server wrote it — never re-worded or summarised.
   await expect(form.getByRole('alert')).toContainText(message);
   await expect(hookRow(page, name)).toHaveCount(0);
+});
+
+/** Fill the register form's name, topic and tool, leaving the execution key to the case. */
+async function fillHookFields(page: Page, name: string): Promise<void> {
+  const form = registerForm(page);
+  await form.getByLabel('Name').fill(name);
+  await form.getByLabel('Topic').fill('e2e-hook-session');
+  await form.getByLabel('Tool', { exact: true }).fill('studio_demo_echo');
+}
+
+const isHooks = (pathname: string): boolean => pathname === '/api/hooks';
+
+test.describe('the execution key a session can bind', () => {
+  test('a key session over an empty key list binds its own identity', async ({ page }) => {
+    await seedCredential(page);
+    await stubSession(page, keySession);
+    await stubKeyList(page, { keys: [] });
+    const name = `e2e-own-${Date.now().toString(36)}`;
+    await serveWrite(page, 'POST', isHooks, { data: { name, registered: true } });
+    await page.goto('/hooks');
+
+    await fillHookFields(page, name);
+    await pickExecutionKey(page, registerForm(page));
+    const write = nextRequest(page, 'POST', isHooks);
+    await registerForm(page).getByRole('button', { name: 'Register' }).click();
+
+    expect(bodyOf(await write).execution_key).toBe(EXECUTION_KEY_ID);
+  });
+
+  test('an account session over an empty key list reads the note and cannot register', async ({
+    page,
+  }) => {
+    await seedCredential(page);
+    await stubSession(page, accountSession);
+    await stubKeyList(page, { keys: [] });
+    await page.goto('/hooks');
+
+    await fillHookFields(page, `e2e-account-${Date.now().toString(36)}`);
+    const form = registerForm(page);
+    await expect(form.getByText(ACCOUNT_EMPTY_NOTE, { exact: true })).toBeVisible();
+    await expect(form.getByRole('combobox', { name: 'Execution key' })).toHaveCount(0);
+    await expect(form.getByRole('button', { name: 'Register' })).toBeDisabled();
+  });
+
+  test('with access control off the form shows no key field and sends the fill identity', async ({
+    page,
+  }) => {
+    await seedCredential(page);
+    await stubSession(page, gateOffSession);
+    const name = `e2e-gate-off-${Date.now().toString(36)}`;
+    await serveWrite(page, 'POST', isHooks, { data: { name, registered: true } });
+    await page.goto('/hooks');
+
+    await fillHookFields(page, name);
+    const form = registerForm(page);
+    await expect(form.getByText('Execution key', { exact: true })).toHaveCount(0);
+    const register = form.getByRole('button', { name: 'Register' });
+    await expect(register).toBeEnabled();
+    const write = nextRequest(page, 'POST', isHooks);
+    await register.click();
+
+    expect(bodyOf(await write).execution_key).toBe('__no_auth__');
+  });
+
+  test("a refused key list reads the note, offers no retry, and binds the session's identity", async ({
+    page,
+  }) => {
+    await seedCredential(page);
+    await stubSession(page, keySession);
+    await stubKeyList(page, { status: 403, error: 'Forbidden' });
+    const name = `e2e-no-grant-${Date.now().toString(36)}`;
+    await serveWrite(page, 'POST', isHooks, { data: { name, registered: true } });
+    await page.goto('/hooks');
+
+    await fillHookFields(page, name);
+    const form = registerForm(page);
+    await expect(form.getByText(KEY_LIST_FORBIDDEN_NOTE, { exact: true })).toBeVisible();
+    await expect(form.getByRole('button', { name: 'Retry' })).toHaveCount(0);
+    await pickExecutionKey(page, form);
+    const write = nextRequest(page, 'POST', isHooks);
+    await form.getByRole('button', { name: 'Register' }).click();
+
+    expect(bodyOf(await write).execution_key).toBe(EXECUTION_KEY_ID);
+  });
 });

@@ -27,9 +27,11 @@ function renderDialog(overrides: Parameters<typeof makeClient>[0] = {}) {
   const provider = discoveredProvider({ client_source: 'unset' });
   const client = makeClient({
     discoverServer: vi.fn().mockResolvedValue(discovered()),
-    setProviderClient: vi
-      .fn()
-      .mockResolvedValue({ provider: { ...provider, client_source: 'manual' }, fanout: null }),
+    setProviderClient: vi.fn().mockResolvedValue({
+      provider: { ...provider, client_source: 'manual' },
+      fanout: null,
+      span_release_error: null,
+    }),
     listProviders: vi.fn().mockResolvedValue({ providers: [provider], categories: [] }),
     ...overrides,
   });
@@ -273,7 +275,11 @@ describe('ClientCredentialsDialog — saving', () => {
     });
     expect(screen.getByLabelText('Client secret')).toBeDisabled();
     expect(screen.getByRole('combobox', { name: 'Sign-in service' })).toBeDisabled();
-    answer({ provider: discoveredProvider({ client_source: 'manual' }), fanout: null });
+    answer({
+      provider: discoveredProvider({ client_source: 'manual' }),
+      fanout: null,
+      span_release_error: null,
+    });
     await waitFor(() => {
       expect(onSaved).toHaveBeenCalledOnce();
     });

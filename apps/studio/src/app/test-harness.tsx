@@ -27,6 +27,7 @@ const SESSION_KEY = 'tai-studio.apiKey';
  * tests that exercise a scoped session override it with `server.use(...)`.
  */
 export const FULL_PROJECTION: MeProjection = {
+  access_control_enabled: true,
   user_id: 'u-admin',
   owner_user_id: null,
   principal: null,

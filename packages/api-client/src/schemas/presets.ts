@@ -52,13 +52,20 @@ export const presetRenamed = openapi.presetRenameResult;
 export type PresetRenamed = z.infer<typeof presetRenamed>;
 
 /**
- * `GET /api/presets/{name}/referees` — every OTHER preset whose active authored
- * composition names this one as a tool (the referees a rename would strand). An
- * empty list is the clean case; a non-empty list means a rename is blocked until
- * those presets are updated. A drift throws `ApiSchemaError`.
+ * `GET /api/presets/{name}/referees?action=` and
+ * `GET /api/states/{name}/attachments/{template}/referees` — every holder that would
+ * refuse the action. An empty list is the clean case; a non-empty list is what the
+ * server's 409 would name. A drift throws `ApiSchemaError`.
  */
-export const presetReferees = openapi.presetRefereesResult;
-export type PresetReferees = z.infer<typeof presetReferees>;
+export const holdersPreview = openapi.holdersPreview;
+export type HoldersPreview = z.infer<typeof holdersPreview>;
+
+/** One holder of a reference: its kind, its name, a one-line summary and its locator. */
+export const referenceHolder = openapi.referenceHolder;
+export type ReferenceHolder = z.infer<typeof referenceHolder>;
+
+/** The preset action a holder preview answers for. */
+export type PresetHolderAction = 'rename' | 'delete';
 
 /**
  * `POST /api/presets/validate` — the dry-run verdict for a preset draft. `valid`

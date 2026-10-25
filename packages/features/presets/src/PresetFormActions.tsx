@@ -12,7 +12,7 @@ export function PresetFormActions({
   canValidate,
   validatePending,
   createPending,
-  outputValid,
+  schemasValid,
   extensionsValid,
   kwargsRowsValid,
   versioningDisabled,
@@ -22,7 +22,8 @@ export function PresetFormActions({
   readonly canValidate: boolean;
   readonly validatePending: boolean;
   readonly createPending: boolean;
-  readonly outputValid: boolean;
+  /** Both schema editors hold a parseable schema (or none). */
+  readonly schemasValid: boolean;
   readonly extensionsValid: boolean;
   readonly kwargsRowsValid: boolean;
   readonly versioningDisabled: boolean;
@@ -45,7 +46,7 @@ export function PresetFormActions({
         variant="primary"
         disabled={
           createPending ||
-          !outputValid ||
+          !schemasValid ||
           !extensionsValid ||
           !kwargsRowsValid ||
           versioningDisabled

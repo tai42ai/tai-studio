@@ -6,7 +6,7 @@
  */
 import type { TargetConversationConfig } from '@tai42/api-client';
 import { Badge, Button, TD, TR } from '@tai42/studio-sdk';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 
 import { EMPTY_PLACEHOLDER } from './format';
 
@@ -19,18 +19,29 @@ export function ConfigRow({
   config,
   canWrite,
   canDelete,
+  highlighted = false,
   onEdit,
   onDelete,
 }: {
   readonly config: TargetConversationConfig;
   readonly canWrite: boolean;
   readonly canDelete: boolean;
+  /** The row a deep link points at: marked current on the accent tint, scrolled to. */
+  readonly highlighted?: boolean;
   readonly onEdit: () => void;
   readonly onDelete: () => void;
 }): ReactNode {
   const rowKey = configRowKey(config);
+  const rowRef = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    if (highlighted) rowRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [highlighted]);
   return (
-    <TR>
+    <TR
+      ref={rowRef}
+      aria-current={highlighted ? 'true' : undefined}
+      style={highlighted ? { background: 'var(--tai-color-accent-tint)' } : undefined}
+    >
       <TD>
         <span className="tai-mono">{`${config.target_kind}: ${config.target_name}`}</span>
       </TD>

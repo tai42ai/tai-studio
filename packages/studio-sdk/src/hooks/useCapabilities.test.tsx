@@ -6,10 +6,12 @@ import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } fr
 import { ApiProvider } from './useApi';
 import { AuthProvider, useAuth } from './useAuth';
 import {
+  boundExecutionKey,
   CapabilityProvider,
   coversAnyRoute,
   coversRoute,
   coversWrite,
+  executionKeyBindingOf,
   isFullProjection,
   useCanWrite,
   useCapabilities,
@@ -18,6 +20,7 @@ import { UnauthorizedProvider } from './useUnauthorized';
 
 function projection(overrides: Partial<MeProjection> = {}): MeProjection {
   return {
+    access_control_enabled: true,
     user_id: 'u',
     owner_user_id: null,
     principal: null,
@@ -198,14 +201,13 @@ describe('coversWrite', () => {
     expect(coversWrite(state, '/api/presets', 'POST')).toBe(false);
   });
 
-  it('is false for a dynamic (templated) write route the projection cannot express', () => {
+  it('reads a templated write route by its template path and its method', () => {
     const state = {
       status: 'ready',
-      projection: projection({
-        route_patterns: [{ pattern: '^/api/presets/.*$', scope_id: 's', open_prefix: null }],
-      }),
+      projection: projection({ routes: [{ path: '/api/presets/{name}', methods: ['DELETE'] }] }),
     } as const;
-    expect(coversWrite(state, '/api/presets/{name}', 'DELETE')).toBe(false);
+    expect(coversWrite(state, '/api/presets/{name}', 'DELETE')).toBe(true);
+    expect(coversWrite(state, '/api/presets/{name}', 'PATCH')).toBe(false);
   });
 
   it('FAILS CLOSED while loading — no write control enables before the gate is known', () => {
@@ -479,5 +481,69 @@ describe('CapabilityProvider', () => {
       result.current.auth.logout();
     });
     expect(result.current.caps.state).toEqual({ status: 'loading' });
+  });
+});
+
+// -- executionKeyBindingOf / boundExecutionKey -------------------------------
+
+describe('executionKeyBindingOf', () => {
+  const ALICE = { user_id: 'alice', display_name: 'Alice', kind: 'human' as const };
+
+  it('is pending while loading and on a failed projection', () => {
+    expect(executionKeyBindingOf({ status: 'loading' })).toEqual({ mode: 'pending' });
+    expect(executionKeyBindingOf({ status: 'failed', error: new Error('x') })).toEqual({
+      mode: 'pending',
+    });
+  });
+
+  it('is unchecked with the projection user as the fill when access control is off', () => {
+    const state = {
+      status: 'ready' as const,
+      projection: projection({ access_control_enabled: false, user_id: '__no_auth__' }),
+    };
+    expect(executionKeyBindingOf(state)).toEqual({ mode: 'unchecked', fillKey: '__no_auth__' });
+  });
+
+  it('is checked with kind key for an owned key and for an ownerless key', () => {
+    const owned = projection({ user_id: 'alice-key', owner_user_id: 'alice', principal: ALICE });
+    expect(executionKeyBindingOf({ status: 'ready', projection: owned })).toEqual({
+      mode: 'checked',
+      own: { userId: 'alice-key', kind: 'key', admin: false },
+    });
+    const ownerless = projection({ user_id: 'svc', owner_user_id: null, principal: null });
+    expect(executionKeyBindingOf({ status: 'ready', projection: ownerless })).toEqual({
+      mode: 'checked',
+      own: { userId: 'svc', kind: 'key', admin: false },
+    });
+  });
+
+  it('is checked with kind account for a principal session, admin copied', () => {
+    const account = projection({
+      user_id: 'alice',
+      owner_user_id: null,
+      principal: ALICE,
+      admin: true,
+    });
+    expect(executionKeyBindingOf({ status: 'ready', projection: account })).toEqual({
+      mode: 'checked',
+      own: { userId: 'alice', kind: 'account', admin: true },
+    });
+  });
+});
+
+describe('boundExecutionKey', () => {
+  const unchecked = { mode: 'unchecked', fillKey: '__no_auth__' } as const;
+  const checked = { mode: 'checked', own: { userId: 'me', kind: 'key', admin: false } } as const;
+
+  it('fills a blank value under unchecked and keeps a non-blank one', () => {
+    expect(boundExecutionKey('', unchecked)).toBe('__no_auth__');
+    expect(boundExecutionKey('  ', unchecked)).toBe('__no_auth__');
+    expect(boundExecutionKey('svc', unchecked)).toBe('svc');
+  });
+
+  it('returns the value, blank included, under pending and checked', () => {
+    expect(boundExecutionKey('', { mode: 'pending' })).toBe('');
+    expect(boundExecutionKey('', checked)).toBe('');
+    expect(boundExecutionKey('svc', checked)).toBe('svc');
   });
 });

@@ -64,6 +64,18 @@ export function encodeSegment(value: string | number): string {
   return encodeURIComponent(segment);
 }
 
+/**
+ * Encode one part of a multi-segment (`{name:path}`) path parameter. An empty part is
+ * kept as it is (the browser sends empty segments as typed); a `.` or `..` part is
+ * REJECTED, because the WHATWG URL parser removes it from the path, percent-encoded or not.
+ */
+export function encodePathPart(part: string): string {
+  if (part === '.' || part === '..') {
+    throw new Error(`URL path part must not be '.' or '..'; received ${JSON.stringify(part)}`);
+  }
+  return encodeURIComponent(part);
+}
+
 function buildUrl(base: string, path: string, query?: RequestOptions['query']): string {
   const url = `${base}${path}`;
   if (!query) return url;

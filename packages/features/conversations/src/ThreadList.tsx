@@ -113,9 +113,9 @@ export function ThreadList({
   const filtered = status !== undefined || address !== undefined;
 
   // Bulk reset fans out the per-thread DELETE door, so it is offered on the same
-  // terms that door is: the dynamic (templated) DELETE route a scoped projection
-  // can never method-express, so the whole multi-select surface withdraws for a
-  // caller who cannot delete, leaving the read-only listing it was.
+  // terms that door is: the templated DELETE route, read by its template path. The
+  // whole multi-select surface withdraws for a caller who cannot delete, leaving the
+  // read-only listing it was.
   const canReset = useCanWrite(apiRoutes.delete_api_conversations_route_name_thread.path, 'DELETE');
   const loadedIds = useMemo(() => pager.items.map((thread) => thread.thread_id), [pager.items]);
   const selection = useThreadSelection(loadedIds);

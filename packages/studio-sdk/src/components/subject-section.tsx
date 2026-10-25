@@ -27,14 +27,19 @@ export interface SubjectTargetOption {
 /** The message a partially-filled subject is refused with (all three fields or none). */
 export const SUBJECT_INCOMPLETE_MESSAGE = 'A subject needs a target, a kind, and a key.';
 
-/** Map the conversation routes read to the target select's options. */
+/** Map the conversation routes read to the target select's options: one option per
+ * distinct target, in first-seen order, since several routes may share a target. */
 export function toSubjectTargetOptions(
   routes: readonly { readonly target_kind: string; readonly target_name: string }[],
 ): SubjectTargetOption[] {
-  return routes.map((route) => ({
-    value: `${route.target_kind}:${route.target_name}`,
-    label: `${route.target_kind} · ${route.target_name}`,
-  }));
+  const byValue = new Map<string, SubjectTargetOption>();
+  for (const route of routes) {
+    const value = `${route.target_kind}:${route.target_name}`;
+    if (!byValue.has(value)) {
+      byValue.set(value, { value, label: `${route.target_kind} · ${route.target_name}` });
+    }
+  }
+  return [...byValue.values()];
 }
 
 /**

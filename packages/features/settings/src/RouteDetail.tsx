@@ -1,6 +1,7 @@
 /**
- * The read-only route detail under a feature group: each route's method + action
- * class, shown as an escaped mono line with an action badge.
+ * The read-only route detail under a feature group: each route's method and path,
+ * shown as an escaped mono line, with a badge for its role reach — the `read`/`write`
+ * class of a route a level opens, or `admin-only`, `self-service` or `public`.
  */
 import type { AuthRoute } from '@tai42/api-client';
 import { Badge } from '@tai42/studio-sdk';
@@ -23,17 +24,35 @@ const routeRowStyle: CSSProperties = {
   color: 'var(--tai-color-text-muted)',
 };
 
-/** The badge variant + label for a route's action class in the read-only detail. */
-function actionBadge(action: AuthRoute['action']): ReactNode {
-  switch (action) {
+/** The badge of a route a level opens: its `read`/`write` action class. */
+function levelBadge(route: AuthRoute): ReactNode {
+  switch (route.action) {
     case 'read':
       return <Badge variant="neutral">read</Badge>;
     case 'write':
       return <Badge variant="primary">write</Badge>;
-    case 'fenced':
-      return <Badge variant="warning">admin-only</Badge>;
-    case 'secret':
-      return <Badge variant="warning">sensitive — admin only</Badge>;
+    default:
+      throw new Error(
+        `Route ${route.path} has role reach "level" but action ${JSON.stringify(route.action)}; a level opens only read/write routes.`,
+      );
+  }
+}
+
+/** The badge variant + label for a route's role reach in the read-only detail. */
+function reachBadge(route: AuthRoute): ReactNode {
+  switch (route.role_reach) {
+    case 'level':
+      return levelBadge(route);
+    case 'admin_only':
+      return (
+        <Badge variant="warning">
+          {route.action === 'secret' ? 'sensitive — admin only' : 'admin-only'}
+        </Badge>
+      );
+    case 'self_service':
+      return <Badge variant="neutral">self-service</Badge>;
+    case 'public':
+      return <Badge variant="neutral">public</Badge>;
     case null:
       return null;
   }
@@ -47,7 +66,7 @@ export function RouteDetail({ routes }: { readonly routes: readonly AuthRoute[] 
           <span className="tai-mono">
             {route.methods.join(', ')} {route.path}
           </span>
-          {actionBadge(route.action)}
+          {reachBadge(route)}
         </li>
       ))}
     </ul>

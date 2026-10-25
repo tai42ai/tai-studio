@@ -7,6 +7,9 @@ test-results/
 # playwright junit reports, written next to each e2e config
 e2e/junit.xml
 e2e/router-invariant/junit.xml
+# the e2e boot's runtime state (its .env, the served manifest copy and their locks),
+# written on every boot
+e2e/boot/.config-state/
 *.tsbuildinfo
 .turbo/
 .pnpm-store/

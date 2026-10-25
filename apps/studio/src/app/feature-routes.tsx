@@ -9,7 +9,6 @@ import { schemas } from '@tai42/api-client';
 import { AgentsPage } from '@tai42/feature-agents';
 import { ConnectorsPage } from '@tai42/feature-connectors';
 import { ConversationsPage } from '@tai42/feature-conversations';
-import { ExtensionsPage } from '@tai42/feature-extensions';
 import { HooksPage } from '@tai42/feature-hooks';
 import { InteractionsPage } from '@tai42/feature-interactions';
 import { ManifestPage, ServedEndpointsPage } from '@tai42/feature-manifest';
@@ -23,7 +22,6 @@ import { SettingsPage } from '@tai42/feature-settings';
 import { StatesPage } from '@tai42/feature-states';
 import { StoragePage } from '@tai42/feature-storage';
 import { SystemPage } from '@tai42/feature-system';
-import { TemplatesPage } from '@tai42/feature-templates';
 import { ToolsPage } from '@tai42/feature-tools';
 import type { RouteSearch } from '@tai42/studio-sdk';
 import { createRoute, useParams, useSearch } from '@tanstack/react-router';
@@ -34,12 +32,13 @@ import { PluginPage } from './plugin-page';
 import {
   parseEnum,
   parseMarketplaceSearch,
+  parseNumber,
   parseObservabilitySearch,
   parseTags,
 } from './route-search';
 import type { AuthedLayoutRoute } from './shell-routes';
 
-/** The authoring surfaces: tools, agents, presets, states, extensions. */
+/** The authoring surfaces: tools, agents, presets, states. */
 function buildWorkbenchRoutes(authedLayout: AuthedLayoutRoute) {
   const toolsRoute = createRoute({
     getParentRoute: () => authedLayout,
@@ -65,6 +64,7 @@ function buildWorkbenchRoutes(authedLayout: AuthedLayoutRoute) {
     path: '/presets',
     validateSearch: (search: Record<string, unknown>): RouteSearch<'presets'> => ({
       preset: typeof search.preset === 'string' ? search.preset : undefined,
+      version: parseNumber(search.version),
     }),
     component: function PresetsRoute(): ReactNode {
       return <PresetsPage search={useSearch({ from: '/authed/presets' })} />;
@@ -86,13 +86,7 @@ function buildWorkbenchRoutes(authedLayout: AuthedLayoutRoute) {
     },
   });
 
-  const extensionsRoute = createRoute({
-    getParentRoute: () => authedLayout,
-    path: '/extensions',
-    component: (): ReactNode => <ExtensionsPage search={{}} />,
-  });
-
-  return [toolsRoute, agentsRoute, presetsRoute, statesRoute, extensionsRoute];
+  return [toolsRoute, agentsRoute, presetsRoute, statesRoute];
 }
 
 /** The activity surfaces: interactions, notifications, conversations, observability. */
@@ -121,6 +115,7 @@ function buildActivityRoutes(authedLayout: AuthedLayoutRoute) {
       status: parseEnum(search.status, schemas.conversationDeliveryStatus.options),
       address: typeof search.address === 'string' ? search.address : undefined,
       q: typeof search.q === 'string' ? search.q : undefined,
+      config: typeof search.config === 'string' ? search.config : undefined,
     }),
     component: function ConversationsRoute(): ReactNode {
       return <ConversationsPage search={useSearch({ from: '/authed/conversations' })} />;
@@ -139,7 +134,7 @@ function buildActivityRoutes(authedLayout: AuthedLayoutRoute) {
   return [interactionsRoute, notificationsRoute, conversationsRoute, observabilityRoute];
 }
 
-/** The integration surfaces: connectors, served endpoints, hooks, templates, storage, manifest. */
+/** The integration surfaces: connectors, served endpoints, hooks, storage, manifest. */
 function buildIntegrationRoutes(authedLayout: AuthedLayoutRoute) {
   const connectorsRoute = createRoute({
     getParentRoute: () => authedLayout,
@@ -161,18 +156,11 @@ function buildIntegrationRoutes(authedLayout: AuthedLayoutRoute) {
   const hooksRoute = createRoute({
     getParentRoute: () => authedLayout,
     path: '/hooks',
-    component: (): ReactNode => <HooksPage search={{}} />,
-  });
-
-  const templatesRoute = createRoute({
-    getParentRoute: () => authedLayout,
-    path: '/templates',
-    validateSearch: (search: Record<string, unknown>): RouteSearch<'templates'> => ({
-      template: typeof search.template === 'string' ? search.template : undefined,
-      q: typeof search.q === 'string' ? search.q : undefined,
+    validateSearch: (search: Record<string, unknown>): RouteSearch<'hooks'> => ({
+      hook: typeof search.hook === 'string' ? search.hook : undefined,
     }),
-    component: function TemplatesRoute(): ReactNode {
-      return <TemplatesPage search={useSearch({ from: '/authed/templates' })} />;
+    component: function HooksRoute(): ReactNode {
+      return <HooksPage search={useSearch({ from: '/authed/hooks' })} />;
     },
   });
 
@@ -181,6 +169,7 @@ function buildIntegrationRoutes(authedLayout: AuthedLayoutRoute) {
     path: '/storage',
     validateSearch: (search: Record<string, unknown>): RouteSearch<'storage'> => ({
       q: typeof search.q === 'string' ? search.q : undefined,
+      id: typeof search.id === 'string' ? search.id : undefined,
     }),
     component: function StorageRoute(): ReactNode {
       return <StoragePage search={useSearch({ from: '/authed/storage' })} />;
@@ -193,14 +182,7 @@ function buildIntegrationRoutes(authedLayout: AuthedLayoutRoute) {
     component: (): ReactNode => <ManifestPage search={{}} />,
   });
 
-  return [
-    connectorsRoute,
-    servedEndpointsRoute,
-    hooksRoute,
-    templatesRoute,
-    storageRoute,
-    manifestRoute,
-  ];
+  return [connectorsRoute, servedEndpointsRoute, hooksRoute, storageRoute, manifestRoute];
 }
 
 /** The administration surfaces + the runtime plugin-page catch-all. */
@@ -226,7 +208,12 @@ function buildAdminRoutes(authedLayout: AuthedLayoutRoute, plugins: PluginLoader
   const schedulingRoute = createRoute({
     getParentRoute: () => authedLayout,
     path: '/scheduling',
-    component: (): ReactNode => <SchedulingPage search={{}} />,
+    validateSearch: (search: Record<string, unknown>): RouteSearch<'scheduling'> => ({
+      schedule: typeof search.schedule === 'string' ? search.schedule : undefined,
+    }),
+    component: function SchedulingRoute(): ReactNode {
+      return <SchedulingPage search={useSearch({ from: '/authed/scheduling' })} />;
+    },
   });
 
   const marketplaceRoute = createRoute({

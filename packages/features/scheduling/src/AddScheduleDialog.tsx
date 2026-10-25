@@ -17,6 +17,7 @@
  */
 import type { StateBinding } from '@tai42/api-client';
 import {
+  boundExecutionKey,
   Button,
   Dialog,
   errorMessage,
@@ -25,6 +26,7 @@ import {
   StateBindingSection,
   SubjectSection,
   useApi,
+  useExecutionKeyBinding,
 } from '@tai42/studio-sdk';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, useCallback, useState } from 'react';
@@ -32,6 +34,7 @@ import { type ReactNode, useCallback, useState } from 'react';
 import { schedulesKey } from './keys';
 import {
   buildScheduleBody,
+  hasDoorContract,
   hasFieldError,
   parseKwargs,
   type ScheduleBody,
@@ -64,10 +67,10 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
   // The execution key + the four door-contract jqs a parkable-driving schedule carries.
   const contract = useScheduleContract();
 
-  const { toolsQuery, toolNames, excludeToolNames, badgesByTool, displayNames } =
-    useScheduleTools();
+  const { toolsQuery, excludeToolNames, badgesByTool, displayNames } = useScheduleTools();
   const { bindingProps, templatedTextTemplates } = useScheduleBinding(tool);
-  const keysQuery = useScheduleExecutionKeys();
+  const binding = useExecutionKeyBinding();
+  const keysQuery = useScheduleExecutionKeys(binding.mode === 'checked');
   const subject = useScheduleSubject();
 
   const add = useMutation({
@@ -104,7 +107,9 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
         subjectKind: subject.kind,
         subjectKey: subject.key,
         stateBinding,
-        executionKey: contract.executionKey,
+        executionKey: hasDoorContract(contract.contract)
+          ? boundExecutionKey(contract.executionKey, binding)
+          : contract.executionKey,
         contract: contract.contract,
       },
       kwargsResult.value,
@@ -117,7 +122,7 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
       return;
     }
     add.mutate(built.body);
-  }, [add, contract, cron, kwargs, mode, name, stateBinding, subject, tool, validation]);
+  }, [add, binding, contract, cron, kwargs, mode, name, stateBinding, subject, tool, validation]);
 
   return (
     <Dialog
@@ -141,7 +146,6 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
           toolMissing={validation.toolMissing}
           kwargsError={kwargsError}
           toolsQuery={toolsQuery}
-          toolNames={toolNames}
           excludeToolNames={excludeToolNames}
           displayNames={displayNames}
           badgesByTool={badgesByTool}
@@ -181,6 +185,7 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
         <ScheduleContractSection
           contract={contract}
           keysQuery={keysQuery}
+          binding={binding}
           templatedTextTemplates={templatedTextTemplates}
         />
 

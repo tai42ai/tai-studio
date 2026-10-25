@@ -10,7 +10,17 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { RegisterHookForm } from './RegisterHookForm';
-import { apiKey, hook, openSelect, renderWithProviders, type StubApiClient } from './test-utils';
+import {
+  accountSessionProjection,
+  apiKey,
+  clickWhenInteractable,
+  gateOffProjection,
+  hook,
+  keySessionProjection,
+  openSelect,
+  renderWithProviders,
+  type StubApiClient,
+} from './test-utils';
 
 /** Open the execution-key Select and pick the seeded svc-events key. */
 async function pickExecutionKey(user: ReturnType<typeof userEvent.setup>): Promise<void> {
@@ -25,7 +35,7 @@ describe('RegisterHookForm — overwrite notice (create)', () => {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
       listHooks: vi.fn().mockResolvedValue({ items: [hook({ name: 'notify-event' })], total: 1 }),
     };
-    renderWithProviders(<RegisterHookForm />, { client });
+    renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
 
     // The list must load before overwrite detection is live.
     await waitFor(() => {
@@ -52,7 +62,7 @@ describe('RegisterHookForm — overwrite notice (create)', () => {
       listHooks: vi.fn().mockRejectedValue(new Error('list boom')),
       registerHook,
     };
-    renderWithProviders(<RegisterHookForm />, { client });
+    renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
 
     expect(await screen.findByText(/Overwrite detection is/)).toBeInTheDocument();
 
@@ -79,7 +89,7 @@ describe('RegisterHookForm — overwrite notice (create)', () => {
       }),
       registerHook,
     };
-    renderWithProviders(<RegisterHookForm />, { client });
+    renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
 
     await user.type(await screen.findByLabelText('Name'), 'greet');
     await user.type(screen.getByLabelText('Topic'), 'events.created');
@@ -128,7 +138,10 @@ describe('RegisterHookForm — edit mode', () => {
       // touches it must save it back verbatim.
       condition: { id: 'shape.big-event', kwargs: { threshold: 100 } },
     });
-    renderWithProviders(<RegisterHookForm initial={initial} onClose={onClose} />, { client });
+    renderWithProviders(<RegisterHookForm initial={initial} onClose={onClose} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     expect(screen.getByLabelText('Name')).toHaveValue('notify-event');
     expect(screen.getByLabelText('Topic')).toHaveValue('events.created');
@@ -170,7 +183,7 @@ describe('RegisterHookForm — edit mode', () => {
     };
     renderWithProviders(
       <RegisterHookForm initial={hook({ name: 'notify-event' })} onClose={vi.fn()} />,
-      { client },
+      { client, projection: accountSessionProjection() },
     );
 
     await waitFor(() => {
@@ -194,7 +207,10 @@ describe('RegisterHookForm — edit mode', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       registerHook,
     };
-    renderWithProviders(<RegisterHookForm initial={hook()} onClose={onClose} />, { client });
+    renderWithProviders(<RegisterHookForm initial={hook()} onClose={onClose} />, {
+      client,
+      projection: accountSessionProjection(),
+    });
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onClose).toHaveBeenCalledOnce();
@@ -217,7 +233,7 @@ describe('RegisterHookForm — jq condition and door-contract expression fields'
         listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
         registerHook,
       };
-      renderWithProviders(<RegisterHookForm />, { client });
+      renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
 
       await user.type(screen.getByLabelText('Name'), 'greet');
       await user.type(screen.getByLabelText('Topic'), 'events.created');
@@ -256,7 +272,7 @@ describe('RegisterHookForm — jq condition and door-contract expression fields'
     // The door folds its field label into its accessible name
     // ("Open the visual editor for <label>"), so each door is pinned to its own field
     // by name — a bare count could not tell WHICH fields got one.
-    renderWithProviders(<RegisterHookForm />, { client });
+    renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
 
     for (const label of ['Condition', 'Start', 'Cancel', 'Resume', 'Extras']) {
       expect(
@@ -279,7 +295,7 @@ describe('RegisterHookForm — charset rule', () => {
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       registerHook,
     };
-    renderWithProviders(<RegisterHookForm />, { client });
+    renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
 
     await user.type(screen.getByLabelText('Name'), 'bad/name');
     await user.type(screen.getByLabelText('Topic'), 'events.created');
@@ -309,7 +325,7 @@ describe('RegisterHookForm — state binding source resolution', () => {
       listStateTemplates: vi.fn().mockResolvedValue([]),
       getToolSchema,
     };
-    renderWithProviders(<RegisterHookForm />, { client });
+    renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
     await user.type(screen.getByLabelText('Tool'), 'notify');
     await waitFor(() => {
       expect(getToolSchema.mock.calls.some((call) => call[0] === 'notify')).toBe(true);
@@ -380,6 +396,7 @@ describe('RegisterHookForm — inherited advisory + binding serialization', () =
     const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'tally-hook' });
     renderWithProviders(<RegisterHookForm initial={boundHook()} onClose={vi.fn()} />, {
       client: presetClient(registerHook),
+      projection: accountSessionProjection(),
     });
     expect(await screen.findByText('Overrides the preset’s subject')).toBeInTheDocument();
     expect(screen.getByText('Preset default:')).toBeInTheDocument();
@@ -390,6 +407,7 @@ describe('RegisterHookForm — inherited advisory + binding serialization', () =
     const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'tally-hook' });
     renderWithProviders(<RegisterHookForm initial={boundHook()} onClose={vi.fn()} />, {
       client: presetClient(registerHook),
+      projection: accountSessionProjection(),
     });
     // The fire gate is unsatisfiable — and submit a no-op — until the key list
     // resolves, which is exactly when the picker sheds its disabled state.
@@ -413,5 +431,146 @@ describe('RegisterHookForm — inherited advisory + binding serialization', () =
         },
       ],
     });
+  });
+});
+
+describe('RegisterHookForm — execution-key binding', () => {
+  const forbiddenKeys = (): Promise<never> => Promise.reject(new ApiError('forbidden', 403));
+
+  async function fillIdentity(
+    user: ReturnType<typeof userEvent.setup>,
+    name = 'greet',
+  ): Promise<void> {
+    await user.type(await screen.findByLabelText('Name'), name);
+    await user.type(screen.getByLabelText('Topic'), 'events.created');
+    await user.type(screen.getByLabelText('Tool'), 'notify');
+  }
+
+  function keyClient(listTokensPayload: StubApiClient['listTokensPayload']) {
+    const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'greet' });
+    const client: StubApiClient = {
+      listTokensPayload,
+      listHooks: vi.fn().mockResolvedValue({ items: [hook({ name: 'taken' })], total: 1 }),
+      registerHook,
+    };
+    return { client, registerHook };
+  }
+
+  it('access control off: no key field, no key read, registers as the fill identity', async () => {
+    const user = userEvent.setup({ delay: null });
+    const { client, registerHook } = keyClient(vi.fn().mockResolvedValue([apiKey()]));
+    renderWithProviders(<RegisterHookForm />, { client, projection: gateOffProjection() });
+
+    await fillIdentity(user);
+    expect(screen.queryByText('Execution key')).not.toBeInTheDocument();
+    await clickWhenInteractable(user, screen.getByRole('button', { name: 'Register' }));
+
+    await waitFor(() => {
+      expect(registerHook).toHaveBeenCalledOnce();
+    });
+    expect(registerHook.mock.calls[0]?.[0]).toMatchObject({ execution_key: '__no_auth__' });
+    expect(client.listTokensPayload).not.toHaveBeenCalled();
+  });
+
+  it('access control off: an edit keeps the stored key; a taken name still warns', async () => {
+    const user = userEvent.setup({ delay: null });
+    const { client, registerHook } = keyClient(vi.fn().mockResolvedValue([]));
+    renderWithProviders(
+      <RegisterHookForm
+        initial={hook({ name: 'greet', execution_key: 'svc' })}
+        onClose={vi.fn()}
+      />,
+      { client, projection: gateOffProjection() },
+    );
+
+    await user.clear(screen.getByLabelText('Name'));
+    await user.type(screen.getByLabelText('Name'), 'taken');
+    const notice = await screen.findByText(/current registration is/);
+    expect(notice).toHaveTextContent(
+      'Replaces the existing hook taken — its current registration is overwritten.',
+    );
+    await clickWhenInteractable(user, screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => {
+      expect(registerHook).toHaveBeenCalledOnce();
+    });
+    expect(registerHook.mock.calls[0]?.[0]).toMatchObject({ execution_key: 'svc' });
+  });
+
+  it('with no projection the key field is pending, unread, and Register is off', async () => {
+    const user = userEvent.setup({ delay: null });
+    const { client } = keyClient(vi.fn().mockResolvedValue([apiKey()]));
+    renderWithProviders(<RegisterHookForm />, { client });
+
+    await fillIdentity(user);
+    const picker = screen.getByRole('combobox', { name: 'Execution key' });
+    expect(picker).toBeDisabled();
+    expect(picker).toHaveTextContent('Loading keys…');
+    expect(screen.getByRole('button', { name: 'Register' })).toBeDisabled();
+    expect(client.listTokensPayload).not.toHaveBeenCalled();
+  });
+
+  for (const [label, read] of [
+    ['an empty key list', () => vi.fn().mockResolvedValue([])],
+    ['a refused key list', () => vi.fn().mockImplementation(forbiddenKeys)],
+  ] as const) {
+    it(`a key session over ${label} registers as its own identity`, async () => {
+      const user = userEvent.setup({ delay: null });
+      const { client, registerHook } = keyClient(read());
+      renderWithProviders(<RegisterHookForm />, { client, projection: keySessionProjection() });
+
+      await fillIdentity(user);
+      await openSelect(user, 'Execution key');
+      await user.click(
+        await screen.findByRole('option', { name: "alice-key — this session's identity" }),
+      );
+      await clickWhenInteractable(user, screen.getByRole('button', { name: 'Register' }));
+
+      await waitFor(() => {
+        expect(registerHook).toHaveBeenCalledOnce();
+      });
+      expect(registerHook.mock.calls[0]?.[0]).toMatchObject({ execution_key: 'alice-key' });
+    });
+
+    it(`a key session over ${label} with the key left blank shows the field error`, async () => {
+      const user = userEvent.setup({ delay: null });
+      const { client, registerHook } = keyClient(read());
+      renderWithProviders(<RegisterHookForm />, { client, projection: keySessionProjection() });
+
+      await fillIdentity(user);
+      await clickWhenInteractable(user, screen.getByRole('button', { name: 'Register' }));
+
+      expect(await screen.findByText('An execution key is required.')).toBeInTheDocument();
+      expect(registerHook).not.toHaveBeenCalled();
+    });
+  }
+
+  it('an account session over an empty key list reads the account note; Register is off', async () => {
+    const user = userEvent.setup({ delay: null });
+    const { client } = keyClient(vi.fn().mockResolvedValue([]));
+    renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
+
+    await fillIdentity(user);
+    expect(
+      await screen.findByText(
+        'No api keys of yours are listed. You are signed in as an account, not an api key, so your own identity cannot be picked here. Mint a key on the settings API-keys tab first.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Register' })).toBeDisabled();
+  });
+
+  it('a refused key list shows the no-grant note, no Retry; an account session cannot register', async () => {
+    const user = userEvent.setup({ delay: null });
+    const { client } = keyClient(vi.fn().mockImplementation(forbiddenKeys));
+    renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
+
+    await fillIdentity(user);
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'This session cannot list api keys. Picking one needs read access to GET /api/auth/tokens-payload; ask an administrator to grant it.',
+    );
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Execution key' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Register' })).toBeDisabled();
   });
 });

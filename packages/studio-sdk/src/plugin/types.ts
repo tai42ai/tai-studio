@@ -20,8 +20,10 @@
  *     its own. Bundled third-party base CSS is exempt from rule (c) but rules
  *     (a) and (b) still bind it.
  */
-import type { ConversationRouteView } from '@tai42/api-client';
+import type { ConversationRouteView, ReferenceHolder } from '@tai42/api-client';
 import type { ComponentType } from 'react';
+
+import type { PluginSearch } from '../navigation/types';
 
 /**
  * A capability requirement a contribution may declare. `routes` is a list of
@@ -246,6 +248,28 @@ export interface RegisteredRoutePanel extends RoutePanelContribution {
   readonly pluginId: string;
 }
 
+/** Where a plugin's page shows one holder: a page of the registering plugin. */
+export interface HolderLinkTarget {
+  readonly pagePath: string;
+  readonly params?: string;
+  readonly search?: PluginSearch;
+}
+
+/**
+ * Resolves the holders of one plugin-declared kind to a page of the registering
+ * plugin, so a holder list links that holder. One resolver per kind deployment-wide;
+ * a core kind cannot be registered.
+ */
+export interface HolderLinkContribution {
+  readonly kind: string;
+  readonly resolve: (holder: ReferenceHolder) => HolderLinkTarget;
+}
+
+/** A holder-link resolver as stored in the registry, stamped with its plugin. */
+export interface RegisteredHolderLink extends HolderLinkContribution {
+  readonly pluginId: string;
+}
+
 /** Everything a single plugin bundle has registered at import time. */
 export interface PluginContributions {
   readonly toolPanels: ReadonlyMap<string, ToolPanelContribution>;
@@ -254,6 +278,8 @@ export interface PluginContributions {
   readonly navEntries: readonly RegisteredNavEntry[];
   /** Route panels keyed by the channel they decorate. */
   readonly routePanels: ReadonlyMap<string, RegisteredRoutePanel>;
+  /** Holder-link resolvers keyed by the holder kind they resolve. */
+  readonly holderLinks: ReadonlyMap<string, RegisteredHolderLink>;
 }
 
 /**
@@ -284,6 +310,11 @@ export interface PluginContext {
    * same channels under `contributions.route_panels`, or the plugin fails to load.
    */
   registerRoutePanel(contribution: RoutePanelContribution): void;
+  /**
+   * Register the page that shows the holders of one plugin-declared kind. Registering a
+   * kind twice (by any plugin) or a core kind throws.
+   */
+  registerHolderLink(contribution: HolderLinkContribution): void;
   /**
    * The resolved absolute base of one of this plugin's route items, e.g. `/api/channels/web`,
    * or `null` when the item has no mount on this deployment (an optional router not listed, a

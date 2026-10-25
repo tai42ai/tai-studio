@@ -1,9 +1,10 @@
 /**
  * The rename-preset dialog. A preset's name IS its live tool name, so a rename
- * rebinds the tool. A referee preflight (the presets that name this one as a tool)
- * blocks a rename that would strand them; the preflight is ADVISORY — its own failure
- * leaves submit enabled and the server 409 backstops. On success it moves the record
- * and history to the new key and drops the OLD name's (credential-bearing) caches.
+ * rebinds the tool. The rename preview lists, as links, everything that still uses
+ * the name and blocks submit while it is non-empty; the preview is ADVISORY — loading,
+ * no grant or a failed read leave submit enabled and the server 409 backstops, and a
+ * 409 naming holders shows them in the same list. On success it moves the record and
+ * history to the new key and drops the OLD name's (credential-bearing) caches.
  */
 import {
   Button,
@@ -11,15 +12,18 @@ import {
   errorMessage,
   ErrorState,
   Field,
+  HolderPreview,
+  previewHolders,
   Spinner,
   TextInput,
   toolsListKey,
   useApi,
 } from '@tai42/studio-sdk';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, useState } from 'react';
 
 import { presetDetailKey, presetRefereesKey, presetsListKey, presetVersionsKey } from './keys';
+import { refusalHeadline, usePresetHolders } from './usePresetHolders';
 
 export function RenamePresetDialog({
   name,
@@ -36,19 +40,10 @@ export function RenamePresetDialog({
   const [submitted, setSubmitted] = useState(false);
   const trimmed = newName.trim();
 
-  // Preflight: the presets that name this one as a tool. A rename would strand them
-  // (the server 409s), so a non-empty list blocks submit with a danger callout. The
-  // preflight is ADVISORY — its own failure must not block a legal rename, so a fetch
-  // error leaves submit enabled and the server 409 backstops.
-  const refereesQuery = useQuery({
-    queryKey: presetRefereesKey(name),
-    queryFn: ({ signal }) => api.getPresetReferees(name, signal),
-  });
-  const referees = refereesQuery.data?.referees ?? [];
-  const hasReferees = referees.length > 0;
-
+  const preview = usePresetHolders(name, 'rename');
   const rename = useMutation({
     mutationFn: () => api.renamePreset(name, trimmed),
+    onError: preview.invalidate,
     onSuccess: (result) => {
       // A rename changes the tool listing (old gone, new present), so the master
       // list and the tool universe both go stale.
@@ -65,6 +60,9 @@ export function RenamePresetDialog({
     },
   });
 
+  const holderState = rename.isError ? preview.afterRefusal(rename.error) : preview.state;
+  const hasHolders = previewHolders(holderState).length > 0;
+
   return (
     <Dialog
       title={`Rename preset — ${name}`}
@@ -78,10 +76,10 @@ export function RenamePresetDialog({
         onSubmit={(event) => {
           event.preventDefault();
           setSubmitted(true);
-          // Only the empty-name rule and the referee preflight are enforced
-          // client-side; the server owns the pattern / collision / referee rules and
-          // its message renders verbatim.
-          if (trimmed === '' || hasReferees) return;
+          // Only the empty-name rule and the holder preview are enforced client-side;
+          // the server owns the pattern / collision / holder rules and its message
+          // renders verbatim.
+          if (trimmed === '' || hasHolders) return;
           rename.mutate();
         }}
         style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}
@@ -99,30 +97,25 @@ export function RenamePresetDialog({
             aria-required
           />
         </Field>
-        {hasReferees ? (
-          <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
-            Referenced by: {referees.join(', ')} — update those presets first.
-          </p>
+        <HolderPreview
+          state={holderState}
+          lead="Still used by — update these first:"
+          label={`Holders of ${name}`}
+          onNavigate={onClose}
+        />
+        {rename.isError ? (
+          <ErrorState
+            message={refusalHeadline(
+              api.holdersFromError(rename.error),
+              errorMessage(rename.error),
+            )}
+          />
         ) : null}
-        {refereesQuery.isError ? (
-          // Advisory preflight: a failed referees fetch must NOT block a legal
-          // rename, so submit stays enabled and the error is shown small.
-          <p
-            style={{
-              margin: 0,
-              fontSize: 'var(--tai-text-sm)',
-              color: 'var(--tai-color-text-muted)',
-            }}
-          >
-            Could not check referees: {errorMessage(refereesQuery.error)}
-          </p>
-        ) : null}
-        {rename.isError ? <ErrorState message={errorMessage(rename.error)} /> : null}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
           <Button type="button" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" disabled={rename.isPending || hasReferees}>
+          <Button type="submit" variant="primary" disabled={rename.isPending || hasHolders}>
             {rename.isPending ? <Spinner label="Renaming preset" /> : null}
             Rename
           </Button>

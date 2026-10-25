@@ -12,5 +12,17 @@
     },
     { "title": "filesystem", "transport": "stdio", "command": "tai-mcp-fs" }
   ],
-  "user_tools": ["studio_demo_echo", "studio_demo_form"]
+  "user_tools": ["studio_demo_echo", "studio_demo_form"],
+  "extension_settings": {
+    "extensions_modules": ["tai42_skeleton.extensions.builtin.ask_external"],
+    "backend_module": null,
+    "tools": [
+      {
+        "title": "reference-plugin-tools",
+        "extensions": { "studio_demo_echo": [["ask_external"]] }
+      }
+    ],
+    "mcp": [],
+    "api_tools": {}
+  }
 }

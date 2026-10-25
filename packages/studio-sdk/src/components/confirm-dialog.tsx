@@ -47,6 +47,8 @@ export interface ConfirmDialogProps {
    * the confirm button — the action can only refuse, so there is nothing to retry.
    */
   readonly disabledNote?: ReactNode;
+  /** Hold the confirm button disabled while the caller knows the action cannot pass. */
+  readonly confirmDisabled?: boolean;
   readonly confirmVariant?: 'primary' | 'danger';
   /** The cancel button's label; defaults to `Cancel`. Set it when the negative
    * choice reads better as a specific verb (e.g. `Keep existing`). */
@@ -64,6 +66,7 @@ export function ConfirmDialog({
   isPending,
   error,
   disabledNote,
+  confirmDisabled = false,
   confirmVariant = 'danger',
   cancelLabel = 'Cancel',
   children,
@@ -85,7 +88,7 @@ export function ConfirmDialog({
         <Button
           type="button"
           variant={confirmVariant}
-          disabled={isPending || disabledNote != null}
+          disabled={isPending || disabledNote != null || confirmDisabled}
           onClick={onConfirm}
         >
           {isPending ? <Spinner label={pendingLabel} /> : null}

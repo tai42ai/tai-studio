@@ -5,7 +5,7 @@
  * acted on ONLY when its origin, source, and type all match.
  */
 import type { FleetReportSummary, OAuthCompleteResult } from '@tai42/api-client';
-import { summarizeFleetFanout } from '@tai42/api-client';
+import { isFleetReportFailure, summarizeFleetFanout } from '@tai42/api-client';
 import type { QueryClient } from '@tanstack/react-query';
 
 import { CONNECTIONS_KEY } from './keys';
@@ -92,18 +92,19 @@ export function readCallback(data: unknown): OAuthCallbackMessage | null {
 export function applyCompletion(
   result: OAuthCompleteResult,
   queryClient: QueryClient,
-  onSuccess: ((fleet: FleetReportSummary | null) => void) | undefined,
+  onSuccess: ((fleet: FleetReportSummary | null, connectionId: string) => void) | undefined,
 ): OAuthNotice | null {
   switch (result.kind) {
     case 'success': {
       void queryClient.invalidateQueries({ queryKey: CONNECTIONS_KEY });
       // The completion writes the manifest and broadcasts a reload. The settled fleet
-      // summary is handed to the consumer so a non-converged broadcast stays visible
-      // as its own honest FleetReport (never a silent close); only a converged
-      // completion confirms success in a notice.
-      const fleet = summarizeFleetFanout(result.fanout, []);
-      onSuccess?.(fleet);
-      if (fleet !== null && fleet.status !== 'converged') return null;
+      // summary and the new connection's id are handed to the consumer, so a
+      // non-converged broadcast stays visible as its own honest FleetReport (never a
+      // silent close) and the consumer can open the connection's next step; only a
+      // converged completion confirms success in a notice.
+      const fleet = summarizeFleetFanout(result.fanout, [], result.span_release_error);
+      onSuccess?.(fleet, result.connection_id);
+      if (isFleetReportFailure(fleet)) return null;
       return { kind: 'success', message: 'Connected successfully.' };
     }
     case 'failed':

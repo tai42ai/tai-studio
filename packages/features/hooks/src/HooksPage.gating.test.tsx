@@ -6,9 +6,8 @@
  *    controls (the method-aware gate — no button that 403s on submit);
  *  - an ungranted non-admin ⇒ section ABSENT.
  *
- * The collection `POST /api/hooks/trigger-links` capability is the write witness for
- * BOTH mutations (the DELETE route is templated, so the projection carries it only
- * method-lessly); a hooks-READ grantee carries only GET on that path.
+ * Create gates on `POST /api/hooks/trigger-links` and revoke on
+ * `DELETE /api/hooks/trigger-links/{name}`, each read from the projection on its own.
  */
 import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -31,7 +30,9 @@ function client(): StubApiClient {
   };
 }
 
-const WRITE_ROUTES = [{ path: '/api/hooks/trigger-links', methods: ['GET', 'POST'] }];
+const CREATE_ROUTE = { path: '/api/hooks/trigger-links', methods: ['GET', 'POST'] };
+const REVOKE_ROUTE = { path: '/api/hooks/trigger-links/{name}', methods: ['DELETE'] };
+const WRITE_ROUTES = [CREATE_ROUTE, REVOKE_ROUTE];
 const READ_ROUTES = [{ path: '/api/hooks/trigger-links', methods: ['GET'] }];
 
 describe('HooksPage — trigger-links gating', () => {
@@ -75,6 +76,31 @@ describe('HooksPage — trigger-links gating', () => {
     expect(
       screen.queryByRole('button', { name: 'Revoke trigger link wall-poster' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('create without revoke: the create button and no row revoke', async () => {
+    renderWithProviders(<HooksPage search={{}} />, {
+      client: client(),
+      projection: scopedProjection({ routes: [CREATE_ROUTE] }),
+    });
+
+    expect(await screen.findByText('wall-poster')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create trigger link' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Revoke trigger link wall-poster' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('revoke without create: the row revoke and no create button', async () => {
+    renderWithProviders(<HooksPage search={{}} />, {
+      client: client(),
+      projection: scopedProjection({ routes: [...READ_ROUTES, REVOKE_ROUTE] }),
+    });
+
+    expect(
+      await screen.findByRole('button', { name: 'Revoke trigger link wall-poster' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create trigger link' })).not.toBeInTheDocument();
   });
 
   it('ungranted non-admin: section ABSENT', async () => {

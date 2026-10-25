@@ -4,7 +4,7 @@
 //
 // The platform's core routes by operationId. A placeholder written `{name:path}` matches
 // across `/` separators (the server names its converter on the parameter).
-import { encodeSegment } from '../http';
+import { encodePathPart, encodeSegment } from '../http';
 
 export const apiRoutes = {
   delete_api_agents_config_entries_title: { method: "DELETE", path: "/api/agents-config/entries/{title}" },
@@ -129,6 +129,7 @@ export const apiRoutes = {
   get_api_states_name: { method: "GET", path: "/api/states/{name}" },
   get_api_states_name_attachments: { method: "GET", path: "/api/states/{name}/attachments" },
   get_api_states_name_attachments_template: { method: "GET", path: "/api/states/{name}/attachments/{template}" },
+  get_api_states_name_attachments_template_referees: { method: "GET", path: "/api/states/{name}/attachments/{template}/referees" },
   get_api_states_name_consumers: { method: "GET", path: "/api/states/{name}/consumers" },
   get_api_states_name_records_check: { method: "GET", path: "/api/states/{name}/records/check" },
   get_api_states_name_records_target_kind_target_name_kind_key: { method: "GET", path: "/api/states/{name}/records/{target_kind}/{target_name}/{kind}/{key}" },
@@ -137,6 +138,7 @@ export const apiRoutes = {
   get_api_states_name_stats: { method: "GET", path: "/api/states/{name}/stats" },
   get_api_states_name_subjects: { method: "GET", path: "/api/states/{name}/subjects" },
   get_api_storage: { method: "GET", path: "/api/storage" },
+  get_api_storage_entries_resource_id: { method: "GET", path: "/api/storage/entries/{resource_id:path}" },
   get_api_storage_resources: { method: "GET", path: "/api/storage/resources" },
   get_api_storage_resources_resource_id_content: { method: "GET", path: "/api/storage/resources/{resource_id:path}/content" },
   get_api_storage_resources_resource_id_stat: { method: "GET", path: "/api/storage/resources/{resource_id:path}/stat" },
@@ -214,6 +216,7 @@ export const apiRoutes = {
   post_api_mcp_config_entries: { method: "POST", path: "/api/mcp-config/entries" },
   post_api_mcp_config_secret_env: { method: "POST", path: "/api/mcp-config/secret-env" },
   post_api_mcp_status_reload_failed: { method: "POST", path: "/api/mcp-status/reload-failed" },
+  post_api_mcp_status_title_advertised_tools: { method: "POST", path: "/api/mcp-status/{title}/advertised-tools" },
   post_api_mcp_status_title_deregister: { method: "POST", path: "/api/mcp-status/{title}/deregister" },
   post_api_mcp_status_title_reload: { method: "POST", path: "/api/mcp-status/{title}/reload" },
   post_api_notifications: { method: "POST", path: "/api/notifications" },
@@ -257,6 +260,7 @@ export const apiRoutes = {
   put_api_conversations_persons_person_id_locale: { method: "PUT", path: "/api/conversations/persons/{person_id}/locale" },
   put_api_conversations_route_name_thread_mode: { method: "PUT", path: "/api/conversations/{route_name}/thread/mode" },
   put_api_hooks_topics_topic_verifier: { method: "PUT", path: "/api/hooks/topics/{topic}/verifier" },
+  put_api_mcp_config_entries_title_tool_filter: { method: "PUT", path: "/api/mcp-config/entries/{title}/tool-filter" },
   put_api_presets_name_versions_version_tags: { method: "PUT", path: "/api/presets/{name}/versions/{version}/tags" },
   put_api_state_templates_name: { method: "PUT", path: "/api/state-templates/{name}" },
   put_api_states_name: { method: "PUT", path: "/api/states/{name}" },
@@ -310,6 +314,7 @@ export const apiPathPrefixes = [
   "/api/states/{name}/records/{target_kind}/{target_name}/{kind}",
   "/api/states/{name}/records/{target_kind}/{target_name}/{kind}/{key}/template-jq",
   "/api/storage/dirs",
+  "/api/storage/entries",
   "/api/system",
   "/api/tool-meta/tools",
   "/api/tools-config",
@@ -327,6 +332,6 @@ export function buildPath(template: ApiPathTemplate, params: Record<string, stri
   return template.replace(/\{([^}:]+)(:path)?\}/g, (_match, name: string, multi?: string) => {
     const value = params[name];
     if (value === undefined) throw new Error(`buildPath: missing param ${name} for ${template}`);
-    return multi ? value.split('/').map(encodeSegment).join('/') : encodeSegment(value);
+    return multi ? value.split('/').map(encodePathPart).join('/') : encodeSegment(value);
   });
 }

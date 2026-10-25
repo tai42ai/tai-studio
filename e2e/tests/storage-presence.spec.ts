@@ -35,6 +35,8 @@ test('the lean boot answers storage presence present:false with no management su
       present: false,
       provider: null,
       module: null,
+      // The manifest lists the templates router and not the storage router.
+      surfaces: ['templates'],
     });
 
     // The management surface stays optional — it is NOT mounted in the lean boot.

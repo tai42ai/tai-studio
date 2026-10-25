@@ -1,7 +1,9 @@
 /**
- * MANIFEST tab — the skeleton's loaded manifest view (`GET /api/manifest`),
- * rendered as a collapsible `<JsonTree>`. Every value is escaped React text, so
- * a manifest carrying markup is displayed literally and never interpreted.
+ * MANIFEST tab — the preserved manifest's MCP section and user tools
+ * (`GET /api/manifest`), rendered as a collapsible `<JsonTree>`. The view's extension
+ * settings render in the Extensions section, so they stay out of this tree. Every
+ * value is escaped React text, so a manifest carrying markup is displayed literally
+ * and never interpreted.
  */
 import {
   EmptyState,
@@ -41,11 +43,11 @@ export function ManifestTab(): ReactNode {
   if (mcp.length === 0 && user_tools.length === 0) {
     return (
       <EmptyState
-        title="The manifest is empty"
-        description="No MCP servers or user tools are declared yet."
+        title="No MCP servers or user tools"
+        description="The manifest declares no MCP servers and no user tools."
       />
     );
   }
 
-  return <JsonTree data={query.data} label="Manifest" />;
+  return <JsonTree data={{ mcp, user_tools }} label="Manifest" />;
 }

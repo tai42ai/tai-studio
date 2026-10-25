@@ -1,25 +1,9 @@
 /**
  * The top fields of the add-schedule dialog: the schedule name, the tool picker
- * (with its list-error branch), and the tool-kwargs JSON textarea.
+ * (which draws the schedulable-tools read's states), and the tool-kwargs JSON textarea.
  */
-import {
-  errorMessage,
-  ErrorState,
-  Field,
-  Textarea,
-  TextInput,
-  ToolPicker,
-} from '@tai42/studio-sdk';
+import { Field, Textarea, TextInput, type ToolListQuery, ToolPicker } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
-
-/** The tool-tags query status this surface reads. The schedulable tool names ride in
- *  their own `toolNames` prop; this shape carries only the read's loading/error legs. */
-interface ToolsQueryLike {
-  readonly isError: boolean;
-  readonly isPending: boolean;
-  readonly error: unknown;
-  readonly refetch: () => unknown;
-}
 
 export function ScheduleFields({
   name,
@@ -33,7 +17,6 @@ export function ScheduleFields({
   toolMissing,
   kwargsError,
   toolsQuery,
-  toolNames,
   excludeToolNames,
   displayNames,
   badgesByTool,
@@ -48,15 +31,13 @@ export function ScheduleFields({
   readonly nameMissing: boolean;
   readonly toolMissing: boolean;
   readonly kwargsError: string | null;
-  readonly toolsQuery: ToolsQueryLike;
-  readonly toolNames: readonly string[];
+  readonly toolsQuery: ToolListQuery;
   readonly excludeToolNames: readonly string[];
   readonly displayNames: Readonly<Record<string, string>>;
   readonly badgesByTool: Readonly<Record<string, readonly string[]>>;
 }): ReactNode {
-  // The picker offers only the tools the server serves as schedulable; with none, it is
-  // disabled with an explanation rather than offering an empty list.
-  const nothingSchedulable = !toolsQuery.isPending && toolNames.length === 0;
+  // The read serves no schedulable tool at all, versus every one it serves is hidden.
+  const nothingSchedulable = toolsQuery.isSuccess && (toolsQuery.data?.length ?? 0) === 0;
   return (
     <>
       <Field label="Name" error={submitted && nameMissing ? 'A name is required.' : undefined}>
@@ -69,39 +50,26 @@ export function ScheduleFields({
         />
       </Field>
 
-      {toolsQuery.isError ? (
-        <ErrorState
-          message={errorMessage(toolsQuery.error)}
-          onRetry={() => void toolsQuery.refetch()}
-        />
-      ) : (
-        <Field
-          label="Tool"
-          description={
-            nothingSchedulable
-              ? "A tool can be scheduled when it carries the scheduling backend's schedule extension."
-              : undefined
-          }
-          error={submitted && toolMissing ? 'A tool is required.' : undefined}
-        >
-          <ToolPicker
-            toolNames={toolNames}
-            value={tool}
-            onChange={setTool}
-            disabled={toolsQuery.isPending || nothingSchedulable}
-            placeholder={
-              toolsQuery.isPending
-                ? 'Loading tools…'
-                : nothingSchedulable
-                  ? 'No tool can be scheduled'
-                  : 'Select a tool…'
-            }
-            excludeNames={excludeToolNames}
-            displayNames={displayNames}
-            badgesByTool={badgesByTool}
-          />
-        </Field>
-      )}
+      <ToolPicker
+        query={toolsQuery}
+        value={tool}
+        onChange={setTool}
+        label="Tool"
+        description={
+          nothingSchedulable
+            ? "A tool can be scheduled when it carries the scheduling backend's schedule extension."
+            : undefined
+        }
+        error={submitted && toolMissing ? 'A tool is required.' : undefined}
+        emptyNote={
+          nothingSchedulable
+            ? 'No tool can be scheduled.'
+            : 'No tool to schedule. Hidden tools are not offered.'
+        }
+        excludeNames={excludeToolNames}
+        displayNames={displayNames}
+        badgesByTool={badgesByTool}
+      />
 
       <Field
         label="Tool kwargs (JSON)"

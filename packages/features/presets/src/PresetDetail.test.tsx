@@ -17,6 +17,7 @@ import {
   clickWhenInteractable,
   detail,
   emptyMeta,
+  fullProjection,
   renderWithProviders,
   type StubApiClient,
   versions,
@@ -29,7 +30,10 @@ describe('PresetDetail', () => {
       listPresetVersions: vi.fn().mockResolvedValue(versions),
       listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
     };
-    renderWithProviders(<PresetDetail name="paris_weather" />, { client });
+    renderWithProviders(<PresetDetail name="paris_weather" />, {
+      projection: fullProjection(),
+      client,
+    });
 
     // The JsonTree renders the baked kwargs key + value.
     expect(await screen.findByText('city:')).toBeInTheDocument();
@@ -55,7 +59,10 @@ describe('PresetDetail', () => {
         ],
       }),
     };
-    renderWithProviders(<PresetDetail name="paris_weather" />, { client });
+    renderWithProviders(<PresetDetail name="paris_weather" />, {
+      projection: fullProjection(),
+      client,
+    });
 
     // Both come from the overlay, not the record (the record has neither field now).
     expect(await screen.findByText('Paris Weather')).toBeInTheDocument();
@@ -88,7 +95,10 @@ describe('PresetDetail', () => {
       }),
       upsertToolMeta,
     };
-    const { queryClient } = renderWithProviders(<PresetDetail name="paris_weather" />, { client });
+    const { queryClient } = renderWithProviders(<PresetDetail name="paris_weather" />, {
+      projection: fullProjection(),
+      client,
+    });
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
 
     // Edit stays disabled until the overlay read lands (its tags seed the editor).
@@ -149,7 +159,7 @@ describe('PresetDetail', () => {
       <StaticToolDisplayNamesProvider names={{}} reload={reload}>
         <PresetDetail name="paris_weather" />
       </StaticToolDisplayNamesProvider>,
-      { client },
+      { projection: fullProjection(), client },
     );
 
     const edit = await screen.findByRole('button', { name: 'Edit details for paris_weather' });
@@ -186,7 +196,10 @@ describe('PresetDetail', () => {
       listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
       upsertToolMeta,
     };
-    renderWithProviders(<PresetDetail name="paris_weather" />, { client });
+    renderWithProviders(<PresetDetail name="paris_weather" />, {
+      projection: fullProjection(),
+      client,
+    });
 
     // Edit is enabled once the overlay read lands; open it and attempt a save.
     const edit = await screen.findByRole('button', { name: 'Edit details for paris_weather' });
@@ -222,7 +235,10 @@ describe('PresetDetail', () => {
       listPresetVersions: vi.fn().mockResolvedValue(versions),
       listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
     };
-    renderWithProviders(<PresetDetail name="paris_weather" />, { client });
+    renderWithProviders(<PresetDetail name="paris_weather" />, {
+      projection: fullProjection(),
+      client,
+    });
 
     expect(await screen.findByRole('button', { name: 'New version' })).toBeInTheDocument();
     expect(screen.getByText('Version history')).toBeInTheDocument();
@@ -243,7 +259,10 @@ describe('PresetDetail', () => {
       listPresetVersions: vi.fn().mockResolvedValue(versions),
       listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
     };
-    renderWithProviders(<PresetDetail name="paris_weather" />, { client });
+    renderWithProviders(<PresetDetail name="paris_weather" />, {
+      projection: fullProjection(),
+      client,
+    });
 
     // The output-schema JsonTree section renders its heading + a schema key.
     expect(await screen.findByText('Output schema')).toBeInTheDocument();
@@ -256,7 +275,10 @@ describe('PresetDetail', () => {
       getPreset: vi.fn().mockResolvedValue({ ...detail, conflicted: true }),
       listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
     };
-    renderWithProviders(<PresetDetail name="paris_weather" />, { client });
+    renderWithProviders(<PresetDetail name="paris_weather" />, {
+      projection: fullProjection(),
+      client,
+    });
 
     expect(await screen.findByText(/not\s+registered/i)).toBeInTheDocument();
     // No New version affordance and no version history for a conflicted record.
@@ -275,7 +297,10 @@ describe('PresetDetail', () => {
       listPresetVersions: vi.fn().mockResolvedValue(versions),
       listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
     };
-    const { unmount } = renderWithProviders(<PresetDetail name="paris_weather" />, { client });
+    const { unmount } = renderWithProviders(<PresetDetail name="paris_weather" />, {
+      projection: fullProjection(),
+      client,
+    });
     expect(
       await screen.findByRole('button', { name: 'Rename preset paris_weather' }),
     ).toBeInTheDocument();
@@ -285,7 +310,10 @@ describe('PresetDetail', () => {
       getPreset: vi.fn().mockResolvedValue({ ...detail, conflicted: true }),
       listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
     };
-    renderWithProviders(<PresetDetail name="paris_weather" />, { client: conflictedClient });
+    renderWithProviders(<PresetDetail name="paris_weather" />, {
+      projection: fullProjection(),
+      client: conflictedClient,
+    });
     await screen.findByText(/not\s+registered/i);
     // A conflicted record is delete-only — no Rename affordance, exactly like Versions.
     expect(screen.queryByRole('button', { name: 'Rename preset paris_weather' })).toBeNull();
@@ -300,7 +328,10 @@ describe('PresetDetail', () => {
       listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
       renamePreset,
     };
-    renderWithProviders(<PresetDetail name="paris_weather" />, { client });
+    renderWithProviders(<PresetDetail name="paris_weather" />, {
+      projection: fullProjection(),
+      client,
+    });
 
     await user.click(await screen.findByRole('button', { name: 'Rename preset paris_weather' }));
     await clickWhenInteractable(user, screen.getByRole('button', { name: 'Rename' }));
@@ -323,6 +354,7 @@ describe('PresetDetail', () => {
       renamePreset,
     };
     const { navigate, queryClient } = renderWithProviders(<PresetDetail name="paris_weather" />, {
+      projection: fullProjection(),
       client,
     });
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');

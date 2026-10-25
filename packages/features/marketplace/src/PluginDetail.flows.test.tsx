@@ -13,6 +13,7 @@ import {
   detailFixture,
   emptyAdvisories,
   installedRow,
+  installReceipt,
   noop,
   pending,
   reads,
@@ -87,7 +88,7 @@ describe('PluginDetail — install flow', () => {
   it('installs behind a confirm dialog, shows the receipt, and invalidates the whole cache', async () => {
     const user = userEvent.setup();
     const installMarketplacePlugin = vi.fn().mockResolvedValue({
-      ref: 'tai42/toolbox',
+      ...installReceipt('tai42/toolbox'),
       version: '1.2.0',
       notes: ['Selected as the OPENAI provider via OPENAI_API_KEY.'],
       advisories: [advisory({ id: 9, severity: 'medium', summary: 'Minor issue.' })],
@@ -217,7 +218,7 @@ describe('PluginDetail — update and uninstall flows', () => {
   it('updates behind a confirm dialog with the correct body', async () => {
     const user = userEvent.setup();
     const updateMarketplacePlugin = vi.fn().mockResolvedValue({
-      ref: 'tai42/toolbox',
+      ...installReceipt('tai42/toolbox'),
       version: '2.0.0',
       notes: [],
       advisories: [],
@@ -275,9 +276,12 @@ describe('PluginDetail — update and uninstall flows', () => {
 
   it('uninstalls behind a confirm dialog with the correct body', async () => {
     const user = userEvent.setup();
-    const uninstallMarketplacePlugin = vi
-      .fn()
-      .mockResolvedValue({ ref: 'tai42/toolbox', uninstalled: true, notes: ['Removed.'] });
+    const uninstallMarketplacePlugin = vi.fn().mockResolvedValue({
+      ref: 'tai42/toolbox',
+      uninstalled: true,
+      notes: ['Removed.'],
+      reload: null,
+    });
     const client: StubApiClient = {
       ...reads(detailFixture(), [installedRow()]),
       uninstallMarketplacePlugin,

@@ -25,7 +25,7 @@
 #      its own dedicated database, created in §3b and migrated by boot.sh);
 #   3. captures every screen in both themes with e2e/scripts/docs-screenshots.mjs
 #      (which FAILS the run rather than shipping an empty/broken shot); and
-#   4. copies the five shell screens the tai-studio README embeds into
+#   4. copies the four shell screens the tai-studio README embeds into
 #      docs/screenshots/, from the same capture (one source of truth).
 #
 # NOT A PRODUCTION TEMPLATE — it inherits boot.sh's test-only key + loopback
@@ -916,6 +916,24 @@ case "${hook_resp}" in
   *) die "registering the consumer hook 'notes-updater' failed: ${hook_resp}" ;;
 esac
 
+# 5. A holder of a stored template: a hook whose `condition` names `jq/gate`, so the
+#    storage-delete-held shot's Delete is refused with the hook as its holder.
+api -X DELETE "${BASE_URL}/api/hooks/gate-watch" >/dev/null 2>&1 || true
+gate_resp="$(api -H "content-type: application/json" -X POST "${BASE_URL}/api/hooks" \
+  -d "$(EXECUTION_KEY="${DEMO_USER_ID}" python3 -c '
+import json, os
+print(json.dumps({
+    "name": "gate-watch",
+    "topic": "notes",
+    "tool": "studio_demo_echo",
+    "execution_key": os.environ["EXECUTION_KEY"],
+    "condition": {"id": "jq/gate"},
+}))')")"
+case "${gate_resp}" in
+  *'"data"'*) : ;;
+  *) die "registering the template-holding hook 'gate-watch' failed: ${gate_resp}" ;;
+esac
+
 # Post-conditions (each shot's own read): the state is listed, the consumer hook binds
 # it, and the delta subject's Writes audit carries an `api`-origin row.
 api "${BASE_URL}/api/states" | grep -q "\"${STATE_NAME}\"" \
@@ -932,7 +950,7 @@ log "capturing screenshots into ${OUT_DIR}"
 STUDIO_URL="${BASE_URL}" OUT_DIR="${OUT_DIR}" node "${E2E_DIR}/scripts/docs-screenshots.mjs"
 
 # --- 9. Refresh the tai-studio README shell shots ---------------------------
-# The README embeds five shell screens; refresh them from the SAME capture so
+# The README shell set: four shell screens; refresh them from the SAME capture so
 # there is a single source of truth and no stale branding lingers. A run narrowed
 # with ONLY captures a subset, so it leaves the README set alone: refreshing part of
 # it from one build and the rest from an older one is exactly the mix this step exists
@@ -942,12 +960,12 @@ if [[ -n "${ONLY:-}" ]]; then
   log "ONLY is set — README shell shots in ${README_SHOTS_DIR} left untouched"
 else
   mkdir -p "${README_SHOTS_DIR}"
-  for screen in extensions login settings tool-run tools; do
+  for screen in login settings tool-run tools; do
     for theme in light dark; do
       cp "${OUT_DIR}/${screen}-${theme}.png" "${README_SHOTS_DIR}/${screen}-${theme}.png"
     done
   done
-  log "refreshed ${README_SHOTS_DIR} (5 shell screens × 2 themes)"
+  log "refreshed ${README_SHOTS_DIR} (4 shell screens × 2 themes)"
 fi
 
 # Success: drop the boot log. On any failure path execution exits before this line

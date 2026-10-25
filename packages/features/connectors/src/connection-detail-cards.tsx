@@ -31,7 +31,7 @@ const HEALTH_VARIANT: Record<ConnectionView['auth_health_state'], string> = {
   refresh_failing: 'danger',
 };
 
-const HEALTH_LABEL: Record<ConnectionView['auth_health_state'], string> = {
+export const HEALTH_LABEL: Record<ConnectionView['auth_health_state'], string> = {
   healthy: 'Healthy',
   reconnect_required: 'Reconnect required',
   refresh_failing: 'Refresh failing',

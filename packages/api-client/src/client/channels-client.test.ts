@@ -40,12 +40,22 @@ function harness(responder: () => Response) {
 describe('channels client transport', () => {
   it('listChannels() GETs /api/channels and unwraps the catalog', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { channels: ['telegram', 'slack'] } }),
+      jsonResponse({
+        data: {
+          channels: [
+            { name: 'telegram', identity_hint: null },
+            { name: 'slack', identity_hint: 'U-member id' },
+          ],
+        },
+      }),
     );
     const out = await client.listChannels();
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/channels');
-    expect(out.channels).toEqual(['telegram', 'slack']);
+    expect(out.channels).toEqual([
+      { name: 'telegram', identity_hint: null },
+      { name: 'slack', identity_hint: 'U-member id' },
+    ]);
   });
 
   it('listChannels() accepts an empty catalog', async () => {
@@ -54,8 +64,8 @@ describe('channels client transport', () => {
     expect(out.channels).toEqual([]);
   });
 
-  it('throws ApiSchemaError LOUDLY on a drifting body (non-string member)', async () => {
-    const { client } = harness(() => jsonResponse({ data: { channels: [1] } }));
+  it('throws ApiSchemaError LOUDLY on a drifting body (a bare-name member)', async () => {
+    const { client } = harness(() => jsonResponse({ data: { channels: ['telegram'] } }));
     await expect(client.listChannels()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 });

@@ -268,14 +268,30 @@ describe('marketplace client transport', () => {
       jsonResponse({
         data: {
           results: [
-            { ref: 'tai42/toolbox', outcome: 'upgraded', detail: '0.1.0 -> 0.2.0' },
+            {
+              ref: 'tai42/toolbox',
+              outcome: 'upgraded',
+              detail: '0.1.0 -> 0.2.0',
+              span_release_error: null,
+            },
             {
               ref: 'tai42/stable',
               outcome: 'up-to-date',
               detail: '0.1.0 is the latest compatible version',
+              span_release_error: null,
             },
-            { ref: 'tai42/orphan', outcome: 'no-compatible-version', detail: 'newest is 9.0.0' },
-            { ref: 'tai42/flaky', outcome: 'failed', detail: 'pip install failed' },
+            {
+              ref: 'tai42/orphan',
+              outcome: 'no-compatible-version',
+              detail: 'newest is 9.0.0',
+              span_release_error: null,
+            },
+            {
+              ref: 'tai42/flaky',
+              outcome: 'failed',
+              detail: 'pip install failed',
+              span_release_error: null,
+            },
           ],
         },
       }),

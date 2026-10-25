@@ -68,6 +68,19 @@ describe('toSubjectTargetOptions', () => {
       { value: 'tool:echo', label: 'tool · echo' },
     ]);
   });
+
+  it('offers a target once when several routes share it', () => {
+    expect(
+      toSubjectTargetOptions([
+        { target_kind: 'tool', target_name: 'echo' },
+        { target_kind: 'agent', target_name: 'assistant' },
+        { target_kind: 'tool', target_name: 'echo' },
+      ]),
+    ).toEqual([
+      { value: 'tool:echo', label: 'tool · echo' },
+      { value: 'agent:assistant', label: 'agent · assistant' },
+    ]);
+  });
 });
 
 describe('useSubjectFields', () => {

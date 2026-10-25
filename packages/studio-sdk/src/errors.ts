@@ -10,3 +10,13 @@ export function errorMessage(error: unknown): string {
   if (typeof error === 'string') return error;
   return 'An unexpected error occurred.';
 }
+
+/**
+ * True when `error` is a refusal for want of a grant: an object whose `status` is
+ * `403`. Duck-typed, so it reads an `ApiError` and any error shaped like one.
+ */
+export function isForbiddenError(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && (error as { status?: unknown }).status === 403
+  );
+}

@@ -4,17 +4,21 @@
  * QueryClient, the raw `ApiProvider`, the auth + capability contexts, the
  * ThemeProvider, and a NavigationProvider with spy-able `navigate` / `resolvePath`.
  *
- * The page embeds the MCP-servers section, whose write affordances gate on the
- * capability projection. These tests seed no session key, so `CapabilityProvider`
- * stays unauthenticated → the write gates fail closed (the section's read surfaces
- * still render); the connectors surfaces under test carry their own coverage. A test
- * that needs a gated affordance present drives it through the dedicated MCP harness.
+ * The directory's reads and write controls gate on the capability projection. A
+ * test that passes no projection seeds no session key, so `CapabilityProvider` stays
+ * unauthenticated and every gate falls closed; `fullProjection` and
+ * `scopedProjection` build the projection a test passes to open them.
  */
 import type {
   ApiClient,
   ConnectionView,
   ConnectorCategoryView,
   DiscoveredServer,
+  ManifestMcpEntry,
+  MarketplaceInstallResult,
+  MarketplacePluginDetail,
+  MarketplaceSearchPage,
+  MarketplaceSearchRow,
   MeProjection,
   ProviderCatalogResponse,
   ProviderView,
@@ -88,20 +92,30 @@ export function renderWithProviders(
 /**
  * Build a mock `ApiClient` from a partial set of methods; unused ones throw if hit.
  *
- * The unified Connectors page also renders the MCP-servers section, which reads a
- * handful of server doors on mount. A connectors test that cares only about the
- * providers/connections sections should not have to stub those, so they default to
- * QUIET empty answers here (no mounted servers, empty config) — a caller can still
- * override any of them to drive the MCP section explicitly.
+ * The Connectors directory also reads the preserved manifest, the live MCP status
+ * and the marketplace on mount. Those reads default to QUIET empty answers here (no
+ * mounted servers, an empty manifest, nothing installed); a caller overrides any of
+ * them to drive the directory's server and listing rows.
  */
 export function makeClient(overrides: Partial<ApiClient>): ApiClient {
   const mcpQuietDefaults: Partial<ApiClient> = {
     getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
-    getManifestPreserved: vi.fn().mockResolvedValue({ mcp: [], user_tools: [] }),
+    getManifestPreserved: vi.fn().mockResolvedValue({
+      mcp: [],
+      user_tools: [],
+      extension_settings: {
+        extensions_modules: [],
+        backend_module: null,
+        tools: [],
+        mcp: [],
+        api_tools: {},
+      },
+    }),
     getMcpConfigSchema: vi.fn().mockResolvedValue({ type: 'object', properties: {} }),
     listExtensions: vi.fn().mockResolvedValue([]),
     getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
     listInstalledMarketplacePlugins: vi.fn().mockResolvedValue({ installed: [] }),
+    searchMarketplace: vi.fn().mockResolvedValue(searchPage([])),
     getMcpEnvRefs: vi.fn().mockResolvedValue([]),
     listFailedMcps: vi.fn().mockResolvedValue({
       op: 'list_failed_mcps',
@@ -112,6 +126,32 @@ export function makeClient(overrides: Partial<ApiClient>): ApiClient {
     }),
   };
   return { ...mcpQuietDefaults, ...overrides } as ApiClient;
+}
+
+const baseProjection: MeProjection = {
+  access_control_enabled: true,
+  user_id: 'u-test',
+  owner_user_id: null,
+  principal: null,
+  admin: false,
+  public_resource_id: 'public',
+  scopes: [],
+  routes: [],
+  route_patterns: [],
+  sub_mcp: [],
+  tools: [],
+  agents: [],
+  mintable: false,
+};
+
+/** An administrator's projection: every route is reached. */
+export function fullProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return { ...baseProjection, admin: true, ...overrides };
+}
+
+/** A scoped (non-admin) projection restricted to the given routes and patterns. */
+export function scopedProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return { ...baseProjection, ...overrides };
 }
 
 /** A fake popup window matching the surface `useOAuthPopup` touches. */
@@ -231,4 +271,139 @@ export const NON_CONVERGED_FANOUT = {
     { name: 'serve-b', outcome: 'departed', payload: null, error: null, detail: 'left' },
   ],
   error: null,
-};
+} satisfies MarketplaceInstallResult['reload']['fanout'];
+
+/** A preserved-manifest MCP entry; `connectionId` makes it a connection's managed entry. */
+export function mcpEntry(
+  title: string,
+  {
+    connectionId = null,
+    providerId = 'github',
+    include = [],
+    exclude = [],
+  }: {
+    connectionId?: string | null;
+    providerId?: string;
+    include?: string[];
+    exclude?: string[];
+  } = {},
+): ManifestMcpEntry {
+  return {
+    title,
+    config: { transport: 'streamable-http', url: 'https://mcp.example.com/mcp' },
+    include,
+    exclude,
+    managed:
+      connectionId === null
+        ? null
+        : { connection_id: connectionId, provider_id: providerId, sub_service: 'default' },
+  };
+}
+
+/** A preserved-manifest answer holding `mcp`. */
+export function preservedManifest(mcp: ManifestMcpEntry[]) {
+  return {
+    mcp,
+    user_tools: [],
+    extension_settings: {
+      extensions_modules: [],
+      backend_module: null,
+      tools: [],
+      mcp: [],
+      api_tools: {},
+    },
+  };
+}
+
+/** A marketplace search row of one item kind. */
+export function listing(overrides: Partial<MarketplaceSearchRow> = {}): MarketplaceSearchRow {
+  return {
+    ref: 'acme/mail',
+    namespace: 'acme',
+    name: 'mail',
+    display_name: 'Acme Mail',
+    icon_url: null,
+    package: 'acme-mail',
+    description: 'Send and read mail.',
+    categories: [],
+    tags: [],
+    trust_tier: 'community',
+    pricing: 'free',
+    premium: false,
+    latest_version: '1.0.0',
+    downloads: 0,
+    updated_at: '2026-07-01T00:00:00Z',
+    kinds: [{ kind: 'connector', count: 1, names: ['acme_mail'] }],
+    groups: [],
+    ...overrides,
+  };
+}
+
+/** One search page; `total` defaults to the rows given, so there is no next page. */
+export function searchPage(
+  listings: MarketplaceSearchRow[],
+  { page = 1, total = listings.length, pageSize = 20 } = {},
+): MarketplaceSearchPage {
+  return { listings, total, page, page_size: pageSize };
+}
+
+/** A listing's detail whose latest version holds `items`. */
+export function listingDetail(
+  items: { kind: string; name: string }[],
+  overrides: Partial<MarketplacePluginDetail> = {},
+): MarketplacePluginDetail {
+  return {
+    namespace: 'acme',
+    name: 'mail',
+    display_name: 'Acme Mail',
+    icon_url: null,
+    package: 'acme-mail',
+    source: 'pypi',
+    description: 'Send and read mail.',
+    readme_md: null,
+    license: null,
+    homepage_url: null,
+    repository_url: null,
+    categories: [],
+    tags: [],
+    trust_tier: 'community',
+    pricing: 'free',
+    premium: false,
+    downloads: 0,
+    latest: {
+      version: '1.0.0',
+      contract_range: '>=1.0',
+      status: 'published',
+      published_at: '2026-07-01T00:00:00Z',
+      items: items.map((item) => ({ ...item, description: '', tags: [], group: null })),
+    },
+    versions: [],
+    ...overrides,
+  };
+}
+
+/** An install receipt whose reload carries `fanout` (a local-only reload by default). */
+export function installReceipt(
+  fanout: MarketplaceInstallResult['reload']['fanout'] = {
+    mode: 'local-only',
+    note: 'only this worker reloaded',
+  },
+): MarketplaceInstallResult {
+  return {
+    ref: 'acme/mail',
+    version: '1.0.0',
+    notes: [],
+    advisories: [],
+    routes: [],
+    package: null,
+    pip_output: null,
+    reload: {
+      span_release_error: null,
+      status: 'reloaded',
+      env_keys: 0,
+      recycle: null,
+      awaiting_respawn: [],
+      fanout,
+    },
+  };
+}

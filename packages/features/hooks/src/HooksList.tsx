@@ -3,7 +3,8 @@
  * the active `topic` filter so the query refetches whenever the filter changes
  * (empty = list all). Each row ({@link HookRow}) has an Edit door
  * ({@link EditHookDialog}) and a Delete door ({@link DeleteHookDialog}). The
- * per-topic verifier bindings render below as {@link TopicVerifiers}.
+ * per-topic verifier bindings render below as {@link TopicVerifiers}. A deep link's
+ * `highlight` marks that hook's row, or says above the table that no hook has the name.
  *
  * Server state is surfaced loudly: loading → `Skeleton`, empty → `EmptyState`, and
  * any failed request → an always-visible `ErrorState` — never a silent empty render.
@@ -37,7 +38,14 @@ function topicDoor(doors: HookList['trigger_auth'], topic: string): TriggerAuth 
   return Object.hasOwn(doors, topic) ? doors[topic] : undefined;
 }
 
-export function HooksList({ topic }: { topic: string }): ReactNode {
+export function HooksList({
+  topic,
+  highlight,
+}: {
+  readonly topic: string;
+  /** The hook a deep link points at, if any. */
+  readonly highlight?: string;
+}): ReactNode {
   const api = useApi();
 
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
@@ -93,6 +101,7 @@ export function HooksList({ topic }: { topic: string }): ReactNode {
                 door={topicDoor(doors, hook.topic)}
                 onEdit={setPendingEdit}
                 onDelete={setPendingDelete}
+                highlighted={hook.name === highlight}
               />
             ))}
           </TBody>
@@ -100,12 +109,23 @@ export function HooksList({ topic }: { topic: string }): ReactNode {
       </ScrollRegion>
     );
   }
+  // Only the unfiltered list can say a name is absent; a topic filter may hide it.
+  const highlightMissing =
+    highlight !== undefined &&
+    trimmedTopic === '' &&
+    query.isSuccess &&
+    !query.data.items.some((hook) => hook.name === highlight);
 
   return (
     <Card>
       <h2 style={{ margin: '0 0 var(--tai-space-4)', fontSize: 'var(--tai-text-lg)' }}>
         Registered hooks
       </h2>
+      {highlightMissing ? (
+        <p role="status" style={{ margin: '0 0 var(--tai-space-3)' }}>
+          {`No hook named '${highlight}'.`}
+        </p>
+      ) : null}
       {body}
       <TopicVerifiers verifiers={query.data?.topic_verifiers ?? {}} />
       {pendingDelete !== null ? (

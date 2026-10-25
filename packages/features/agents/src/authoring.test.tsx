@@ -304,8 +304,8 @@ describe('authored-agents list', () => {
         }),
       ),
     );
-    // The authored agent is visible (its preset reads), but the dynamic authored-run POST
-    // is not method-expressible in the projection, so the run degrades to read-only.
+    // The authored agent is visible (its preset reads), but the projection lists no POST
+    // on the authored-run route, so the run degrades to read-only.
     renderWithProviders(<AgentsPage />, authoredClient({ streamAuthoredAgentRun, getPreset }), {
       projection: scopedProjection({ routes: [{ path: '/api/agents', methods: ['GET'] }] }),
     });

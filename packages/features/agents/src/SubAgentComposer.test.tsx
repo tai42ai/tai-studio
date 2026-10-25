@@ -4,6 +4,7 @@
  * the low-emphasis (ghost) style rather than filled danger.
  */
 import type { PresetDetail } from '@tai42/api-client';
+import type { ToolListQuery } from '@tai42/studio-sdk';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { type ReactNode, useState } from 'react';
@@ -12,6 +13,18 @@ import { describe, expect, it, vi } from 'vitest';
 import type { InlineSubAgentSpec } from './authoring-types';
 import { SubAgentComposer } from './SubAgentComposer';
 import { presetRecord, renderWithProviders, stubClient } from './test-utils';
+
+/** A settled tools read over the given names, as the compose dialog's query hands it down. */
+function loadedTools(names: readonly string[]): ToolListQuery {
+  return {
+    data: names,
+    isPending: false,
+    isError: false,
+    isSuccess: true,
+    error: null,
+    refetch: () => undefined,
+  };
+}
 
 function spec(overrides: Partial<InlineSubAgentSpec> = {}): InlineSubAgentSpec {
   return {
@@ -32,6 +45,8 @@ const presetDetail = (over: Partial<PresetDetail> = {}): PresetDetail => ({
   extensions: [],
   output_schema: null,
   input_schema: null,
+  input_map: null,
+  output_map: null,
   conflicted: false,
   conflicted_reason: null,
   uses: [],
@@ -59,7 +74,7 @@ function Harness({
   const [value, setValue] = useState<readonly InlineSubAgentSpec[]>(initial);
   return (
     <SubAgentComposer
-      toolNames={toolNames}
+      toolsQuery={loadedTools(toolNames)}
       presetRecords={presetRecords}
       value={value}
       onChange={(next) => {
@@ -74,7 +89,7 @@ describe('SubAgentComposer — low-emphasis item control', () => {
   it('wears the ghost style on a sub-agent card Remove, not filled danger', () => {
     renderWithProviders(
       <SubAgentComposer
-        toolNames={['echo']}
+        toolsQuery={loadedTools(['echo'])}
         presetRecords={[presetRecord()]}
         value={[spec()]}
         onChange={vi.fn()}

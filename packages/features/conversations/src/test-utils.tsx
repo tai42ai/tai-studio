@@ -17,7 +17,9 @@
  * capability fetch (so it schedules no late state update to warn about).
  */
 import {
+  type AgentListing,
   type ApiClient,
+  type Channels,
   type ConversationMessage,
   type ConversationRouteView,
   type ConversationThread,
@@ -25,6 +27,7 @@ import {
   schemas,
   servedConstants,
   type TargetConversationConfig,
+  type TokensPayload,
 } from '@tai42/api-client';
 import type { NavigateOptions, NavigationContextValue, RouteSearch } from '@tai42/studio-sdk';
 import {
@@ -35,9 +38,10 @@ import {
   ThemeProvider,
 } from '@tai42/studio-sdk';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, type RenderResult } from '@testing-library/react';
+import { render, type RenderResult, screen, waitFor } from '@testing-library/react';
+import type userEvent from '@testing-library/user-event';
 import { type ReactElement, type ReactNode, useMemo, useState } from 'react';
-import { type Mock, vi } from 'vitest';
+import { expect, type Mock, vi } from 'vitest';
 
 import type { ConversationsSearch } from './search';
 
@@ -58,6 +62,7 @@ export function scopedProjection(overrides: Partial<MeProjection> = {}): MeProje
 }
 
 const baseProjection: MeProjection = {
+  access_control_enabled: true,
   user_id: 'u-test',
   owner_user_id: null,
   principal: null,
@@ -99,11 +104,21 @@ export interface RenderWithProvidersResult extends RenderResult {
 
 export function renderWithProviders(
   ui: ReactElement,
-  { client, projection }: { readonly client: StubApiClient; readonly projection?: MeProjection },
+  {
+    client,
+    projection,
+    seed,
+  }: {
+    readonly client: StubApiClient;
+    readonly projection?: MeProjection;
+    /** Fills the query cache before the first render, as another screen's earlier read would. */
+    readonly seed?: (queryClient: QueryClient) => void;
+  },
 ): RenderWithProvidersResult {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  seed?.(queryClient);
   const navigate = vi.fn();
   const apiClient = withCapabilities(client, projection);
   // Built ONCE, as the shell builds it — `createNavigation` runs at app assembly,
@@ -364,4 +379,114 @@ export function transcriptPage<T>(
   } = {},
 ) {
   return { ...page(items, nextPage, pageNumber, truncated), order, person_id: personId };
+}
+
+// -- execution-key sessions and picker reads ---------------------------------
+
+const ALICE = { user_id: 'alice', display_name: 'Alice', kind: 'human' } as const;
+
+/** A non-admin key session: the api key `alice-key`, owned by the account `alice`. */
+export function keySessionProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return {
+    ...baseProjection,
+    user_id: 'alice-key',
+    owner_user_id: 'alice',
+    principal: ALICE,
+    ...overrides,
+  };
+}
+
+/** A non-admin account session: the account `alice` itself, which the key picker cannot offer. */
+export function accountSessionProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return {
+    ...baseProjection,
+    user_id: 'alice',
+    owner_user_id: null,
+    principal: ALICE,
+    ...overrides,
+  };
+}
+
+/** An admin key session: the api key `root-key`, owned by the account `root`. */
+export function adminKeySessionProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return {
+    ...baseProjection,
+    admin: true,
+    user_id: 'root-key',
+    owner_user_id: 'root',
+    principal: { user_id: 'root', display_name: 'Root', kind: 'human' },
+    ...overrides,
+  };
+}
+
+/** A deployment with access control off: every session is the fill identity `__no_auth__`. */
+export function gateOffProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return {
+    ...baseProjection,
+    access_control_enabled: false,
+    user_id: '__no_auth__',
+    admin: true,
+    ...overrides,
+  };
+}
+
+/** One row of the api-key list. */
+export function apiKey(overrides: Partial<TokensPayload[number]> = {}): TokensPayload[number] {
+  return {
+    user_id: 'svc-events',
+    description: '',
+    scopes: [],
+    policy_data: {},
+    condition: null,
+    principal: null,
+    orphaned: false,
+    ...overrides,
+  };
+}
+
+/** The registered-agent list holding `names`. */
+export function agentListing(names: readonly string[]): AgentListing {
+  return {
+    items: names.map((name) => ({
+      name,
+      description: '',
+      tool_name: `run_${name}`,
+      input_schema: {},
+      spec_runnable: false,
+    })),
+    total: names.length,
+  };
+}
+
+/** The installed-channel list: each entry a name and its declared identity hint. */
+export function channelListing(
+  entries: readonly (readonly [name: string, hint: string | null])[],
+): Channels {
+  return { channels: entries.map(([name, hint]) => ({ name, identity_hint: hint })) };
+}
+
+/**
+ * Opens a named combobox once it is enabled: a picker over a pending read renders a
+ * disabled control, and a click on it opens no listbox.
+ */
+export async function openSelect(
+  user: ReturnType<typeof userEvent.setup>,
+  name: RegExp | string,
+): Promise<HTMLElement> {
+  const combobox = await screen.findByRole('combobox', { name });
+  await waitFor(() => {
+    expect(combobox).toBeEnabled();
+  });
+  await user.click(combobox);
+  return combobox;
+}
+
+/** Opens a named combobox and picks the named option. */
+export async function pickOption(
+  user: ReturnType<typeof userEvent.setup>,
+  name: RegExp | string,
+  option: RegExp | string,
+): Promise<void> {
+  await openSelect(user, name);
+  await user.click(await screen.findByRole('option', { name: option }));
 }

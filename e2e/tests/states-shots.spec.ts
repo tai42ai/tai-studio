@@ -321,7 +321,12 @@ const FRAMES: readonly Frame[] = [
     name: 'states-declaration-stored-schema',
     path: `/states?state=${STORED_STATE}`,
     setup: async (page) => {
-      await stubGet(page, '/api/storage', { present: true, provider: 'demo', module: 'demo' });
+      await stubGet(page, '/api/storage', {
+        present: true,
+        provider: 'demo',
+        module: 'demo',
+        surfaces: ['storage', 'templates'],
+      });
       await stubGet(page, '/api/templates', [STORED_SCHEMA_TEMPLATE]);
       await stubGet(page, `/api/states/${STORED_STATE}`, {
         name: STORED_STATE,

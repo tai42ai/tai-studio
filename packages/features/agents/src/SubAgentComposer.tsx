@@ -1,5 +1,6 @@
 /** The `subagents` field editor: a list of inline sub-agent cards with add/remove. */
 import type { PresetRecord } from '@tai42/api-client';
+import type { ToolListQuery } from '@tai42/studio-sdk';
 import { Button } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
@@ -7,7 +8,7 @@ import type { InlineSubAgentSpec } from './authoring-types';
 import { SubAgentCard } from './SubAgentCard';
 
 export function SubAgentComposer({
-  toolNames,
+  toolsQuery,
   tagsByTool,
   displayNames,
   presetRecords,
@@ -15,7 +16,7 @@ export function SubAgentComposer({
   onChange,
   disabled,
 }: {
-  readonly toolNames: readonly string[];
+  readonly toolsQuery: ToolListQuery;
   readonly tagsByTool?: Readonly<Record<string, readonly string[]>>;
   readonly displayNames?: Readonly<Record<string, string>>;
   readonly presetRecords: readonly PresetRecord[];
@@ -31,7 +32,7 @@ export function SubAgentComposer({
           key={index}
           spec={spec}
           index={index}
-          toolNames={toolNames}
+          toolsQuery={toolsQuery}
           tagsByTool={tagsByTool}
           displayNames={displayNames}
           presetRecords={presetRecords}

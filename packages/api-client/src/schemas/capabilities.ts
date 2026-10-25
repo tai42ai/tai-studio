@@ -3,7 +3,11 @@ import type { z } from 'zod';
 
 import * as openapi from '../generated/openapi-schemas';
 
-/** A concrete route the caller can reach, with the methods that pass its jq fence. */
+/**
+ * A route the caller can reach — a concrete path, or a route template such as
+ * `/api/presets/{name}` — with the methods its grant admits (on a representative
+ * instance, for a template).
+ */
 export const routeEntry = openapi.routeEntry;
 export type RouteEntry = z.infer<typeof routeEntry>;
 
@@ -25,17 +29,17 @@ export const subMcpEntry = openapi.subMcpEntry;
 export type SubMcpEntry = z.infer<typeof subMcpEntry>;
 
 /**
- * `GET /api/auth/me` — the caller's derived capability projection: the concrete
- * (path, method) surface, dynamic patterns, sub-MCP mounts, tools, and agents it
+ * `GET /api/auth/me` — the caller's derived capability projection: the (path, method)
+ * surface (concrete paths and route templates), dynamic patterns, sub-MCP mounts, tools, and agents it
  * can reach RIGHT NOW (derived server-side, never stored). `admin` is the
  * condition-free `"*"` discriminator (a TOTAL projection); a scoped
- * session carries `admin: false` and a jq-exact `routes` list. `owner_user_id` is
+ * session carries `admin: false` and its projected `routes` list. `owner_user_id` is
  * the key's owner claim, `null` for a key with no owner claim. `principal` is the
  * caller's principal (kind + display name), `null` when no principal row backs the
  * credential. `public_resource_id` is the deployment's reserved public marker (the
  * route-table id a public route maps to — never a scope). The invariant is projection ⊆ gate: every projected surface is one
- * the server would admit, so the UI can filter on it without ever advertising a
- * door the gate denies.
+ * the server would admit for a role-holder; a credential fenced per instance is
+ * decided at the server, which answers 403 where its fence denies the instance.
  */
 export const meProjection = openapi.projectionResult;
 export type MeProjection = z.infer<typeof meProjection>;

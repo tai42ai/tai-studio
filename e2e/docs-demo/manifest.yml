@@ -105,9 +105,10 @@ routers_modules:
 
 # --- Tool extensions --------------------------------------------------------
 # `ask_external` wraps a callback_url-taking tool into an external human-in-the-
-# loop question (the extensions catalog screen).
+# loop question (listed on the Manifest screen's loaded extensions).
 extensions_modules:
   - tai42_skeleton.extensions.builtin.ask_external
+  - reference_plugin.extensions
 
 # --- Tools ------------------------------------------------------------------
 # The reference plugin's demo tools, plus the ask builtin.

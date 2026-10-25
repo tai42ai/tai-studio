@@ -9,3 +9,5 @@ import * as openapi from '../generated/openapi-schemas';
 
 export const channels = openapi.channelListing;
 export type Channels = z.infer<typeof channels>;
+/** One installed channel plugin: its name and its declared identity hint, if any. */
+export type ChannelEntry = z.infer<typeof openapi.channelEntry>;

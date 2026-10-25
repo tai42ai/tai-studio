@@ -12,7 +12,13 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CreateTriggerLinkDialog } from './CreateTriggerLinkDialog';
-import { apiKey, openSelect, renderWithProviders, type StubApiClient } from './test-utils';
+import {
+  accountSessionProjection,
+  apiKey,
+  openSelect,
+  renderWithProviders,
+  type StubApiClient,
+} from './test-utils';
 
 const CREATED = {
   name: 'wall-poster',
@@ -57,6 +63,7 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -88,6 +95,7 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
     const onClose = vi.fn();
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     renderWithProviders(<CreateTriggerLinkDialog onClose={onClose} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -110,6 +118,7 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     const { rerender } = renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -133,6 +142,7 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockReturnValue(new Promise(() => undefined));
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -152,6 +162,7 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
       .fn()
       .mockResolvedValue({ ...CREATED, expires_at: '2026-07-22T10:00:00Z' });
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -169,6 +180,7 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -187,6 +199,7 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -202,6 +215,7 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
 describe('CreateTriggerLinkDialog — require api key', () => {
   it('a link is a token door, so the api-key toggle is always present and starts off', () => {
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(vi.fn()),
     });
     expect(screen.getByRole('checkbox', { name: 'Also require an api key' })).not.toBeChecked();
@@ -211,6 +225,7 @@ describe('CreateTriggerLinkDialog — require api key', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -230,6 +245,7 @@ describe('CreateTriggerLinkDialog — require api key', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -249,6 +265,7 @@ describe('CreateTriggerLinkDialog — params editor', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -267,6 +284,7 @@ describe('CreateTriggerLinkDialog — params editor', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -282,6 +300,7 @@ describe('CreateTriggerLinkDialog — params editor', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -300,6 +319,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -316,6 +336,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -330,6 +351,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
 
   it('shows no required-field error before the operator submits', async () => {
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(vi.fn()),
     });
 
@@ -341,6 +363,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -357,6 +380,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -379,6 +403,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
     const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -405,6 +430,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
       .fn()
       .mockRejectedValue(new ApiConflictError('trigger link name already exists'));
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -419,6 +445,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
     const message = 'execution_key svc-events is not yours to delegate';
     const createTriggerLink = vi.fn().mockRejectedValue(new ApiError(message, 403, 'pass_role'));
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -436,6 +463,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
       .fn()
       .mockRejectedValue(new ApiError(message, 400, 'execution_key_not_token_free'));
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 
@@ -451,6 +479,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
       .fn()
       .mockRejectedValue(new ApiError('trigger links require the redis hooks backend', 501));
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      projection: accountSessionProjection(),
       client: baseClient(createTriggerLink),
     });
 

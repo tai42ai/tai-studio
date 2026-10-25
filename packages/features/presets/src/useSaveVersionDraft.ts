@@ -1,8 +1,8 @@
 /**
  * The save-new-version draft: it seeds every field from the preset's ACTIVE body,
  * tracks which fields the user changed, and sends ONLY those (an untouched field is
- * omitted so the route carries it forward; a cleared extensions list / output schema
- * / state binding is sent as an explicit `[]` / `null`). The active binding is not on
+ * omitted so the route carries it forward; a cleared extensions list, schema, map or
+ * state binding is sent as an explicit `[]` / `null`). The active binding is not on
  * the record — it rides the current version body, so it seeds asynchronously from the
  * version list and its dirtiness is gated on the seed so a pre-seed `null` never reads
  * as a user clear.
@@ -12,6 +12,7 @@ import type {
   PresetExtensionElement,
   SavePresetVersionBody,
   StateBinding,
+  TemplatedText,
   ValidatePresetBody,
 } from '@tai42/api-client';
 import { type SchemaEditorChange, toolsListKey, useApi } from '@tai42/studio-sdk';
@@ -20,6 +21,47 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { presetDetailKey, presetsListKey, presetVersionsKey } from './keys';
 import { jsonEqual, parseJsonObject } from './parse';
+
+/** A stored map in the editor's shape: a plain string is the inline jq program. */
+function mapSeed(stored: TemplatedText | string | null): TemplatedText | null {
+  return typeof stored === 'string' ? { content: stored } : stored;
+}
+
+/** The input/output contract fields seeded from the active body, each with its dirtiness. */
+function useIoDraftState(detail: PresetDetail) {
+  const seedInputMap = useMemo(() => mapSeed(detail.input_map), [detail]);
+  const seedOutputMap = useMemo(() => mapSeed(detail.output_map), [detail]);
+  const [inputSchema, setInputSchema] = useState<SchemaEditorChange>({
+    schema: detail.input_schema,
+    valid: true,
+  });
+  const [inputMap, setInputMap] = useState<TemplatedText | null>(seedInputMap);
+  const [outputSchema, setOutputSchema] = useState<SchemaEditorChange>({
+    schema: detail.output_schema,
+    valid: true,
+  });
+  const [outputMap, setOutputMap] = useState<TemplatedText | null>(seedOutputMap);
+  const inputSchemaChanged = !jsonEqual(inputSchema.schema, detail.input_schema);
+  const inputMapChanged = !jsonEqual(inputMap, seedInputMap);
+  const outputSchemaChanged = !jsonEqual(outputSchema.schema, detail.output_schema);
+  const outputMapChanged = !jsonEqual(outputMap, seedOutputMap);
+  return {
+    inputSchema,
+    setInputSchema,
+    inputMap,
+    setInputMap,
+    outputSchema,
+    setOutputSchema,
+    outputMap,
+    setOutputMap,
+    schemasValid: inputSchema.valid && outputSchema.valid,
+    inputSchemaChanged,
+    inputMapChanged,
+    outputSchemaChanged,
+    outputMapChanged,
+    ioChanged: inputSchemaChanged || inputMapChanged || outputSchemaChanged || outputMapChanged,
+  };
+}
 
 /** The seeded field state plus the per-field dirtiness the save/validate bodies read. */
 function useVersionDraftState(detail: PresetDetail) {
@@ -38,14 +80,11 @@ function useVersionDraftState(detail: PresetDetail) {
   );
   const seedKwargsText = useMemo(() => JSON.stringify(detail.fixed_kwargs, null, 2), [detail]);
   const seedCombos = useMemo(() => detail.extensions.map((combo) => [...combo]), [detail]);
+  const io = useIoDraftState(detail);
 
   const [kwargsText, setKwargsText] = useState(seedKwargsText);
   const [description, setDescription] = useState(detail.description);
   const [combos, setCombos] = useState<PresetExtensionElement[][]>(seedCombos);
-  const [outputSchema, setOutputSchema] = useState<SchemaEditorChange>({
-    schema: detail.output_schema,
-    valid: true,
-  });
   const [stateBinding, setStateBinding] = useState<StateBinding | null>(null);
   const [bindingSeeded, setBindingSeeded] = useState(false);
   const [kwargsError, setKwargsError] = useState<string | undefined>(undefined);
@@ -65,17 +104,12 @@ function useVersionDraftState(detail: PresetDetail) {
   // client-side. An UNTOUCHED description is never validated — it carries forward.
   const descriptionInvalid = descriptionChanged && description.trim() === '';
   const extensionsChanged = !jsonEqual(combos, detail.extensions);
-  const outputSchemaChanged = !jsonEqual(outputSchema.schema, detail.output_schema);
   // Compared only once the binding has seeded — a pre-seed `null` is not a clear.
   const stateBindingChanged = bindingSeeded && !jsonEqual(stateBinding, seedBinding);
   const dirty =
-    kwargsChanged ||
-    descriptionChanged ||
-    extensionsChanged ||
-    outputSchemaChanged ||
-    stateBindingChanged;
+    kwargsChanged || descriptionChanged || extensionsChanged || io.ioChanged || stateBindingChanged;
   const canValidate =
-    !('error' in parsed) && outputSchema.valid && extensionsValid && !descriptionInvalid;
+    !('error' in parsed) && io.schemasValid && extensionsValid && !descriptionInvalid;
 
   return {
     name,
@@ -86,8 +120,7 @@ function useVersionDraftState(detail: PresetDetail) {
     setDescription,
     combos,
     setCombos,
-    outputSchema,
-    setOutputSchema,
+    ...io,
     stateBinding,
     setStateBinding,
     bindingSeeded,
@@ -102,7 +135,6 @@ function useVersionDraftState(detail: PresetDetail) {
     descriptionChanged,
     descriptionInvalid,
     extensionsChanged,
-    outputSchemaChanged,
     stateBindingChanged,
     dirty,
     canValidate,
@@ -139,7 +171,10 @@ export function useSaveVersionDraft(detail: PresetDetail, onClose: () => void) {
     kwargsText: draft.kwargsText,
     description: draft.description,
     combos: draft.combos,
+    inputSchema: draft.inputSchema.schema,
+    inputMap: draft.inputMap,
     outputSchema: draft.outputSchema.schema,
+    outputMap: draft.outputMap,
     stateBinding: draft.stateBinding,
   });
   useEffect(() => {
@@ -148,7 +183,7 @@ export function useSaveVersionDraft(detail: PresetDetail, onClose: () => void) {
 
   const submit = (): void => {
     if (!draft.dirty) return;
-    if (!draft.outputSchema.valid || !draft.extensionsValid || draft.descriptionInvalid) return;
+    if (!draft.schemasValid || !draft.extensionsValid || draft.descriptionInvalid) return;
     // A half-edited kwarg row holds the text at its last VALID serialisation, which would
     // parse and carry the stale value forward; refuse so it can never be saved silently.
     if (!draft.kwargsRowsValid) return;
@@ -174,7 +209,10 @@ export function useSaveVersionDraft(detail: PresetDetail, onClose: () => void) {
       ...(draft.descriptionChanged ? { description: draft.description.trim() } : {}),
       // An empty list means "no combos", read under save-version (edit) semantics.
       extensions: draft.combos,
+      input_schema: draft.inputSchema.schema,
+      input_map: draft.inputMap,
       output_schema: draft.outputSchema.schema,
+      output_map: draft.outputMap,
       // Send the edited binding (null when cleared) only when it changed.
       ...(draft.stateBindingChanged ? { state_binding: draft.stateBinding } : {}),
     });
@@ -200,8 +238,11 @@ function changedFields(draft: ReturnType<typeof useVersionDraftState>): SavePres
     ...(draft.descriptionChanged ? { description: draft.description.trim() } : {}),
     // A cleared builder sends an explicit `[]`; the route clears the combos.
     ...(draft.extensionsChanged ? { extensions: draft.combos } : {}),
-    // An untouched schema carries forward (omitted); an explicit clear sends `null`.
+    // An untouched schema or map carries forward (omitted); an explicit clear sends `null`.
+    ...(draft.inputSchemaChanged ? { input_schema: draft.inputSchema.schema } : {}),
+    ...(draft.inputMapChanged ? { input_map: draft.inputMap } : {}),
     ...(draft.outputSchemaChanged ? { output_schema: draft.outputSchema.schema } : {}),
+    ...(draft.outputMapChanged ? { output_map: draft.outputMap } : {}),
     // An untouched binding carries forward (omitted); a removed one sends `null`.
     ...(draft.stateBindingChanged ? { state_binding: draft.stateBinding } : {}),
   };

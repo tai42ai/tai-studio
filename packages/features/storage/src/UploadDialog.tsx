@@ -14,15 +14,17 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ChangeEvent, type CSSProperties, type ReactNode, useRef, useState } from 'react';
 
-import { storageResourcesKey } from './keys';
+import { listKey, storageEntryKey, templateNamesKey } from './keys';
 import { monoStyle } from './storage-view';
 import {
   type FileEntry,
   readFileBase64,
+  readFileUtf8,
   STATUS_BADGE,
   uploadConflicts,
   type UploadMode,
 } from './upload-data';
+import type { StorageDoor } from './use-storage-doors';
 
 const endRowStyle: CSSProperties = {
   display: 'flex',
@@ -36,19 +38,25 @@ const endRowStyle: CSSProperties = {
  * file name — reporting per-file success/failure. A conflict check (an id already
  * stored, or a name picked twice) blocks the whole batch first. The dialog closes only
  * when every file succeeded; a partial failure keeps the failed files listed to retry.
+ * The templates door stores text only, so on it every file must decode as UTF-8 and a
+ * file that does not blocks the batch.
  */
 function FilesUploadPanel({
+  door,
   existingIds,
+  onWritten,
   onClose,
 }: {
+  readonly door: StorageDoor;
   readonly existingIds: readonly string[];
+  readonly onWritten: (ids: readonly string[]) => void;
   readonly onClose: () => void;
 }): ReactNode {
   const api = useApi();
-  const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [notText, setNotText] = useState<readonly string[]>([]);
 
   const outstanding = entries.filter((entry) => entry.status !== 'done');
   const conflicts = uploadConflicts(outstanding, existingIds);
@@ -57,6 +65,7 @@ function FilesUploadPanel({
   const onFilesChange = (event: ChangeEvent<HTMLInputElement>): void => {
     const files = Array.from(event.target.files ?? []);
     setEntries(files.map((file) => ({ id: file.name, file, status: 'pending', error: null })));
+    setNotText([]);
   };
 
   const patch = (entryId: string, next: Partial<FileEntry>): void => {
@@ -65,27 +74,47 @@ function FilesUploadPanel({
     );
   };
 
-  const canSubmitFiles = outstanding.length > 0 && conflicts.length === 0 && !submitting;
+  const canSubmitFiles =
+    outstanding.length > 0 && conflicts.length === 0 && notText.length === 0 && !submitting;
 
   const submitFiles = async (): Promise<void> => {
     if (!canSubmitFiles) return;
     setSubmitting(true);
-    let anySuccess = false;
+    const texts = new Map<string, string>();
+    if (door === 'templates') {
+      const undecodable: string[] = [];
+      for (const entry of outstanding) {
+        const text = await readFileUtf8(entry.file);
+        if (text === null) undecodable.push(entry.id);
+        else texts.set(entry.id, text);
+      }
+      if (undecodable.length > 0) {
+        setNotText(undecodable);
+        setSubmitting(false);
+        return;
+      }
+    }
+    const written: string[] = [];
     let anyFailure = false;
     for (const entry of outstanding) {
       patch(entry.id, { status: 'uploading', error: null });
       try {
-        const content = await readFileBase64(entry.file);
-        await api.uploadStorageResource({ id: entry.id, content_base64: content });
+        const text = texts.get(entry.id);
+        if (text !== undefined) {
+          await api.uploadTemplate(entry.id, text);
+        } else {
+          const content = await readFileBase64(entry.file);
+          await api.uploadStorageResource({ id: entry.id, content_base64: content });
+        }
         patch(entry.id, { status: 'done', error: null });
-        anySuccess = true;
+        written.push(entry.id);
       } catch (err) {
         patch(entry.id, { status: 'error', error: errorMessage(err) });
         anyFailure = true;
       }
     }
     setSubmitting(false);
-    if (anySuccess) void queryClient.invalidateQueries({ queryKey: storageResourcesKey });
+    if (written.length > 0) onWritten(written);
     // Close ONLY when the whole batch succeeded; a partial failure stays open with the
     // failed files listed so they alone can be retried.
     if (!anyFailure) onClose();
@@ -137,6 +166,11 @@ function FilesUploadPanel({
         </ul>
       ) : null}
 
+      {notText.length > 0 ? (
+        <ErrorState
+          message={`These files are not UTF-8 text: ${notText.join(', ')}. Your access stores text only; ask for the storage grant to upload other files.`}
+        />
+      ) : null}
       {conflicts.length > 0 ? (
         <ErrorState
           message={`These ids already exist or repeat in this batch: ${conflicts.join(', ')}. Rename or remove them before uploading.`}
@@ -169,12 +203,15 @@ function FilesUploadPanel({
 /**
  * The upload dialog. TEXT mode authors one resource: an id + its text content
  * (`content_text`). FILES mode picks one or more files (see {@link FilesUploadPanel}).
- * Uploading an existing id overwrites its content. Server errors render verbatim.
+ * Uploading an existing id overwrites its content. It posts through the upload door
+ * the caller reaches. Server errors render verbatim.
  */
 export function UploadDialog({
+  door,
   existingIds,
   onClose,
 }: {
+  readonly door: StorageDoor;
   readonly existingIds: readonly string[];
   readonly onClose: () => void;
 }): ReactNode {
@@ -184,10 +221,24 @@ export function UploadDialog({
   const [id, setId] = useState('');
   const [text, setText] = useState('');
 
+  const onWritten = (ids: readonly string[]): void => {
+    void queryClient.invalidateQueries({ queryKey: listKey(door) });
+    void queryClient.invalidateQueries({ queryKey: templateNamesKey });
+    for (const written of ids) {
+      void queryClient.invalidateQueries({ queryKey: storageEntryKey(written) });
+    }
+  };
+
   const textUpload = useMutation({
-    mutationFn: () => api.uploadStorageResource({ id: id.trim(), content_text: text }),
+    mutationFn: async (): Promise<void> => {
+      if (door === 'storage') {
+        await api.uploadStorageResource({ id: id.trim(), content_text: text });
+      } else {
+        await api.uploadTemplate(id.trim(), text);
+      }
+    },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: storageResourcesKey });
+      onWritten([id.trim()]);
       onClose();
     },
   });
@@ -256,7 +307,12 @@ export function UploadDialog({
             </div>
           </>
         ) : (
-          <FilesUploadPanel existingIds={existingIds} onClose={onClose} />
+          <FilesUploadPanel
+            door={door}
+            existingIds={existingIds}
+            onWritten={onWritten}
+            onClose={onClose}
+          />
         )}
       </div>
     </Dialog>

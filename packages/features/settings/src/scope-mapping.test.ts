@@ -212,6 +212,7 @@ describe('served sub-MCP mounts', () => {
       summary: '',
       action: null,
       declared_public: declared,
+      role_reach: declared ? ('public' as const) : null,
     });
     const chips = deriveMapperChips(
       {},

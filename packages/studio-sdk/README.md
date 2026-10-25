@@ -173,8 +173,8 @@ icons; the `-fill` members are for fills and charts and carry `on-fill` ink.
 
 | Token                   | Light                     | Dark                        |
 | ----------------------- | ------------------------- | --------------------------- |
-| `--tai-color-ok-text`   | `#047857`                 | `#34d399`                   |
-| `--tai-color-err-text`  | `#b91c1c`                 | `#f87171`                   |
+| `--tai-color-ok-text`   | `#065f46`                 | `#34d399`                   |
+| `--tai-color-err-text`  | `#b91c1c`                 | `#fca5a5`                   |
 | `--tai-color-warn-text` | `#92400e`                 | `#fbbf24`                   |
 | `--tai-color-ok-fill`   | `#10b981`                 | `#34d399`                   |
 | `--tai-color-err-fill`  | `#ef4444`                 | `#f87171`                   |
@@ -343,6 +343,129 @@ is something the sheet can supply for you:
    column-stacked 11 px labels.
 9. **`--shell-topbar-height` is private to the sheet**, deliberately outside the
    `--tai-*` contract. Do not read it; it is not part of the published API.
+
+## Design rules
+
+These rules hold for every Studio screen and for a plugin page that wants to sit
+beside them. They name the SDK pieces each case is built from, so a screen reads
+the same way wherever it comes from.
+
+**Tokens.** Colour, space, radius, type, motion and elevation come only from the
+names in `TOKEN_NAMES`; a literal colour is never written. Every colour pair is
+checked in both themes, the light `--tai-color-*` and the dark
+`--tai-dark-color-*` values. A status is never told by hue alone: an icon or a word
+sits beside it. The accent is the brand colour only, never a status.
+
+**Spacing.** A page is padded by `.tai-page`. Vertical rhythm is `.tai-stack`
+(space-4); inside a group it is `.tai-stack-2`, between groups in a card
+`.tai-stack-3`, and between the sections of a page `.tai-stack-6`. A row of
+controls is `.tai-row`.
+
+**Screen patterns.** A new screen uses one of these patterns. A screen with tabs
+under its header (Settings, Dashboard, Marketplace, the Conversations landing)
+takes a pattern per tab.
+
+- **Browse and inspect.** A split list and detail (`.tai-split`), with the
+  selection held in the URL search. Tools, whose list pane is an `ExplorerView`;
+  Presets; States; Storage; a Conversations route, its threads beside the open
+  transcript.
+- **Catalog.** A directory of cards with search and filters. Connectors and the
+  Tools card view, through `ExplorerView`; the Marketplace Browse tab, a card grid
+  with facet filters and Load more.
+- **Registry.** Tables or lists of records in cards. Create and the row actions
+  open a dialog built on `Dialog` (`FormDialog` or the screen's own); edit opens
+  one too or happens in place; a destructive action is confirmed before it runs.
+  Scheduling, Members, the Conversations routes and per-target configs, the
+  Marketplace Installed tab, and the Profiles, API keys and Roles tabs of
+  Settings.
+- **Registry with inline create.** The records list first, then the create forms
+  in cards on the page below them; edit, where a record has one, in a `Dialog`; a
+  destructive action confirmed before it runs. Hooks, Served endpoints.
+- **Replaced detail.** A search param swaps the page or the tab for one item. The
+  Marketplace plugin page, a trace in the Dashboard Tracing tab, a state template
+  or a state's records.
+- **Run surface.** A list, then the run view in its place. Agents.
+- **Inbox.** Newest-first cards, the rest paged in by a button at the foot: Load
+  more where the server pages (Interactions), Show more where the whole feed is
+  already loaded (Notifications).
+- **Status and configuration.** Stacked cards of read-only views and in-place
+  editors, no create dialog; a destructive or fleet-wide action is confirmed in a
+  `ConfirmDialog`. Manifest, System, the Dashboard tab of Dashboard, the Settings,
+  Environment and Backup tabs of Settings, and the Failed deliveries tab of the
+  Conversations landing (one read-only card that re-reads itself).
+
+A multi-step create is a `Stepper` inside a `Dialog`.
+
+**States.** A page or a region (a card, a pane, a tab) shows one state at a time,
+each drawn by its SDK piece:
+
+- loading: a `Skeleton` in the shape of the content, or a labelled `Spinner` where
+  the content has no fixed shape;
+- empty: an `EmptyState` whose title says what is missing and whose `action`
+  gives the next step;
+- off, when the server answers that the feature is not configured:
+  `FeatureDisabled`;
+- no grant: as below;
+- failed: an `ErrorState`, with `onRetry` when a retry can succeed;
+- then the content.
+
+Content already drawn stays when a later read fails (the next page, a secondary
+read): the failure is shown beside it, as an `ErrorState` or a muted line saying
+what could not be read and why. A control inside a form follows the picker rules
+instead.
+
+**No grant.** What the caller's access does not reach is not drawn. A write
+control is hidden through `useCanWrite`, never shown disabled, and in its place,
+where the reader would look for it, a muted `role="status"` line says what is out
+of reach and, where the screen knows it, the access it needs ("Running this tool
+is outside your access — it is shown read-only."). A whole region the caller
+cannot read is an `EmptyState` whose title says it is not available and whose
+description says what it would show and the access it needs. A no-grant state
+has no Retry and never wears the error ground: a refusal is an answer, not a
+failure. Readable content stays, read-only. A secondary control (a row's Delete)
+is hidden without a line. A screen the caller cannot reach leaves the sidebar;
+its URL still renders, and a refusal the screen did not expect is an
+`ErrorState`.
+
+**Disabled controls and results.** A control disabled for a reason the screen
+does not otherwise show says the reason in text beside it. There is no toast: a
+result is shown inline next to the control that caused it, a `role="status"` line
+for an outcome and `role="alert"` (or an `ErrorState`) for a failure.
+
+**Pickers.** A picker is an SDK component wrapped in `Field` with a visible
+label. It reads a structural query interface
+(`{ data, isPending, isError, isSuccess, error, refetch }`, the shape
+`ExecutionKeyPicker` takes) and names no query library. Pending is the control
+disabled with the placeholder "Loading <plural noun>…"; error is an `ErrorState`
+with retry inside the field (`group` set); empty is a muted `role="status"` line
+naming where to create one; no grant to read the list is the no-grant line in
+place of the control. Values render as text, never HTML. A picker is composed
+outside `SchemaForm`. Two cases differ:
+
+- A picker that is one control of a larger group on its host (a `fieldset` whose
+  `legend` names the group) takes no label of its own: its control carries an
+  `aria-label` that names it within the group (the legend, then what the control
+  picks), and its states render in the same place without a `Field`.
+- When the read behind the list fails and the same failure is already shown once,
+  with retry, elsewhere on the same surface, the picker draws no second
+  `ErrorState`: in place of the control it shows a muted `role="status"` line
+  saying the list could not be read and where that error is shown, with no retry.
+  A surface shows one failure with retry once.
+
+**Stepper.** An ordered list in a labelled `nav`, with `aria-current="step"` on
+the current step and each step's status spoken in visually hidden text. Done,
+current, upcoming and error are told apart by marker shape and icon as well as
+colour, filled with the ok and err tokens (never the accent, never a destructive
+token). Tab and Enter or Space reach only the steps that can be revisited. Below
+the narrow breakpoint (640 px) the list collapses to "Step n of m: <label>".
+Motion follows the reduced-motion rule, and targets are 44 px on coarse pointers.
+
+**Keyboard and accessibility.** There are no global shortcuts. Every interactive
+element is reachable by Tab in reading order; Enter and Space work on custom rows;
+the focus-visible ring comes from the five-state contract. A route change moves
+focus to the page `<h1>`; dialogs trap focus and return it. The bar is WCAG
+2.0/2.1 A and AA in both themes, enforced by an axe audit over every route and by
+the SDK's guard tests.
 
 ## Usage
 

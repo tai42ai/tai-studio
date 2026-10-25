@@ -16,9 +16,10 @@ export function pickableToolNames(rows: readonly ToolTagEntry[]): string[] {
   return rows.filter((row) => row.schedulable).map((row) => row.name);
 }
 
-/** Schedulable tools + the enrichment the picker renders. The tags read is the picker's
- *  source (its loading/error legs drive the picker); `excludeToolNames`/`badgesByTool` stay
- *  empty on a failed meta read (the server is the authority over runs). */
+/** Schedulable tools + the enrichment the picker renders. `toolsQuery` observes the tags
+ *  read projected to the schedulable names (the picker's source); the unprojected tags read
+ *  feeds the hidden names and badges, which stay empty on a failed meta read (the server is
+ *  the authority over runs). */
 export function useScheduleTools() {
   const api = useApi();
   const displayNames = useToolDisplayNames();
@@ -26,7 +27,11 @@ export function useScheduleTools() {
   const tagsQuery = useQuery({ queryKey: scheduleToolTagsKey, queryFn: () => api.listToolTags() });
   const metaQuery = useQuery({ queryKey: scheduleToolMetaKey, queryFn: () => api.listToolMeta() });
 
-  const toolNames = useMemo(() => pickableToolNames(tagsQuery.data ?? []), [tagsQuery.data]);
+  const toolsQuery = useQuery({
+    queryKey: scheduleToolTagsKey,
+    queryFn: () => api.listToolTags(),
+    select: pickableToolNames,
+  });
 
   const hiddenNames = useMemo(
     () => hiddenToolNames(tagsQuery.data ?? [], metaQuery.data?.meta ?? []),
@@ -39,5 +44,5 @@ export function useScheduleTools() {
     [tagsQuery.data, metaQuery.data],
   );
 
-  return { toolsQuery: tagsQuery, toolNames, excludeToolNames, badgesByTool, displayNames };
+  return { toolsQuery, excludeToolNames, badgesByTool, displayNames };
 }

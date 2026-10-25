@@ -75,6 +75,8 @@ describe('useOAuthPopup — trusted message', () => {
       kind: 'success',
       connection_id: 'c1',
       return_url: '/x',
+      fanout: null,
+      span_release_error: null,
     });
     const onSuccess = vi.fn();
     renderWithProviders(<Harness url="https://provider/auth" onSuccess={onSuccess} />, {
@@ -151,9 +153,13 @@ describe("useOAuthPopup — the redirect's iss", () => {
   it('hands the iss of a trusted message to the completion call', async () => {
     const popup = makeFakePopup();
     stubOpen(popup);
-    const completeOAuth = vi
-      .fn()
-      .mockResolvedValue({ kind: 'success', connection_id: 'c1', return_url: '/x', fanout: null });
+    const completeOAuth = vi.fn().mockResolvedValue({
+      kind: 'success',
+      connection_id: 'c1',
+      return_url: '/x',
+      span_release_error: null,
+      fanout: null,
+    });
     renderWithProviders(<Harness url="https://provider/auth" />, {
       client: makeClient({ completeOAuth }),
     });
@@ -345,6 +351,7 @@ describe('useOAuthRedirectResume — completing a redirect flow', () => {
       kind: 'success',
       connection_id: 'c1',
       return_url: '/connectors',
+      span_release_error: null,
       fanout: null,
     });
     renderWithProviders(<ResumeHarness />, { client: makeClient({ completeOAuth }) });
@@ -371,6 +378,7 @@ describe('useOAuthRedirectResume — completing a redirect flow', () => {
       kind: 'success',
       connection_id: 'c1',
       return_url: '/connectors',
+      span_release_error: null,
       fanout: null,
     });
     renderWithProviders(<ResumeHarness />, { client: makeClient({ completeOAuth }) });

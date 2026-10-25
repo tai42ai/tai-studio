@@ -1,14 +1,15 @@
 import { type MarketplaceInstallPreview, type MarketplacePluginDetail } from '@tai42/api-client';
+import { installedMarketplacePluginsKey } from '@tai42/studio-sdk';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { marketplaceInstalledKey } from './keys';
 import { PluginDetail } from './PluginDetail';
 import {
   detailFixture,
   installedList,
   installedRow,
+  installReceipt,
   noop,
   paneOf,
   reads,
@@ -111,7 +112,7 @@ describe('PluginDetail — panes that scroll are keyboard targets', () => {
     // prose, taking the instrumented regions with it and dropping the reader
     // standing in one onto the document body.
     act(() => {
-      queryClient.setQueryData(marketplaceInstalledKey, installedList([installedRow()]));
+      queryClient.setQueryData(installedMarketplacePluginsKey, installedList([installedRow()]));
     });
     expect(await screen.findByText('Installed v1.2.0')).toBeInTheDocument();
 
@@ -199,7 +200,7 @@ describe('PluginDetail — route surface and mounting', () => {
   it('installs a route plugin through the mount dialog and shows the mounted routes on the receipt', async () => {
     const user = userEvent.setup();
     const installMarketplacePlugin = vi.fn().mockResolvedValue({
-      ref: 'tai42/toolbox',
+      ...installReceipt('tai42/toolbox'),
       version: '1.2.0',
       notes: [],
       advisories: [],
@@ -240,7 +241,7 @@ describe('PluginDetail — route surface and mounting', () => {
   it('updates a route plugin: the input prefills the non-default stored base and an edit-free update preserves it', async () => {
     const user = userEvent.setup();
     const updateMarketplacePlugin = vi.fn().mockResolvedValue({
-      ref: 'tai42/toolbox',
+      ...installReceipt('tai42/toolbox'),
       version: '2.0.0',
       notes: [],
       advisories: [],

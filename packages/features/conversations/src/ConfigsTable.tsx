@@ -46,7 +46,12 @@ const headerStyle: CSSProperties = {
   marginBottom: 'var(--tai-space-4)',
 };
 
-export function ConfigsTable(): ReactNode {
+export function ConfigsTable({
+  highlight,
+}: {
+  /** The config a deep link points at (`<target_kind>:<target_name>`), if any. */
+  readonly highlight?: string;
+} = {}): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
   const configs = useQuery({
@@ -56,11 +61,9 @@ export function ConfigsTable(): ReactNode {
 
   // Create and edit ride the one UPSERT door
   // (`PUT /api/conversation-configs/{target_kind}/{target_name}`); delete rides the
-  // `DELETE` on the same path. Both are DYNAMIC (templated) write routes, so — following
-  // the house static-placeholder idiom — the interpolated path resolves to a
-  // full-projection gate: a scoped projection can never method-express a templated
-  // route, so its write affordances stay withdrawn (projection ⊆ gate). The read table
-  // below is unaffected; only the write controls gate.
+  // `DELETE` on the same path. Both gate on the template path with their method, which
+  // the projection lists when the caller's grant admits it (projection ⊆ gate). The read
+  // table below is unaffected; only the write controls gate.
   const canWrite = useCanWrite(
     apiRoutes.put_api_conversation_configs_target_kind_target_name.path,
     'PUT',
@@ -123,6 +126,7 @@ export function ConfigsTable(): ReactNode {
                 config={config}
                 canWrite={canWrite}
                 canDelete={canDelete}
+                highlighted={configRowKey(config) === highlight}
                 onEdit={() => {
                   setEditing(config);
                 }}
@@ -139,6 +143,10 @@ export function ConfigsTable(): ReactNode {
       </ScrollRegion>
     );
   }
+  const highlightMissing =
+    highlight !== undefined &&
+    configs.isSuccess &&
+    !configs.data.items.some((config) => configRowKey(config) === highlight);
 
   return (
     <div data-testid="conversation-configs">
@@ -156,6 +164,11 @@ export function ConfigsTable(): ReactNode {
             </Button>
           ) : null}
         </div>
+        {highlightMissing ? (
+          <p role="status" style={{ margin: '0 0 var(--tai-space-3)' }}>
+            {`No config named '${highlight}'.`}
+          </p>
+        ) : null}
         {body}
       </Card>
       {creating ? (

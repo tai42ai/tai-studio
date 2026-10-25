@@ -1,4 +1,5 @@
 import type { ApiClient } from '@tai42/api-client';
+import { channelsListKey } from '@tai42/studio-sdk';
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -13,11 +14,35 @@ function renderCard(listChannels: ApiClient['listChannels']): void {
 
 describe('ChannelsCard', () => {
   it('renders a badge per installed channel', async () => {
-    renderCard(vi.fn().mockResolvedValue({ channels: ['telegram', 'slack'] }));
+    renderCard(
+      vi.fn().mockResolvedValue({
+        channels: [
+          { name: 'telegram', identity_hint: null },
+          { name: 'slack', identity_hint: null },
+        ],
+      }),
+    );
 
     const list = await screen.findByTestId('channels-list');
     expect(within(list).getByText('telegram')).toBeInTheDocument();
     expect(within(list).getByText('slack')).toBeInTheDocument();
+  });
+
+  it('renders the entries another screen already read under the shared channel-list key', () => {
+    const client = stubClient({
+      channel: makeChannel(),
+      listChannels: vi.fn().mockReturnValue(new Promise(() => undefined)),
+    });
+    renderWithProviders(<ChannelsCard />, {
+      client,
+      seed: (queryClient) => {
+        queryClient.setQueryData(channelsListKey, {
+          channels: [{ name: 'signal', identity_hint: 'The account phone number.' }],
+        });
+      },
+    });
+
+    expect(within(screen.getByTestId('channels-list')).getByText('signal')).toBeInTheDocument();
   });
 
   it('shows the "no delivery channels installed" line on an empty catalog', async () => {

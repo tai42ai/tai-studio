@@ -149,7 +149,7 @@ export interface ScheduleBodyInput {
 }
 
 /** Whether any of the four door-contract jqs is set. */
-function hasDoorContract(contract: ScheduleDoorContract): boolean {
+export function hasDoorContract(contract: ScheduleDoorContract): boolean {
   return [contract.startExpr, contract.cancelExpr, contract.resumeExpr, contract.extrasExpr].some(
     (expr) => expr !== null,
   );

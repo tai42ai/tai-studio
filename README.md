@@ -88,7 +88,7 @@ lower ever imports something higher).
   HTTP API. One schema per endpoint; every response is validated and every
   drift or failure throws. It holds no server state of its own.
 - **`packages/features/*`** — one package per page surface (tools, agents,
-  extensions, presets, templates, hooks, interactions, connectors, conversations,
+  presets, hooks, interactions, connectors, conversations,
   notifications, settings, system, observability, scheduling, manifest,
   marketplace, storage).
   Each exports its page component and imports only `@tai42/studio-sdk`,

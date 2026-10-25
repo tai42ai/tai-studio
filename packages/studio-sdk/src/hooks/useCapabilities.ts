@@ -121,7 +121,7 @@ export function useCapabilities(): CapabilityContextValue {
  * seeded editor/viewer carries `["*"]` scopes PLUS a jq fence, so keying on `"*"`
  * scopes would hand every editor/viewer the unfiltered nav and a wall of 403s on
  * the admin routes their fence denies. Keying on `admin` makes editor/viewer
- * SCOPED sessions whose nav is filtered by their jq-exact `routes`, which is
+ * SCOPED sessions whose nav is filtered by their projected `routes`, which is
  * exactly right — and the gate-off synthetic projection (`admin: true`, empty
  * `routes`) still reads as full, so an AC-disabled deployment shows everything.
  */
@@ -143,8 +143,8 @@ function pathUnderPrefix(path: string, prefix: string): boolean {
 /**
  * Whether the projection reaches ANY route under one of `prefixes` — the
  * declarative test behind nav filtering and plugin `requiredCapabilities`. A
- * concrete `routes[].path` covers a prefix when it is that prefix or a
- * segment-nested descendant of it; a dynamic `route_patterns[]` entry covers a
+ * `routes[].path` (a concrete path, or a route template such as `/api/presets/{name}`)
+ * covers a prefix when it is that prefix or a segment-nested descendant of it; a dynamic `route_patterns[]` entry covers a
  * prefix through its served `open_prefix` — the literal the server rules every
  * path starting with is reachable — when it overlaps the prefix at a segment
  * boundary. A `null` open prefix (a pattern whose matched set is not a clean
@@ -167,14 +167,16 @@ export function coversAnyRoute(projection: MeProjection, prefixes: readonly stri
 
 /**
  * Whether the projection reaches a specific WRITE route — an EXACT `path` whose
- * admitted `methods` include `method`. This is the method-aware companion to
+ * admitted `methods` include `method`. A templated route is listed under its template
+ * path (`/api/presets/{name}`) with the methods the caller's grant admits on a
+ * representative instance of it, so a caller names the template on both sides. This is the method-aware companion to
  * {@link coversAnyRoute}: a read/nav surface gates path-only (any method reaching a
  * prefix means the surface is navigable), but an action that issues `method path`
  * must gate on the method too, or a caller whose jq fence admits only GET on `path`
  * would be shown a control that 403s on submit (projection ⊆ gate).
  *
- * Only concrete `routes` are consulted: dynamic `route_patterns` carry no method, so
- * no write capability can be soundly inferred from them, and a synthetic TOTAL
+ * Only `routes` are consulted: dynamic `route_patterns` carry no method, so no write
+ * capability can be soundly inferred from them, and a synthetic TOTAL
  * (admin) projection carries no concrete `routes` at all — callers short-circuit it
  * with {@link isFullProjection} before reaching here. Under-showing is safe (the
  * server stays the authority); over-showing an action the gate denies is the bug.
@@ -191,10 +193,11 @@ export function coversRoute(projection: MeProjection, path: string, method: stri
  * `method path`. While the projection is loading/failed it is `false` — a write control
  * never enables before the gate is known (fail closed; not-ready ⇒ disabled/read-only).
  *
- * Only concrete `routes` carry methods, so a DYNAMIC (templated) write route — one the
- * projection can represent only as a method-less `route_patterns` row — reads `false` for
- * every non-admin caller and degrades that control to read-only. Under-showing is safe
- * (the server stays the authority); over-showing a write the gate denies is the bug.
+ * A templated write route is gated by its template path: the projection lists it with
+ * the methods the caller's grant admits on a representative instance. A credential fenced
+ * per instance is decided at the server, which answers 403 on submit where the fence
+ * denies that instance. Under-showing is safe (the server stays the authority);
+ * over-showing a write the gate denies is the bug.
  */
 export function coversWrite(state: CapabilityState, path: string, method: string): boolean {
   return (
@@ -216,4 +219,50 @@ export function coversWrite(state: CapabilityState, path: string, method: string
 export function useCanWrite(path: string, method = 'POST'): boolean {
   const { state } = useCapabilities();
   return coversWrite(state, path, method);
+}
+
+/** The session's own identity, as the execution-key pickers offer it. */
+export interface OwnIdentity {
+  readonly userId: string;
+  /** 'account' when the session is a principal itself (no owner claim, a principal row): the bind check refuses
+   * it. 'key' otherwise: an owned api key, or a key with no owner. */
+  readonly kind: 'key' | 'account';
+  readonly admin: boolean;
+}
+
+/** How a form binds the execution key a stored record runs as, read from the session's projection. */
+export type ExecutionKeyBinding =
+  /** The projection is not ready (loading, or failed: the shell shows its own error); the form cannot submit. */
+  | { readonly mode: 'pending' }
+  /** Access control is off: no identity is checked, no key field is shown, a blank key is sent as `fillKey`. */
+  | { readonly mode: 'unchecked'; readonly fillKey: string }
+  /** Access control is on: the key list, plus the session's own identity. */
+  | { readonly mode: 'checked'; readonly own: OwnIdentity };
+
+/** The execution-key binding a capability state implies. */
+export function executionKeyBindingOf(state: CapabilityState): ExecutionKeyBinding {
+  if (state.status !== 'ready') return { mode: 'pending' };
+  const { projection } = state;
+  if (!projection.access_control_enabled) {
+    return { mode: 'unchecked', fillKey: projection.user_id };
+  }
+  return {
+    mode: 'checked',
+    own: {
+      userId: projection.user_id,
+      kind: projection.owner_user_id === null && projection.principal !== null ? 'account' : 'key',
+      admin: projection.admin,
+    },
+  };
+}
+
+/** The execution-key binding of the live session. */
+export function useExecutionKeyBinding(): ExecutionKeyBinding {
+  const { state } = useCapabilities();
+  return useMemo(() => executionKeyBindingOf(state), [state]);
+}
+
+/** The key a write sends: the form's value; with access control off and a blank value, the fill key. */
+export function boundExecutionKey(value: string, binding: ExecutionKeyBinding): string {
+  return binding.mode === 'unchecked' && value.trim() === '' ? binding.fillKey : value;
 }

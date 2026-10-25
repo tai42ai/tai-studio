@@ -50,6 +50,7 @@ function stubClient(methods: Stub): ApiClient {
 }
 function saved(): ReturnType<ApiClient['setEnvConfig']> {
   return Promise.resolve({
+    span_release_error: null,
     status: 'reloaded',
     env_keys: 1,
     awaiting_respawn: [],
@@ -61,6 +62,7 @@ function saved(): ReturnType<ApiClient['setEnvConfig']> {
 /** A save whose broadcast left a sibling unconverged, so `FleetReport` renders. */
 function degradedSave(): ReturnType<ApiClient['setEnvConfig']> {
   return Promise.resolve({
+    span_release_error: null,
     status: 'reloaded',
     env_keys: 1,
     awaiting_respawn: [],
@@ -311,6 +313,7 @@ describe('EnvironmentTab', () => {
 function rolledSave(stopped: boolean): ReturnType<ApiClient['setEnvConfig']> {
   const awaiting = { status: 'ok', env_keys: 1, awaiting_respawn: ['BACKEND_MANIFEST_KEY'] };
   return Promise.resolve({
+    span_release_error: null,
     status: 'ok',
     env_keys: 1,
     // The operation's verdict: a converged roll leaves nobody waiting; a stopped one leaves

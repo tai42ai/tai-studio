@@ -23,12 +23,26 @@
  * create leg does NOT bind one, because the skeleton's create door stamps a bound key as the
  * reserved `backend_schedule_execution_key` arguments and dispatches the schedule vehicle
  * with them, which a vehicle whose base tool declares no `**kwargs` rejects — so a
- * key-bound create cannot persist for such a tool on the installed backend.
+ * key-bound create cannot persist for such a tool on the installed backend. The session
+ * cases therefore serve the create write through `page.route` (with `GET /api/auth/me` and
+ * the api-key list) and read the execution key each session sends.
  */
-import { expect } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
-import { API_KEY, seedCredential } from './helpers';
+import { API_KEY, EXECUTION_KEY_ID, pickExecutionKey, seedCredential } from './helpers';
+import {
+  ACCOUNT_EMPTY_NOTE,
+  accountSession,
+  bodyOf,
+  gateOffSession,
+  KEY_LIST_FORBIDDEN_NOTE,
+  keySession,
+  nextRequest,
+  serveWrite,
+  stubKeyList,
+  stubSession,
+} from './session-stubs';
 
 needs(
   'kind:backend:rq',
@@ -118,4 +132,90 @@ test('a schedule created from the dialog persists and reads back with its cadenc
   expect(created?.tool).toBe(SCHEDULE_TOOL);
   expect(created?.cadence).toEqual(cadence);
   expect(created?.enabled).toBe(true);
+});
+
+/** Open the add-schedule dialog and fill a valid schedule, leaving the key to the case. */
+async function openScheduleFields(page: Page, name: string): Promise<Locator> {
+  await page.getByRole('button', { name: 'Add schedule' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Add schedule' });
+  await dialog.getByLabel('Name').fill(name);
+  await dialog.getByRole('combobox', { name: 'Tool' }).click();
+  await page.getByRole('option', { name: SCHEDULE_TOOL }).click();
+  await dialog.getByLabel('Cron expression').fill('0 2 * * *');
+  await dialog.getByLabel('Tool kwargs (JSON)').fill('{"message":"tick"}');
+  return dialog;
+}
+
+const isSchedules = (pathname: string): boolean => pathname === '/api/schedules';
+
+test.describe('the execution key a session can bind', () => {
+  test('a key session over an empty key list binds its own identity', async ({ page }) => {
+    await seedCredential(page);
+    await stubSession(page, keySession);
+    await stubKeyList(page, { keys: [] });
+    const name = `e2e-own-${String(Date.now())}`;
+    await serveWrite(page, 'POST', isSchedules, { data: { schedule_name: name } });
+    await page.goto('/scheduling');
+
+    const dialog = await openScheduleFields(page, name);
+    await pickExecutionKey(page, dialog);
+    const write = nextRequest(page, 'POST', isSchedules);
+    await dialog.getByRole('button', { name: 'Create schedule' }).click();
+
+    expect(bodyOf(await write).execution_key).toBe(EXECUTION_KEY_ID);
+  });
+
+  test('an account session over an empty key list reads the note', async ({ page }) => {
+    await seedCredential(page);
+    await stubSession(page, accountSession);
+    await stubKeyList(page, { keys: [] });
+    await page.goto('/scheduling');
+
+    await page.getByRole('button', { name: 'Add schedule' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Add schedule' });
+    await expect(dialog.getByText(ACCOUNT_EMPTY_NOTE, { exact: true })).toBeVisible();
+    await expect(dialog.getByRole('combobox', { name: 'Execution key' })).toHaveCount(0);
+  });
+
+  test('with access control off a door-contract jq is sent with the fill identity', async ({
+    page,
+  }) => {
+    await seedCredential(page);
+    await stubSession(page, gateOffSession);
+    const name = `e2e-gate-off-${String(Date.now())}`;
+    await serveWrite(page, 'POST', isSchedules, { data: { schedule_name: name } });
+    await page.goto('/scheduling');
+
+    const dialog = await openScheduleFields(page, name);
+    await expect(dialog.getByText('Execution key', { exact: true })).toHaveCount(0);
+    await dialog.getByRole('textbox', { name: 'Start', exact: true }).fill('.id');
+    const create = dialog.getByRole('button', { name: 'Create schedule' });
+    await expect(create).toBeEnabled();
+    const write = nextRequest(page, 'POST', isSchedules);
+    await create.click();
+
+    const body = bodyOf(await write);
+    expect(body.execution_key).toBe('__no_auth__');
+    expect(body.start_expr).toBeDefined();
+  });
+
+  test("a refused key list reads the note, offers no retry, and binds the session's identity", async ({
+    page,
+  }) => {
+    await seedCredential(page);
+    await stubSession(page, keySession);
+    await stubKeyList(page, { status: 403, error: 'Forbidden' });
+    const name = `e2e-no-grant-${String(Date.now())}`;
+    await serveWrite(page, 'POST', isSchedules, { data: { schedule_name: name } });
+    await page.goto('/scheduling');
+
+    const dialog = await openScheduleFields(page, name);
+    await expect(dialog.getByText(KEY_LIST_FORBIDDEN_NOTE, { exact: true })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Retry' })).toHaveCount(0);
+    await pickExecutionKey(page, dialog);
+    const write = nextRequest(page, 'POST', isSchedules);
+    await dialog.getByRole('button', { name: 'Create schedule' }).click();
+
+    expect(bodyOf(await write).execution_key).toBe(EXECUTION_KEY_ID);
+  });
 });

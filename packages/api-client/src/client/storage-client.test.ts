@@ -45,18 +45,23 @@ function harness(responder: () => Response) {
 describe('storage client transport', () => {
   it('getStorageInfo GETs /api/storage and parses the absent sentinel', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { present: false, provider: null, module: null } }),
+      jsonResponse({ data: { present: false, provider: null, module: null, surfaces: [] } }),
     );
     const out = await client.getStorageInfo();
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/storage');
-    expect(out).toEqual({ present: false, provider: null, module: null });
+    expect(out).toEqual({ present: false, provider: null, module: null, surfaces: [] });
   });
 
   it('getStorageInfo parses a present provider identity', async () => {
     const { client } = harness(() =>
       jsonResponse({
-        data: { present: true, provider: 'FsStorage', module: 'plugin.storage' },
+        data: {
+          present: true,
+          provider: 'FsStorage',
+          module: 'plugin.storage',
+          surfaces: ['storage', 'templates'],
+        },
       }),
     );
     const out = await client.getStorageInfo();
@@ -153,21 +158,55 @@ describe('storage client transport', () => {
     await expect(client.downloadStorageResource('gone')).rejects.toBeInstanceOf(ApiError);
   });
 
-  // A `.`/`..`/absolute/empty-segment id can never survive the browser's URL parser
-  // (it strips dot-segments from the relative path before the request is sent), so the
-  // path encoder rejects it at the client boundary rather than let it silently retarget
-  // the request at an unrelated route. Every storage method that encodes an id inherits
-  // the guard.
-  it('rejects an id with unsafe path segments before issuing any request', () => {
+  // The browser's URL parser strips a `.` or `..` segment before the request is sent,
+  // which would retarget it at another route, so the client refuses those segments.
+  // Every storage method that encodes an id inherits the check.
+  it('rejects a `.` or `..` segment before issuing any request', () => {
     const { client, captured } = harness(() => jsonResponse({ data: {} }));
-    const rule = /relative path/;
-    expect(() => client.statStorageResource('..')).toThrow(rule);
-    expect(() => client.deleteStorageResource('a/../b')).toThrow(rule);
-    expect(() => client.downloadStorageResource('/etc')).toThrow(rule);
-    expect(() => client.deleteStorageDir('a//b')).toThrow(rule);
-    expect(() => client.statStorageResource('')).toThrow(rule);
-    // The guard fires before the transport, so no request was ever sent.
+    const rule = /non-canonical store key/;
+    expect(() => client.statStorageResource('./x')).toThrow(rule);
+    expect(() => client.downloadStorageResource('x/.')).toThrow(rule);
+    expect(() => client.deleteStorageResource('../x')).toThrow(rule);
+    expect(() => client.deleteStorageDir('a/../b')).toThrow(rule);
+    expect(() => client.readStorageResource('..')).toThrow(rule);
     expect(captured).toHaveLength(0);
+  });
+
+  it('sends a key with an empty segment as typed and surfaces the server refusal', async () => {
+    const message =
+      "non-canonical store key 'a//b': a key is '/'-separated names with no empty, '.' or '..' segment";
+    const { client, captured } = harness(() => jsonResponse({ error: message }, 400));
+    const failure = client.statStorageResource('a//b');
+    await expect(failure).rejects.toBeInstanceOf(ApiError);
+    await expect(failure).rejects.toThrow(message);
+    expect(captured[0]?.url).toBe('/api/storage/resources/a//b/stat');
+    await expect(client.deleteStorageResource('x/')).rejects.toBeInstanceOf(ApiError);
+    expect(captured[1]?.url).toBe('/api/storage/resources/x/');
+  });
+
+  it('readStorageResource GETs the entries route and parses each kind', async () => {
+    const text = { id: 'a.txt', kind: 'text', content: 'hi', content_type: 'text/plain', size: 2 };
+    const doc = {
+      id: 'docs/a.pdf',
+      kind: 'document',
+      content: 'extracted',
+      content_type: 'application/pdf',
+      size: 900,
+    };
+    const bin = { id: 'img.png', kind: 'binary', content_type: 'image/png', size: 4 };
+    for (const entry of [text, doc, bin]) {
+      const { client, captured } = harness(() => jsonResponse({ data: entry }));
+      expect(await client.readStorageResource(entry.id)).toEqual(entry);
+      expect(captured[0]?.method).toBe('GET');
+      expect(captured[0]?.url).toBe(`/api/storage/entries/${entry.id}`);
+    }
+  });
+
+  it('readStorageResource refuses an unknown kind loudly', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: { id: 'x', kind: 'video', content_type: null, size: 1 } }),
+    );
+    await expect(client.readStorageResource('x')).rejects.toThrow();
   });
 
   it('still encodes a legitimate nested id per segment (guard does not over-reject)', async () => {

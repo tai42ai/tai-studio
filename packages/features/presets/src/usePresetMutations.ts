@@ -5,7 +5,12 @@
  * versioning-off derivation. Both writes hit the same versioning store, so once
  * either reveals it off the other is certain to refuse too.
  */
-import type { CreatePresetBody, PresetExtensionElement, StateBinding } from '@tai42/api-client';
+import type {
+  CreatePresetBody,
+  PresetExtensionElement,
+  StateBinding,
+  TemplatedText,
+} from '@tai42/api-client';
 import {
   isFeatureDisabled,
   type SchemaEditorChange,
@@ -27,7 +32,10 @@ export interface CreateDraft {
   readonly base: string | null;
   readonly combos: PresetExtensionElement[][];
   readonly kwargsText: string;
+  readonly inputSchema: SchemaEditorChange;
+  readonly inputMap: TemplatedText | null;
   readonly outputSchema: SchemaEditorChange;
+  readonly outputMap: TemplatedText | null;
   readonly stateBinding: StateBinding | null;
   readonly extensionsValid: boolean;
   /** Whether the fixed-kwargs editor's rows are all valid; a half-edited row blocks submit. */
@@ -57,9 +65,17 @@ function buildDraftBody(
     description: draft.description,
     fixedKwargs: parsed.value,
     combos: draft.combos,
+    inputSchema: draft.inputSchema.schema,
+    inputMap: draft.inputMap,
     outputSchema: draft.outputSchema.schema,
+    outputMap: draft.outputMap,
     stateBinding: draft.stateBinding,
   });
+}
+
+/** Both schema editors hold a parseable schema (or none). */
+export function draftSchemasValid(draft: CreateDraft): boolean {
+  return draft.inputSchema.valid && draft.outputSchema.valid;
 }
 
 /** The submit/validate gates: which required fields are missing, and whether a validate can run. */
@@ -71,7 +87,7 @@ function draftGates(draft: CreateDraft, parsed: ReturnType<typeof parseJsonObjec
   const canValidate =
     !nameMissing &&
     !baseMissing &&
-    draft.outputSchema.valid &&
+    draftSchemasValid(draft) &&
     draft.extensionsValid &&
     draft.kwargsRowsValid &&
     !('error' in parsed);
@@ -137,7 +153,10 @@ export function usePresetMutations({
     base: draft.base,
     combos: draft.combos,
     kwargsText: draft.kwargsText,
+    inputSchema: draft.inputSchema.schema,
+    inputMap: draft.inputMap,
     outputSchema: draft.outputSchema.schema,
+    outputMap: draft.outputMap,
     stateBinding: draft.stateBinding,
   });
   useEffect(() => {
@@ -147,7 +166,7 @@ export function usePresetMutations({
   const submit = (): void => {
     // Name, base, AND description each gate the create (an empty description 422s).
     if (nameMissing || baseMissing || descriptionMissing) return;
-    if (!draft.outputSchema.valid || !draft.extensionsValid) return;
+    if (!draftSchemasValid(draft) || !draft.extensionsValid) return;
     // A half-edited kwarg row holds the text at its last VALID serialisation, which would
     // parse and bake the stale value; refuse so it can never be saved silently.
     if (!draft.kwargsRowsValid) return;

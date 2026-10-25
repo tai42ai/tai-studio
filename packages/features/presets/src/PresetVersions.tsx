@@ -12,7 +12,12 @@
  * panel's `onEditTags` callback runs `setPresetVersionTags` and invalidates this
  * preset's versions. Editing a tag annotation rebinds nothing (labels on an
  * immutable body), so only the versions query is invalidated — not the tool list.
+ *
+ * Rollback and Edit tags are offered only when the caller's access projection admits
+ * their routes. A deep link's `version` marks that row; a version the history does not
+ * hold is said above the table.
  */
+import { apiRoutes } from '@tai42/api-client';
 import {
   Card,
   EmptyState,
@@ -21,6 +26,7 @@ import {
   Skeleton,
   toolsListKey,
   useApi,
+  useCanWrite,
   type VersionHistoryEntry,
   VersionHistoryPanel,
 } from '@tai42/studio-sdk';
@@ -29,9 +35,18 @@ import type { ReactNode } from 'react';
 
 import { presetDetailKey, presetsListKey, presetVersionsKey } from './keys';
 
-export function PresetVersions({ name }: { readonly name: string }): ReactNode {
+export function PresetVersions({
+  name,
+  version,
+}: {
+  readonly name: string;
+  /** The version a deep link points at, if any. */
+  readonly version?: number;
+}): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
+  const canRollback = useCanWrite(apiRoutes.post_api_presets_name_rollback.path);
+  const canEditTags = useCanWrite(apiRoutes.put_api_presets_name_versions_version_tags.path, 'PUT');
 
   const versionsQuery = useQuery({
     queryKey: presetVersionsKey(name),
@@ -95,18 +110,36 @@ export function PresetVersions({ name }: { readonly name: string }): ReactNode {
       tags: version.tags,
     }));
 
+  const versionMissing =
+    version !== undefined && !entries.some((entry) => entry.version === version);
+
   return (
-    <VersionHistoryPanel
-      versions={entries}
-      onRollback={(version) => {
-        rollback.mutate(version);
-      }}
-      rollbackPending={rollback.isPending}
-      rollbackError={rollback.isError ? errorMessage(rollback.error) : undefined}
-      rollbackConfirmDescription="The live preset tool rebinds to this version immediately."
-      onEditTags={async (version, tags) => {
-        await editTags.mutateAsync({ version, tags });
-      }}
-    />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
+      {versionMissing ? (
+        <p role="status" style={{ margin: 0 }}>
+          {`Version ${String(version)} is not in this preset's history.`}
+        </p>
+      ) : null}
+      <VersionHistoryPanel
+        versions={entries}
+        onRollback={(target) => {
+          rollback.mutate(target);
+        }}
+        // The panel's read-only mode withholds every row mutation; Edit tags is
+        // additionally offered only with its own grant.
+        readOnly={!canRollback}
+        rollbackPending={rollback.isPending}
+        rollbackError={rollback.isError ? errorMessage(rollback.error) : undefined}
+        rollbackConfirmDescription="The live preset tool rebinds to this version immediately."
+        onEditTags={
+          canEditTags
+            ? async (target, tags) => {
+                await editTags.mutateAsync({ version: target, tags });
+              }
+            : undefined
+        }
+        highlightVersion={version}
+      />
+    </div>
   );
 }

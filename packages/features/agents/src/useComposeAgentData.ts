@@ -12,7 +12,7 @@ import {
   useToolDisplayNames,
 } from '@tai42/studio-sdk';
 import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { hasField } from './authoring-schema';
 import {
@@ -69,10 +69,20 @@ export function useComposeAgentData(baseAgent: AgentSummary | null, baseSchema: 
   // Effective-hidden tools (`overlay.hidden ?? plugin declaration`) are removed from
   // the population the compose pickers offer — the same tri-state rule the tools
   // screen applies. Best-effort: a failed tags/meta read leaves everything visible.
-  const visibleToolNames = useMemo(() => {
-    const hidden = hiddenToolNames(tagsQuery.data ?? [], metaQuery.data?.meta ?? []);
-    return (toolsQuery.data ?? []).filter((name) => !hidden.has(name));
-  }, [toolsQuery.data, tagsQuery.data, metaQuery.data]);
+  // A second observer on the tools read, so the pickers see the read's own
+  // pending/error state over the visible names.
+  const dropHidden = useCallback(
+    (names: string[]): string[] => {
+      const hidden = hiddenToolNames(tagsQuery.data ?? [], metaQuery.data?.meta ?? []);
+      return names.filter((name) => !hidden.has(name));
+    },
+    [tagsQuery.data, metaQuery.data],
+  );
+  const visibleToolsQuery = useQuery({
+    queryKey: authoredToolsKey,
+    queryFn: () => api.listTools(),
+    select: dropHidden,
+  });
 
   return {
     toolMetaOff,
@@ -82,7 +92,7 @@ export function useComposeAgentData(baseAgent: AgentSummary | null, baseSchema: 
     presetsQuery,
     usablePresets,
     tagsByTool,
-    visibleToolNames,
+    visibleToolsQuery,
     needsTools,
     needsPresets,
     readFailed,
