@@ -41,7 +41,7 @@ _SPEC = {
     # preview resolves (the skeleton refuses a spec whose contract_range excludes the
     # installed tai42-contract). Pinned to the current major the same way every
     # shipped plugin's tai-plugin.yml is, so it tracks the contract bump.
-    "contract": ">=22,<23",
+    "contract": ">=23,<24",
     "categories": ["channels"],
     "tags": ["alerts", "relay", "webhook"],
     "provides": [
@@ -85,6 +85,7 @@ _LISTING = {
     "display_name": _SPEC["display_name"],
     "icon_url": None,
     "package": _SPEC["package"],
+    "source": "pypi",
     "description": _SPEC["description"],
     "readme_md": None,
     "license": _SPEC["license"],

@@ -354,6 +354,7 @@ categories: string[];
 tags: string[];
 trust_tier: string;
 pricing: string;
+premium: boolean;
 latest_version: string | null;
 downloads: number;
 updated_at: string;
@@ -366,7 +367,6 @@ groups: {
 name: string;
 count: number;
 }[];
-premium?: boolean | null | undefined;
 }[];
 total: number;
 page: number;
@@ -378,6 +378,7 @@ name: string;
 display_name: string | null;
 icon_url: string | null;
 package: string | null;
+source: "pypi" | "github" | "spec";
 description: string;
 readme_md: string | null;
 license: string | null;
@@ -387,6 +388,7 @@ categories: string[];
 tags: string[];
 trust_tier: string;
 pricing: string;
+premium: boolean;
 downloads: number;
 latest: {
 version: string;
@@ -419,9 +421,7 @@ contract_range: string | null;
 status: string;
 published_at: string | null;
 }[];
-source?: "pypi" | "github" | "spec" | null | undefined;
 docs_url?: string | null | undefined;
-premium?: boolean | null | undefined;
 }>;
 readonly listMarketplaceCategories: (signal?: AbortSignal) => Promise<string[]>;
 readonly listMarketplaceKinds: (signal?: AbortSignal) => Promise<string[]>;
@@ -5954,7 +5954,7 @@ const configFieldView: z.ZodObject<{
         header: "header";
         env: "env";
     }>;
-}, z.core.$strip>;
+}, z.core.$strict>;
 
 // @public
 const configMode: z.ZodObject<{
@@ -8527,6 +8527,7 @@ function createApiClient(config: ApiConfig): {
             tags: string[];
             trust_tier: string;
             pricing: string;
+            premium: boolean;
             latest_version: string | null;
             downloads: number;
             updated_at: string;
@@ -8539,7 +8540,6 @@ function createApiClient(config: ApiConfig): {
                 name: string;
                 count: number;
             }[];
-            premium?: boolean | null | undefined;
         }[];
         total: number;
         page: number;
@@ -8551,6 +8551,7 @@ function createApiClient(config: ApiConfig): {
         display_name: string | null;
         icon_url: string | null;
         package: string | null;
+        source: "pypi" | "github" | "spec";
         description: string;
         readme_md: string | null;
         license: string | null;
@@ -8560,6 +8561,7 @@ function createApiClient(config: ApiConfig): {
         tags: string[];
         trust_tier: string;
         pricing: string;
+        premium: boolean;
         downloads: number;
         latest: {
             version: string;
@@ -8592,9 +8594,7 @@ function createApiClient(config: ApiConfig): {
             status: string;
             published_at: string | null;
         }[];
-        source?: "pypi" | "github" | "spec" | null | undefined;
         docs_url?: string | null | undefined;
-        premium?: boolean | null | undefined;
     }>;
     readonly listMarketplaceCategories: (signal?: AbortSignal) => Promise<string[]>;
     readonly listMarketplaceKinds: (signal?: AbortSignal) => Promise<string[]>;
@@ -15954,11 +15954,11 @@ const marketplacePluginDetail: z.ZodObject<{
     display_name: z.ZodNullable<z.ZodString>;
     icon_url: z.ZodNullable<z.ZodString>;
     package: z.ZodNullable<z.ZodString>;
-    source: z.ZodOptional<z.ZodNullable<z.ZodEnum<{
+    source: z.ZodEnum<{
         pypi: "pypi";
         github: "github";
         spec: "spec";
-    }>>>;
+    }>;
     description: z.ZodString;
     readme_md: z.ZodNullable<z.ZodString>;
     license: z.ZodNullable<z.ZodString>;
@@ -15969,7 +15969,7 @@ const marketplacePluginDetail: z.ZodObject<{
     tags: z.ZodArray<z.ZodString>;
     trust_tier: z.ZodString;
     pricing: z.ZodString;
-    premium: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
+    premium: z.ZodBoolean;
     downloads: z.ZodNumber;
     latest: z.ZodNullable<z.ZodObject<{
         version: z.ZodString;
@@ -16164,7 +16164,7 @@ const marketplaceSearchPage: z.ZodObject<{
         tags: z.ZodArray<z.ZodString>;
         trust_tier: z.ZodString;
         pricing: z.ZodString;
-        premium: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
+        premium: z.ZodBoolean;
         latest_version: z.ZodNullable<z.ZodString>;
         downloads: z.ZodNumber;
         updated_at: z.ZodString;
@@ -16223,7 +16223,7 @@ const marketplaceSearchRow: z.ZodObject<{
     tags: z.ZodArray<z.ZodString>;
     trust_tier: z.ZodString;
     pricing: z.ZodString;
-    premium: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
+    premium: z.ZodBoolean;
     latest_version: z.ZodNullable<z.ZodString>;
     downloads: z.ZodNumber;
     updated_at: z.ZodString;
@@ -17449,7 +17449,7 @@ type PresetBody = z.input<typeof presetBody>;
 // @public (undocumented)
 const presetBody: z.ZodObject<{
     base_tool: z.ZodString;
-    description: z.ZodDefault<z.ZodString>;
+    description: z.ZodString;
     extensions: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodRecord<z.ZodString, z.ZodUnknown>]>>>>;
     fixed_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     input_schema: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
@@ -17682,7 +17682,7 @@ const presetVersion: z.ZodObject<{
     version: z.ZodNumber;
     body: z.ZodObject<{
         base_tool: z.ZodString;
-        description: z.ZodDefault<z.ZodString>;
+        description: z.ZodString;
         extensions: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodRecord<z.ZodString, z.ZodUnknown>]>>>>;
         fixed_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         input_schema: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
@@ -17749,7 +17749,7 @@ const presetVersionList: z.ZodArray<z.ZodObject<{
     version: z.ZodNumber;
     body: z.ZodObject<{
         base_tool: z.ZodString;
-        description: z.ZodDefault<z.ZodString>;
+        description: z.ZodString;
         extensions: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodRecord<z.ZodString, z.ZodUnknown>]>>>>;
         fixed_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         input_schema: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
@@ -18008,7 +18008,7 @@ const providerMutationResult: z.ZodObject<{
                 header: "header";
                 env: "env";
             }>;
-        }, z.core.$strip>>>;
+        }, z.core.$strict>>>;
         description: z.ZodDefault<z.ZodString>;
         display_name: z.ZodString;
         icon_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -18103,7 +18103,7 @@ const providers: z.ZodObject<{
                 header: "header";
                 env: "env";
             }>;
-        }, z.core.$strip>>>;
+        }, z.core.$strict>>>;
         description: z.ZodDefault<z.ZodString>;
         display_name: z.ZodString;
         icon_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -18147,7 +18147,7 @@ const providerView: z.ZodObject<{
             header: "header";
             env: "env";
         }>;
-    }, z.core.$strip>>>;
+    }, z.core.$strict>>>;
     description: z.ZodDefault<z.ZodString>;
     display_name: z.ZodString;
     icon_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -23599,7 +23599,6 @@ const servedDocumentsJson: {
                 readonly type: "string";
             };
             readonly description: {
-                readonly default: "";
                 readonly title: "Description";
                 readonly type: "string";
             };
@@ -23659,7 +23658,7 @@ const servedDocumentsJson: {
                 readonly default: null;
             };
         };
-        readonly required: readonly ["base_tool"];
+        readonly required: readonly ["base_tool", "description"];
         readonly title: "PresetBody";
         readonly type: "object";
     };

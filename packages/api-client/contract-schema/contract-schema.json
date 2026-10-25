@@ -2605,7 +2605,7 @@
     "MEDIA_ROUTE_PREFIX": "/api/interactions/media/",
     "PERSON_KIND": "person"
   },
-  "contract_version": "22.0.0",
+  "contract_version": "23.0.0",
   "documents": {
     "AccessPolicy": {
       "description": "Schema for data stored at 'ac:policy:{user_id}'. Represents WHAT the user can do (permissions & logic).",
@@ -3318,7 +3318,6 @@
           "type": "string"
         },
         "description": {
-          "default": "",
           "title": "Description",
           "type": "string"
         },
@@ -3391,7 +3390,8 @@
         }
       },
       "required": [
-        "base_tool"
+        "base_tool",
+        "description"
       ],
       "title": "PresetBody",
       "type": "object"

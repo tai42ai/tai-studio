@@ -163,7 +163,7 @@
       },
       "AgentsConfig": {
         "additionalProperties": false,
-        "description": "An agents block: a ``module`` import path plus selection config (no extensions).",
+        "description": "An agents block: a ``module`` import path plus selection config.\n\nAgents carry no clip-on extensions, so an ``extensions`` key here is refused as\nan unknown key, like any other (``BaseConfig``'s ``extra=\"forbid\"``).",
         "properties": {
           "exclude": {
             "items": {
@@ -3401,6 +3401,7 @@
         "type": "object"
       },
       "ConfigFieldSpec": {
+        "additionalProperties": false,
         "description": "One client-supplied static config value for a no-auth provider.\n\n``target`` picks the injection channel and MUST match the server transport\n(``env`` for stdio, ``header`` for http/websocket). ``secret`` flags a value\nmasked in the UI and never logged; ``required`` gates connect-time validation.",
         "properties": {
           "key": {
@@ -3660,6 +3661,7 @@
         "type": "object"
       },
       "ConnectorRef": {
+        "additionalProperties": false,
         "description": "Marker on a manifest entry pointing back at a Connection.\n\nHand-authored entries leave ``managed`` as ``None`` and are unaffected.",
         "properties": {
           "connection_id": {
@@ -3843,7 +3845,7 @@
         "type": "object"
       },
       "ConversationAnswer": {
-        "description": "The outcome of one conversation turn.\n\nThe body POSTed (HMAC-signed) to a ``door=api`` row's ``callback_url`` AND the bounded\nsync-wait payload.\n\n``message_id`` correlates it to the ``202``/``200`` the door returned. On\n``status=\"error\"`` the ``answer`` is generic client-safe text, never an internal\ndetail. On ``status=\"silent\"`` the turn produced no reply and ``answer`` is absent.\n\n``parts`` is the ordered list of :class:`AnswerPart` messages the turn produced when a\nsingle joined string would lose something — more than one message, or one message\ncarrying media/options/a template. It is order-significant; when it is present ``answer``\nequals the parts' NON-BLANK MESSAGE texts joined with ``\"\\n\\n\"`` (:func:`joined_answer_text`),\nso every consumer of ``answer`` (api-door callbacks, sync waits, transcripts) keeps seeing\nthe whole text with zero migration while a parts-aware consumer reads ``parts`` and delivers\neach as its own message (with its media/options). A single PLAIN-TEXT answer carries\n``parts=None`` (the joined ``answer`` says everything); a richer or multi-message answer\ncarries the parts. An ALL-MEDIA answer (every part media-only) joins to the EMPTY string, so\non ``answered``/``error`` a blank ``answer`` is admissible ONLY when ``parts`` carry the\ncontent — the media rides ``parts``.\n\n``status=\"merged\"`` / ``status=\"superseded\"`` are ANSWERLESS overlap outcomes (no ``answer``,\nno ``parts``) that carry a ``successor_id``: the ``message_id`` of the turn that took this\nmessage's place — the turn that carried this message's text (``merged``) or the newer turn it\nwas dropped in favour of (``superseded``). ``successor_id`` is set EXACTLY on those two\noutcomes and ``None`` on every other. Frozen.",
+        "description": "The outcome of one conversation turn.\n\nThe body POSTed (HMAC-signed) to a ``door=api`` row's ``callback_url`` AND the bounded\nsync-wait payload.\n\n``message_id`` correlates it to the ``202``/``200`` the door returned. On\n``status=\"error\"`` the ``answer`` is generic client-safe text, never an internal\ndetail. On ``status=\"silent\"`` the turn produced no reply and ``answer`` is absent.\n\n``parts`` is the ordered list of :class:`AnswerPart` messages the turn produced when a\nsingle joined string would lose something — more than one message, or one message\ncarrying media/options/a template. It is order-significant; when it is present ``answer``\nequals the parts' NON-BLANK MESSAGE texts joined with ``\"\\n\\n\"`` (:func:`joined_answer_text`).\n``answer`` is the whole text, read by the consumers that take one string (api-door callbacks,\nsync waits, transcripts); ``parts`` is read by a consumer that delivers each part as its own\nmessage (with its media/options). A single PLAIN-TEXT answer carries\n``parts=None`` (the joined ``answer`` says everything); a richer or multi-message answer\ncarries the parts. An ALL-MEDIA answer (every part media-only) joins to the EMPTY string, so\non ``answered``/``error`` a blank ``answer`` is admissible ONLY when ``parts`` carry the\ncontent — the media rides ``parts``.\n\n``status=\"merged\"`` / ``status=\"superseded\"`` are ANSWERLESS overlap outcomes (no ``answer``,\nno ``parts``) that carry a ``successor_id``: the ``message_id`` of the turn that took this\nmessage's place — the turn that carried this message's text (``merged``) or the newer turn it\nwas dropped in favour of (``superseded``). ``successor_id`` is set EXACTLY on those two\noutcomes and ``None`` on every other. Frozen.",
         "properties": {
           "answer": {
             "anyOf": [
@@ -8169,6 +8171,7 @@
         "type": "object"
       },
       "MCPConfig": {
+        "additionalProperties": false,
         "description": "Transport config for one MCP server: exactly one of ``url``/``uds``/``command``.",
         "properties": {
           "args": {
@@ -17855,6 +17858,7 @@
         "type": "array"
       },
       "TaiMCPConfig": {
+        "additionalProperties": false,
         "description": "An MCP block: a transport ``config`` plus optional managed-connector binding.",
         "properties": {
           "config": {
@@ -19345,6 +19349,7 @@
         "type": "object"
       },
       "ToolsConfig": {
+        "additionalProperties": false,
         "description": "A tools block: a ``module`` import path plus selection and extension config.",
         "properties": {
           "exclude": {
@@ -20202,7 +20207,7 @@
   "info": {
     "description": "The operator HTTP surface served under /api/*. The platform's core routes. Plugin routes are published by each plugin.",
     "title": "tai42-skeleton API",
-    "version": "28.0.0"
+    "version": "29.0.1"
   },
   "openapi": "3.1.0",
   "paths": {
