@@ -9,11 +9,10 @@ import { configure } from '@testing-library/react';
 
 /**
  * `ASYNC_UTIL_TIMEOUT_MS` is how long a Testing Library async utility (`findBy*`, `waitFor`)
- * waits for the rendered state it awaits. Measured over every such wait of one
- * `pnpm -r test --coverage` run on a 20-core host at load average 80-92 (6198 waits): the
- * slowest took 7968 ms (studio-sdk JsonTree › "bounds expand-all by a total node budget on a
- * wide-and-deep payload"); add the 2.1 s first-test warm-up measured for `TEST_TIMEOUT_MS`
- * in `vitest.shared.config.ts`. 8.0 s + 2.1 s, rounded up.
+ * waits for the rendered state it awaits. It sits below `TEST_TIMEOUT_MS` so a wait that
+ * never resolves fails with the awaited query named, not with Vitest's bare timeout, and
+ * above the slowest test measured on CI's 4-vCPU runner with packages run one at a time
+ * (3.6 s, see `vitest.shared.config.ts`), which bounds every wait inside it.
  */
 const ASYNC_UTIL_TIMEOUT_MS = 11_000;
 

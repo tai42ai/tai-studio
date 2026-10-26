@@ -32,7 +32,7 @@
     "lint": "pnpm -r lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "pnpm -r test",
+    "test": "pnpm -r --workspace-concurrency=1 test",
     "e2e": "pnpm --filter @tai42/e2e run e2e",
     "fixtures:refresh": "pnpm --filter @tai42/e2e run fixtures:refresh",
     "prepare": "lefthook install"

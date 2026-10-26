@@ -3,13 +3,13 @@ import { fileURLToPath } from 'node:url';
 /**
  * Settings every workspace package's vitest config reads, so the packages share these values.
  *
- * `TEST_TIMEOUT_MS` is the per-test time budget. The tests wait on rendered state, never on
- * a timer, so what the budget bounds is how long a test runs on a busy machine. Measured with
- * `pnpm -r test --coverage` on a 20-core host at load average 80-92: the slowest passing test
- * took 15.5 s (`features/hooks` RegisterHookForm, the jq condition and door-contract round
- * trip), and the first test in a file carries about 2.1 s of warm-up whatever it does
- * (`features/connectors` connection-detail: 2143 ms first, 326 ms for the same file's later
- * tests). 15.5 s + 2.1 s, rounded up.
+ * `TEST_TIMEOUT_MS` is the per-test budget: a hang detector, not a performance gate. The
+ * tests wait on rendered state, never on a timer, so a test that reaches it is stuck. The
+ * workspace runs its packages one at a time (`pnpm test`) and each package's Vitest pool
+ * is sized to the machine's cores, so a test runs on about one core; the slowest test
+ * measured that way on CI's 4-vCPU runner is 3.6 s (`features/conversations`
+ * RouteFormDialog › "keeps the revealed secret on Escape, then closes only on the explicit
+ * Done") and the budget is at least twice that, rounded up to a round number.
  */
 export const TEST_TIMEOUT_MS = 20_000;
 

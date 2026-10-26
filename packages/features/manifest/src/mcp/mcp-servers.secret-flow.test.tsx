@@ -1,10 +1,7 @@
 // Each secret op mounts the full MCP config editor — a schema-driven form that
 // re-renders on every keystroke, plus the async paste → confirm-re-read → save/sweep
-// chain — so these flows are a heavy render chain that runs slowly under coverage
-// instrumentation on a loaded runner. The file gets explicit testTimeout headroom and
-// userEvent runs without its inter-key delay, so a loaded runner cannot push a keystroke
-// chain past the timeout; correctness stays gated by the real assertions and awaited
-// signals below.
+// chain — so userEvent runs without its inter-key delay; correctness stays gated by the
+// real assertions and awaited signals below.
 import { ApiError } from '@tai42/api-client';
 import { QueryClient } from '@tanstack/react-query';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
@@ -20,8 +17,6 @@ import {
   withEnvBlank,
   withEnvMarker,
 } from './test-utils-mcp-servers';
-
-vi.setConfig({ testTimeout: 15_000 });
 
 describe('McpServersSection — secret op lifecycle + blocking', () => {
   it('shuts the Save door while a paste op is in flight, then sweeps the key it generated', async () => {

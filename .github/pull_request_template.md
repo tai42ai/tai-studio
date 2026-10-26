@@ -12,7 +12,7 @@
 - [ ] Types check (`pnpm -r typecheck`)
 - [ ] Lint is clean (`pnpm -r lint`)
 - [ ] Formatting is clean (`pnpm -r format:check`)
-- [ ] Tests pass (`pnpm -r test --coverage`)
+- [ ] Tests pass (`pnpm test --coverage`)
 - [ ] Commits follow Conventional Commits (`feat:`/`fix:`/`chore:` …) — commitlint
       gates this, and release-please derives the version bump and release notes
       from them

@@ -57,11 +57,8 @@ function StubExpressionField({ label, value, onChange }: ExpressionFieldProps): 
 }
 
 // Every case drives a full Radix dialog flow — portal mount, combobox pickers, and a
-// schema-driven form that re-renders on each keystroke — so these flows are a heavy
-// render chain that runs slowly under coverage instrumentation on a loaded runner.
-// userEvent runs without its inter-key delay and the file gets explicit testTimeout
-// headroom; correctness stays gated by the real assertions and awaited signals below.
-vi.setConfig({ testTimeout: 20_000 });
+// schema-driven form that re-renders on each keystroke — so userEvent runs without its
+// inter-key delay; correctness stays gated by the real assertions and awaited signals below.
 
 type User = ReturnType<typeof userEvent.setup>;
 

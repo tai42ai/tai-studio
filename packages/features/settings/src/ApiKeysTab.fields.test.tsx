@@ -18,8 +18,6 @@ import { CONDITION_HINT, POLICY_DATA_HINT } from './PolicySection';
 import { FULL_ACCESS_LABEL, FULL_ACCESS_WARNING } from './ScopePicker';
 import { fullProjection, renderWithProviders, scopedProjection } from './test-utils';
 
-vi.setConfig({ testTimeout: 15_000 });
-
 function key(overrides: Partial<TokensPayload[number]> = {}): TokensPayload[number] {
   return {
     condition: null,

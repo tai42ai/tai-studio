@@ -23,8 +23,6 @@ import {
   type StubApiClient,
 } from './test-utils';
 
-vi.setConfig({ testTimeout: 20_000 });
-
 /** A non-admin key session whose own `user_id` is `alice` (owned by the account `alice-owner`). */
 const aliceKey = (): MeProjection =>
   keySessionProjection({
