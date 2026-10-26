@@ -5381,21 +5381,25 @@ export function createApiClient(config: ApiConfig): {
     }>;
     readonly getSettingsSchema: (signal?: AbortSignal) => Promise<{
         groups: {
+            fields: {
+                accepted_env_vars: string[];
+                default: unknown;
+                default_namespace_var: string | null;
+                description: string | null;
+                env_var: string;
+                key_material: boolean;
+                name: string;
+                nested_group: string | null;
+                reload_class: "recycle" | "hot" | "excluded";
+                required: boolean;
+                secret: boolean;
+                type: string;
+                value: unknown;
+                value_source: "stored" | "deployment" | "default_namespace" | "field_default" | null;
+            }[];
             module: string;
             name: string;
             qualname: string;
-            fields: {
-                name: string;
-                env_var: string;
-                type: string;
-                default: unknown;
-                required: boolean;
-                secret: boolean;
-                description: string | null;
-                nested_group: string | null;
-                default_namespace_var: string | null;
-                value: unknown;
-            }[];
         }[];
     }>;
     readonly getMcpConfigSchema: (signal?: AbortSignal) => Promise<Record<string, unknown>>;
@@ -7412,6 +7416,7 @@ export function createApiClient(config: ApiConfig): {
         version: number;
     }>;
     readonly getEnvConfig: (signal?: AbortSignal) => Promise<{
+        deployment_keys: string[];
         env: Record<string, string>;
         secret_keys: string[];
     }>;
@@ -9722,6 +9727,7 @@ const editApiKeyResult: z.ZodObject<{
 
 // @public (undocumented)
 const envConfig: z.ZodObject<{
+    deployment_keys: z.ZodArray<z.ZodString>;
     env: z.ZodRecord<z.ZodString, z.ZodString>;
     secret_keys: z.ZodArray<z.ZodString>;
 }, z.core.$strip>;
@@ -22175,21 +22181,34 @@ export type SettingsSchema = z.infer<typeof settingsSchema>;
 // @public (undocumented)
 const settingsSchema: z.ZodObject<{
     groups: z.ZodArray<z.ZodObject<{
+        fields: z.ZodArray<z.ZodObject<{
+            accepted_env_vars: z.ZodArray<z.ZodString>;
+            default: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+            default_namespace_var: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            description: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            env_var: z.ZodString;
+            key_material: z.ZodDefault<z.ZodBoolean>;
+            name: z.ZodString;
+            nested_group: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            reload_class: z.ZodDefault<z.ZodEnum<{
+                recycle: "recycle";
+                hot: "hot";
+                excluded: "excluded";
+            }>>;
+            required: z.ZodBoolean;
+            secret: z.ZodBoolean;
+            type: z.ZodString;
+            value: z.ZodUnknown;
+            value_source: z.ZodNullable<z.ZodEnum<{
+                stored: "stored";
+                deployment: "deployment";
+                default_namespace: "default_namespace";
+                field_default: "field_default";
+            }>>;
+        }, z.core.$strip>>;
         module: z.ZodString;
         name: z.ZodString;
         qualname: z.ZodString;
-        fields: z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
-            env_var: z.ZodString;
-            type: z.ZodString;
-            default: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
-            required: z.ZodBoolean;
-            secret: z.ZodBoolean;
-            description: z.ZodNullable<z.ZodString>;
-            nested_group: z.ZodNullable<z.ZodString>;
-            default_namespace_var: z.ZodNullable<z.ZodString>;
-            value: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
-        }, z.core.$strip>>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 

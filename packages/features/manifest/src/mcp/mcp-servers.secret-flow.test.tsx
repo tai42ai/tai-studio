@@ -47,8 +47,8 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
       listExtensions: vi.fn().mockResolvedValue([]),
       getEnvConfig: vi
         .fn()
-        .mockResolvedValueOnce({ env: {}, secret_keys: [] })
-        .mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'] }),
+        .mockResolvedValueOnce({ env: {}, secret_keys: [], deployment_keys: [] })
+        .mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'], deployment_keys: [] }),
       setMcpSecretEnv,
       setMcpConfig,
       setEnvConfig,
@@ -104,7 +104,7 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
         .mockResolvedValue(withEnvMarker),
       getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
       setMcpSecretEnv,
       setMcpConfig,
       setEnvConfig,
@@ -150,7 +150,7 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
       getManifestPreserved,
       getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
       setMcpSecretEnv,
       setMcpConfig,
       setEnvConfig,
@@ -191,8 +191,8 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
       listExtensions: vi.fn().mockResolvedValue([]),
       getEnvConfig: vi
         .fn()
-        .mockResolvedValueOnce({ env: {}, secret_keys: [] })
-        .mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'] }),
+        .mockResolvedValueOnce({ env: {}, secret_keys: [], deployment_keys: [] })
+        .mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'], deployment_keys: [] }),
       setMcpSecretEnv,
       setMcpConfig,
       setEnvConfig,
@@ -233,7 +233,9 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
         .mockResolvedValue(withEnvMarker),
       getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: ['SHARED_KEY'] }),
+      getEnvConfig: vi
+        .fn()
+        .mockResolvedValue({ env: {}, secret_keys: ['SHARED_KEY'], deployment_keys: [] }),
       setMcpSecretEnv,
     };
     renderWithProviders(<McpServersSection />, { client });
@@ -277,8 +279,8 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
       listExtensions: vi.fn().mockResolvedValue([]),
       getEnvConfig: vi
         .fn()
-        .mockResolvedValueOnce({ env: {}, secret_keys: [] })
-        .mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'] }),
+        .mockResolvedValueOnce({ env: {}, secret_keys: [], deployment_keys: [] })
+        .mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'], deployment_keys: [] }),
       setMcpSecretEnv,
       setMcpConfig,
       setEnvConfig,
@@ -316,7 +318,7 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
       getManifestPreserved: vi.fn().mockResolvedValue(withEnvBlank),
       getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
       setMcpSecretEnv,
     };
     renderWithProviders(<McpServersSection />, { client });
@@ -338,7 +340,9 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
       getManifestPreserved: vi.fn().mockResolvedValue(withEnvMarker),
       getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'] }),
+      getEnvConfig: vi
+        .fn()
+        .mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'], deployment_keys: [] }),
       setMcpConfig,
     };
     renderWithProviders(<McpServersSection />, { client });
@@ -359,7 +363,7 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
       getManifestPreserved: vi.fn().mockResolvedValue(withEnvBlank),
       getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
       setMcpSecretEnv,
     };
     renderWithProviders(<McpServersSection />, { client });
@@ -396,7 +400,7 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
       }),
       getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
       setMcpSecretEnv,
     };
     renderWithProviders(<McpServersSection />, { client });

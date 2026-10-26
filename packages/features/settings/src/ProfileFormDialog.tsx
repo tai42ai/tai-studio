@@ -28,6 +28,10 @@ import { settingsProfileKey, settingsProfilesKey, settingsProfileVersionsKey } f
 import { isSecretKey, type ProfileBody } from './profile-secrets';
 import { SECRET_MARKS_ENV_VAR } from './settings-secrets';
 
+// A profile is a document applied later: a key the deployment sets is not locked in
+// its editor, and the apply diff lists it among the refused keys.
+const notDeploymentSet = (): boolean => false;
+
 const fieldStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
@@ -130,6 +134,7 @@ function ProfileFormFields({
           secretIdPrefix="profile-secret"
           isSecret={isSecret}
           isOwned={isOwned}
+          isDeploymentSet={notDeploymentSet}
           onKeyChange={editor.setKey}
           onValueChange={editor.setValue}
           onRemove={editor.removeRow}

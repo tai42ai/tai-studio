@@ -53,6 +53,9 @@ const settingsSchemaData = {
         {
           name: 'title',
           env_var: 'APP_TITLE',
+          accepted_env_vars: ['APP_TITLE'],
+          key_material: false,
+          reload_class: 'hot',
           type: 'str',
           default: 'Studio',
           required: false,
@@ -61,6 +64,7 @@ const settingsSchemaData = {
           nested_group: null,
           default_namespace_var: null,
           value: 'Studio',
+          value_source: 'deployment',
         },
       ],
     },
@@ -278,6 +282,16 @@ describe('manifest / mcp client transport', () => {
     const out = await client.getSettingsSchema();
     expect(captured[0]?.url).toBe('/api/config/settings-schema');
     expect(out.groups[0]?.fields[0]?.env_var).toBe('APP_TITLE');
+    expect(out.groups[0]?.fields[0]?.value_source).toBe('deployment');
+  });
+
+  it('getSettingsSchema rejects a field whose value_source is not a known source', async () => {
+    const field = settingsSchemaData.groups[0]?.fields[0];
+    const broken = {
+      groups: [{ ...settingsSchemaData.groups[0], fields: [{ ...field, value_source: 'other' }] }],
+    };
+    const { client } = harness(() => jsonResponse({ data: broken }));
+    await expect(client.getSettingsSchema()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 
   it('getMcpEnvRefs GETs /api/manifest/mcp-env-refs and parses the names-only rows', async () => {

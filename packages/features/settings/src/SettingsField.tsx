@@ -2,11 +2,18 @@
  * One settings-class field, typed by its schema descriptor: a nested-group reference
  * (read-only), a secret RevealInput, a boolean checkbox, a numeric input, or a text
  * input. A pending edit (keyed by env var) overrides the reported value.
+ *
+ * A field the deployment's own environment sets is locked: its control shows the
+ * reported value read-only beside a "Set by the deployment" badge that describes it
+ * (`aria-describedby`), and it never reports an edit, so it never enters the pending
+ * map a save posts.
  */
 import { Checkbox, Field, NumberInput, RevealInput, TextInput } from '@tai42/studio-sdk';
-import type { CSSProperties, ReactNode } from 'react';
+import { type CSSProperties, type ReactNode, useId } from 'react';
 
+import { DeploymentSetBadge } from './deployment-lock';
 import {
+  isDeploymentSet,
   isNestedRef,
   labelOf,
   placeholderOf,
@@ -40,6 +47,9 @@ const nestedRefStyle: CSSProperties = {
   fontStyle: 'italic',
 };
 
+// The field stacks its parts in a column; the lock badge keeps its own width.
+const lockStyle: CSSProperties = { alignSelf: 'flex-start' };
+
 export function SettingsField({
   field,
   pending,
@@ -51,6 +61,7 @@ export function SettingsField({
   readonly readOnly: boolean;
   readonly onChange: (envVar: string, value: string) => void;
 }): ReactNode {
+  const lockId = `${useId()}-deployment-lock`;
   if (isNestedRef(field)) {
     return (
       <div style={fieldStyle}>
@@ -65,72 +76,87 @@ export function SettingsField({
   const label = labelOf(field);
   const description = field.description ?? undefined;
   const placeholder = placeholderOf(field);
+  const locked = isDeploymentSet(field);
+  const disabled = readOnly || locked;
+  const current = locked ? toText(field.value) : (pending[field.env_var] ?? toText(field.value));
+  const edit = (value: string): void => {
+    if (!locked) onChange(field.env_var, value);
+  };
+  const describedBy = locked ? lockId : undefined;
+  const lockBadge = locked ? (
+    <div style={lockStyle}>
+      <DeploymentSetBadge id={lockId} />
+    </div>
+  ) : null;
 
   if (field.secret) {
-    const current = pending[field.env_var] ?? toText(field.value);
     return (
       <Field label={label} description={description}>
         <RevealInput
           idPrefix={`settings-secret-${field.env_var}`}
           value={current}
           placeholder={placeholder}
-          readOnly={readOnly}
-          onChange={(value) => {
-            onChange(field.env_var, value);
-          }}
+          readOnly={disabled}
+          aria-describedby={describedBy}
+          onChange={edit}
         />
+        {lockBadge}
       </Field>
     );
   }
 
   if (field.type === 'boolean') {
     const checked =
-      field.env_var in pending ? pending[field.env_var] === 'true' : toBool(field.value);
+      !locked && field.env_var in pending ? pending[field.env_var] === 'true' : toBool(field.value);
     return (
       <div style={fieldStyle}>
         <Checkbox
           label={label}
           checked={checked}
-          disabled={readOnly}
+          disabled={disabled}
+          aria-describedby={describedBy}
           onCheckedChange={(next) => {
-            onChange(field.env_var, next ? 'true' : 'false');
+            edit(next ? 'true' : 'false');
           }}
         />
+        {lockBadge}
         {description !== undefined ? <p style={descriptionStyle}>{description}</p> : null}
       </div>
     );
   }
 
   if (field.type === 'integer' || field.type === 'number') {
-    const current = pending[field.env_var] ?? toText(field.value);
     return (
       <Field label={label} description={description}>
         <NumberInput
           value={current}
           placeholder={placeholder}
-          disabled={readOnly}
+          disabled={disabled}
+          aria-describedby={describedBy}
           autoComplete="off"
           onChange={(event) => {
-            onChange(field.env_var, event.target.value);
+            edit(event.target.value);
           }}
         />
+        {lockBadge}
       </Field>
     );
   }
 
-  const current = pending[field.env_var] ?? toText(field.value);
   return (
     <Field label={label} description={description}>
       <TextInput
         value={current}
         placeholder={placeholder}
-        disabled={readOnly}
+        disabled={disabled}
+        aria-describedby={describedBy}
         autoComplete="off"
         spellCheck={false}
         onChange={(event) => {
-          onChange(field.env_var, event.target.value);
+          edit(event.target.value);
         }}
       />
+      {lockBadge}
     </Field>
   );
 }

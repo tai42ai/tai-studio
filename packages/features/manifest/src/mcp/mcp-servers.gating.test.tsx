@@ -19,7 +19,7 @@ describe('McpServersSection — write gating (projection ⊆ gate)', () => {
       getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST_CONFIGURED),
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
       listFailedMcps: vi
         .fn()
         .mockResolvedValue(failedReport([{ title: 'bad', status: 'timeout' }])),

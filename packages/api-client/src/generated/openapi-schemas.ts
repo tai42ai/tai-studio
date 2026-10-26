@@ -397,7 +397,7 @@ export type DocumentVersionList = z.infer<typeof documentVersionList>;
 export const envUpdate = z.object({ "env": z.record(z.string(), z.string()), "secret_keys": z.array(z.string()).nullable().default(null) }).strict();
 export type EnvUpdate = z.infer<typeof envUpdate>;
 
-export const envView = z.object({ "env": z.record(z.string(), z.string()), "secret_keys": z.array(z.string()) });
+export const envView = z.object({ "deployment_keys": z.array(z.string()), "env": z.record(z.string(), z.string()), "secret_keys": z.array(z.string()) });
 export type EnvView = z.infer<typeof envView>;
 
 export const eraseAck = z.object({ "erased": z.boolean() });
@@ -1051,7 +1051,10 @@ export type SetConnectorClientRequest = z.infer<typeof setConnectorClientRequest
 export const setMcpSecretEnv = z.object({ "key": z.string().nullable().default(null), "key_hint": z.string().nullable().default(null), "manifest_pointer": z.string(), "value": z.string() });
 export type SetMcpSecretEnv = z.infer<typeof setMcpSecretEnv>;
 
-export const settingsGroupView = z.object({ "fields": z.array(z.record(z.string(), jsonValue)), "module": z.string(), "name": z.string(), "qualname": z.string() });
+export const settingsFieldView = z.object({ "accepted_env_vars": z.array(z.string()), "default": z.unknown().nullable().default(null), "default_namespace_var": z.string().nullable().default(null), "description": z.string().nullable().default(null), "env_var": z.string(), "key_material": z.boolean().default(false), "name": z.string(), "nested_group": z.string().nullable().default(null), "reload_class": z.enum(["hot","recycle","excluded"]).default("hot"), "required": z.boolean(), "secret": z.boolean(), "type": z.string(), "value": jsonValue, "value_source": z.enum(["deployment","stored","default_namespace","field_default"]).nullable() });
+export type SettingsFieldView = z.infer<typeof settingsFieldView>;
+
+export const settingsGroupView = z.object({ "fields": z.array(settingsFieldView), "module": z.string(), "name": z.string(), "qualname": z.string() });
 export type SettingsGroupView = z.infer<typeof settingsGroupView>;
 
 export const settingsSchemaView = z.object({ "groups": z.array(settingsGroupView) });

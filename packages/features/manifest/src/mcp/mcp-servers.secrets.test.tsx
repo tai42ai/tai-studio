@@ -21,7 +21,9 @@ describe('McpServersSection — secret env op', () => {
       getManifestPreserved: vi.fn().mockResolvedValue(withEnvMarker),
       getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'] }),
+      getEnvConfig: vi
+        .fn()
+        .mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'], deployment_keys: [] }),
     };
     renderWithProviders(<McpServersSection />, { client });
 
@@ -50,7 +52,9 @@ describe('McpServersSection — secret env op', () => {
       }),
       getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'] }),
+      getEnvConfig: vi
+        .fn()
+        .mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'], deployment_keys: [] }),
     };
     renderWithProviders(<McpServersSection />, { client });
 
@@ -76,7 +80,7 @@ describe('McpServersSection — secret env op', () => {
       getManifestPreserved,
       getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
       setMcpSecretEnv,
       setMcpConfig,
     };
@@ -130,7 +134,9 @@ describe('McpServersSection — secret env op', () => {
       getManifestPreserved: vi.fn().mockResolvedValue(withEnvBlank),
       getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: ['SHARED_KEY'] }),
+      getEnvConfig: vi
+        .fn()
+        .mockResolvedValue({ env: {}, secret_keys: ['SHARED_KEY'], deployment_keys: [] }),
       setMcpSecretEnv,
       setMcpConfig,
     };
@@ -171,7 +177,11 @@ describe('McpServersSection — secret env op', () => {
       }),
       getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: ['OLD_KEY', 'SHARED_KEY'] }),
+      getEnvConfig: vi.fn().mockResolvedValue({
+        env: {},
+        secret_keys: ['OLD_KEY', 'SHARED_KEY'],
+        deployment_keys: [],
+      }),
       setMcpConfig,
     };
     renderWithProviders(<McpServersSection />, { client });
@@ -210,7 +220,9 @@ describe('McpServersSection — secret env op', () => {
       }),
       getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: ['SHARED_KEY'] }),
+      getEnvConfig: vi
+        .fn()
+        .mockResolvedValue({ env: {}, secret_keys: ['SHARED_KEY'], deployment_keys: [] }),
       setMcpConfig,
       setEnvConfig,
     };
@@ -237,7 +249,9 @@ describe('McpServersSection — secret env op', () => {
     // pasted here — another admin created it. It is ABSENT from the initial env read and
     // surfaces only in a later read (a background refetch), exactly the shape a load-time
     // snapshot heuristic would mistake for a session-generated key and blank-delete.
-    const getEnvConfig = vi.fn().mockResolvedValue({ env: {}, secret_keys: [] });
+    const getEnvConfig = vi
+      .fn()
+      .mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] });
     const client = {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
       getManifestPreserved: vi.fn().mockResolvedValue({
@@ -264,7 +278,11 @@ describe('McpServersSection — secret env op', () => {
     // A background cache update surfaces the concurrently-created key in secret_keys —
     // AFTER this editor's initial load saw an empty set.
     act(() => {
-      queryClient.setQueryData(['env-config'], { env: {}, secret_keys: ['CONCURRENT_KEY'] });
+      queryClient.setQueryData(['env-config'], {
+        env: {},
+        secret_keys: ['CONCURRENT_KEY'],
+        deployment_keys: [],
+      });
     });
 
     // Drop the env entry that references it, then save.
@@ -296,8 +314,8 @@ describe('McpServersSection — secret env op', () => {
     // present only after the paste — that is what marks it session-generated.
     const getEnvConfig = vi
       .fn()
-      .mockResolvedValueOnce({ env: {}, secret_keys: [] })
-      .mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'] });
+      .mockResolvedValueOnce({ env: {}, secret_keys: [], deployment_keys: [] })
+      .mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'], deployment_keys: [] });
     const getManifestPreserved = vi
       .fn()
       .mockResolvedValueOnce(withEnvBlank)

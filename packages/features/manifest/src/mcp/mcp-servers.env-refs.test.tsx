@@ -64,9 +64,11 @@ describe('McpServersSection — installed mcp-server entry + env-refs checklist'
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
       // Real env VALUES exist on this door — the checklist must never fetch or show them.
-      getEnvConfig: vi
-        .fn()
-        .mockResolvedValue({ env: { DATABASE_URL: 'super-secret-value' }, secret_keys: [] }),
+      getEnvConfig: vi.fn().mockResolvedValue({
+        env: { DATABASE_URL: 'super-secret-value' },
+        secret_keys: [],
+        deployment_keys: [],
+      }),
       listInstalledMarketplacePlugins: vi.fn().mockResolvedValue(INSTALLED),
       getMcpEnvRefs: vi.fn().mockResolvedValue(ENV_REFS),
     };

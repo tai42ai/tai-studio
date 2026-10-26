@@ -17,6 +17,9 @@ function schemaFixture(): SettingsSchema {
           {
             name: 'port',
             env_var: 'TAI_PORT',
+            accepted_env_vars: ['TAI_PORT'],
+            key_material: false,
+            reload_class: 'hot',
             type: 'integer',
             default: 8000,
             required: false,
@@ -25,10 +28,14 @@ function schemaFixture(): SettingsSchema {
             nested_group: null,
             default_namespace_var: null,
             value: 100,
+            value_source: 'stored',
           },
           {
             name: 'debug',
             env_var: 'TAI_DEBUG',
+            accepted_env_vars: ['TAI_DEBUG'],
+            key_material: false,
+            reload_class: 'hot',
             type: 'boolean',
             default: false,
             required: false,
@@ -37,10 +44,14 @@ function schemaFixture(): SettingsSchema {
             nested_group: null,
             default_namespace_var: null,
             value: false,
+            value_source: 'field_default',
           },
           {
             name: 'api_key',
             env_var: 'TAI_API_KEY',
+            accepted_env_vars: ['TAI_API_KEY'],
+            key_material: false,
+            reload_class: 'hot',
             type: 'string',
             default: null,
             required: true,
@@ -49,10 +60,14 @@ function schemaFixture(): SettingsSchema {
             nested_group: null,
             default_namespace_var: null,
             value: 'topsecret',
+            value_source: 'stored',
           },
           {
             name: 'redis',
             env_var: '',
+            accepted_env_vars: [],
+            key_material: false,
+            reload_class: 'hot',
             type: 'object',
             default: null,
             required: false,
@@ -61,6 +76,7 @@ function schemaFixture(): SettingsSchema {
             nested_group: 'RedisSettings',
             default_namespace_var: null,
             value: null,
+            value_source: null,
           },
         ],
       },
@@ -191,6 +207,9 @@ describe('SettingsTab', () => {
             {
               name: 'pg_host',
               env_var: 'TAI_DATABASE_DEFAULT_PG_HOST',
+              accepted_env_vars: ['TAI_DATABASE_DEFAULT_PG_HOST'],
+              key_material: false,
+              reload_class: 'hot',
               type: 'string',
               default: null,
               required: false,
@@ -199,6 +218,7 @@ describe('SettingsTab', () => {
               nested_group: null,
               default_namespace_var: null,
               value: null,
+              value_source: 'field_default',
             },
           ],
         },
@@ -212,5 +232,163 @@ describe('SettingsTab', () => {
     // could read as a silent localhost default.
     expect(input).toHaveValue('');
     expect(input).toHaveAttribute('placeholder', '—');
+  });
+});
+
+describe('SettingsTab — fields the deployment sets', () => {
+  function lockedFixture(): SettingsSchema {
+    const base = {
+      required: false,
+      description: null,
+      nested_group: null,
+      default_namespace_var: null,
+      value_source: 'deployment' as const,
+    };
+    return {
+      groups: [
+        {
+          name: 'AppSettings',
+          module: 'tai42_app.settings',
+          qualname: 'tai42_app.settings.AppSettings',
+          fields: [
+            {
+              ...base,
+              name: 'host',
+              env_var: 'TAI_HOST',
+              accepted_env_vars: ['TAI_HOST'],
+              key_material: false,
+              reload_class: 'hot',
+              type: 'string',
+              default: null,
+              secret: false,
+              value: '10.0.0.5',
+            },
+            {
+              ...base,
+              name: 'workers',
+              env_var: 'TAI_WORKERS',
+              accepted_env_vars: ['TAI_WORKERS'],
+              key_material: false,
+              reload_class: 'hot',
+              type: 'integer',
+              default: 1,
+              secret: false,
+              value: 4,
+            },
+            {
+              ...base,
+              name: 'verbose',
+              env_var: 'TAI_VERBOSE',
+              accepted_env_vars: ['TAI_VERBOSE'],
+              key_material: false,
+              reload_class: 'hot',
+              type: 'boolean',
+              default: false,
+              secret: false,
+              value: true,
+            },
+            {
+              ...base,
+              name: 'token',
+              env_var: 'TAI_TOKEN',
+              accepted_env_vars: ['TAI_TOKEN'],
+              key_material: false,
+              reload_class: 'hot',
+              type: 'string',
+              default: null,
+              secret: true,
+              value: 'deploy-secret',
+            },
+            {
+              ...base,
+              name: 'port',
+              env_var: 'TAI_PORT',
+              accepted_env_vars: ['TAI_PORT'],
+              key_material: false,
+              reload_class: 'hot',
+              type: 'integer',
+              default: 8000,
+              secret: false,
+              value: 8000,
+              value_source: 'stored',
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  it('shows each deployment-set field read-only with its value and the lock text', async () => {
+    const client = stubClient({ getSettingsSchema: vi.fn(() => Promise.resolve(lockedFixture())) });
+    renderWithProviders(<SettingsTab readOnly={false} />, { client });
+
+    const host = await screen.findByLabelText('host');
+    expect(host).toBeDisabled();
+    expect(host).toHaveValue('10.0.0.5');
+    expect(screen.getByLabelText('workers')).toBeDisabled();
+    expect(screen.getByLabelText('workers')).toHaveValue(4);
+    const verbose = screen.getByRole('checkbox', { name: 'verbose' });
+    expect(verbose).toBeDisabled();
+    expect(verbose).toBeChecked();
+    // The secret stays revealable; it is read-only, never editable.
+    const token = screen.getByLabelText('token');
+    expect(token).toHaveAttribute('readonly');
+    expect(token).toHaveValue('deploy-secret');
+    expect(screen.getAllByText('Set by the deployment')).toHaveLength(4);
+    // A field the deployment does not set stays editable, without the lock text.
+    expect(screen.getByLabelText('port')).toBeEnabled();
+  });
+
+  it('describes each locked control by its lock text, beside its own description', async () => {
+    const schema = lockedFixture();
+    const [group] = schema.groups;
+    if (group === undefined) throw new Error('fixture has no group');
+    const described: SettingsSchema = {
+      groups: [
+        {
+          ...group,
+          fields: group.fields.map((field) =>
+            field.name === 'host' ? { ...field, description: 'The bind address.' } : field,
+          ),
+        },
+      ],
+    };
+    const client = stubClient({ getSettingsSchema: vi.fn(() => Promise.resolve(described)) });
+    renderWithProviders(<SettingsTab readOnly={false} />, { client });
+
+    expect(await screen.findByLabelText('host')).toHaveAccessibleDescription(
+      'Set by the deployment The bind address.',
+    );
+    expect(screen.getByLabelText('workers')).toHaveAccessibleDescription('Set by the deployment');
+    expect(screen.getByRole('checkbox', { name: 'verbose' })).toHaveAccessibleDescription(
+      'Set by the deployment',
+    );
+    expect(screen.getByLabelText('token')).toHaveAccessibleDescription('Set by the deployment');
+    expect(screen.getByLabelText('port')).toHaveAccessibleDescription('');
+  });
+
+  it('never puts a deployment-set field in the save payload', async () => {
+    const user = userEvent.setup();
+    const setEnvConfig = vi.fn(saved);
+    const client = stubClient({
+      getSettingsSchema: vi.fn(() => Promise.resolve(lockedFixture())),
+      setEnvConfig,
+    });
+    renderWithProviders(<SettingsTab readOnly={false} />, { client });
+
+    const host = await screen.findByLabelText('host');
+    await user.type(host, 'x');
+    await user.type(screen.getByLabelText('token'), 'x');
+    await user.click(screen.getByRole('checkbox', { name: 'verbose' }));
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+
+    const port = screen.getByLabelText('port');
+    await user.clear(port);
+    await user.type(port, '9000');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(setEnvConfig).toHaveBeenCalledWith({ env: { TAI_PORT: '9000' } });
+    });
   });
 });

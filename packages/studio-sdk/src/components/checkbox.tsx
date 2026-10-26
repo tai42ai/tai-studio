@@ -37,6 +37,11 @@ export interface CheckboxProps {
    * the visible text out of the accessible name (WCAG 2.5.3).
    */
   readonly 'aria-label'?: string;
+  /**
+   * IDREFs of elements describing the box, listed before an enclosing `Field`'s
+   * description and error.
+   */
+  readonly 'aria-describedby'?: string;
   readonly name?: string;
   readonly value?: string;
 }
@@ -48,12 +53,16 @@ export function Checkbox({
   disabled,
   label,
   'aria-label': ariaLabel,
+  'aria-describedby': ariaDescribedBy,
   name,
   value,
 }: CheckboxProps) {
   const field = useFieldControl();
   const generatedId = useId();
   const id = field.id ?? generatedId;
+  const describedBy = [ariaDescribedBy, field['aria-describedby']].filter(
+    (ref): ref is string => ref !== undefined,
+  );
 
   const box = (
     <RadixCheckbox.Root
@@ -63,7 +72,7 @@ export function Checkbox({
       // by an enclosing `Field` is named from visible text, and `aria-label`
       // outranks a native `<label for>` — emitting both would discard that text.
       aria-label={field.id === undefined && label === undefined ? ariaLabel : undefined}
-      aria-describedby={field['aria-describedby']}
+      aria-describedby={describedBy.length > 0 ? describedBy.join(' ') : undefined}
       aria-invalid={field['aria-invalid']}
       checked={checked}
       defaultChecked={defaultChecked}

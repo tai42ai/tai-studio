@@ -43,8 +43,8 @@ export function DiffCallouts({ diff }: { readonly diff: ProfileDiff }): ReactNod
         <div role="alert" style={dangerPanelStyle} data-testid="diff-refused">
           <strong>Refused keys — apply is blocked</strong>
           <span>
-            These keys are refused at the profile boundary (key material / infrastructure identity)
-            and cannot be applied:
+            These keys cannot be applied, because each is a key that locates the worker bus or a key
+            set by the deployment:
           </span>
           <span className="tai-mono">{diff.refused_keys.join(', ')}</span>
         </div>

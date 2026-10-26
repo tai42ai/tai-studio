@@ -113,7 +113,7 @@ export function makeClient(overrides: Partial<ApiClient>): ApiClient {
     }),
     getMcpConfigSchema: vi.fn().mockResolvedValue({ type: 'object', properties: {} }),
     listExtensions: vi.fn().mockResolvedValue([]),
-    getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+    getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
     listInstalledMarketplacePlugins: vi.fn().mockResolvedValue({ installed: [] }),
     searchMarketplace: vi.fn().mockResolvedValue(searchPage([])),
     getMcpEnvRefs: vi.fn().mockResolvedValue([]),

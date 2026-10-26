@@ -8,6 +8,7 @@
         {
           "name": "log_level",
           "env_var": "LOG_LEVEL",
+          "accepted_env_vars": ["LOG_LEVEL"],
           "type": "string",
           "default": "INFO",
           "required": false,
@@ -15,11 +16,15 @@
           "description": "Application log level.",
           "nested_group": null,
           "default_namespace_var": null,
-          "value": "INFO"
+          "value": "INFO",
+          "value_source": "field_default",
+          "key_material": false,
+          "reload_class": "hot"
         },
         {
           "name": "openai_api_key",
           "env_var": "OPENAI_API_KEY",
+          "accepted_env_vars": ["OPENAI_API_KEY"],
           "type": "string",
           "default": null,
           "required": true,
@@ -27,7 +32,10 @@
           "description": "OpenAI API key.",
           "nested_group": null,
           "default_namespace_var": null,
-          "value": "***"
+          "value": "***",
+          "value_source": "stored",
+          "key_material": false,
+          "reload_class": "hot"
         }
       ]
     }

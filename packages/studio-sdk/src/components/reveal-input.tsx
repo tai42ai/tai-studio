@@ -26,6 +26,11 @@ export interface RevealInputProps {
   readonly placeholder?: string;
   /** Accessible name for the inner input when no visual `label` is rendered. */
   readonly 'aria-label'?: string;
+  /**
+   * IDREFs of elements describing the inner input, listed before an enclosing
+   * `Field`'s description and error.
+   */
+  readonly 'aria-describedby'?: string;
 }
 
 export function RevealInput({
@@ -37,6 +42,7 @@ export function RevealInput({
   label,
   placeholder,
   'aria-label': ariaLabel,
+  'aria-describedby': ariaDescribedBy,
 }: RevealInputProps) {
   const [revealed, setRevealed] = useState(false);
   const isReadOnly = readOnly === true || onChange === undefined;
@@ -49,6 +55,7 @@ export function RevealInput({
         <TextInput
           type={revealed ? 'text' : 'password'}
           aria-label={ariaLabel}
+          aria-describedby={ariaDescribedBy}
           value={value}
           onChange={
             isReadOnly

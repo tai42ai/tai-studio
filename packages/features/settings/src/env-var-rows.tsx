@@ -2,12 +2,14 @@
  * The shared env key/value row editor for the Environment tab and the profile
  * form: a headless {@link useEnvVarRows} hook owning the row + secret-mark state,
  * and a presentational {@link EnvVarRows} list. The caller divergences — read-only,
- * merge-vs-replace save, dirty signature, and the secret predicate — are injected
+ * merge-vs-replace save, dirty signature, the secret predicate, and the
+ * deployment-lock predicate — are injected
  * as props/callbacks; none is branched inside this module.
  */
 import { Badge, Button, Checkbox, RevealInput, TextInput } from '@tai42/studio-sdk';
-import { type CSSProperties, type ReactNode, useRef, useState } from 'react';
+import { type CSSProperties, type ReactNode, useId, useRef, useState } from 'react';
 
+import { DeploymentRowNote, DeploymentSetBadge } from './deployment-lock';
 import { SECRET_MARKS_ENV_VAR } from './settings-secrets';
 
 /** One editable environment variable, with a stable id so React keys survive edits. */
@@ -15,6 +17,11 @@ export interface EnvVarRow {
   readonly id: string;
   readonly key: string;
   readonly value: string;
+  /**
+   * The key the row was seeded with from the env map, unchanged by later edits; `null`
+   * for a row added in the editor.
+   */
+  readonly seededKey: string | null;
 }
 
 /** The seed a row set is built from: an env map and the current user-marked keys. */
@@ -42,7 +49,7 @@ export interface EnvVarRowsState {
 function rowsFromEnv(env: Record<string, string>, nextId: () => string): EnvVarRow[] {
   return Object.entries(env)
     .filter(([key]) => key !== SECRET_MARKS_ENV_VAR)
-    .map(([key, value]) => ({ id: nextId(), key, value }));
+    .map(([key, value]) => ({ id: nextId(), key, value, seededKey: key }));
 }
 
 /**
@@ -68,7 +75,7 @@ export function useEnvVarRows(seed: EnvVarSeed): EnvVarRowsState {
     hasBlankKey,
     hasDuplicateKey,
     addRow: () => {
-      setRows((current) => [...current, { id: nextId(), key: '', value: '' }]);
+      setRows((current) => [...current, { id: nextId(), key: '', value: '', seededKey: null }]);
     },
     setKey: (id, key) => {
       setRows((current) => current.map((row) => (row.id === id ? { ...row, key } : row)));
@@ -133,13 +140,25 @@ export interface EnvVarRowsProps {
   readonly isSecret: (key: string) => boolean;
   /** Whether a key is owned by a settings class (class-derived secret state). */
   readonly isOwned: (key: string) => boolean;
+  /**
+   * Whether the deployment's own environment sets a key. A row seeded with such a key is
+   * locked (name and value not editable, a "Set by the deployment" badge with a note that
+   * the stored value is not used) and keeps only its Remove. The lock follows the row's
+   * seeded key alone: a row added in the editor is never locked, whatever name it is
+   * given, and a save that sets a key the deployment sets is refused by the server.
+   */
+  readonly isDeploymentSet: (key: string) => boolean;
   readonly onKeyChange: (id: string, key: string) => void;
   readonly onValueChange: (id: string, value: string) => void;
   readonly onRemove: (id: string) => void;
   readonly onToggleSecret: (key: string, next: boolean) => void;
 }
 
-/** One row: key input, masked-or-plain value input, owned badge or secret toggle, remove. */
+/**
+ * One row: key input, masked-or-plain value input, owned badge or secret toggle, the
+ * deployment lock badge and its note when the deployment sets the key, remove. The
+ * lock badge and its note describe the row's locked inputs (`aria-describedby`).
+ */
 function EnvVarRowItem({
   row,
   index,
@@ -147,6 +166,7 @@ function EnvVarRowItem({
   secretIdPrefix,
   secret,
   owned,
+  deploymentSet,
   onKeyChange,
   onValueChange,
   onRemove,
@@ -156,17 +176,24 @@ function EnvVarRowItem({
   readonly index: number;
   readonly secret: boolean;
   readonly owned: boolean;
+  readonly deploymentSet: boolean;
 } & Pick<
   EnvVarRowsProps,
   'readOnly' | 'secretIdPrefix' | 'onKeyChange' | 'onValueChange' | 'onRemove' | 'onToggleSecret'
 >): ReactNode {
+  const locked = readOnly || deploymentSet;
+  const lockId = useId();
+  const badgeId = `${lockId}-deployment-lock`;
+  const noteId = `${lockId}-deployment-note`;
+  const describedBy = deploymentSet ? `${badgeId} ${noteId}` : undefined;
   return (
     <li style={rowStyle}>
       <TextInput
         aria-label={nameLabel(row.key, index)}
         value={row.key}
         placeholder="NAME"
-        disabled={readOnly}
+        disabled={locked}
+        aria-describedby={describedBy}
         autoComplete="off"
         spellCheck={false}
         style={keyInputStyle}
@@ -181,7 +208,8 @@ function EnvVarRowItem({
             aria-label={valueLabel(row.key, index)}
             value={row.value}
             placeholder="value"
-            readOnly={readOnly}
+            readOnly={locked}
+            aria-describedby={describedBy}
             onChange={(value) => {
               onValueChange(row.id, value);
             }}
@@ -191,7 +219,8 @@ function EnvVarRowItem({
             aria-label={valueLabel(row.key, index)}
             value={row.value}
             placeholder="value"
-            disabled={readOnly}
+            disabled={locked}
+            aria-describedby={describedBy}
             autoComplete="off"
             spellCheck={false}
             onChange={(event) => {
@@ -214,6 +243,12 @@ function EnvVarRowItem({
           }}
         />
       )}
+      {deploymentSet ? (
+        <>
+          <DeploymentSetBadge id={badgeId} />
+          <DeploymentRowNote id={noteId} />
+        </>
+      ) : null}
       {readOnly ? null : (
         <Button
           type="button"
@@ -237,6 +272,7 @@ export function EnvVarRows({
   secretIdPrefix,
   isSecret,
   isOwned,
+  isDeploymentSet,
   onKeyChange,
   onValueChange,
   onRemove,
@@ -253,6 +289,7 @@ export function EnvVarRows({
           secretIdPrefix={secretIdPrefix}
           secret={isSecret(row.key)}
           owned={isOwned(row.key)}
+          deploymentSet={row.seededKey !== null && isDeploymentSet(row.seededKey)}
           onKeyChange={onKeyChange}
           onValueChange={onValueChange}
           onRemove={onRemove}
