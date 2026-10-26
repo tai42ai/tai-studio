@@ -26,7 +26,7 @@ pnpm -r typecheck
 pnpm -r lint
 pnpm -r format:check
 pnpm format:check
-pnpm -r test --coverage
+pnpm test --coverage
 ```
 
 ## Comments and docs

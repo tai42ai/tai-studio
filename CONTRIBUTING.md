@@ -50,7 +50,7 @@ pnpm -r build          # build first: each package resolves the others through t
 pnpm -r typecheck
 pnpm -r lint
 pnpm -r format:check
-pnpm -r test --coverage
+pnpm test --coverage
 ```
 
 `pnpm --filter @tai42/studio-app dev` starts the Vite dev server.

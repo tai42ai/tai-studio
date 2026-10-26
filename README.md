@@ -38,7 +38,7 @@ pnpm -r build                         # build first — see below
 pnpm -r typecheck
 pnpm -r lint
 pnpm -r format:check
-pnpm -r test --coverage
+pnpm test --coverage
 pnpm --filter @tai42/studio-app dev   # start the Vite dev server
 ```
 

@@ -1,8 +1,7 @@
 // The create/mint dialog mounts the full policy editor plus the template and
-// condition-validate seams, so its flows are a genuinely heavy render chain — race-free
-// but slow. The whole file gets explicit testTimeout headroom; correctness stays gated
-// by real assertions and awaited signals. userEvent runs without its inter-key delay so
-// a loaded runner cannot push a keystroke chain past the suite timeout.
+// condition-validate seams, so its flows are a heavy render chain; userEvent runs
+// without its inter-key delay, and correctness stays gated by real assertions and
+// awaited signals.
 import { type ApiClient, ApiError, type TokensPayload } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -41,8 +40,6 @@ function role(name: string) {
     scopes: [],
   };
 }
-
-vi.setConfig({ testTimeout: 15_000 });
 
 function tokens(): TokensPayload {
   return [
