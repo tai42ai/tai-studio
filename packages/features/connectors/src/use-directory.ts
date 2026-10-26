@@ -340,12 +340,26 @@ export function useDirectoryReads(q: string): DirectoryReads {
 
 const ready = <T>(state: ReadState<T>): T | null => (state.status === 'ready' ? state.data : null);
 
+/** The connections grouped by their provider id, each group in read order. */
+function connectionsByProvider(
+  connections: readonly ConnectionView[],
+): ReadonlyMap<string, readonly ConnectionView[]> {
+  const groups = new Map<string, ConnectionView[]>();
+  for (const c of connections) {
+    const group = groups.get(c.provider_id);
+    if (group === undefined) groups.set(c.provider_id, [c]);
+    else group.push(c);
+  }
+  return groups;
+}
+
 function providerRows(reads: DirectoryReads, providers: readonly ProviderView[]): ProviderRow[] {
+  const grouped =
+    reads.connections.status === 'ready' ? connectionsByProvider(reads.connections.data) : null;
   return providers.map((provider) => {
     let connections: ProviderRow['connections'];
-    if (reads.connections.status === 'ready') {
-      connections = reads.connections.data.filter((c) => c.provider_id === provider.id);
-    } else if (reads.connections.status === 'loading') connections = null;
+    if (grouped !== null) connections = grouped.get(provider.id) ?? [];
+    else if (reads.connections.status === 'loading') connections = null;
     else connections = 'unknown';
     return { kind: 'provider', key: `provider:${provider.id}`, provider, connections };
   });

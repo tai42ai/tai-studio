@@ -81,6 +81,26 @@ describe('directoryRows', () => {
     expect(rows.map((row) => row.key)).toEqual(['provider:github', 'server:gone_repo']);
   });
 
+  it("gives each provider card its own connections in read order, or the read's state", () => {
+    const providers = ready([provider(), provider({ id: 'acme_mail' }), provider({ id: 'relay' })]);
+    const connectionsOf = (overrides: Partial<DirectoryReads>) =>
+      directoryRows(reads({ providers, ...overrides })).map((row) => {
+        if (row.kind !== 'provider') throw new Error(`not a provider row: ${row.key}`);
+        const { connections } = row;
+        return connections === null || connections === 'unknown'
+          ? connections
+          : connections.map((c) => c.connection_id);
+      });
+    const connections = ready([
+      connection({ connection_id: 'c-1', provider_id: 'acme_mail' }),
+      connection({ connection_id: 'c-2' }),
+      connection({ connection_id: 'c-3', provider_id: 'acme_mail' }),
+    ]);
+    expect(connectionsOf({ connections })).toEqual([['c-2'], ['c-1', 'c-3'], []]);
+    expect(connectionsOf({ connections: { status: 'loading' } })).toEqual([null, null, null]);
+    expect(connectionsOf({ connections: REFUSED })).toEqual(['unknown', 'unknown', 'unknown']);
+  });
+
   it('draws servers from the bound and failed titles when the configuration is refused', () => {
     const rows = directoryRows(
       reads({

@@ -437,6 +437,43 @@ describe('ConnectFlowDialog — a marketplace listing', () => {
     expect(await screen.findByText(MISSING_PROVIDER)).toBeInTheDocument();
   });
 
+  it('stops checking for the provider once it gave up', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+    const listProviders = vi.fn().mockResolvedValue({ providers: [] });
+    renderFlow(LISTING, { client: listingClient({ listProviders }) });
+    await install(user);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(INSTALL_SETTLE_TIMEOUT_MS);
+    });
+    expect(await screen.findByText(MISSING_PROVIDER)).toBeInTheDocument();
+    const checks = listProviders.mock.calls.length;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(listProviders).toHaveBeenCalledTimes(checks);
+  });
+
+  it('stops checking the status read once it gave up', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+    const getMcpStatus = vi.fn().mockResolvedValue({ bound: {}, failed: [] });
+    renderFlow(LISTING, {
+      client: listingClient({
+        getMarketplacePlugin: vi.fn().mockResolvedValue(SERVER_DETAIL),
+        installMarketplacePlugin: vi.fn().mockResolvedValue(installReceipt()),
+        getMcpStatus,
+      }),
+    });
+    await install(user);
+    expect(await screen.findByText(MISSING_PROVIDER)).toBeInTheDocument();
+    const checks = getMcpStatus.mock.calls.length;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    expect(getMcpStatus).toHaveBeenCalledTimes(checks);
+  });
+
   it('starts the wait again on Check again after it gave up', async () => {
     const user = userEvent.setup();
     const listProviders = vi.fn().mockResolvedValue({ providers: [] });
