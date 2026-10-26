@@ -7,6 +7,14 @@ import { apiRoutes, type MeProjection, type PrincipalRef } from '@tai42/api-clie
 import { type CapabilityState, coversAnyRoute, isFullProjection } from '@tai42/studio-sdk';
 
 /**
+ * The universal scope: a key carrying it passes every route's scope check, including
+ * scopes mapped later. It names no routed scope, so the mint's unknown-scope check
+ * passes it; a non-admin may grant it only when its own scopes hold it. An owned key
+ * holding it still reaches no further than its owner's own access.
+ */
+export const FULL_ACCESS_SCOPE = '*';
+
+/**
  * Unique scope ids across the scope map, excluding the deployment's served public
  * marker (`publicId`, the projection's `public_resource_id`), which is never a scope.
  */
@@ -89,7 +97,19 @@ export function principalLabel(projection: MeProjection): string | null {
 export function mintableScopeIds(scopeIds: readonly string[], state: CapabilityState): string[] {
   if (state.status !== 'ready' || isFullProjection(state.projection)) return [...scopeIds];
   const { scopes } = state.projection;
-  if (scopes.includes('*')) return [...scopeIds];
+  if (scopes.includes(FULL_ACCESS_SCOPE)) return [...scopeIds];
   const allowed = new Set(scopes);
   return scopeIds.filter((id) => allowed.has(id));
+}
+
+/**
+ * Whether the caller may grant {@link FULL_ACCESS_SCOPE} to a key. The server lets a
+ * non-admin grant only scopes within its own, so a scoped session may grant `"*"` only
+ * when its own projection carries it; a full (admin) projection always may. Minting
+ * itself is gated separately (a gate-off deployment mints no key at all). Fails closed
+ * while the projection is not ready.
+ */
+export function canGrantFullAccess(state: CapabilityState): boolean {
+  if (state.status !== 'ready') return false;
+  return isFullProjection(state.projection) || state.projection.scopes.includes(FULL_ACCESS_SCOPE);
 }

@@ -1,8 +1,10 @@
 /**
- * An add/remove key/value editor whose rows round-trip through `rowsToObject`.
+ * An add/remove key/value editor whose rows round-trip through `rowsToObject`. An
+ * optional one-line `description` sits under the label and describes every row
+ * input and the add button.
  */
 import { Button, TextInput } from '@tai42/studio-sdk';
-import type { CSSProperties, ReactNode } from 'react';
+import { type CSSProperties, type ReactNode, useId } from 'react';
 
 import type { PolicyRow } from './policy-data';
 
@@ -14,6 +16,10 @@ const fieldLabelStyle: CSSProperties = {
   marginBottom: 'var(--tai-space-1)',
 };
 
+const hintStyle: CSSProperties = {
+  margin: '0 0 var(--tai-space-1)',
+};
+
 const rowStyle: CSSProperties = {
   display: 'flex',
   gap: 'var(--tai-space-2)',
@@ -23,22 +29,32 @@ const rowStyle: CSSProperties = {
 
 export function KeyValueEditor({
   label,
+  description,
   rows,
   disabled,
   onChange,
 }: {
   readonly label: string;
+  readonly description?: string;
   readonly rows: readonly PolicyRow[];
   readonly disabled: boolean;
   readonly onChange: (rows: PolicyRow[]) => void;
 }): ReactNode {
+  const descriptionId = useId();
+  const describedBy = description === undefined ? undefined : descriptionId;
   return (
     <div>
       <span style={fieldLabelStyle}>{label}</span>
+      {description === undefined ? null : (
+        <p id={descriptionId} className="tai-field-hint" style={hintStyle}>
+          {description}
+        </p>
+      )}
       {rows.map((row, index) => (
         <div key={index} style={rowStyle}>
           <TextInput
             aria-label={`${label} key ${String(index + 1)}`}
+            aria-describedby={describedBy}
             placeholder="key"
             value={row.key}
             autoComplete="off"
@@ -51,6 +67,7 @@ export function KeyValueEditor({
           />
           <TextInput
             aria-label={`${label} value ${String(index + 1)}`}
+            aria-describedby={describedBy}
             placeholder="value"
             value={row.value}
             autoComplete="off"
@@ -76,6 +93,7 @@ export function KeyValueEditor({
       <Button
         type="button"
         disabled={disabled}
+        aria-describedby={describedBy}
         onClick={() => {
           onChange([...rows, { key: '', value: '' }]);
         }}

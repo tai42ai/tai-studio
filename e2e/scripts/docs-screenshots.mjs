@@ -3000,7 +3000,7 @@ const AUTHED_PAGES = [
       // action runs once per theme against the SAME live backend, so a fixed id would
       // 400 on the second pass. The id is cosmetic here — the shot frames the minted-
       // key dialog's QR, not the create form.
-      await page.getByLabel('User ID').fill(`svc-demo-${Date.now()}`);
+      await page.getByLabel('Key user ID').fill(`svc-demo-${Date.now()}`);
       await page.getByLabel('Description').fill('Demo service key');
       // Grant the boot's one route-mapped scope (`studio`). A key with no scope and no
       // condition is no policy at all, so the claim-link door refuses it as "not a valid

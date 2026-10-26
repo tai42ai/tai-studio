@@ -1,9 +1,10 @@
 /**
- * The create-key dialog: collects user_id, description, scopes and policy
- * fields, mints a new key, and hands the raw `sk-…` string back to the caller
- * exactly once before clearing the form and mutation state.
+ * The create-key dialog: collects user_id, description, scopes (or Full access) and
+ * policy fields, refuses before sending what the server would refuse, mints a new
+ * key, and hands the raw `sk-…` string back to the caller exactly once before
+ * clearing the form and mutation state.
  */
-import type { ApiClient, PrincipalRef } from '@tai42/api-client';
+import type { ApiClient, MeProjection, PrincipalRef } from '@tai42/api-client';
 import {
   Button,
   Dialog,
@@ -21,25 +22,75 @@ import { principalLabel } from './api-keys-gating';
 import {
   conditionWarningStyle,
   dialogActionsStyle,
+  fieldHintStyle,
   fieldLabelStyle,
   formStyle,
   ownerLineStyle,
 } from './api-keys-styles';
-import { KeyFormFields } from './KeyFormFields';
+import { keyFormError, keyScopes } from './key-form-rules';
+import { KEY_USER_ID_LABEL, KeyFormFields } from './KeyFormFields';
 import { tokensPayloadKey } from './keys';
 import type { PolicyFields } from './policy-data';
 import { PolicySection } from './PolicySection';
 import { PrincipalPicker } from './PrincipalPicker';
 
+export const PRINCIPAL_HINT =
+  "Required. Who owns the key: yourself, or a service principal for automation. The key never reaches past its owner's access.";
+
+const PRINCIPAL_HINT_ID = 'create-key-principal-hint';
+
+/**
+ * The owning principal: the admin's picker (self by default, or a service
+ * principal) with its hint, or the fixed "Owned by …" line a non-admin reads.
+ */
+function KeyOwnerField({
+  isAdmin,
+  projection,
+  owner,
+  onOwnerChange,
+}: {
+  readonly isAdmin: boolean;
+  readonly projection: MeProjection | null;
+  readonly owner: PrincipalRef | null;
+  readonly onOwnerChange: (owner: PrincipalRef | null) => void;
+}): ReactNode {
+  return (
+    <div>
+      <span style={fieldLabelStyle}>Principal</span>
+      {isAdmin && projection !== null ? (
+        <>
+          <p id={PRINCIPAL_HINT_ID} className="tai-field-hint" style={fieldHintStyle}>
+            {PRINCIPAL_HINT}
+          </p>
+          <PrincipalPicker
+            selfPrincipal={projection.principal ?? null}
+            value={owner}
+            describedBy={PRINCIPAL_HINT_ID}
+            onChange={onOwnerChange}
+          />
+        </>
+      ) : (
+        <p style={ownerLineStyle}>
+          Owned by{' '}
+          {projection !== null ? (principalLabel(projection) ?? 'your account') : 'your account'}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function CreateKeyDialog({
   open,
   onOpenChange,
   scopeIds,
+  fullAccessAvailable,
   onMinted,
 }: {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly scopeIds: readonly string[];
+  /** Whether the caller may grant Full access (the universal scope). */
+  readonly fullAccessAvailable: boolean;
   readonly onMinted: (apiKey: string, principal: PrincipalRef | null) => void;
 }): ReactNode {
   const api = useApi();
@@ -50,6 +101,7 @@ export function CreateKeyDialog({
   const [userId, setUserId] = useState('');
   const [description, setDescription] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [fullAccess, setFullAccess] = useState(false);
   const [policyFields, setPolicyFields] = useState<PolicyFields>({});
   const [conditionTestFailed, setConditionTestFailed] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -63,6 +115,7 @@ export function CreateKeyDialog({
     setUserId('');
     setDescription('');
     setSelected(new Set());
+    setFullAccess(false);
     setPolicyFields({});
     setConditionTestFailed(false);
     setFormError(null);
@@ -91,7 +144,7 @@ export function CreateKeyDialog({
   const submit = (): void => {
     setFormError(null);
     if (userId.trim().length === 0) {
-      setFormError('User ID is required.');
+      setFormError(`${KEY_USER_ID_LABEL} is required.`);
       return;
     }
     // An admin names the owning principal (self by default); a non-admin sends none
@@ -100,12 +153,23 @@ export function CreateKeyDialog({
       setFormError('Choose the principal that owns this key.');
       return;
     }
+    const scopes = keyScopes(fullAccess, selected);
+    const refusal = keyFormError({
+      description,
+      scopes,
+      condition: policyFields.condition,
+      fullAccessOffered: fullAccessAvailable,
+    });
+    if (refusal !== null) {
+      setFormError(refusal);
+      return;
+    }
     // A failed condition Test does NOT block save — the server re-validates at
     // enforcement; a non-blocking warning next to Save is the only signal.
     mutation.mutate({
       user_id: userId,
       description,
-      scopes: [...selected],
+      scopes,
       ...(isAdmin && owner !== null ? { owner_user_id: owner.user_id } : {}),
       ...policyFields,
     });
@@ -121,25 +185,13 @@ export function CreateKeyDialog({
       }}
     >
       <div style={formStyle}>
-        <div>
-          <span style={fieldLabelStyle}>Principal</span>
-          {isAdmin ? (
-            <PrincipalPicker
-              selfPrincipal={projection.principal ?? null}
-              value={owner}
-              onChange={setOwner}
-            />
-          ) : (
-            <p style={ownerLineStyle}>
-              Owned by{' '}
-              {projection !== null
-                ? (principalLabel(projection) ?? 'your account')
-                : 'your account'}
-            </p>
-          )}
-        </div>
+        <KeyOwnerField
+          isAdmin={isAdmin}
+          projection={projection}
+          owner={owner}
+          onOwnerChange={setOwner}
+        />
         <KeyFormFields
-          idPrefix="create-key"
           userId={userId}
           onUserIdChange={setUserId}
           description={description}
@@ -147,6 +199,9 @@ export function CreateKeyDialog({
           scopeIds={scopeIds}
           selected={selected}
           onSelectedChange={setSelected}
+          fullAccess={fullAccess}
+          fullAccessAvailable={fullAccessAvailable}
+          onFullAccessChange={setFullAccess}
         />
         <PolicySection
           key={policyNonce}

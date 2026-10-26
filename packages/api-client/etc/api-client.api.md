@@ -5203,7 +5203,9 @@ export function createApiClient(config: ApiConfig): {
         user_id: string;
     }[]>;
     readonly createApiKey: (body: ApiKeyBody) => Promise<string>;
-    readonly editApiKey: (userId: string, body: Omit<ApiKeyBody, "user_id">) => Promise<{
+    readonly editApiKey: (userId: string, body: Omit<ApiKeyBody, "user_id" | "scopes"> & {
+        readonly scopes?: string[];
+    }) => Promise<{
         updated: boolean;
         user_id: string;
     }>;

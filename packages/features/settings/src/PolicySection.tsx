@@ -40,6 +40,11 @@ import {
   type PolicySeed,
 } from './policy-data';
 
+export const POLICY_DATA_HINT = 'Optional. Values the condition can read as .policy.<key>.';
+
+export const CONDITION_HINT =
+  'Optional. A jq rule run on every request with the key; the request is allowed only when it returns true.';
+
 const sectionStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
@@ -86,6 +91,7 @@ function PolicyConditionField({
         <TemplatedTextField
           key={`condition-${String(resetToken)}`}
           label="Condition"
+          description={CONDITION_HINT}
           value={condition}
           disabled={disabled}
           templates={templates.templates}
@@ -219,6 +225,7 @@ export function PolicySection({
       <div>
         <KeyValueEditor
           label="Policy data"
+          description={POLICY_DATA_HINT}
           rows={policyRows}
           disabled={disabled}
           onChange={(rows) => {

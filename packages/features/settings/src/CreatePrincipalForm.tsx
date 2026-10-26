@@ -19,7 +19,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type CSSProperties, type ReactNode, useState } from 'react';
 
-import { fieldLabelStyle } from './api-keys-styles';
+import { fieldHintStyle, fieldLabelStyle } from './api-keys-styles';
 import { principalsKey, rolesKey } from './keys';
 
 const formStyle: CSSProperties = {
@@ -30,6 +30,8 @@ const formStyle: CSSProperties = {
   borderRadius: 'var(--tai-radius-md)',
   border: '1px solid var(--tai-color-control-border)',
 };
+
+const ROLE_HINT = 'Required. What this principal, and every key it owns, may reach.';
 
 const actionsStyle: CSSProperties = {
   display: 'flex',
@@ -106,7 +108,7 @@ export function CreatePrincipalForm({
         submit();
       }}
     >
-      <Field label="Display name">
+      <Field label="Display name" description="Required. The name shown for this principal.">
         <TextInput
           value={displayName}
           autoComplete="off"
@@ -119,13 +121,16 @@ export function CreatePrincipalForm({
       {rolesQuery.isError ? (
         <div>
           <span style={fieldLabelStyle}>Role</span>
+          <p className="tai-field-hint" style={fieldHintStyle}>
+            {ROLE_HINT}
+          </p>
           <ErrorState
             message={errorMessage(rolesQuery.error)}
             onRetry={() => void rolesQuery.refetch()}
           />
         </div>
       ) : (
-        <Field label="Role">
+        <Field label="Role" description={ROLE_HINT}>
           <Select
             options={roleOptions}
             value={role}
@@ -138,9 +143,8 @@ export function CreatePrincipalForm({
           />
         </Field>
       )}
-      <Field label="User ID" description="Leave empty to generate one.">
+      <Field label="Principal user ID" description="Optional. Leave empty to generate one.">
         <TextInput
-          aria-label="Principal User ID"
           value={userId}
           autoComplete="off"
           onChange={(event) => {

@@ -210,7 +210,7 @@ describe('ApiKeysTab', () => {
     expect(create).toBeDisabled();
     expect(screen.getByText('Keys are managed at the external issuer')).toBeInTheDocument();
     // The create dialog is unreachable — no mint request is possible.
-    expect(screen.queryByLabelText('User ID')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Key user ID')).not.toBeInTheDocument();
     expect(createApiKey).not.toHaveBeenCalled();
   });
 
@@ -229,7 +229,7 @@ describe('ApiKeysTab', () => {
     expect(create).toBeEnabled();
     expect(screen.queryByText('Keys are managed at the external issuer')).not.toBeInTheDocument();
     await user.click(create);
-    expect(screen.getByLabelText('User ID')).toBeInTheDocument();
+    expect(screen.getByLabelText('Key user ID')).toBeInTheDocument();
   });
 
   it('surfaces a capabilities-fetch failure loudly (never a silent enable/disable guess)', async () => {

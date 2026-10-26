@@ -33,10 +33,13 @@ function toRef(principal: Principal | PrincipalRef): PrincipalRef {
 export function PrincipalPicker({
   selfPrincipal,
   value,
+  describedBy,
   onChange,
 }: {
   readonly selfPrincipal: PrincipalRef | null;
   readonly value: PrincipalRef | null;
+  /** The id of the hint that describes the picker, wired as its `aria-describedby`. */
+  readonly describedBy?: string;
   readonly onChange: (principal: PrincipalRef | null) => void;
 }): ReactNode {
   const principalsQuery = usePrincipalsQuery();
@@ -78,6 +81,7 @@ export function PrincipalPicker({
     <div style={stackStyle}>
       <Select
         aria-label="Principal"
+        aria-describedby={describedBy}
         options={options}
         value={value?.user_id ?? ''}
         disabled={principalsQuery.isPending}
