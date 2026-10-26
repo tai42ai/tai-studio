@@ -13,14 +13,14 @@
  *   skips them.
  * - forced — the monitoring reads are fulfilled via `page.route` with fixed payloads,
  *   for the states the seeded backend does not produce: a declared sort × filter
- *   incompatibility (the Langfuse reader's real served declaration, the api-client
- *   fixture), a trace whose first ERROR span is auto-selected, the waterfall and its
- *   span filter, the summary bar, the by-model card's unavailable state, and by-model
+ *   exclusion (a backend that declares exclusions, held in this spec), a link whose
+ *   sort the backend does not serve (the not-served notice, with no runs read sent),
+ *   a too-broad answer to a sort-header click (the notice and the focused time range),
+ *   a trace whose first ERROR span is auto-selected, the waterfall and its span
+ *   filter, the summary bar, the by-model card's unavailable state, and by-model
  *   captions wider than a phone's screen.
  */
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-
+import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
@@ -65,23 +65,34 @@ const RUNS_PAGE = {
   nextPage: null,
 };
 
+/** The four run-list sorts and the metric filters, as the capabilities read names them. */
+const SORT_KEYS = ['createdAt', 'cost', 'latencyMs', 'totalTokens'] as const;
+const METRIC_FILTERS = [
+  'maxCost',
+  'maxLatencyMs',
+  'maxTokens',
+  'minCost',
+  'minLatencyMs',
+  'minTokens',
+  'status',
+  'version',
+] as const;
+
 /**
- * The Langfuse reader's served capabilities: its metric sorts cannot carry the status /
- * cost / token / latency / version filters. Read from the api-client fixture that holds
- * that reader's real `capabilities_view` output, so the guard legs react to a declaration
- * an actual backend serves.
+ * A backend that declares exclusions: its metric sorts cannot carry the status / cost /
+ * token / latency / version filters, so the guard legs react to a declared sort × filter
+ * exclusion.
  */
-const CAPABILITIES: unknown = JSON.parse(
-  readFileSync(
-    fileURLToPath(
-      new URL(
-        '../../packages/api-client/fixtures/redacted/observability-capabilities.json',
-        import.meta.url,
-      ),
-    ),
-    'utf8',
-  ),
-);
+const CAPABILITIES = {
+  pageSizeMax: 100,
+  sortKeys: SORT_KEYS,
+  incompatibleFilters: {
+    cost: METRIC_FILTERS,
+    latencyMs: METRIC_FILTERS,
+    totalTokens: METRIC_FILTERS,
+  },
+  metrics: { measures: ['cost', 'count', 'latency', 'tokens'], dimensions: ['model'] },
+};
 
 /** A three-span trace whose ERROR span is NOT the first root — proves first-error select. */
 const TRACE = {
@@ -249,22 +260,139 @@ test('the served capabilities disable the filters a sort cannot carry, and the s
   await expect(page.getByRole('button', { name: 'When', exact: true })).toBeEnabled();
 });
 
-test('a hand-built metric-sort×filter URL is repaired to a legal query before it is sent', async ({
+/** Collect every runs-list request the page sends. */
+function recordRunsReads(page: Page): URL[] {
+  const reads: URL[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === RUNS_PATH) reads.push(url);
+  });
+  return reads;
+}
+
+test('a hand-built sort and filter URL the declaration excludes shows the not-served notice', async ({
   page,
 }) => {
   await stubObservability(page);
-  // A shared/hand-edited URL states a combination the served capabilities exclude.
+  const runsReads = recordRunsReads(page);
+  const capabilitiesRead = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === CAPABILITIES_PATH,
+  );
   await page.goto('/observability?tab=tracing&sort=cost&dir=desc&status=error');
+  await capabilitiesRead;
 
-  // The filter is the more specific intent: the metric sort + its direction are dropped,
-  // the status filter kept, and the URL — the source of truth — is rewritten to match.
+  // The link is shown as it is: the URL keeps its sort and the notice names why.
+  const notice = page.getByTestId('observability-read-not-served');
+  await expect(notice).toHaveAttribute('role', 'alert');
+  await expect(notice).toContainText('This request is not served by the monitoring backend');
+  await expect(notice).toContainText(
+    'The monitoring backend does not sort runs by Cost with the filters in this link.',
+  );
+  await expect(page).toHaveURL(/sort=cost/);
+  await expect(page).toHaveURL(/dir=desc/);
+  await expect(page.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Export CSV' })).toBeDisabled();
+  expect(runsReads).toEqual([]);
+
+  // "Sort newest first" drops the sort and its direction, keeps the filter, and loads.
+  await notice.getByRole('button', { name: 'Sort newest first' }).click();
   await page.waitForURL(/status=error/);
-  await expect(page).not.toHaveURL(/sort=cost/);
-  await expect(page).not.toHaveURL(/dir=desc/);
-  // Repaired to a legal query, the table loads and the status filter stays usable.
+  await expect(page).not.toHaveURL(/sort=/);
+  await expect(page).not.toHaveURL(/dir=/);
   await expect(page.getByTestId('run-row-run-ok')).toBeVisible();
-  await expect(page.getByLabel('Min cost')).toBeEnabled();
+  expect(runsReads.length).toBeGreaterThan(0);
+  for (const read of runsReads) {
+    expect(read.searchParams.get('status')).toBe('error');
+    expect(read.searchParams.has('sort')).toBe(false);
+  }
 });
+
+test('a link whose sort the backend does not list shows the not-served notice', async ({
+  page,
+}) => {
+  await stubObservability(page);
+  // Registered after the shared stub, so this declaration answers the capabilities read.
+  await page.route(
+    (url) => url.pathname === CAPABILITIES_PATH,
+    async (route) => {
+      await route.fulfill({
+        json: {
+          data: {
+            ...CAPABILITIES,
+            sortKeys: SORT_KEYS.filter((key) => key !== 'cost'),
+            incompatibleFilters: {},
+          },
+        },
+      });
+    },
+  );
+  const runsReads = recordRunsReads(page);
+  await page.goto('/observability?tab=tracing&sort=cost');
+
+  const notice = page.getByTestId('observability-read-not-served');
+  await expect(notice).toContainText('The monitoring backend does not sort runs by Cost.');
+  await expect(page.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Export CSV' })).toBeDisabled();
+  expect(runsReads).toEqual([]);
+
+  await notice.getByRole('button', { name: 'Sort newest first' }).click();
+  await expect(page.getByTestId('run-row-run-ok')).toBeVisible();
+  await expect(page).not.toHaveURL(/sort=/);
+});
+
+/** The backend's guidance for a ranked read over too many runs in the time range. */
+const TOO_BROAD_MESSAGE =
+  'This list reads at most 2,000 runs in the time range to rank by latency, and this range holds more. Narrow the time range or add filters.';
+
+for (const scheme of ['light', 'dark'] as const) {
+  test.describe(`a too-broad sort-header click (${scheme})`, () => {
+    test.use({ colorScheme: scheme });
+
+    test('shows the too-broad notice and moves focus to the pressed range chip', async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+      await stubObservability(page);
+      // A backend that combines every sort with every filter, ranking over a bounded walk.
+      await page.route(
+        (url) => url.pathname === CAPABILITIES_PATH,
+        async (route) => {
+          await route.fulfill({ json: { data: { ...CAPABILITIES, incompatibleFilters: {} } } });
+        },
+      );
+      await page.route(
+        (url) => url.pathname === RUNS_PATH && url.searchParams.get('sort') === 'latencyMs',
+        async (route) => {
+          await route.fulfill({
+            status: 400,
+            json: { error: TOO_BROAD_MESSAGE, code: 'monitoring-read-too-broad' },
+          });
+        },
+      );
+      await page.goto('/observability?tab=tracing');
+      await expect(page.getByTestId('run-row-run-ok')).toBeVisible();
+      const theme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+      expect(theme).toBe(scheme);
+
+      await page.getByRole('button', { name: 'Latency', exact: true }).click();
+
+      const notice = page.getByTestId('observability-read-too-broad');
+      await expect(notice).toHaveAttribute('role', 'alert');
+      await expect(notice).toContainText(TOO_BROAD_MESSAGE);
+      const chip = page
+        .getByRole('group', { name: 'Run time range' })
+        .getByRole('button', { name: 'Last 30 days' });
+      await expect(chip).toHaveAttribute('aria-pressed', 'true');
+      await expect(chip).toBeFocused();
+
+      const results = await new AxeBuilder({ page })
+        .include('[data-testid="observability-read-too-broad"]')
+        .include('[role="group"][aria-label="Run time range"]')
+        .analyze();
+      expect(results.violations).toEqual([]);
+    });
+  });
+}
 
 test('opening a run drills into the two-pane trace with the first ERROR span auto-selected', async ({
   page,

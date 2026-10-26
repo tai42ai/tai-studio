@@ -375,6 +375,27 @@ describe('TraceView', () => {
     expect(screen.queryByTestId('observability-read-not-supported')).not.toBeInTheDocument();
   });
 
+  it('renders the backend message in the not-served notice on a not-served 400', async () => {
+    const client: StubApiClient = {
+      getRunTrace: vi
+        .fn()
+        .mockRejectedValue(
+          new ApiError(
+            'This backend does not serve trace reads by that id.',
+            400,
+            'monitoring-read-not-served',
+          ),
+        ),
+    };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    const notice = await screen.findByTestId('observability-read-not-served');
+    expect(notice).toHaveAttribute('role', 'alert');
+    expect(notice).toHaveTextContent('This backend does not serve trace reads by that id.');
+    expect(screen.queryByTestId('observability-read-not-supported')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back to runs' })).toBeInTheDocument();
+  });
+
   it('renders a 404 as a not-available state, never a retry-forever error', async () => {
     const client: StubApiClient = {
       getRunTrace: vi.fn().mockRejectedValue(new ApiError('trace not found', 404)),

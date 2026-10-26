@@ -7,7 +7,7 @@ in the screenshots are produced by the same code path a production reader uses â
 only the underlying dataset is a demo fixture.
 
 Every clause the contract does not let this reader honor raises
-``MonitoringReadNotSupportedError`` rather than being silently dropped.
+``MonitoringReadNotServedError`` rather than being silently dropped.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from tai42_contract.monitoring import (
     MonitoringFilter,
     MonitoringLevel,
     MonitoringObservation,
-    MonitoringReadNotSupportedError,
+    MonitoringReadNotServedError,
     MonitoringTrace,
     MonitoringTraceSummary,
     ObservationNotFoundError,
@@ -227,7 +227,7 @@ class DemoReader:
         """Aggregate the requested measures over the query window.
 
         A measure or dimension outside :meth:`metrics_capability`, or an unsupported
-        granularity, raises ``MonitoringReadNotSupportedError`` rather than returning a
+        granularity, raises ``MonitoringReadNotServedError`` rather than returning a
         silent zero. The model dimension aggregates over generation observations; an
         ungrouped query aggregates over whole traces (runs).
         """
@@ -242,13 +242,13 @@ class DemoReader:
         unknown_measures = [m for m in query.measures if m not in _SUPPORTED_MEASURES]
         unknown_dimensions = [d for d in query.dimensions if d not in _SUPPORTED_DIMENSIONS]
         if unknown_measures or unknown_dimensions:
-            raise MonitoringReadNotSupportedError(
+            raise MonitoringReadNotServedError(
                 "docs-demo metrics query cannot serve "
                 f"measures={[m.value for m in unknown_measures]} "
                 f"dimensions={[d.value for d in unknown_dimensions]}"
             )
         if query.granularity is not None and query.granularity not in _SUPPORTED_GRANULARITY:
-            raise MonitoringReadNotSupportedError(f"unsupported granularity: {query.granularity}")
+            raise MonitoringReadNotServedError(f"unsupported granularity: {query.granularity}")
 
     def _by_time(self, traces: list[MonitoringTrace], query: MetricsQuery) -> MetricsResult:
         """Trace-level aggregation: one ungrouped row, or one row per time bucket."""
@@ -414,8 +414,8 @@ class DemoReader:
 
     def _trace_matches(self, trace: MonitoringTrace, f: MonitoringFilter) -> bool:
         if f.name is not None or f.user_id is not None or f.session_id is not None or f.metadata:
-            raise MonitoringReadNotSupportedError(
-                "name/user_id/session_id/metadata filters are not supported by the docs-demo reader"
+            raise MonitoringReadNotServedError(
+                "name/user_id/session_id/metadata filters are not served by the docs-demo reader"
             )
         if f.tags and not set(f.tags).issubset(set(trace.tags or [])):
             return False
@@ -445,7 +445,7 @@ class DemoReader:
         reverse = order_by.direction == "desc" if order_by is not None else True
         getter = _TRACE_SORT_GETTERS.get(field)
         if getter is None:
-            raise MonitoringReadNotSupportedError(f"unsupported order_by field: {field}")
+            raise MonitoringReadNotServedError(f"unsupported order_by field: {field}")
         return _sorted_missing_last(traces, getter, lambda t: t.id, reverse=reverse)
 
     def _sort_spans(self, items: list[SpanWindowItem], order_by: OrderBy | None) -> list[SpanWindowItem]:
@@ -460,7 +460,7 @@ class DemoReader:
         reverse = order_by.direction == "desc" if order_by is not None else True
         getter = getters.get(field)
         if getter is None:
-            raise MonitoringReadNotSupportedError(f"unsupported order_by field: {field}")
+            raise MonitoringReadNotServedError(f"unsupported order_by field: {field}")
         return _sorted_missing_last(items, getter, lambda s: s.id, reverse=reverse)
 
 

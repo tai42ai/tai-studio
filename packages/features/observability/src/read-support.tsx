@@ -1,5 +1,5 @@
 /**
- * The two distinct ways a monitoring read can fail to return data, each with its
+ * The three distinct ways a monitoring read can fail to return data, each with its
  * own surface.
  *
  * READ NOT SUPPORTED — the backend cannot read AT ALL. The default no-op backend
@@ -16,6 +16,13 @@
  * malfunction: it renders INLINE beside the filters as a warn notice carrying the
  * backend's exact words, so the reader narrows and retries — never the full-page
  * marketplace pitch, never a silent empty result.
+ *
+ * READ NOT SERVED — the backend CAN read, but not this request: a sort, a filter
+ * with a sort, or a granularity it does not serve. It answers with the
+ * `monitoring-read-not-served` code on an HTTP 400 and its own message. The notice
+ * replaces the result area only; the filters and the time range stay with their
+ * values. The runs table shows the same notice, without sending a read, for a link
+ * whose sort the backend's declared capabilities do not serve.
  */
 import { ApiError } from '@tai42/api-client';
 import { AlertTriangleIcon, AppLink, EmptyState } from '@tai42/studio-sdk';
@@ -34,6 +41,14 @@ export function isReadNotSupported(error: unknown): boolean {
  */
 export function isReadTooBroad(error: unknown): boolean {
   return error instanceof ApiError && error.code === 'monitoring-read-too-broad';
+}
+
+/**
+ * True when `error` is the monitoring read-not-served refusal from the skeleton. Keyed
+ * on the pinned `code` alone, as the 400 status is shared by unrelated client faults.
+ */
+export function isReadNotServed(error: unknown): boolean {
+  return error instanceof ApiError && error.code === 'monitoring-read-not-served';
 }
 
 /** The dedicated full-page state shown when the backend cannot serve reads. */
@@ -83,6 +98,34 @@ export function ReadTooBroadNotice({ message }: { readonly message: string }): R
         This read is too broad
       </strong>
       <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{message}</p>
+    </div>
+  );
+}
+
+/**
+ * The inline warn notice shown when the backend does not serve the request as it is.
+ * It carries the message verbatim; `action`, when given, renders after the message
+ * (the runs table passes the control that leaves the unserved sort).
+ */
+export function ReadNotServedNotice({
+  message,
+  action,
+}: {
+  readonly message: string;
+  readonly action?: ReactNode;
+}): ReactNode {
+  return (
+    <div
+      role="alert"
+      className="tai-warn-state tai-stack tai-stack-2"
+      data-testid="observability-read-not-served"
+    >
+      <strong className="tai-status tai-status-warn">
+        <AlertTriangleIcon />
+        This request is not served by the monitoring backend
+      </strong>
+      <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{message}</p>
+      {action === undefined ? null : <div>{action}</div>}
     </div>
   );
 }

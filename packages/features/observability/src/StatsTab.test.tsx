@@ -5,12 +5,12 @@
  * the runs tab, the empty/loading states, and the 501 and loud-error paths.
  */
 import { ApiError, type DashboardMetrics } from '@tai42/api-client';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { StatsTab } from './StatsTab';
-import { renderWithProviders, type StubApiClient } from './test-utils';
+import { renderWithLiveUrl, renderWithProviders, type StubApiClient } from './test-utils';
 
 function metricsFixture(overrides: Partial<DashboardMetrics> = {}): DashboardMetrics {
   return {
@@ -187,6 +187,94 @@ describe('StatsTab', () => {
     expect(screen.queryByTestId('observability-read-not-supported')).not.toBeInTheDocument();
     // The range picker stays on screen so the reader can narrow and retry.
     expect(screen.getByLabelText('Metrics time range')).toBeInTheDocument();
+  });
+
+  it('moves focus to the pressed range chip when a range change reads too broad', async () => {
+    const user = userEvent.setup();
+    let rejectWide: (error: unknown) => void = () => {
+      throw new Error('the wide read was never sent');
+    };
+    const getObservabilityMetrics = vi.fn((query?: { from?: string }) =>
+      query?.from === '90d'
+        ? new Promise<DashboardMetrics>((_resolve, reject) => {
+            rejectWide = reject;
+          })
+        : Promise.resolve(metricsFixture()),
+    );
+    renderWithLiveUrl<'observability'>((search) => <StatsTab search={search} />, {
+      client: { getObservabilityMetrics },
+      initialSearch: { tab: 'dashboard' },
+    });
+
+    await screen.findByText('Total runs');
+    await user.click(screen.getByRole('button', { name: 'Last 90 days' }));
+    // The picker is disabled while the read is in flight, so focus leaves it.
+    await waitFor(() => {
+      expect(getObservabilityMetrics).toHaveBeenCalledWith(
+        expect.objectContaining({ from: '90d' }),
+        expect.anything(),
+      );
+    });
+    const viewRuns = screen.getByRole('button', { name: 'View runs' });
+    act(() => {
+      viewRuns.focus();
+    });
+    expect(viewRuns).toHaveFocus();
+    await act(async () => {
+      rejectWide(
+        new ApiError('Narrow the time range to under 30 days.', 400, 'monitoring-read-too-broad'),
+      );
+      await Promise.resolve();
+    });
+
+    const notice = await screen.findByTestId('observability-read-too-broad');
+    expect(notice).toHaveAttribute('role', 'alert');
+    const chip = within(screen.getByRole('group', { name: 'Metrics time range' })).getByRole(
+      'button',
+      { name: 'Last 90 days' },
+    );
+    expect(chip).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() => {
+      expect(chip).toHaveFocus();
+    });
+  });
+
+  it('does not move focus when the dashboard opens straight into a too-broad read', async () => {
+    const client: StubApiClient = {
+      getObservabilityMetrics: vi
+        .fn()
+        .mockRejectedValue(new ApiError('Narrow it.', 400, 'monitoring-read-too-broad')),
+    };
+    renderWithProviders(<StatsTab search={{ tab: 'dashboard' }} />, { client });
+
+    await screen.findByTestId('observability-read-too-broad');
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(document.body).toHaveFocus();
+  });
+
+  it('renders the backend message in the not-served notice on a not-served 400', async () => {
+    const client: StubApiClient = {
+      getObservabilityMetrics: vi
+        .fn()
+        .mockRejectedValue(
+          new ApiError('unsupported granularity: month', 400, 'monitoring-read-not-served'),
+        ),
+    };
+    renderWithProviders(<StatsTab search={{ tab: 'dashboard', from: '7d' }} />, { client });
+
+    const notice = await screen.findByTestId('observability-read-not-served');
+    expect(notice).toHaveAttribute('role', 'alert');
+    expect(notice).toHaveTextContent('This request is not served by the monitoring backend');
+    expect(notice).toHaveTextContent('unsupported granularity: month');
+    expect(screen.queryByTestId('observability-read-not-supported')).not.toBeInTheDocument();
+    // The range picker stays with its value.
+    expect(
+      within(screen.getByRole('group', { name: 'Metrics time range' })).getByRole('button', {
+        name: 'Last 7 days',
+      }),
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('surfaces a non-501 failure loudly and refetches on retry', async () => {

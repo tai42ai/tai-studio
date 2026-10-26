@@ -20,7 +20,7 @@ from tai42_contract.monitoring import (
     MetricsQuery,
     MonitoringLevel,
     MonitoringObservation,
-    MonitoringReadNotSupportedError,
+    MonitoringReadNotServedError,
     MonitoringTrace,
     OrderBy,
     SpanKind,
@@ -112,7 +112,7 @@ def test_unsupported_granularity_raises() -> None:
     # typed ``MetricsQuery`` rejects a non-enum member before the reader is reached —
     # so the reader's served-check guards the case where the contract enums grow.)
     reader = _reader()
-    with pytest.raises(MonitoringReadNotSupportedError):
+    with pytest.raises(MonitoringReadNotServedError):
         asyncio.run(
             reader.query_metrics(
                 MetricsQuery(measures=MEASURES, from_timestamp=FROM, to_timestamp=TO, granularity="month")
@@ -169,7 +169,7 @@ def test_list_capability_and_page_ceiling() -> None:
     assert len(asyncio.run(reader.list_traces(from_timestamp=FROM, to_timestamp=TO, limit=100))) == 24
     with pytest.raises(ValueError, match="limit 101 exceeds the reader's maximum page size 100"):
         asyncio.run(reader.list_traces(limit=101))
-    with pytest.raises(MonitoringReadNotSupportedError):
+    with pytest.raises(MonitoringReadNotServedError):
         asyncio.run(reader.list_traces(order_by=OrderBy(field="name")))
 
 
