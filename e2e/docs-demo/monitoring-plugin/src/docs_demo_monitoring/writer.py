@@ -35,6 +35,8 @@ from tai42_contract.monitoring import (
     SpanKind,
     TokenUsage,
     TraceContext,
+    is_span_id,
+    is_trace_id,
 )
 from tai42_kit.monitoring import encode_payload
 
@@ -45,7 +47,7 @@ logger = logging.getLogger(__name__)
 # Ambient stack of the activated spans of the current async context, and a
 # suppression flag toggled by ``disable()``. An ended span stays listed when it
 # was ended from another context, but never counts as current.
-_SPAN_STACK: ContextVar[tuple[DemoSpan, ...]] = ContextVar("docs_demo_span_stack", default=())
+_SPAN_STACK: ContextVar[tuple[DemoSpan | _ContextSpan, ...]] = ContextVar("docs_demo_span_stack", default=())
 _DISABLED: ContextVar[bool] = ContextVar("docs_demo_disabled", default=False)
 
 def _now() -> datetime:
@@ -63,7 +65,7 @@ def _recorded(value: Any) -> Any:
         return {"$tai42_unencodable": type(value).__qualname__}
 
 
-def _current() -> DemoSpan | None:
+def _current() -> DemoSpan | _ContextSpan | None:
     for span in reversed(_SPAN_STACK.get()):
         if not span.ended:
             return span
@@ -87,6 +89,19 @@ class _InertSpan:
         pass
 
 
+class _ContextSpan:
+    """A span a ``TraceContext`` names, made current by ``use_trace_context``.
+
+    It is not this writer's to end or amend: it only parents the spans started under it.
+    """
+
+    ended = False
+
+    def __init__(self, trace_id: str, span_id: str) -> None:
+        self.trace_id = trace_id
+        self.id = span_id
+
+
 class DemoSpan:
     """A handle to a recorded observation. Every method is fail-safe."""
 
@@ -95,7 +110,7 @@ class DemoSpan:
         self.trace_id = trace_id
         self._obs = observation
         self.ended = False
-        self._token: Token[tuple[DemoSpan, ...]] | None = None
+        self._token: Token[tuple[DemoSpan | _ContextSpan, ...]] | None = None
 
     @property
     def id(self) -> str:
@@ -263,6 +278,29 @@ class DemoWriter:
         finally:
             _SPAN_STACK.reset(token)
 
+    @contextmanager
+    def use_trace_context(self, trace_context: TraceContext) -> Iterator[None]:
+        """Make the span ``trace_context`` names current for the block (fail-safe).
+
+        That span parents every span started in the block; it is not this writer's, so
+        ``update_current_span`` amends nothing under it. A span already current changes
+        nothing; a context naming no valid span is logged and changes nothing.
+        """
+        trace_id, span_id = trace_context.trace_id, trace_context.parent_span_id
+        if not (trace_id and is_trace_id(trace_id) and span_id and is_span_id(span_id)):
+            logger.error("DemoWriter.use_trace_context got a context naming no valid span: %r", trace_context)
+            yield
+            return
+        current = _current()
+        if current is not None and (current.trace_id, current.id) == (trace_id, span_id):
+            yield
+            return
+        token = _SPAN_STACK.set((*_SPAN_STACK.get(), _ContextSpan(trace_id, span_id)))
+        try:
+            yield
+        finally:
+            _SPAN_STACK.reset(token)
+
     def record_span(
         self,
         *,
@@ -327,7 +365,7 @@ class DemoWriter:
         if _DISABLED.get():
             return
         span = _current()
-        if span is None:
+        if not isinstance(span, DemoSpan):
             return
         try:
             if input_ is not None:

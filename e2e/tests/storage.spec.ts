@@ -220,6 +220,7 @@ test('a held delete lists its holders and the holder link opens the hooks screen
           holders: [
             {
               kind: 'hook',
+              tag: 'hooks',
               name: 'h',
               locator: { template: 'jq/gate', site: 'condition' },
               summary: "hook 'h' names 'jq/gate' at condition",

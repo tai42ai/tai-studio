@@ -318,7 +318,7 @@ describe('StoragePage', () => {
     const message = "resource 'a.txt' is still referenced — held by:\n  hook 'h1'";
     const refusal = new ApiError(message, 409, 'resource-in-use', undefined, {
       error: message,
-      holders: [{ kind: 'hook', name: 'h1', locator: {}, summary: "hook 'h1'" }],
+      holders: [{ kind: 'hook', tag: 'hooks', name: 'h1', locator: {}, summary: "hook 'h1'" }],
     });
     const client = stubClient({
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),

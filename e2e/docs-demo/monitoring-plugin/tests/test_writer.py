@@ -217,6 +217,42 @@ def test_use_span_leaves_the_current_span_for_an_inert_or_foreign_span() -> None
     foreign.end()
 
 
+def test_use_trace_context_parents_new_spans_under_the_named_span() -> None:
+    writer, store = _writer()
+    with writer.use_trace_context(_ctx("r")):
+        assert writer.current_trace_id() == _tid("r")
+        assert writer.current_span_id() == PARENT_SPAN_ID
+        writer.update_current_span(metadata={"ignored": True})
+        with writer.start_span(name="child", kind=SpanKind.TOOL):
+            pass
+    assert writer.current_span_id() is None
+    (obs,) = store.get(_tid("r")).observations
+    assert obs.parent_id == PARENT_SPAN_ID
+    assert obs.metadata is None
+
+
+def test_use_trace_context_restores_the_earlier_current_span() -> None:
+    writer, _ = _writer()
+    outer = writer.open_span(name="outer", kind=SpanKind.CHAIN, trace_context=_ctx("e"), activate=True)
+    with writer.use_trace_context(_ctx("other")):
+        assert writer.current_span_id() == PARENT_SPAN_ID
+    assert writer.current_span_id() == outer.id
+    with writer.use_trace_context(TraceContext(trace_id=outer.trace_id, parent_span_id=outer.id)):
+        assert writer.current_span_id() == outer.id
+    outer.end()
+
+
+def test_use_trace_context_leaves_the_current_span_for_a_context_naming_no_span(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    writer, _ = _writer()
+    current = writer.open_span(name="c", kind=SpanKind.CHAIN, trace_context=_ctx("n"), activate=True)
+    with writer.use_trace_context(TraceContext()):
+        assert writer.current_span_id() == current.id
+    assert "naming no valid span" in caplog.text
+    current.end()
+
+
 def test_a_new_root_span_carries_contract_form_ids() -> None:
     writer, _ = _writer()
     span = writer.open_span(name="root", kind=SpanKind.CHAIN, activate=True)

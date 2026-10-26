@@ -8472,6 +8472,7 @@ export function createApiClient(config: ApiConfig): {
             locator: Record<string, string | number>;
             name: string;
             summary: string;
+            tag: string;
         }[];
     }>;
     readonly detachStateTemplate: (name: string, template: string) => Promise<{
@@ -9324,6 +9325,7 @@ export function createApiClient(config: ApiConfig): {
             locator: Record<string, string | number>;
             name: string;
             summary: string;
+            tag: string;
         }[];
     }>;
     readonly validatePreset: (body: ValidatePresetBody) => Promise<{
@@ -10237,6 +10239,7 @@ const holdersPreview: z.ZodObject<{
         locator: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>>;
         name: z.ZodString;
         summary: z.ZodString;
+        tag: z.ZodString;
     }, z.core.$strict>>;
 }, z.core.$strip>;
 
@@ -13634,6 +13637,7 @@ const referenceHolder: z.ZodObject<{
     locator: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>>;
     name: z.ZodString;
     summary: z.ZodString;
+    tag: z.ZodString;
 }, z.core.$strict>;
 
 // @public (undocumented)

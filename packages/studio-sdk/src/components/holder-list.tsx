@@ -1,15 +1,15 @@
 /**
  * `HolderList` — the things that still use a name, each a link to where it lives.
  * A core holder kind links to its Studio screen; a plugin kind links to the page its
- * plugin registered for it; a kind nobody resolves shows as text, so no holder is
- * hidden.
+ * plugin registered for it; a kind nobody resolves, and a count of holders the caller's
+ * role cannot read, show as text, so no holder is hidden.
  */
 import type { ReferenceHolder } from '@tai42/api-client';
 import { type MouseEvent, type ReactNode, useCallback } from 'react';
 
 import { errorMessage } from '../errors';
 import { useNavigation } from '../navigation/context';
-import { coreHolderRoute } from './holder-kinds';
+import { coreHolderRoute, isCountHolder } from './holder-kinds';
 import { Spinner } from './primitives';
 import { ScrollRegion } from './scroll-region';
 
@@ -20,14 +20,15 @@ export interface HolderHref {
 }
 
 /**
- * The resolver for holder links: `null` for a kind neither the core table nor any
- * registered plugin resolves.
+ * The resolver for holder links: `null` for a count holder and for a kind neither the
+ * core table nor any registered plugin resolves.
  */
 export function useHolderHref(): (holder: ReferenceHolder) => HolderHref | null {
   const { navigate, resolvePath, navigatePlugin, resolvePluginPath, resolveHolderLink } =
     useNavigation();
   return useCallback(
     (holder: ReferenceHolder): HolderHref | null => {
+      if (isCountHolder(holder)) return null;
       const core = coreHolderRoute(holder);
       if (core !== null) {
         return {

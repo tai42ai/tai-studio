@@ -519,6 +519,7 @@ describe('Storage detail: upload and held deletes', () => {
       holders: [
         {
           kind: 'hook',
+          tag: 'hooks',
           name: 'h',
           locator: {},
           summary: `hook 'h' names '${subject}' at condition`,

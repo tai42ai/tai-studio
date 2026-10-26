@@ -272,7 +272,7 @@ describe('McpServersSection — config editor', () => {
     const setMcpConfig = vi.fn().mockRejectedValue(
       new ApiError(message, 409, undefined, undefined, {
         detail: message,
-        holders: [{ kind: 'hook', name: 'h1', locator: {}, summary: "hook 'h1'" }],
+        holders: [{ kind: 'hook', tag: 'hooks', name: 'h1', locator: {}, summary: "hook 'h1'" }],
       }),
     );
     const client = {

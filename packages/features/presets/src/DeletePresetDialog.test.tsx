@@ -42,7 +42,7 @@ describe('DeletePresetDialog', () => {
     const deletePreset = vi.fn().mockRejectedValue(
       new ApiError(message, 409, undefined, undefined, {
         error: message,
-        holders: [{ kind: 'hook', name: 'h1', locator: {}, summary: "hook 'h1'" }],
+        holders: [{ kind: 'hook', tag: 'hooks', name: 'h1', locator: {}, summary: "hook 'h1'" }],
       }),
     );
     const onDeleted = vi.fn();
