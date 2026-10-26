@@ -1,7 +1,7 @@
 /**
  * The Environment tab (raw view — the escape hatch): editable key/value rows
  * over the deployment's environment map (`GET /api/config/env` →
- * `{ env, secret_keys }`). Rows can be added, edited, and removed (no blank or
+ * `{ env, secret_keys, deployment_keys }`). Rows can be added, edited, and removed (no blank or
  * duplicate keys); Save posts the assembled map and marks through `setEnvConfig`.
  *
  * Secret marking: keys OWNED by a registered settings class show their
@@ -10,6 +10,14 @@
  * operator's secret marks; the marks ride out in the same Save as its
  * `secret_keys` list. Any row whose key is effectively secret renders MASKED
  * through `RevealInput` (reveal-on-click; display masking only, never logged).
+ *
+ * A row whose key the server names in `deployment_keys` (a stored key the deployment's
+ * own environment sets, aliases of a deployment-set settings field included) is locked:
+ * its name and value are not editable, and it wears a "Set by the deployment" badge
+ * with a note that the stored value is not used. The deployment's value wins over a
+ * stored copy; Remove still deletes it, and Save carries it unchanged otherwise.
+ * A row added in the editor is never locked, whatever name it is given: a Save that sets
+ * a key the deployment sets is refused by the server, and the refusal names the key.
  *
  * The `TAI_ENV_SECRET_KEYS` variable itself is managed through the toggles, not
  * as a raw row, so it is hidden from the row list to avoid a duplicate editor.
@@ -186,6 +194,7 @@ interface EditorProps {
   readonly initialEnv: Record<string, string>;
   readonly initialSecretKeys: readonly string[];
   readonly ownedSecret: Map<string, boolean>;
+  readonly deploymentSet: ReadonlySet<string>;
   readonly readOnly: boolean;
 }
 
@@ -193,6 +202,7 @@ function EnvironmentEditor({
   initialEnv,
   initialSecretKeys,
   ownedSecret,
+  deploymentSet,
   readOnly,
 }: EditorProps): ReactNode {
   const api = useApi();
@@ -239,6 +249,7 @@ function EnvironmentEditor({
   const isOwned = (key: string): boolean => ownedSecret.has(key);
   const isSecret = (key: string): boolean =>
     isOwned(key) ? (ownedSecret.get(key) ?? false) : editor.secretKeys.has(key);
+  const isDeploymentSet = (key: string): boolean => deploymentSet.has(key);
 
   const onSave = (): void => {
     mutation.mutate(
@@ -285,6 +296,7 @@ function EnvironmentEditor({
           secretIdPrefix="env-secret"
           isSecret={isSecret}
           isOwned={isOwned}
+          isDeploymentSet={isDeploymentSet}
           onKeyChange={editor.setKey}
           onValueChange={editor.setValue}
           onRemove={editor.removeRow}
@@ -365,14 +377,16 @@ export function EnvironmentTab({ readOnly }: EnvironmentTabProps): ReactNode {
     return <Spinner label="Loading environment" />;
   }
 
-  const { env, secret_keys } = envQuery.data;
+  const { env, secret_keys, deployment_keys } = envQuery.data;
   const ownedSecret = ownedSecretMap(schemaQuery.data);
+  const deploymentSet = new Set(deployment_keys);
 
   return (
     <EnvironmentEditor
       initialEnv={env}
       initialSecretKeys={secret_keys}
       ownedSecret={ownedSecret}
+      deploymentSet={deploymentSet}
       readOnly={readOnly}
     />
   );

@@ -122,4 +122,27 @@ describe('Checkbox', () => {
     expect(fielded).toHaveAccessibleName('Accept terms');
     expect(fielded).not.toHaveAttribute('aria-label');
   });
+
+  it('is described by the caller aria-describedby, before an enclosing Field description', () => {
+    const bare = render(
+      <>
+        <Checkbox label="Accept terms" aria-describedby="terms-note" />
+        <span id="terms-note">Required to continue</span>
+      </>,
+    );
+    expect(screen.getByRole('checkbox')).toHaveAccessibleDescription('Required to continue');
+    bare.unmount();
+
+    render(
+      <>
+        <Field label="Accept terms" description="Read them first">
+          <Checkbox aria-describedby="terms-note" />
+        </Field>
+        <span id="terms-note">Required to continue</span>
+      </>,
+    );
+    expect(screen.getByRole('checkbox')).toHaveAccessibleDescription(
+      'Required to continue Read them first',
+    );
+  });
 });

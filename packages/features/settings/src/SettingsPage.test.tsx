@@ -399,7 +399,7 @@ describe('SettingsPage — capability-gated sub-tab visibility', () => {
     return {
       getConfigMode: vi.fn().mockResolvedValue({ config_mode: 'env-file', read_only: false }),
       getSettingsSchema: vi.fn(emptySchema),
-      getEnvConfig: vi.fn(() => Promise.resolve({ env: {}, secret_keys: [] })),
+      getEnvConfig: vi.fn(() => Promise.resolve({ env: {}, secret_keys: [], deployment_keys: [] })),
       listBackupSections: vi.fn(() => Promise.resolve([])),
       listSettingsProfiles: vi.fn(() => Promise.resolve([])),
       listTokensPayload: vi.fn(() => Promise.resolve([])),
@@ -591,7 +591,7 @@ describe('SettingsPage — capability-gated sub-tab visibility', () => {
     const client = {
       getConfigMode,
       getSettingsSchema: vi.fn(emptySchema),
-      getEnvConfig: vi.fn(() => Promise.resolve({ env: {}, secret_keys: [] })),
+      getEnvConfig: vi.fn(() => Promise.resolve({ env: {}, secret_keys: [], deployment_keys: [] })),
       listTokensPayload: vi.fn(() => Promise.resolve([])),
       listScopes: vi.fn(() => Promise.resolve({})),
       getAuthCapabilities: vi.fn(() => Promise.resolve({ mintable: false })),

@@ -25,6 +25,14 @@ export function isNestedRef(field: SettingsFieldModel): boolean {
   return field.nested_group !== null && field.env_var === '';
 }
 
+/**
+ * True when the deployment's own environment sets the field: its value belongs to the
+ * deployment, so the field is shown locked and never edited here.
+ */
+export function isDeploymentSet(field: SettingsFieldModel): boolean {
+  return field.value_source === 'deployment';
+}
+
 /** The visible label — a required field carries a trailing marker. */
 export function labelOf(field: SettingsFieldModel): string {
   return field.required ? `${field.name} *` : field.name;

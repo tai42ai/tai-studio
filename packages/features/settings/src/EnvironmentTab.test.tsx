@@ -18,6 +18,9 @@ function schemaFixture(): SettingsSchema {
           {
             name: 'port',
             env_var: 'TAI_PORT',
+            accepted_env_vars: ['TAI_PORT'],
+            key_material: false,
+            reload_class: 'hot',
             type: 'integer',
             default: 8000,
             required: false,
@@ -26,6 +29,7 @@ function schemaFixture(): SettingsSchema {
             nested_group: null,
             default_namespace_var: null,
             value: 8000,
+            value_source: 'stored',
           },
         ],
       },
@@ -33,10 +37,13 @@ function schemaFixture(): SettingsSchema {
   };
 }
 
-function envFixture(): { env: Record<string, string>; secret_keys: string[] } {
+type EnvConfig = Awaited<ReturnType<ApiClient['getEnvConfig']>>;
+
+function envFixture(): EnvConfig {
   return {
     env: { OPENAI_API_KEY: 'sk-openai', TAI_PORT: '8000', FOO: 'bar' },
     secret_keys: ['FOO'],
+    deployment_keys: [],
   };
 }
 
@@ -164,6 +171,7 @@ describe('EnvironmentTab', () => {
           // must never write it back into the marks var (owned secret state is
           // class-derived), and a removed unowned key must be pruned.
           secret_keys: ['FOO', 'TAI_PORT'],
+          deployment_keys: [],
         }),
       ),
       getSettingsSchema: vi.fn(() => Promise.resolve(schemaFixture())),
@@ -185,7 +193,9 @@ describe('EnvironmentTab', () => {
 
   it('wears the ghost style on an env-var row Remove, not filled danger', async () => {
     const client = stubClient({
-      getEnvConfig: vi.fn(() => Promise.resolve({ env: { FOO: 'bar' }, secret_keys: [] })),
+      getEnvConfig: vi.fn(() =>
+        Promise.resolve({ env: { FOO: 'bar' }, secret_keys: [], deployment_keys: [] }),
+      ),
       getSettingsSchema: vi.fn(() => Promise.resolve(schemaFixture())),
     });
     renderWithProviders(<EnvironmentTab readOnly={false} />, { client });
@@ -204,7 +214,9 @@ describe('EnvironmentTab', () => {
     const user = userEvent.setup();
     const setEnvConfig = vi.fn(saved);
     const client = stubClient({
-      getEnvConfig: vi.fn(() => Promise.resolve({ env: { A: '1', B: '2' }, secret_keys: [] })),
+      getEnvConfig: vi.fn(() =>
+        Promise.resolve({ env: { A: '1', B: '2' }, secret_keys: [], deployment_keys: [] }),
+      ),
       getSettingsSchema: vi.fn(() => Promise.resolve(schemaFixture())),
       setEnvConfig,
     });
@@ -224,7 +236,9 @@ describe('EnvironmentTab', () => {
     const user = userEvent.setup();
     const setEnvConfig = vi.fn(saved);
     const client = stubClient({
-      getEnvConfig: vi.fn(() => Promise.resolve({ env: { A: '1' }, secret_keys: [] })),
+      getEnvConfig: vi.fn(() =>
+        Promise.resolve({ env: { A: '1' }, secret_keys: [], deployment_keys: [] }),
+      ),
       getSettingsSchema: vi.fn(() => Promise.resolve(schemaFixture())),
       setEnvConfig,
     });
@@ -273,8 +287,8 @@ describe('EnvironmentTab', () => {
     const user = userEvent.setup();
     const getEnvConfig = vi
       .fn()
-      .mockResolvedValueOnce({ env: { A: '1' }, secret_keys: [] })
-      .mockResolvedValue({ env: { A: 'trimmed' }, secret_keys: [] });
+      .mockResolvedValueOnce({ env: { A: '1' }, secret_keys: [], deployment_keys: [] })
+      .mockResolvedValue({ env: { A: 'trimmed' }, secret_keys: [], deployment_keys: [] });
     const client = stubClient({
       getEnvConfig: getEnvConfig as ApiClient['getEnvConfig'],
       getSettingsSchema: vi.fn(() => Promise.resolve(schemaFixture())),
@@ -387,6 +401,174 @@ function rolledSave(stopped: boolean): ReturnType<ApiClient['setEnvConfig']> {
         },
   });
 }
+
+/**
+ * The env with TAI_PORT and its alias PORT stored while the deployment's own environment
+ * sets the field: the server names both stored keys in `deployment_keys`.
+ */
+function deploymentEnv(): EnvConfig {
+  return {
+    env: { OPENAI_API_KEY: 'sk-openai', TAI_PORT: '8000', PORT: '8001', FOO: 'bar' },
+    secret_keys: ['FOO'],
+    deployment_keys: ['PORT', 'TAI_PORT'],
+  };
+}
+
+describe('EnvironmentTab — a key the deployment sets', () => {
+  function deploymentStub(setEnvConfig?: ApiClient['setEnvConfig']): ApiClient {
+    return stubClient({
+      getEnvConfig: vi.fn(() => Promise.resolve(deploymentEnv())),
+      getSettingsSchema: vi.fn(() => Promise.resolve(schemaFixture())),
+      ...(setEnvConfig === undefined ? {} : { setEnvConfig }),
+    });
+  }
+
+  it('locks every row the server names: read-only, the badge, the note, and Remove kept', async () => {
+    renderWithProviders(<EnvironmentTab readOnly={false} />, { client: deploymentStub() });
+
+    await screen.findByLabelText('Name of variable TAI_PORT');
+    // The alias PORT is no settings field's env var, yet the server names it, so it locks too.
+    for (const key of ['TAI_PORT', 'PORT']) {
+      const name = screen.getByLabelText(`Name of variable ${key}`);
+      expect(name).toBeDisabled();
+      expect(screen.getByLabelText(`Value of variable ${key}`)).toBeDisabled();
+      const row = within(name.closest('li') as HTMLElement);
+      expect(row.getByText('Set by the deployment')).toBeInTheDocument();
+      expect(
+        row.getByText("Stored value not used; the deployment's value applies."),
+      ).toBeInTheDocument();
+      expect(row.getByRole('button', { name: `Remove variable ${key}` })).toBeEnabled();
+    }
+    // A key the server does not name stays editable, without the lock or its note.
+    const other = screen.getByLabelText('Name of variable FOO');
+    expect(other).toBeEnabled();
+    const otherRow = within(other.closest('li') as HTMLElement);
+    expect(otherRow.queryByText('Set by the deployment')).toBeNull();
+    expect(
+      otherRow.queryByText("Stored value not used; the deployment's value applies."),
+    ).toBeNull();
+  });
+
+  it('describes a locked row inputs by the lock text and its note', async () => {
+    renderWithProviders(<EnvironmentTab readOnly={false} />, { client: deploymentStub() });
+
+    const lock = "Set by the deployment Stored value not used; the deployment's value applies.";
+    expect(await screen.findByLabelText('Name of variable TAI_PORT')).toHaveAccessibleDescription(
+      lock,
+    );
+    expect(screen.getByLabelText('Value of variable TAI_PORT')).toHaveAccessibleDescription(lock);
+    expect(screen.getByLabelText('Name of variable FOO')).toHaveAccessibleDescription('');
+    expect(screen.getByLabelText('Value of variable FOO')).toHaveAccessibleDescription('');
+  });
+
+  it('locks by the server list alone, not by the settings schema', async () => {
+    const schema = schemaFixture();
+    const [group] = schema.groups;
+    if (group === undefined) throw new Error('fixture has no group');
+    const deploymentSchema: SettingsSchema = {
+      groups: [
+        {
+          ...group,
+          fields: group.fields.map((field) => ({ ...field, value_source: 'deployment' })),
+        },
+      ],
+    };
+    renderWithProviders(<EnvironmentTab readOnly={false} />, {
+      client: stubClient({
+        getEnvConfig: vi.fn(() => Promise.resolve(envFixture())),
+        getSettingsSchema: vi.fn(() => Promise.resolve(deploymentSchema)),
+      }),
+    });
+
+    const name = await screen.findByLabelText('Name of variable TAI_PORT');
+    expect(name).toBeEnabled();
+    expect(
+      within(name.closest('li') as HTMLElement).queryByText('Set by the deployment'),
+    ).toBeNull();
+  });
+
+  it('carries the locked rows unchanged on Save', async () => {
+    const user = userEvent.setup();
+    const setEnvConfig = vi.fn(saved);
+    renderWithProviders(<EnvironmentTab readOnly={false} />, {
+      client: deploymentStub(setEnvConfig),
+    });
+
+    await user.type(await screen.findByLabelText('Value of variable FOO'), '2');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(setEnvConfig).toHaveBeenCalledWith({
+        env: { OPENAI_API_KEY: 'sk-openai', TAI_PORT: '8000', PORT: '8001', FOO: 'bar2' },
+        secret_keys: ['FOO'],
+      });
+    });
+  });
+
+  it('deletes the stored copy of a locked key through Remove', async () => {
+    const user = userEvent.setup();
+    const setEnvConfig = vi.fn(saved);
+    renderWithProviders(<EnvironmentTab readOnly={false} />, {
+      client: deploymentStub(setEnvConfig),
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Remove variable TAI_PORT' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(setEnvConfig).toHaveBeenCalledWith({
+        env: { OPENAI_API_KEY: 'sk-openai', PORT: '8001', FOO: 'bar', TAI_PORT: '' },
+        secret_keys: ['FOO'],
+      });
+    });
+  });
+
+  it('keeps a new row editable while its typed name passes through a locked key', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<EnvironmentTab readOnly={false} />, { client: deploymentStub() });
+
+    await screen.findByLabelText('Name of variable TAI_PORT');
+    await user.click(screen.getByRole('button', { name: 'Add variable' }));
+    await user.type(screen.getByLabelText('Name of new variable 5'), 'TAI_PORT_EXTRA');
+
+    const name = screen.getByLabelText('Name of variable TAI_PORT_EXTRA');
+    expect(name).toHaveValue('TAI_PORT_EXTRA');
+    expect(name).toBeEnabled();
+    expect(screen.getByLabelText('Value of variable TAI_PORT_EXTRA')).toBeEnabled();
+    expect(
+      within(name.closest('li') as HTMLElement).queryByText('Set by the deployment'),
+    ).toBeNull();
+  });
+
+  it('keeps a new row that names a locked key editable, and saves the value typed', async () => {
+    const user = userEvent.setup();
+    const setEnvConfig = vi.fn(saved);
+    renderWithProviders(<EnvironmentTab readOnly={false} />, {
+      client: deploymentStub(setEnvConfig),
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Remove variable TAI_PORT' }));
+    await user.click(screen.getByRole('button', { name: 'Add variable' }));
+    await user.type(screen.getByLabelText('Name of new variable 4'), 'TAI_PORT');
+
+    const name = screen.getByLabelText('Name of variable TAI_PORT');
+    expect(name).toBeEnabled();
+    expect(
+      within(name.closest('li') as HTMLElement).queryByText('Set by the deployment'),
+    ).toBeNull();
+    const value = screen.getByLabelText('Value of variable TAI_PORT');
+    expect(value).toBeEnabled();
+    await user.type(value, '9000');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(setEnvConfig).toHaveBeenCalledWith({
+        env: { OPENAI_API_KEY: 'sk-openai', PORT: '8001', FOO: 'bar', TAI_PORT: '9000' },
+        secret_keys: ['FOO'],
+      });
+    });
+  });
+});
 
 describe('EnvironmentTab — a save that rolls a worker recycle', () => {
   it('shows every recycled worker and the writer recycling itself, and no restart list', async () => {

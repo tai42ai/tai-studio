@@ -53,6 +53,23 @@ describe('RevealInput', () => {
     expect(screen.getByLabelText('OPENAI_API_KEY value')).toHaveAttribute('type', 'password');
   });
 
+  it('passes aria-describedby through to the inner input', () => {
+    render(
+      <>
+        <RevealInput
+          aria-label="OPENAI_API_KEY value"
+          aria-describedby="key-note"
+          value="s3cr3t"
+          readOnly
+        />
+        <span id="key-note">Set by the deployment</span>
+      </>,
+    );
+    expect(screen.getByLabelText('OPENAI_API_KEY value')).toHaveAccessibleDescription(
+      'Set by the deployment',
+    );
+  });
+
   it('stays revealable when readOnly is set and disabled is absent', async () => {
     const user = userEvent.setup();
     render(<RevealInput label="Secret" value="s3cr3t" onChange={vi.fn()} readOnly />);

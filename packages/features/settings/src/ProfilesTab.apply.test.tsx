@@ -20,6 +20,9 @@ function schemaFixture(): SettingsSchema {
           {
             name: 'openai_key',
             env_var: 'OWNED_SECRET',
+            accepted_env_vars: ['OWNED_SECRET'],
+            key_material: false,
+            reload_class: 'hot',
             type: 'string',
             default: null,
             required: false,
@@ -28,6 +31,7 @@ function schemaFixture(): SettingsSchema {
             nested_group: null,
             default_namespace_var: null,
             value: null,
+            value_source: 'field_default',
           },
         ],
       },
@@ -128,16 +132,21 @@ describe('ProfilesTab — diff preview', () => {
     expect(screen.queryByTestId('diff-refused')).not.toBeInTheDocument();
   });
 
-  it('calls out refused keys prominently', async () => {
+  it('calls out refused keys prominently, naming every reason a key may be refused', async () => {
     const user = userEvent.setup();
-    const diff = { ...cleanDiff(), refused_keys: ['TAI_K8S_NAMESPACE'] };
+    const diff = { ...cleanDiff(), refused_keys: ['APP_LOG_LEVEL', 'TAI_BUS_REDIS_URL'] };
     renderWithProviders(<ProfilesTab readOnly={false} />, {
       client: stubClient({ diffSettingsProfile: vi.fn(() => Promise.resolve(diff)) }),
       projection: fullProjection(),
     });
 
     await user.click(await screen.findByRole('button', { name: 'Diff profile prod' }));
-    expect(await screen.findByTestId('diff-refused')).toHaveTextContent('TAI_K8S_NAMESPACE');
+    const refused = await screen.findByTestId('diff-refused');
+    expect(refused).toHaveTextContent('Refused keys — apply is blocked');
+    expect(refused).toHaveTextContent(
+      'These keys cannot be applied, because each is a key that locates the worker bus or a key set by the deployment:',
+    );
+    expect(refused).toHaveTextContent('APP_LOG_LEVEL, TAI_BUS_REDIS_URL');
   });
 });
 

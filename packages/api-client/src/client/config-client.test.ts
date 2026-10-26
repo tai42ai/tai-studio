@@ -47,15 +47,22 @@ function harness(responder: () => Response) {
 }
 
 describe('config client transport', () => {
-  it('getEnvConfig GETs /api/config/env and parses env + secret_keys', async () => {
+  it('getEnvConfig GETs /api/config/env and parses env + secret_keys + deployment_keys', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { env: { APP_TITLE: 'Studio' }, secret_keys: ['API_TOKEN'] } }),
+      jsonResponse({
+        data: {
+          env: { APP_TITLE: 'Studio', LOG_LEVEL: 'info' },
+          secret_keys: ['API_TOKEN'],
+          deployment_keys: ['LOG_LEVEL'],
+        },
+      }),
     );
     const out = await client.getEnvConfig();
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/config/env');
-    expect(out.env).toEqual({ APP_TITLE: 'Studio' });
+    expect(out.env).toEqual({ APP_TITLE: 'Studio', LOG_LEVEL: 'info' });
     expect(out.secret_keys).toEqual(['API_TOKEN']);
+    expect(out.deployment_keys).toEqual(['LOG_LEVEL']);
   });
 
   it('setEnvConfig POSTs the env map and the secret marks as the body and parses the apply result (reload + fanout)', async () => {
@@ -136,7 +143,12 @@ describe('config client transport', () => {
   });
 
   it('throws ApiSchemaError LOUDLY on a drifting env config (secret_keys missing)', async () => {
-    const { client } = harness(() => jsonResponse({ data: { env: {} } }));
+    const { client } = harness(() => jsonResponse({ data: { env: {}, deployment_keys: [] } }));
+    await expect(client.getEnvConfig()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('throws ApiSchemaError LOUDLY on a drifting env config (deployment_keys missing)', async () => {
+    const { client } = harness(() => jsonResponse({ data: { env: {}, secret_keys: [] } }));
     await expect(client.getEnvConfig()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 });
