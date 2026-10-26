@@ -45,6 +45,7 @@ function descriptor(overrides: Partial<MemberActionDescriptor>): MemberActionDes
   return {
     key: 'act-x',
     label: 'Run action',
+    provider_name: 'Alpha',
     scope: 'page',
     destructive: false,
     input_schema: emptySchema,
@@ -199,5 +200,35 @@ describe('ActionDialog invoke', () => {
     // The result phase is undismissable: only Done closes it.
     await userEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ActionDialog provider name', () => {
+  it('describes the input dialog by the provider the action acts through', async () => {
+    const client = {
+      invokeMemberAction: vi.fn().mockResolvedValue({ result: {} }),
+    } as unknown as ApiClient;
+    renderDialog(client, { descriptor: descriptor({ provider_name: 'Beta' }) });
+
+    expect(await screen.findByRole('dialog', { name: 'Run action' })).toHaveAccessibleDescription(
+      'Beta',
+    );
+  });
+
+  it('describes the result dialog by the provider the action acted through', async () => {
+    const client = {
+      invokeMemberAction: vi.fn().mockResolvedValue({ result: { link: 'https://host/x#t=1' } }),
+    } as unknown as ApiClient;
+    renderDialog(client, {
+      descriptor: descriptor({
+        label: 'Invite',
+        provider_name: 'Beta',
+        result_schema: { type: 'object', properties: { link: { type: 'string', title: 'Link' } } },
+      }),
+    });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Invite' }));
+    await screen.findByTestId('member-action-result-link');
+    expect(screen.getByRole('dialog', { name: 'Invite' })).toHaveAccessibleDescription('Beta');
   });
 });

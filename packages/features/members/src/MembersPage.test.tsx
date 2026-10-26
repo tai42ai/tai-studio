@@ -61,6 +61,7 @@ const member = {
   principals: [{ user_id: 'p-1', disabled: false, role: 'editor' }],
   disabled: false,
   handle: 'handle-m-1',
+  provider_name: 'Alpha',
   action_keys: [] as string[],
 };
 
@@ -71,6 +72,7 @@ const invite = {
   created_at: '2026-07-12T00:00:00Z',
   expires_at: '2026-07-19T00:00:00Z',
   handle: 'handle-i-1',
+  provider_name: 'Alpha',
   action_keys: [] as string[],
 };
 
@@ -120,6 +122,48 @@ describe('MembersPage listing', () => {
     expect(inviteRows).toHaveLength(1);
     expect(within(invitesTable).getByText('bob@example.com')).toBeInTheDocument();
     expect(within(invitesTable).getByText('viewer')).toBeInTheDocument();
+  });
+
+  it("shows each row's own provider name in the Provider column", async () => {
+    const client = stubClient({
+      listMembers: vi.fn().mockResolvedValue({
+        members: [
+          member,
+          {
+            ...member,
+            id: 'm-2',
+            email: 'carol@example.com',
+            handle: 'handle-m-2',
+            provider_name: 'Beta',
+          },
+        ],
+        invites: [
+          invite,
+          {
+            ...invite,
+            id: 'i-2',
+            email: 'dave@example.com',
+            handle: 'handle-i-2',
+            provider_name: 'Beta',
+          },
+        ],
+      }),
+    });
+    renderPage(client);
+
+    const providerCells = (table: HTMLElement): (string | null)[] => {
+      const headers = within(table)
+        .getAllByRole('columnheader')
+        .map((cell) => cell.textContent);
+      const column = headers.indexOf('Provider');
+      expect(column).toBe(1);
+      return within(table)
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) => row.children[column]?.textContent ?? null);
+    };
+    expect(providerCells(await screen.findByTestId('members-table'))).toEqual(['Alpha', 'Beta']);
+    expect(providerCells(screen.getByTestId('invites-table'))).toEqual(['Alpha', 'Beta']);
   });
 
   it('renders a null role as the neutral "No role" badge with its explanation', async () => {
@@ -319,6 +363,7 @@ describe('MembersPage actions', () => {
           {
             key: 'act-invite',
             label: 'Invite a person',
+            provider_name: 'Alpha',
             scope: 'page',
             destructive: false,
             input_schema: emptySchema,
@@ -333,7 +378,7 @@ describe('MembersPage actions', () => {
     });
     renderPage(client);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Invite a person' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Invite a person Alpha' }));
     // No input declared → a run prompt, then the invoke.
     expect(await screen.findByText('Run this action now?')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Invite a person' }));
@@ -350,6 +395,72 @@ describe('MembersPage actions', () => {
     expect(screen.getByText('https://host/invite#t=abc')).toBeInTheDocument();
   });
 
+  it("tells same-labelled page actions apart by their providers' declared names", async () => {
+    const invokeMemberAction = vi.fn().mockResolvedValue({ result: {} });
+    const client = stubClient({
+      listMembers: vi.fn().mockResolvedValue({ members: [member], invites: [] }),
+      listMemberActions: vi.fn().mockResolvedValue({
+        actions: [
+          {
+            key: 'act-alpha-invite',
+            label: 'Invite',
+            provider_name: 'Alpha',
+            scope: 'page',
+            destructive: false,
+            input_schema: emptySchema,
+            result_schema: emptySchema,
+          },
+          {
+            key: 'act-beta-invite',
+            label: 'Invite',
+            provider_name: 'Beta',
+            scope: 'page',
+            destructive: false,
+            input_schema: emptySchema,
+            result_schema: emptySchema,
+          },
+        ],
+      }),
+      invokeMemberAction,
+    });
+    renderPage(client);
+
+    const pageGroup = await screen.findByRole('group', { name: 'Member actions' });
+    expect(
+      within(pageGroup)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Invite Alpha', 'Invite Beta']);
+
+    await userEvent.click(within(pageGroup).getByRole('button', { name: 'Invite Alpha' }));
+    expect(await screen.findByRole('dialog', { name: 'Invite' })).toHaveAccessibleDescription(
+      'Alpha',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Invite' }));
+    await waitFor(() => {
+      expect(invokeMemberAction).toHaveBeenCalledWith({
+        action_key: 'act-alpha-invite',
+        target_handle: null,
+        input: {},
+      });
+    });
+    await userEvent.click(await screen.findByRole('button', { name: 'Done' }));
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Invite Beta' }));
+    expect(await screen.findByRole('dialog', { name: 'Invite' })).toHaveAccessibleDescription(
+      'Beta',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Invite' }));
+    await waitFor(() => {
+      expect(invokeMemberAction).toHaveBeenLastCalledWith({
+        action_key: 'act-beta-invite',
+        target_handle: null,
+        input: {},
+      });
+    });
+    expect(invokeMemberAction).toHaveBeenCalledTimes(2);
+  });
+
   it('renders a member-row action joined by key and invokes it with the row handle', async () => {
     const invokeMemberAction = vi.fn().mockResolvedValue({ result: {} });
     const client = stubClient({
@@ -361,6 +472,7 @@ describe('MembersPage actions', () => {
           {
             key: 'act-remove',
             label: 'Remove person',
+            provider_name: 'Alpha',
             scope: 'member_row',
             destructive: true,
             input_schema: emptySchema,
@@ -370,6 +482,7 @@ describe('MembersPage actions', () => {
             // A page action should NOT appear in the row's menu.
             key: 'act-invite',
             label: 'Invite a person',
+            provider_name: 'Alpha',
             scope: 'page',
             destructive: false,
             input_schema: emptySchema,
@@ -415,6 +528,7 @@ describe('MembersPage actions', () => {
           {
             key: 'act-purge',
             label: 'Purge directory',
+            provider_name: 'Alpha',
             scope: 'page',
             destructive: true,
             input_schema: emptySchema,
@@ -426,7 +540,7 @@ describe('MembersPage actions', () => {
     });
     renderPage(client);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Purge directory' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Purge directory Alpha' }));
     // Destructive → the first submit reveals the confirm step, no invoke yet.
     await userEvent.click(await screen.findByRole('button', { name: 'Purge directory' }));
     expect(await screen.findByTestId('member-action-confirm')).toBeInTheDocument();
@@ -448,6 +562,7 @@ describe('MembersPage actions', () => {
           {
             key: 'act-resend',
             label: 'Resend link',
+            provider_name: 'Alpha',
             scope: 'member_row',
             destructive: false,
             input_schema: emptySchema,
@@ -486,6 +601,7 @@ describe('MembersPage actions', () => {
           {
             key: 'act-revoke',
             label: 'Revoke invitation',
+            provider_name: 'Alpha',
             scope: 'invite_row',
             destructive: false,
             input_schema: emptySchema,
@@ -519,6 +635,7 @@ describe('MembersPage actions', () => {
           {
             key: 'act-role',
             label: 'Change role',
+            provider_name: 'Alpha',
             scope: 'page',
             destructive: false,
             input_schema: {
@@ -533,7 +650,7 @@ describe('MembersPage actions', () => {
     });
     renderPage(client);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Change role' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Change role Alpha' }));
     // The action's declared input renders through the platform SchemaForm (its root
     // carries the idPrefix as a test id).
     expect(await screen.findByTestId('member-action-act-role')).toBeInTheDocument();
@@ -548,6 +665,7 @@ describe('MembersPage actions', () => {
           {
             key: 'act-invite',
             label: 'Invite a person',
+            provider_name: 'Alpha',
             scope: 'page',
             destructive: false,
             input_schema: emptySchema,
@@ -559,7 +677,7 @@ describe('MembersPage actions', () => {
     });
     renderPage(client);
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Invite a person' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Invite a person Alpha' }));
     expect(await screen.findByText('Run this action now?')).toBeInTheDocument();
     // Cancelling drops the active action: the dialog unmounts and nothing is invoked.
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));

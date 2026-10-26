@@ -35,8 +35,9 @@ export type MemberPrincipalState = z.infer<typeof memberPrincipalState>;
  * person with any enabled principal still reads active while the per-principal truth
  * stays visible. `handle` routes an invoke back to the producing provider and pins
  * this row; `action_keys` are the opaque catalog keys of the actions applicable to
- * it — Studio joins and echoes both, never parses them. `created_at` is an ISO-8601
- * instant.
+ * it — Studio joins and echoes both, never parses them. `provider_name` is the
+ * owning accounts provider's declared display name, shown on the row so rows of
+ * different providers read apart. `created_at` is an ISO-8601 instant.
  */
 export const memberRow = openapi.memberRow;
 export type MemberRow = z.infer<typeof memberRow>;
@@ -47,8 +48,10 @@ export type MemberRow = z.infer<typeof memberRow>;
  * stable handle for the invited person; `email` is the invited address; `role` names
  * the platform role they will hold (name only, or `null` when not from a role template). An
  * invitation holds no principal, so it carries no principal state. `handle` and
- * `action_keys` are the opaque routing tokens (see {@link memberRow}). `created_at`
- * and `expires_at` are ISO-8601 instants.
+ * `action_keys` are the opaque routing tokens (see {@link memberRow}).
+ * `provider_name` is the owning accounts provider's declared display name, shown on
+ * the row so rows of different providers read apart. `created_at` and `expires_at`
+ * are ISO-8601 instants.
  */
 export const inviteRow = openapi.inviteRow;
 export type InviteRow = z.infer<typeof inviteRow>;
@@ -65,11 +68,12 @@ export type MemberDirectory = z.infer<typeof memberDirectory>;
 /**
  * One declared member action, serialized for the catalog (`GET
  * /api/auth/member-actions` → `actions[]`). `key` is the opaque catalog key a caller
- * joins and echoes, never parses. `label` is the resolved wording. `scope` places
- * the action; `destructive` asks for a confirm before invoking. `input_schema` and
- * `result_schema` are the declared models' JSON Schema — a caller renders an input
- * form and a read-only result view from them generically, with no provider field
- * name known to Studio.
+ * joins and echoes, never parses. `label` is the resolved wording. `provider_name` is
+ * the owning accounts provider's declared display name. `scope` places the action;
+ * `destructive` asks for a confirm before invoking. `input_schema` and `result_schema`
+ * are the declared models' JSON Schema — a caller renders an input form and a
+ * read-only result view from them generically, with no provider field name known to
+ * Studio.
  */
 export const memberActionDescriptor = openapi.memberActionDescriptor;
 export type MemberActionDescriptor = z.infer<typeof memberActionDescriptor>;

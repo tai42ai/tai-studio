@@ -126,8 +126,9 @@
  *                  populated from `GET /api/system/kinds`.
  *   - members    — the generic Members directory (`GET /api/auth/members` +
  *                  `GET /api/auth/member-actions`): the People table beside the Pending
- *                  invitations table, each row's actions joined from the declared
- *                  catalog, populated by the runner's member-action seed.
+ *                  invitations table, each row naming its provider in the Provider
+ *                  column and its actions joined from the declared catalog, populated
+ *                  by the runner's member-action seed.
  *   - member-action-input — the page-scoped "Invite a user" action's SchemaForm over its
  *                  declared input schema (filled, not submitted — no account is created).
  *   - member-action-confirm — a destructive row action ("Remove user") stopped at its
@@ -2392,8 +2393,8 @@ const AUTHED_PAGES = [
   {
     // The generic Members directory (`/members`): the People table — the deployment's
     // people aggregated across every accounts provider by `GET /api/auth/members` — beside
-    // the Pending invitations table, each row's actions joined from the declared
-    // `GET /api/auth/member-actions` catalog. The runner seeds a realistic membership (an
+    // the Pending invitations table, each row naming its provider in the Provider column and
+    // its actions joined from the declared `GET /api/auth/member-actions` catalog. The runner seeds a realistic membership (an
     // admin owner + an active editor and viewer + a pending invite) before capture, so both
     // tables are populated; the forced row above adds a person whose logins hold different
     // roles. Waits on the seeded owner's People row, and the action requires the seeded

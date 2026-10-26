@@ -11,6 +11,7 @@ function descriptor(key: string, scope: MemberActionDescriptor['scope']): Member
   return {
     key,
     label: key,
+    provider_name: 'Alpha',
     scope,
     destructive: false,
     input_schema: emptySchema,

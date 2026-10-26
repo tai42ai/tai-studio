@@ -11,8 +11,9 @@
  * an accidental dismiss cannot lose a value the server will not reproduce.
  *
  * Everything is driven by the opaque descriptor: the title is the provider's rendered
- * label, the form and result come from the declared schemas, and the invoke echoes the
- * opaque `key` and row `handle`. No provider name, route, or field appears here.
+ * label, the description is the display name the provider declares, the form and result
+ * come from the declared schemas, and the invoke echoes the opaque `key` and row
+ * `handle`. The dialog hard-codes no provider, route, or field.
  */
 import type { MemberActionDescriptor } from '@tai42/api-client';
 import {
@@ -91,6 +92,7 @@ export function ActionDialog({
     return (
       <Dialog
         title={descriptor.label}
+        description={descriptor.provider_name}
         open
         dismissable={false}
         onOpenChange={(next) => {
@@ -123,6 +125,7 @@ export function ActionDialog({
   return (
     <Dialog
       title={descriptor.label}
+      description={descriptor.provider_name}
       open
       onOpenChange={(next) => {
         if (!next) onClose();

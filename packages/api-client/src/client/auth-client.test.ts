@@ -484,6 +484,7 @@ describe('auth members client transport', () => {
               principals: [{ user_id: 'u-alice', disabled: false, role: 'editor' }],
               disabled: false,
               handle: 'prov:alice',
+              provider_name: 'Alpha',
               action_keys: ['act-1'],
             },
           ],
@@ -495,6 +496,7 @@ describe('auth members client transport', () => {
               created_at: '2026-07-21T00:00:00Z',
               expires_at: '2026-07-28T00:00:00Z',
               handle: 'prov:bob',
+              provider_name: 'Alpha',
               action_keys: ['act-2'],
             },
           ],
@@ -508,6 +510,8 @@ describe('auth members client transport', () => {
     expect(out.members[0]?.principals[0]?.disabled).toBe(false);
     expect(out.members[0]?.principals[0]?.role).toBe('editor');
     expect(out.members[0]?.action_keys).toEqual(['act-1']);
+    expect(out.members[0]?.provider_name).toBe('Alpha');
+    expect(out.invites[0]?.provider_name).toBe('Alpha');
     expect(out.invites[0]?.handle).toBe('prov:bob');
   });
 
@@ -523,6 +527,7 @@ describe('auth members client transport', () => {
               created_at: '2026-07-21T00:00:00Z',
               principals: [],
               disabled: true,
+              provider_name: 'Alpha',
               action_keys: [],
             },
           ],
@@ -541,6 +546,7 @@ describe('auth members client transport', () => {
             {
               key: 'act-1',
               label: 'Disable',
+              provider_name: 'Alpha',
               scope: 'member_row',
               destructive: true,
               input_schema: { type: 'object', properties: {} },
@@ -554,6 +560,7 @@ describe('auth members client transport', () => {
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/auth/member-actions');
     expect(out.actions[0]?.scope).toBe('member_row');
+    expect(out.actions[0]?.provider_name).toBe('Alpha');
     // The input/result JSON Schemas ride through opaque — Studio renders from them.
     expect(out.actions[0]?.input_schema).toEqual({ type: 'object', properties: {} });
   });
