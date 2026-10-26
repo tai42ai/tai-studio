@@ -1512,9 +1512,6 @@ const AUTHED_PAGES = [
     path: '/conversations',
     wait: 'button:has-text("Create route")',
     nondeterministic: true,
-    // The dialog is modal (the background nav goes inert), so the plugin-nav wait is
-    // meaningless — the dialog's own waits are the stable signal.
-    awaitPluginNav: false,
     action: async (page) => {
       const dialog = await openAgentRouteDialog(page);
       await pickRouteOption(page, dialog, 'Agent', 'tools_agent');
@@ -1540,9 +1537,6 @@ const AUTHED_PAGES = [
     name: 'conversation-route-reply-texts',
     path: '/conversations',
     wait: 'button:has-text("Create route")',
-    // The dialog is modal (the background nav goes inert), so the plugin-nav wait is
-    // meaningless — the dialog's own waits are the stable signal.
-    awaitPluginNav: false,
     action: async (page) => {
       const dialog = await openAgentRouteDialog(page);
       await pickRouteOption(page, dialog, 'Agent', 'tools_agent');
@@ -1569,7 +1563,6 @@ const AUTHED_PAGES = [
     name: 'conversation-route-channel-hint',
     path: '/conversations',
     wait: 'button:has-text("Create route")',
-    awaitPluginNav: false,
     action: async (page) => {
       const dialog = await openAgentRouteDialog(page);
       await fillWebDoor(page, dialog);
@@ -1588,7 +1581,6 @@ const AUTHED_PAGES = [
     name: 'conversation-route-no-grant',
     path: '/conversations',
     wait: 'button:has-text("Create route")',
-    awaitPluginNav: false,
     setup: async (page) => {
       await page.route(
         (url) => url.pathname === '/api/agents',
@@ -1618,7 +1610,6 @@ const AUTHED_PAGES = [
     name: 'conversation-route-key-not-own',
     path: '/conversations',
     wait: `button[aria-label="Edit route ${STUB_CHANNEL_ROUTE.route_name}"]`,
-    awaitPluginNav: false,
     setup: async (page) => {
       await stubGet(
         page,
@@ -1648,7 +1639,6 @@ const AUTHED_PAGES = [
     name: 'conversation-route-own-identity',
     path: '/conversations',
     wait: 'button:has-text("Create route")',
-    awaitPluginNav: false,
     setup: async (page) => {
       await stubGet(page, '/api/auth/tokens-payload', []);
       await stubSessionFields(page, {
@@ -1686,8 +1676,6 @@ const AUTHED_PAGES = [
     name: 'schedule-contract',
     path: '/scheduling',
     wait: 'button:has-text("Add schedule")',
-    // The dialog is modal (background nav inert), so the plugin-nav wait is meaningless.
-    awaitPluginNav: false,
     action: async (page) => {
       await page.getByRole('button', { name: 'Add schedule' }).click();
       const dialog = page.getByRole('dialog', { name: 'Add schedule' });
@@ -1735,8 +1723,6 @@ const AUTHED_PAGES = [
     name: 'schedule-cron-error',
     path: '/scheduling',
     wait: 'button:has-text("Add schedule")',
-    // The dialog is modal (background nav inert), so the plugin-nav wait is meaningless.
-    awaitPluginNav: false,
     action: async (page) => {
       await page.getByRole('button', { name: 'Add schedule' }).click();
       const dialog = page.getByRole('dialog', { name: 'Add schedule' });
@@ -1784,8 +1770,6 @@ const AUTHED_PAGES = [
     name: 'profile-apply-recycle-stopped',
     path: '/settings',
     wait: 'text=LoggingSettings',
-    // The open dialog is modal, so the sidebar behind it leaves the accessibility tree.
-    awaitPluginNav: false,
     setup: async (page) => {
       await page.route(
         (url) => url.pathname === '/api/config/profiles/production/apply',
@@ -1946,12 +1930,10 @@ const AUTHED_PAGES = [
   },
   {
     // The create-preset dialog's fixed-kwargs editor in its FIELDS view: a text row, a
-    // number row, and a secret-reference row showing the committed env-key chip. The
-    // dialog is modal (background nav inert), so the plugin-nav wait is skipped.
+    // number row, and a secret-reference row showing the committed env-key chip.
     name: 'preset-kwargs-fields',
     path: '/presets',
     wait: 'button:has-text("Create preset")',
-    awaitPluginNav: false,
     action: async (page) => {
       await authorPresetKwargs(page);
       await frameKwargsEditor(page);
@@ -1963,7 +1945,6 @@ const AUTHED_PAGES = [
     name: 'preset-kwargs-json',
     path: '/presets',
     wait: 'button:has-text("Create preset")',
-    awaitPluginNav: false,
     action: async (page) => {
       const dialog = await authorPresetKwargs(page);
       await dialog.getByRole('button', { name: 'JSON' }).click();
@@ -1981,7 +1962,6 @@ const AUTHED_PAGES = [
     name: 'preset-maps',
     path: '/presets',
     wait: 'button:has-text("Create preset")',
-    awaitPluginNav: false,
     action: async (page) => {
       await page.getByRole('button', { name: 'Create preset' }).click();
       const dialog = page.getByRole('dialog');
@@ -2447,12 +2427,10 @@ const AUTHED_PAGES = [
   {
     // A member action's INPUT dialog: the page-scoped "Invite a user" action opens the
     // platform `SchemaForm` over the action's declared input schema (Email + Role). Filled,
-    // never submitted, so no account is created and the frame is deterministic. The dialog is
-    // modal (background nav inert), so the plugin-nav wait is skipped.
+    // never submitted, so no account is created and the frame is deterministic.
     name: 'member-action-input',
     path: '/members',
     wait: 'text=ada.lovelace@demo.tai',
-    awaitPluginNav: false,
     action: async (page) => {
       await page
         .getByRole('group', { name: 'Member actions' })
@@ -2467,12 +2445,10 @@ const AUTHED_PAGES = [
   {
     // A destructive member action's CONFIRM step: "Remove user" on a member row asks the
     // operator to confirm before it runs (the loud destructive guard). Opened to the confirm
-    // step, never confirmed, so no account is removed and the frame is deterministic. Modal —
-    // background nav inert.
+    // step, never confirmed, so no account is removed and the frame is deterministic.
     name: 'member-action-confirm',
     path: '/members',
     wait: 'text=alan.turing@demo.tai',
-    awaitPluginNav: false,
     action: async (page) => {
       await page
         .getByRole('group', { name: 'Actions for alan.turing@demo.tai' })
@@ -2492,12 +2468,11 @@ const AUTHED_PAGES = [
     //
     // Nondeterministic: the minted invite token differs every run, so the automated pipeline
     // skips it (SKIP_NONDETERMINISTIC_SHOTS); recaptured on a manual full run when the result
-    // view changes. Modal — background nav inert.
+    // view changes.
     name: 'member-action-result',
     nondeterministic: true,
     path: '/members',
     wait: 'text=katherine.johnson@demo.tai',
-    awaitPluginNav: false,
     action: async (page) => {
       await page
         .getByRole('group', { name: 'Actions for katherine.johnson@demo.tai' })
@@ -2525,15 +2500,10 @@ const AUTHED_PAGES = [
     // boots (MARKETPLACE_URL) answers the detail + preview deterministically — one
     // published version, fixed routes, no advisories — so the routes and the
     // public-acceptance gate render on every run (NO `nondeterministic` flag).
-    //
-    // The Install action opens a modal dialog, which makes the background nav inert
-    // (aria-hidden), so the plugin-sidebar wait is meaningless here — skip it; the
-    // dialog's own waits are the stable signal.
     name: 'marketplace-install',
     path: '/marketplace?plugin=acme/alerts-relay',
     // The detail page's Install button proves the listing loaded populated.
     wait: 'button:has-text("Install")',
-    awaitPluginNav: false,
     action: async (page) => {
       await page.getByRole('button', { name: 'Install', exact: true }).click();
       const dialog = page.getByRole('dialog');
@@ -2572,12 +2542,10 @@ const AUTHED_PAGES = [
   {
     // The connect flow at Pick tools for the hand-added server: the tools it advertises,
     // each with its tick. The advertised read is a probe of the server, answered by a
-    // route stub; nothing is saved. Modal (background nav inert), so the plugin-nav wait
-    // is skipped.
+    // route stub; nothing is saved.
     name: 'connectors-pick-tools',
     path: '/connectors',
     wait: 'text=Your connections',
-    awaitPluginNav: false,
     setup: async (page) => {
       await stubConnectorsScene(page);
       await page.route(
@@ -2625,11 +2593,10 @@ const AUTHED_PAGES = [
     // custom server", at its review step: where the server signs in, its app registration,
     // and the prefilled name, identifier and scopes. The single look-up call is answered by a route stub — the docs-demo backend has no
     // OAuth-protected server to look up — and nothing is added, so the frame is
-    // deterministic. Modal (background nav inert), so the plugin-nav wait is skipped.
+    // deterministic.
     name: 'connectors-add-server',
     path: '/connectors',
     wait: 'button:has-text("Add a custom server")',
-    awaitPluginNav: false,
     setup: async (page) => {
       await page.route(
         (url) => url.pathname === '/api/connectors/providers/discover',
@@ -2832,12 +2799,10 @@ const AUTHED_PAGES = [
   },
   {
     // The "Reset selected threads" confirm, whose copy and confirm label name the count. It is
-    // never confirmed, so nothing is deleted. The dialog is modal and hides the nav the
-    // plugin-nav wait looks for.
+    // never confirmed, so nothing is deleted.
     name: 'conversation-bulk-reset-confirm',
     path: `/conversations?route=${encodeURIComponent(BULK_RESET_ROUTE)}`,
     wait: '[data-testid="conversation-threads-table"]',
-    awaitPluginNav: false,
     setup: async (page) => {
       await stubBulkResetDoors(page, { answerDeletes: false });
     },
@@ -2902,8 +2867,6 @@ const AUTHED_PAGES = [
     setup: async (page) => {
       await revokeEntryCodes(page, ENTRY_GATE_OPEN_ROUTE);
     },
-    // The dialog is modal and hides the nav the plugin-nav wait looks for.
-    awaitPluginNav: false,
     action: async (page) => {
       await page.locator(WEB_CHAT_PANEL).getByRole('button', { name: 'Mint entry code' }).click();
       const dialog = page.getByRole('dialog', { name: 'Mint entry code' });
@@ -3029,10 +2992,6 @@ const AUTHED_PAGES = [
     nondeterministic: true,
     path: '/settings',
     wait: 'text=LoggingSettings',
-    // The action opens a modal dialog, which makes the background nav inert
-    // (aria-hidden) — so the plugin-sidebar wait would time out and is meaningless
-    // for a modal-framed shot. Skip it; the action's QR wait is the stable signal.
-    awaitPluginNav: false,
     action: async (page) => {
       await page.getByRole('tab', { name: 'API keys' }).click();
       await page.getByRole('button', { name: 'Create key' }).click();
@@ -3066,8 +3025,7 @@ const AUTHED_PAGES = [
   {
     // The trigger-link create flow: driven with the FULL key (the section + create
     // control show for a full/admin projection), the shot frames the create dialog's
-    // QR step. Like the claim-link shot, the modal makes the background nav inert,
-    // so the plugin-nav wait is skipped and the QR wait is the stable signal.
+    // QR step; the QR wait is the stable signal.
     //
     // The Name is left blank on purpose: the light and dark passes run against the
     // same booted server, so a fixed name would be taken on the second pass and the
@@ -3080,7 +3038,6 @@ const AUTHED_PAGES = [
     nondeterministic: true,
     path: '/hooks',
     wait: 'text=Trigger links',
-    awaitPluginNav: false,
     action: async (page) => {
       await page.getByRole('button', { name: 'Create trigger link' }).click();
       const dialog = page.getByRole('dialog');
@@ -3284,7 +3241,6 @@ async function shoot(page, entry, theme, { awaitPluginNav }) {
   // persistent SSE stream open, so the network never goes idle.
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await waitForPopulated(page, entry, theme);
-  if (entry.action) await entry.action(page);
   // Deterministic sidebar: the reference plugin's "Reference" nav entry appears
   // only once the shell's plugin loader has committed the plugin's contributions,
   // which races the async bundle load. Every signed-in shot renders that sidebar,
@@ -3292,6 +3248,12 @@ async function shoot(page, entry, theme, { awaitPluginNav }) {
   // some shots and missing in others. The demo boot always loads the reference
   // plugin, so this entry always resolves. It renders under the single generic
   // "Plugins" section list; `exact` avoids the per-entry provenance badge link.
+  //
+  // The wait runs BEFORE the entry's action: an action that opens a modal dialog
+  // hides the rest of the page from the accessibility tree (the sidebar gets
+  // `aria-hidden`), so a role query for the nav entry would never match after it.
+  // Once committed, the plugin's contributions stay, so the sidebar the shot
+  // captures (behind an overlay or not) carries the entry either way.
   if (awaitPluginNav) {
     await page
       .getByRole('navigation', { name: 'Primary' })
@@ -3299,6 +3261,7 @@ async function shoot(page, entry, theme, { awaitPluginNav }) {
       .getByRole('link', { name: 'Reference', exact: true })
       .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
   }
+  if (entry.action) await entry.action(page);
   // Let fonts/layout settle.
   await page.waitForTimeout(600);
   // Canvas routes only: frame the whole graph so a tall canvas is captured complete
@@ -3350,9 +3313,8 @@ async function main() {
       // Only the FULL-privilege session loads plugins (a scoped projection leaves the
       // plugin registry unprojected, so the shell skips it), so the plugin sidebar's
       // "Reference" nav entry is awaited only for the default key — a scoped shot
-      // never renders it and must not wait on it. An entry may opt out explicitly
-      // (`awaitPluginNav: false`) when its action opens a modal that hides the nav.
-      const awaitPluginNav = entry.awaitPluginNav ?? key === DEMO_KEY;
+      // never renders it and must not wait on it.
+      const awaitPluginNav = key === DEMO_KEY;
       await shoot(page, entry, theme, { awaitPluginNav });
       await page.close();
     }
