@@ -170,7 +170,7 @@ jobs:
       # oversubscribe the runner and stretch every test toward the per-test budget
       # (vitest.shared.config.ts).
       - name: Test
-        run: pnpm test --coverage --reporter=verbose
+        run: pnpm test --coverage
       # The repo-root gate script's own unit tests (node's built-in runner); it is
       # outside every package, so `pnpm test` does not reach it (the recursive run
       # skips the workspace root).
