@@ -177,7 +177,11 @@ function keyMemberMethods(t: Transport) {
       req(apiRoutes.get_api_auth_tokens_payload.path, s.tokensPayload, { signal }),
     createApiKey: (body: ApiKeyBody) =>
       req(apiRoutes.post_api_auth_api_keys.path, s.createdApiKey, { method: 'POST', body }),
-    editApiKey: (userId: string, body: Omit<ApiKeyBody, 'user_id'>) =>
+    // PATCH-style PUT: an omitted `scopes` keeps the key's stored scopes.
+    editApiKey: (
+      userId: string,
+      body: Omit<ApiKeyBody, 'user_id' | 'scopes'> & { readonly scopes?: string[] },
+    ) =>
       req(
         buildPath(apiRoutes.put_api_auth_api_keys_user_id.path, { user_id: userId }),
         s.editApiKeyResult,

@@ -32,6 +32,7 @@ import { useQuery } from '@tanstack/react-query';
 import { type CSSProperties, type ReactNode, useState } from 'react';
 
 import {
+  canGrantFullAccess,
   MINT_ROUTE,
   mintableScopeIds,
   POLICY_VERSIONS_ROUTE,
@@ -111,6 +112,7 @@ function ApiKeysDialogHost({
   createOpen,
   onCreateOpenChange,
   dialogScopeIds,
+  fullAccessAvailable,
   onMinted,
   minted,
   editPayload,
@@ -125,6 +127,7 @@ function ApiKeysDialogHost({
   readonly createOpen: boolean;
   readonly onCreateOpenChange: (open: boolean) => void;
   readonly dialogScopeIds: readonly string[];
+  readonly fullAccessAvailable: boolean;
   readonly onMinted: (apiKey: string, principal: PrincipalRef | null) => void;
   readonly minted: { readonly apiKey: string; readonly principal: PrincipalRef | null } | null;
   readonly editPayload: KeyPayload | null;
@@ -142,6 +145,7 @@ function ApiKeysDialogHost({
           open={createOpen}
           onOpenChange={onCreateOpenChange}
           scopeIds={dialogScopeIds}
+          fullAccessAvailable={fullAccessAvailable}
           onMinted={onMinted}
         />
       ) : null}
@@ -154,6 +158,7 @@ function ApiKeysDialogHost({
           payload={editPayload}
           scopeIds={scopeIds}
           publicId={publicId}
+          fullAccessAvailable={fullAccessAvailable}
           onClose={onClose}
         />
       ) : null}
@@ -263,6 +268,7 @@ export function ApiKeysTab({ publicId }: ApiKeysTabProps): ReactNode {
         createOpen={createOpen}
         onCreateOpenChange={setCreateOpen}
         dialogScopeIds={dialogScopeIds}
+        fullAccessAvailable={canGrantFullAccess(capabilityState)}
         onMinted={(apiKey, principal) => {
           setMinted({ apiKey, principal });
         }}

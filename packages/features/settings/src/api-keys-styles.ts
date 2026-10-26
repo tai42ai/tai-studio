@@ -46,3 +46,20 @@ export const conditionWarningStyle: CSSProperties = {
   fontSize: 'var(--tai-text-sm)',
   color: 'var(--tai-color-warn-text)',
 };
+
+// The warning shown while a key is granted every scope: the warn colour with its
+// icon, so the state never rests on colour alone.
+export const fullAccessWarningStyle: CSSProperties = {
+  margin: 0,
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: 'var(--tai-space-2)',
+  fontSize: 'var(--tai-text-sm)',
+  color: 'var(--tai-color-warn-text)',
+};
+
+// The one-line hint under a field label that is not wrapped in the SDK `Field`
+// (it carries the same `tai-field-hint` class `Field` paints its description with).
+export const fieldHintStyle: CSSProperties = {
+  margin: '0 0 var(--tai-space-1)',
+};

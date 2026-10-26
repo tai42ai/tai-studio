@@ -119,7 +119,7 @@ describe('ApiKeysTab — create key', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
-    await user.type(screen.getByLabelText('User ID'), 'bob');
+    await user.type(screen.getByLabelText('Key user ID'), 'bob');
     await user.type(screen.getByLabelText('Description'), 'Bob key');
     await user.click(screen.getByRole('checkbox', { name: 'admin' }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
@@ -167,7 +167,7 @@ describe('ApiKeysTab — create key', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
-    await user.type(screen.getByLabelText('User ID'), 'bob');
+    await user.type(screen.getByLabelText('Key user ID'), 'bob');
     await user.type(screen.getByLabelText('Description'), 'Bob key');
     await user.click(screen.getByRole('checkbox', { name: 'admin' }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
@@ -181,7 +181,7 @@ describe('ApiKeysTab — create key', () => {
     // Reopen: the form is blank (no pre-filled user_id/description/scopes) and the
     // minted key never resurfaces from stale mutation state.
     await user.click(screen.getByRole('button', { name: 'Create key' }));
-    expect(screen.getByLabelText('User ID')).toHaveValue('');
+    expect(screen.getByLabelText('Key user ID')).toHaveValue('');
     expect(screen.getByLabelText('Description')).toHaveValue('');
     expect(screen.getByRole('checkbox', { name: 'admin' })).not.toBeChecked();
     expect(screen.queryByText('sk-generated-123')).not.toBeInTheDocument();
@@ -196,7 +196,9 @@ describe('ApiKeysTab — create key', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
-    await user.type(screen.getByLabelText('User ID'), 'bob');
+    await user.type(screen.getByLabelText('Key user ID'), 'bob');
+    await user.type(screen.getByLabelText('Description'), 'Bob key');
+    await user.click(screen.getByRole('checkbox', { name: 'read' }));
     await user.click(screen.getByRole('button', { name: 'Add Policy data row' }));
     await user.type(screen.getByLabelText('Policy data key 1'), 'limit');
     await user.type(screen.getByLabelText('Policy data value 1'), '7');
@@ -206,8 +208,8 @@ describe('ApiKeysTab — create key', () => {
     await waitFor(() => {
       expect(createApiKey).toHaveBeenCalledWith({
         user_id: 'bob',
-        description: '',
-        scopes: [],
+        description: 'Bob key',
+        scopes: ['read'],
         owner_user_id: 'u-test',
         policy_data: { limit: 7 },
       });
@@ -226,7 +228,8 @@ describe('ApiKeysTab — create key', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
-    await user.type(screen.getByLabelText('User ID'), 'bob');
+    await user.type(screen.getByLabelText('Key user ID'), 'bob');
+    await user.type(screen.getByLabelText('Description'), 'Bob key');
     await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.policy.limit >');
 
     // A failed Test surfaces the guard's compiler error verbatim…
@@ -371,7 +374,8 @@ describe('ApiKeysTab — create key', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
-    await user.type(screen.getByLabelText('User ID'), 'bob');
+    await user.type(screen.getByLabelText('Key user ID'), 'bob');
+    await user.type(screen.getByLabelText('Description'), 'Bob key');
     await user.click(screen.getByRole('radio', { name: 'Stored template' }));
 
     await user.click(await screen.findByRole('combobox', { name: 'Condition' }));
@@ -423,7 +427,9 @@ describe('ApiKeysTab — create key', () => {
     expect(await screen.findByRole('option', { name: 'Test User (you)' })).toBeInTheDocument();
     await user.click(await screen.findByRole('option', { name: 'Acme Bot' }));
 
-    await user.type(screen.getByLabelText('User ID'), 'bob');
+    await user.type(screen.getByLabelText('Key user ID'), 'bob');
+    await user.type(screen.getByLabelText('Description'), 'Bob key');
+    await user.click(screen.getByRole('checkbox', { name: 'read' }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => {
@@ -463,7 +469,9 @@ describe('ApiKeysTab — create key', () => {
       });
     });
 
-    await user.type(screen.getByLabelText('User ID'), 'bob');
+    await user.type(screen.getByLabelText('Key user ID'), 'bob');
+    await user.type(screen.getByLabelText('Description'), 'Bob key');
+    await user.click(screen.getByRole('checkbox', { name: 'read' }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => {
@@ -481,6 +489,7 @@ describe('ApiKeysTab — create key', () => {
       client: baseStub({ createApiKey, listPrincipals }),
       projection: scopedProjection({
         owner_user_id: null,
+        scopes: ['read'],
         routes: [{ path: '/api/auth/api-keys', methods: ['POST'] }],
       }),
     });
@@ -492,11 +501,17 @@ describe('ApiKeysTab — create key', () => {
     expect(screen.queryByRole('combobox', { name: 'Principal' })).not.toBeInTheDocument();
     expect(screen.getByText('Owned by Test User (human)')).toBeInTheDocument();
 
-    await user.type(screen.getByLabelText('User ID'), 'bob');
+    await user.type(screen.getByLabelText('Key user ID'), 'bob');
+    await user.type(screen.getByLabelText('Description'), 'Bob key');
+    await user.click(screen.getByRole('checkbox', { name: 'read' }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => {
-      expect(createApiKey).toHaveBeenCalledWith({ user_id: 'bob', description: '', scopes: [] });
+      expect(createApiKey).toHaveBeenCalledWith({
+        user_id: 'bob',
+        description: 'Bob key',
+        scopes: ['read'],
+      });
     });
     // A non-admin never fetches the admin-only principals list.
     expect(listPrincipals).not.toHaveBeenCalled();
@@ -511,7 +526,9 @@ describe('ApiKeysTab — create key', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
-    await user.type(screen.getByLabelText('User ID'), 'bob');
+    await user.type(screen.getByLabelText('Key user ID'), 'bob');
+    await user.type(screen.getByLabelText('Description'), 'Bob key');
+    await user.click(screen.getByRole('checkbox', { name: 'read' }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     expect(await screen.findByText('user_id already exists')).toBeInTheDocument();

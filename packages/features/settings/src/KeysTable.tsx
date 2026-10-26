@@ -20,6 +20,7 @@ import {
 } from '@tai42/studio-sdk';
 import type { CSSProperties, ReactNode } from 'react';
 
+import { FULL_ACCESS_SCOPE } from './api-keys-gating';
 import { badgeRowStyle } from './api-keys-styles';
 import type { KeyPayload } from './key-owner';
 
@@ -237,7 +238,7 @@ export function KeysTable({
                     <div style={badgeRowStyle}>
                       {(payload.scopes ?? []).map((scope) => (
                         <Badge key={scope} variant="neutral">
-                          {scope}
+                          {scope === FULL_ACCESS_SCOPE ? 'Full access' : scope}
                         </Badge>
                       ))}
                     </div>

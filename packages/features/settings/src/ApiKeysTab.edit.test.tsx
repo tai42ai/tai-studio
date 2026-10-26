@@ -111,13 +111,36 @@ describe('ApiKeysTab — edit key', () => {
     const desc = screen.getByLabelText('Description');
     await user.clear(desc);
     await user.type(desc, 'Alice v2');
+    await user.click(screen.getByRole('checkbox', { name: 'read' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
       expect(editApiKey).toHaveBeenCalledWith('alice', {
         description: 'Alice v2',
-        scopes: ['admin'],
+        scopes: ['admin', 'read'],
       });
+    });
+  });
+
+  it('a description-only edit omits scopes, so the stored scopes are kept', async () => {
+    const user = userEvent.setup({ delay: null });
+    const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
+    renderTab(<ApiKeysTab publicId="public" />, {
+      client: baseStub({ editApiKey }),
+    });
+
+    await screen.findByText('alice');
+    await user.click(screen.getByRole('button', { name: 'Edit key alice' }));
+    // Toggling a scope off and on again leaves the choice as it opened.
+    await user.click(screen.getByRole('checkbox', { name: 'admin' }));
+    await user.click(screen.getByRole('checkbox', { name: 'admin' }));
+    const desc = screen.getByLabelText('Description');
+    await user.clear(desc);
+    await user.type(desc, 'Alice v2');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => {
+      expect(editApiKey).toHaveBeenCalledWith('alice', { description: 'Alice v2' });
     });
   });
 
@@ -477,16 +500,14 @@ describe('ApiKeysTab — edit key', () => {
     await user.click(screen.getByRole('button', { name: 'Edit key alice' }));
     expect(screen.getByRole('checkbox', { name: 'public' })).toBeChecked();
     expect(screen.queryByRole('checkbox', { name: 'open' })).toBeNull();
-    const desc = screen.getByLabelText('Description');
-    await user.clear(desc);
-    await user.type(desc, 'Alice v2');
+    await user.click(screen.getByRole('checkbox', { name: 'admin' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     // The served marker `open` is never sent back as a scope; the real `public` scope survives.
     await waitFor(() => {
       expect(editApiKey).toHaveBeenCalledWith('alice', {
-        description: 'Alice v2',
-        scopes: ['admin', 'public'],
+        description: 'Alice key',
+        scopes: ['public'],
       });
     });
   });
