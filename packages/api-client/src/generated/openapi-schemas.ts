@@ -541,7 +541,7 @@ export type IntervalCadence = z.infer<typeof intervalCadence>;
 export const inviteCredential = z.object({ "email": z.string().min(1), "kind": z.literal("invite").default("invite") }).strict();
 export type InviteCredential = z.infer<typeof inviteCredential>;
 
-export const inviteRow = z.object({ "action_keys": z.array(z.string()).default([]), "created_at": z.string().datetime({ offset: true }), "email": z.string().min(1), "expires_at": z.string().datetime({ offset: true }), "handle": z.string().min(1), "id": z.string().min(1), "role": z.string().min(1).nullable() }).strict();
+export const inviteRow = z.object({ "action_keys": z.array(z.string()).default([]), "created_at": z.string().datetime({ offset: true }), "email": z.string().min(1), "expires_at": z.string().datetime({ offset: true }), "handle": z.string().min(1), "id": z.string().min(1), "provider_name": z.string().min(1), "role": z.string().min(1).nullable() }).strict();
 export type InviteRow = z.infer<typeof inviteRow>;
 
 export const invokeMemberActionRequest = z.object({ "action_key": z.string().min(1), "input": z.record(z.string(), z.unknown()).default({}), "target_handle": z.string().nullable().default(null) });
@@ -625,7 +625,7 @@ export type McpTargets = z.infer<typeof mcpTargets>;
 export const mcpToolFilterUpdate = z.object({ "exclude": z.array(z.string()).default([]), "include": z.array(z.string()).default([]) });
 export type McpToolFilterUpdate = z.infer<typeof mcpToolFilterUpdate>;
 
-export const memberActionDescriptor = z.object({ "destructive": z.boolean(), "input_schema": z.record(z.string(), z.unknown()), "key": z.string().min(1), "label": z.string(), "result_schema": z.record(z.string(), z.unknown()), "scope": z.enum(["page","member_row","invite_row"]) }).strict();
+export const memberActionDescriptor = z.object({ "destructive": z.boolean(), "input_schema": z.record(z.string(), z.unknown()), "key": z.string().min(1), "label": z.string(), "provider_name": z.string().min(1), "result_schema": z.record(z.string(), z.unknown()), "scope": z.enum(["page","member_row","invite_row"]) }).strict();
 export type MemberActionDescriptor = z.infer<typeof memberActionDescriptor>;
 
 export const memberActionCatalog = z.object({ "actions": z.array(memberActionDescriptor) }).strict();
@@ -634,7 +634,7 @@ export type MemberActionCatalog = z.infer<typeof memberActionCatalog>;
 export const memberPrincipalState = z.object({ "disabled": z.boolean(), "role": z.string().min(1).nullable(), "user_id": z.string().min(1) }).strict();
 export type MemberPrincipalState = z.infer<typeof memberPrincipalState>;
 
-export const memberRow = z.object({ "action_keys": z.array(z.string()).default([]), "created_at": z.string().datetime({ offset: true }), "disabled": z.boolean(), "email": z.string().min(1), "handle": z.string().min(1), "id": z.string().min(1), "principals": z.array(memberPrincipalState), "role": z.string().min(1).nullable() }).strict();
+export const memberRow = z.object({ "action_keys": z.array(z.string()).default([]), "created_at": z.string().datetime({ offset: true }), "disabled": z.boolean(), "email": z.string().min(1), "handle": z.string().min(1), "id": z.string().min(1), "principals": z.array(memberPrincipalState), "provider_name": z.string().min(1), "role": z.string().min(1).nullable() }).strict();
 export type MemberRow = z.infer<typeof memberRow>;
 
 export const memberDirectory = z.object({ "invites": z.array(inviteRow), "members": z.array(memberRow) }).strict();

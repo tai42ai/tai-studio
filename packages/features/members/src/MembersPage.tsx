@@ -1,16 +1,17 @@
 /**
  * The `/members` feature page: a generic view of the deployment's membership — the
  * people every accounts provider owns, and the invitations they hold — aggregated and
- * platform-joined server-side by `GET /api/auth/members` into one directory that names
- * no provider, plus the member-admin actions each provider DECLARES (`GET
- * /api/auth/member-actions`).
+ * platform-joined server-side by `GET /api/auth/members` into one directory, plus the
+ * member-admin actions each provider DECLARES (`GET /api/auth/member-actions`).
  *
  * Everything action-related is driven by the opaque declarations: page-scoped actions
  * render as header buttons, member-/invite-row actions render per row by joining the
  * row's `action_keys` to the catalog by key, and an action's input form and result
- * view come from its declared JSON schemas. The page names no provider, no route, and
- * no action — only opaque keys and handles, generic scopes, and the platform-joined
- * principal state.
+ * view come from its declared JSON schemas. The page hard-codes no provider, no route,
+ * and no action — only opaque keys and handles, generic scopes, and the platform-joined
+ * principal state. The provider name it shows — beside each page action, and in each
+ * people and invitation row's Provider column — is the display name the owning
+ * provider declares.
  *
  * The view is a state machine — loading → `<Skeleton>`, error → `<ErrorState>` (loud,
  * always visible; a 401/403 is not special-cased), empty → `<EmptyState>` — over BOTH
@@ -218,7 +219,10 @@ function RowActionButtons({
   );
 }
 
-/** The people table: one row per account an accounts provider owns. */
+/**
+ * The people table: one row per account an accounts provider owns, with the owning
+ * provider's declared name in the Provider column.
+ */
 function PeopleTable({
   members,
   byKey,
@@ -242,6 +246,7 @@ function PeopleTable({
         <THead>
           <TR>
             <TH>Email</TH>
+            <TH>Provider</TH>
             <TH>Role</TH>
             <TH>Status</TH>
             <TH>Created</TH>
@@ -252,6 +257,7 @@ function PeopleTable({
           {rows.map(({ member, actions }) => (
             <TR key={member.id} data-testid="member-row">
               <TH scope="row">{member.email}</TH>
+              <TD>{member.provider_name}</TD>
               <TD>
                 <MemberRoleBadge row={member} />
               </TD>
@@ -277,7 +283,10 @@ function PeopleTable({
   );
 }
 
-/** The invitations table: one row per outstanding invitation a provider holds. */
+/**
+ * The invitations table: one row per outstanding invitation a provider holds, with
+ * the owning provider's declared name in the Provider column.
+ */
 function InvitesTable({
   invites,
   byKey,
@@ -306,6 +315,7 @@ function InvitesTable({
         <THead>
           <TR>
             <TH>Email</TH>
+            <TH>Provider</TH>
             <TH>Role</TH>
             <TH>Invited</TH>
             <TH>Expires</TH>
@@ -316,6 +326,7 @@ function InvitesTable({
           {rows.map(({ invite, actions }) => (
             <TR key={invite.id} data-testid="invite-row">
               <TH scope="row">{invite.email}</TH>
+              <TD>{invite.provider_name}</TD>
               <TD>
                 <RoleBadge role={invite.role} />
               </TD>
@@ -401,7 +412,7 @@ export const MembersPage: (props: PageProps<'members'>) => ReactNode = () => {
                 onInvoke(descriptor, null);
               }}
             >
-              {descriptor.label}
+              {descriptor.label} <Badge variant="neutral">{descriptor.provider_name}</Badge>
             </Button>
           ))}
         </div>

@@ -5224,6 +5224,7 @@ export function createApiClient(config: ApiConfig): {
             expires_at: string;
             handle: string;
             id: string;
+            provider_name: string;
             role: string | null;
         }[];
         members: {
@@ -5238,6 +5239,7 @@ export function createApiClient(config: ApiConfig): {
                 role: string | null;
                 user_id: string;
             }[];
+            provider_name: string;
             role: string | null;
         }[];
     }>;
@@ -5247,6 +5249,7 @@ export function createApiClient(config: ApiConfig): {
             input_schema: Record<string, unknown>;
             key: string;
             label: string;
+            provider_name: string;
             result_schema: Record<string, unknown>;
             scope: "page" | "member_row" | "invite_row";
         }[];
@@ -10706,6 +10709,7 @@ const inviteRow: z.ZodObject<{
     expires_at: z.ZodString;
     handle: z.ZodString;
     id: z.ZodString;
+    provider_name: z.ZodString;
     role: z.ZodNullable<z.ZodString>;
 }, z.core.$strict>;
 
@@ -11940,6 +11944,7 @@ const memberActionCatalog: z.ZodObject<{
         input_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
         key: z.ZodString;
         label: z.ZodString;
+        provider_name: z.ZodString;
         result_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
         scope: z.ZodEnum<{
             page: "page";
@@ -11958,6 +11963,7 @@ const memberActionDescriptor: z.ZodObject<{
     input_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     key: z.ZodString;
     label: z.ZodString;
+    provider_name: z.ZodString;
     result_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     scope: z.ZodEnum<{
         page: "page";
@@ -11988,6 +11994,7 @@ const memberDirectory: z.ZodObject<{
         expires_at: z.ZodString;
         handle: z.ZodString;
         id: z.ZodString;
+        provider_name: z.ZodString;
         role: z.ZodNullable<z.ZodString>;
     }, z.core.$strict>>;
     members: z.ZodArray<z.ZodObject<{
@@ -12002,6 +12009,7 @@ const memberDirectory: z.ZodObject<{
             role: z.ZodNullable<z.ZodString>;
             user_id: z.ZodString;
         }, z.core.$strict>>;
+        provider_name: z.ZodString;
         role: z.ZodNullable<z.ZodString>;
     }, z.core.$strict>>;
 }, z.core.$strict>;
@@ -12032,6 +12040,7 @@ const memberRow: z.ZodObject<{
         role: z.ZodNullable<z.ZodString>;
         user_id: z.ZodString;
     }, z.core.$strict>>;
+    provider_name: z.ZodString;
     role: z.ZodNullable<z.ZodString>;
 }, z.core.$strict>;
 
