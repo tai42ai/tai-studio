@@ -10,9 +10,10 @@
 
   "mainEntryPointFilePath": "<projectFolder>/dist/index.d.ts",
 
-  // The committed report is gated by scripts/api-gate.mjs, whose fence parser
-  // anchors on "\n"; api-extractor defaults to CRLF, so the report must be
-  // written LF (pinned again in .gitattributes for checkout stability).
+  // The committed report is gated by scripts/api-gate.mjs, whose report parser
+  // (scripts/api-report-parse.mjs) anchors on "\n"; api-extractor defaults to
+  // CRLF, so the report must be written LF (pinned again in .gitattributes for
+  // checkout stability).
   "newlineKind": "lf",
 
   "compiler": {

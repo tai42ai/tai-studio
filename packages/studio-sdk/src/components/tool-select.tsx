@@ -1,26 +1,14 @@
 /**
- * The pieces of `ToolPicker`: the tool `Select` itself (grouped or flat), the tag
- * filter field, and the selected tool's capability badges. The picker owns the
- * state and composes these; the option-label and grouping helpers live here too.
+ * `ToolPicker`'s tool `Select`: grouped by tag or flat, with the option-label and
+ * grouping helpers it renders from.
  */
 import type { ReactNode } from 'react';
 
 import { toolDisplayLabel } from '../hooks/useToolDisplayNames';
-import { Badge } from './badge';
-import { Field } from './field';
 import { Select, type SelectGroup, type SelectOption } from './select';
-import { Tooltip } from './tooltip';
-
-/** The shared informational note every badge surface carries: declared, never enforced. */
-export const BADGES_NOTE =
-  'Declared capability labels — informational only. They describe what the tool touches; the server never enforces them.';
 
 const NO_DISPLAY_NAMES: Readonly<Record<string, string>> = {};
 const UNTAGGED = 'Untagged';
-// Radix `Select.Item` forbids an empty-string value, so the "no filter" choice
-// uses a sentinel rather than ''. A tool literally tagged this string would just
-// never be filtered out — harmless for a UI convenience whose authority is the server.
-export const ALL_TAGS = '__all_tags__';
 
 /** The group a tool sorts into: its alphabetically-first tag, else "Untagged". */
 function groupFor(name: string, tagsByTool: Readonly<Record<string, readonly string[]>>): string {
@@ -133,63 +121,5 @@ export function ToolSelect({
       aria-describedby={ariaDescribedBy}
       disabled={disabled}
     />
-  );
-}
-
-/** The tag filter: an "All tags" sentinel plus one option per distinct tag. */
-export function TagFilterField({
-  allTags,
-  tagFilter,
-  onTagFilterChange,
-  disabled,
-}: {
-  readonly allTags: readonly string[];
-  readonly tagFilter: string;
-  readonly onTagFilterChange: (value: string) => void;
-  readonly disabled: boolean | undefined;
-}): ReactNode {
-  return (
-    <Field label="Filter by tag">
-      <Select
-        options={[
-          { value: ALL_TAGS, label: 'All tags' },
-          ...allTags.map((tag) => ({ value: tag, label: tag })),
-        ]}
-        value={tagFilter}
-        onValueChange={onTagFilterChange}
-        disabled={disabled}
-      />
-    </Field>
-  );
-}
-
-/** The selected tool's DECLARED capability badges, read-only and informational.
- *  Renders nothing unless the selected tool carries badges. */
-export function SelectedToolBadges({
-  value,
-  badgesByTool,
-  idPrefix,
-}: {
-  readonly value: string | null;
-  readonly badgesByTool: Readonly<Record<string, readonly string[]>> | undefined;
-  readonly idPrefix: string;
-}): ReactNode {
-  if (value === null || badgesByTool === undefined || (badgesByTool[value]?.length ?? 0) === 0) {
-    return null;
-  }
-  return (
-    <Tooltip content={BADGES_NOTE}>
-      <span
-        className="tai-row"
-        data-testid={`${idPrefix}-badges`}
-        style={{ gap: 'var(--tai-space-1)' }}
-      >
-        {(badgesByTool[value] ?? []).map((badge) => (
-          <Badge key={badge} variant="neutral">
-            {badge}
-          </Badge>
-        ))}
-      </span>
-    </Tooltip>
   );
 }

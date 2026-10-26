@@ -47,9 +47,11 @@ import { Badge } from './badge';
 import { Field } from './field';
 import { ErrorState } from './primitives';
 import type { SelectOption } from './select';
-import { ALL_TAGS, SelectedToolBadges, TagFilterField, ToolSelect } from './tool-picker-parts';
+import { SelectedToolBadges } from './selected-tool-badges';
+import { ALL_TAGS, TagFilterField } from './tag-filter-field';
+import { ToolSelect } from './tool-select';
 
-export { BADGES_NOTE } from './tool-picker-parts';
+export { BADGES_NOTE } from './selected-tool-badges';
 
 const MUTED_LINE = { margin: 0, color: 'var(--tai-color-text-muted)' } as const;
 

@@ -6,10 +6,10 @@
  * preset/tool extensions wire carries. It is PRESENTATIONAL: the caller fetches the
  * extension catalog (`available`) and owns the `value`; this component fetches nothing.
  *
- * The surface has two parts:
- *  - the current combos, each an ordered row of name `Badge`s with a per-combo Edit
- *    (pull it back into the draft) and Remove;
- *  - a combo UNDER CONSTRUCTION, authored with the shared `ExtensionPicker` (grouped
+ * The surface has two sections:
+ *  - the current combos (`CommittedComboList`), each an ordered row of name `Badge`s
+ *    with a per-combo Edit (pull it back into the draft) and Remove;
+ *  - a combo UNDER CONSTRUCTION (`ComboDraftEditor`), authored with the shared `ExtensionPicker` (grouped
  *    by kind, single-select for the non-stackable `backend` kind). An extension whose
  *    catalog entry declares a `config_schema` is authored as `{ name, config }` through
  *    its settings form; any other name stays a bare element, or the edited combo's own
@@ -38,15 +38,15 @@
 import type { Extension, PresetExtensionElement } from '@tai42/api-client';
 import { type ReactNode, useEffect, useState } from 'react';
 
-import { comboElementNames, extensionElementName } from '../extension-combos';
-import type { JsonSchema } from '../schema-form/types';
 import {
-  ComboDraftEditor,
-  CommittedComboList,
-  type ConfigurableExtension,
+  comboElementNames,
+  extensionElementName,
   sameNames,
   unknownNames,
-} from './extension-combo-parts';
+} from '../extension-combos';
+import type { JsonSchema } from '../schema-form/types';
+import { ComboDraftEditor, type ConfigurableExtension } from './combo-draft-editor';
+import { CommittedComboList } from './committed-combo-list';
 import type { ExtensionConfigChange } from './extension-config-editor';
 
 type Seeds = Readonly<Record<string, Record<string, unknown> | undefined>>;

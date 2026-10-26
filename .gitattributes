@@ -1,5 +1,6 @@
 # The api-extractor surface reports are gated by scripts/api-gate.mjs, whose
-# fence parser anchors on "\n"; pin them to LF so a CRLF-defaulting checkout or
-# regeneration cannot break the gate.
+# report parser (scripts/api-report-parse.mjs) anchors its fence match on "\n";
+# pin them to LF so a CRLF-defaulting checkout or regeneration cannot break the
+# gate.
 packages/studio-sdk/etc/*.api.md text eol=lf
 packages/api-client/etc/*.api.md text eol=lf

@@ -9,9 +9,10 @@
 
   "projectFolder": "..",
 
-  // The committed reports are gated by scripts/api-gate.mjs, whose fence parser
-  // anchors on "\n"; api-extractor defaults to CRLF, so the reports must be
-  // written LF (pinned again in .gitattributes for checkout stability).
+  // The committed reports are gated by scripts/api-gate.mjs, whose report parser
+  // (scripts/api-report-parse.mjs) anchors on "\n"; api-extractor defaults to
+  // CRLF, so the reports must be written LF (pinned again in .gitattributes for
+  // checkout stability).
   "newlineKind": "lf",
 
   "compiler": {

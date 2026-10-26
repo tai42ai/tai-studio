@@ -1,31 +1,14 @@
 /**
- * The pieces of `ExtensionComboBuilder`: the committed-combo list
- * (`CommittedComboList`), the under-construction combo editor (`ComboDraftEditor`),
- * and the shared combo helpers. The builder owns the state and composes these.
+ * `ExtensionComboBuilder`'s list of committed combos: one row of name badges per
+ * combo, with per-combo Edit and Remove and an inline unknown-name note.
  */
-import type { Extension, PresetExtensionElement } from '@tai42/api-client';
+import type { PresetExtensionElement } from '@tai42/api-client';
 import { Fragment, type ReactNode } from 'react';
 
-import { comboElementNames } from '../extension-combos';
-import type { JsonSchema } from '../schema-form/types';
+import { comboElementNames, unknownNames } from '../extension-combos';
 import { Badge } from './badge';
-import { type ExtensionConfigChange, ExtensionConfigEditor } from './extension-config-editor';
-import { ExtensionPicker } from './extension-picker';
 import { CloseIcon, XCircleIcon } from './icons';
 import { Button } from './primitives';
-
-/** Two combos are equal when their NAME sequences match (config is not part of identity). */
-export function sameNames(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && a.every((name, index) => name === b[index]);
-}
-
-/** The element names in a combo that are absent from the known catalog. */
-export function unknownNames(
-  combo: readonly PresetExtensionElement[],
-  availableNames: ReadonlySet<string>,
-): string[] {
-  return comboElementNames(combo).filter((name) => !availableNames.has(name));
-}
 
 /** One committed combo's row: its name badges and the Edit / Remove pair, with an
  *  inline unknown-name note. */
@@ -138,89 +121,5 @@ export function CommittedComboList({
         />
       ))}
     </ul>
-  );
-}
-
-/** A drafted extension whose catalog entry declares a settings schema. */
-export interface ConfigurableExtension {
-  readonly name: string;
-  readonly schema: JsonSchema;
-}
-
-/** The combo under construction: the extension picker, one settings form per drafted
- *  configurable extension, the duplicate note, and the Add/Update + Cancel actions. */
-export function ComboDraftEditor({
-  available,
-  draft,
-  onDraftChange,
-  configurable,
-  draftConfigs,
-  onDraftConfigChange,
-  isDuplicate,
-  canAdd,
-  editing,
-  disabled,
-  idPrefix,
-  onCommit,
-  onReset,
-}: {
-  readonly available: readonly Extension[];
-  readonly draft: string[];
-  readonly onDraftChange: (draft: string[]) => void;
-  readonly configurable: readonly ConfigurableExtension[];
-  readonly draftConfigs: Readonly<Record<string, Record<string, unknown> | undefined>>;
-  readonly onDraftConfigChange: (name: string, change: ExtensionConfigChange) => void;
-  readonly isDuplicate: boolean;
-  readonly canAdd: boolean;
-  readonly editing: number | null;
-  readonly disabled: boolean | undefined;
-  readonly idPrefix: string;
-  readonly onCommit: () => void;
-  readonly onReset: () => void;
-}): ReactNode {
-  return (
-    <div className="tai-stack tai-stack-2">
-      <ExtensionPicker
-        available={available}
-        value={draft}
-        onChange={onDraftChange}
-        disabled={disabled}
-        idPrefix={`${idPrefix}-draft`}
-      />
-
-      {configurable.map(({ name, schema }) => (
-        <ExtensionConfigEditor
-          // Re-seed the form when the draft target changes (a new draft vs a
-          // specific combo pulled in for edit).
-          key={`${editing === null ? 'new' : String(editing)}-${name}`}
-          name={name}
-          schema={schema}
-          value={draftConfigs[name]}
-          onChange={(change) => {
-            onDraftConfigChange(name, change);
-          }}
-          disabled={disabled}
-          idPrefix={`${idPrefix}-settings-${name}`}
-        />
-      ))}
-
-      {isDuplicate ? (
-        <p role="alert" className="tai-field-error">
-          <XCircleIcon />
-          This extension set is already added.
-        </p>
-      ) : null}
-
-      <div className="tai-row">
-        <Button type="button" variant="primary" onClick={onCommit} disabled={!canAdd}>
-          {editing === null ? 'Add extension set' : 'Update extension set'}
-        </Button>
-        {editing !== null ? (
-          <Button type="button" onClick={onReset} disabled={disabled}>
-            Cancel edit
-          </Button>
-        ) : null}
-      </div>
-    </div>
   );
 }
