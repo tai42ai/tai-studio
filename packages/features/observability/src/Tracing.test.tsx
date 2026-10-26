@@ -393,6 +393,104 @@ describe('TracingTab — runs table', () => {
     expect(screen.getByLabelText('Run time range')).toBeInTheDocument();
   });
 
+  it('renders the backend message in the not-served notice on a not-served 400, filters kept', async () => {
+    const client: StubApiClient = {
+      listRuns: vi
+        .fn()
+        .mockRejectedValue(
+          new ApiError(
+            'This backend does not filter runs by that status.',
+            400,
+            'monitoring-read-not-served',
+          ),
+        ),
+    };
+    renderWithProviders(
+      <ObservabilityPage search={{ tab: 'tracing', status: 'error', minCost: 2 }} />,
+      { client: tracing(client) },
+    );
+
+    const notice = await screen.findByTestId('observability-read-not-served');
+    expect(notice).toHaveTextContent('This request is not served by the monitoring backend');
+    expect(notice).toHaveTextContent('This backend does not filter runs by that status.');
+    // The backend's refusal carries no action; the filters stay with their values.
+    expect(within(notice).queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('observability-read-not-supported')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Min cost')).toHaveValue(2);
+    expect(screen.getByLabelText('Run time range')).toBeInTheDocument();
+  });
+
+  it('moves focus to the pressed range chip when a sort header click reads too broad', async () => {
+    const user = userEvent.setup();
+    const message =
+      'This list reads at most 2,000 runs in the time range to rank by latency, and this range holds more. Narrow the time range or add filters.';
+    const listRuns = vi.fn((query?: { sort?: string }) =>
+      query?.sort === 'latencyMs'
+        ? Promise.reject(new ApiError(message, 400, 'monitoring-read-too-broad'))
+        : Promise.resolve({ items: [run('r1', 't1')], page: 1, nextPage: null }),
+    );
+    renderWithLiveUrl<'observability'>((search) => <ObservabilityPage search={search} />, {
+      client: tracing({ listRuns }, { ...CAPS, incompatibleFilters: {} }),
+      initialSearch: { tab: 'tracing' },
+    });
+
+    await screen.findByTestId('run-row-r1');
+    await user.click(screen.getByRole('button', { name: 'Latency' }));
+
+    const notice = await screen.findByTestId('observability-read-too-broad');
+    expect(notice).toHaveAttribute('role', 'alert');
+    expect(notice).toHaveTextContent(message);
+    const chip = within(screen.getByRole('group', { name: 'Run time range' })).getByRole('button', {
+      name: 'Last 30 days',
+    });
+    expect(chip).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() => {
+      expect(chip).toHaveFocus();
+    });
+  });
+
+  it('moves focus to the From input when the custom range a filter apply sends reads too broad', async () => {
+    const user = userEvent.setup();
+    const listRuns = vi.fn((query?: { minCost?: number }) =>
+      query?.minCost !== undefined
+        ? Promise.reject(new ApiError('Narrow the range.', 400, 'monitoring-read-too-broad'))
+        : Promise.resolve({ items: [run('r1', 't1')], page: 1, nextPage: null }),
+    );
+    renderWithLiveUrl<'observability'>((search) => <ObservabilityPage search={search} />, {
+      client: tracing({ listRuns }),
+      initialSearch: {
+        tab: 'tracing',
+        from: '2026-01-01T00:00:00.000Z',
+        to: '2026-01-02T00:00:00.000Z',
+      },
+    });
+
+    await screen.findByTestId('run-row-r1');
+    await user.type(screen.getByLabelText('Min cost'), '5');
+    await user.click(screen.getByRole('button', { name: 'Apply filters' }));
+
+    await screen.findByTestId('observability-read-too-broad');
+    await waitFor(() => {
+      expect(screen.getByLabelText('From')).toHaveFocus();
+    });
+  });
+
+  it('does not move focus when the page opens straight into a too-broad read', async () => {
+    const listRuns = vi
+      .fn()
+      .mockRejectedValue(new ApiError('Narrow the range.', 400, 'monitoring-read-too-broad'));
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', sort: 'latencyMs' }} />, {
+      client: tracing({ listRuns }, { ...CAPS, incompatibleFilters: {} }),
+    });
+
+    await screen.findByTestId('observability-read-too-broad');
+    // Let any pending effect run before asserting focus stayed put.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(document.body).toHaveFocus();
+  });
+
   it('shows the empty "No runs match" state when the filters match nothing', async () => {
     const client: StubApiClient = {
       listRuns: vi.fn().mockResolvedValue({ items: [], page: 1, nextPage: null }),
@@ -576,23 +674,80 @@ describe('TracingTab — the served sort × filter exclusions', () => {
     expect(screen.getByLabelText('Tags (comma-separated)')).toBeEnabled();
   });
 
-  it('repairs an incompatible sort×filter combo that arrives from the URL', async () => {
+  it('shows the not-served notice for a link whose sort excludes its filter', async () => {
+    const user = userEvent.setup();
+    const listRuns = vi.fn();
+    const exportRuns = vi.fn();
+    const { navigate } = renderWithProviders(
+      <ObservabilityPage search={{ tab: 'tracing', sort: 'cost', dir: 'asc', minCost: 5 }} />,
+      { client: tracing({ listRuns, exportRuns }) },
+    );
+
+    const notice = await screen.findByTestId('observability-read-not-served');
+    expect(notice).toHaveAttribute('role', 'alert');
+    expect(notice).toHaveTextContent('This request is not served by the monitoring backend');
+    expect(notice).toHaveTextContent(
+      'The monitoring backend does not sort runs by Cost with the filters in this link.',
+    );
+    // The link is shown as it is: no read is sent and the URL is not changed.
+    expect(listRuns).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeDisabled();
+    // The filter bar keeps the link's values.
+    expect(screen.getByLabelText('Min cost')).toHaveValue(5);
+
+    await user.click(within(notice).getByRole('button', { name: 'Sort newest first' }));
+    expect(navigate).toHaveBeenCalledWith('observability', { tab: 'tracing', minCost: 5 });
+    expect(listRuns).not.toHaveBeenCalled();
+    expect(exportRuns).not.toHaveBeenCalled();
+  });
+
+  it('shows the not-served notice for a link whose sort the backend does not list', async () => {
+    const user = userEvent.setup();
+    const listRuns = vi.fn();
+    const caps: ObservabilityCapabilities = {
+      ...CAPS,
+      sortKeys: ['createdAt', 'latencyMs', 'totalTokens'],
+      incompatibleFilters: {},
+    };
+    const { navigate } = renderWithProviders(
+      <ObservabilityPage search={{ tab: 'tracing', sort: 'cost', dir: 'desc', status: 'error' }} />,
+      { client: tracing({ listRuns }, caps) },
+    );
+
+    const notice = await screen.findByTestId('observability-read-not-served');
+    expect(notice).toHaveTextContent('This request is not served by the monitoring backend');
+    expect(notice).toHaveTextContent('The monitoring backend does not sort runs by Cost.');
+    expect(listRuns).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Apply filters' })).toBeEnabled();
+
+    await user.click(within(notice).getByRole('button', { name: 'Sort newest first' }));
+    expect(navigate).toHaveBeenCalledWith('observability', { tab: 'tracing', status: 'error' });
+  });
+
+  it('loads the table once "Sort newest first" leaves a served search', async () => {
+    const user = userEvent.setup();
     const listRuns = vi
       .fn()
       .mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null });
-    const { navigate } = renderWithProviders(
-      <ObservabilityPage search={{ tab: 'tracing', sort: 'cost', dir: 'asc', minCost: 5 }} />,
-      { client: tracing({ listRuns }) },
-    );
+    renderWithLiveUrl<'observability'>((search) => <ObservabilityPage search={search} />, {
+      client: tracing({ listRuns }),
+      initialSearch: { tab: 'tracing', sort: 'cost', dir: 'desc', status: 'error' },
+    });
+
+    const notice = await screen.findByTestId('observability-read-not-served');
+    await user.click(within(notice).getByRole('button', { name: 'Sort newest first' }));
 
     await screen.findByTestId('run-row-r1');
-    // The URL is rewritten to the legal, repaired search (the metric sort dropped).
-    expect(navigate).toHaveBeenCalledWith('observability', { tab: 'tracing', minCost: 5 });
-    // The runs query is sent without the illegal metric sort.
+    expect(listRuns).toHaveBeenCalledTimes(1);
     expect(listRuns).toHaveBeenCalledWith(
-      expect.objectContaining({ sort: undefined, minCost: 5 }),
+      expect.objectContaining({ status: 'error', sort: undefined, dir: undefined }),
       expect.anything(),
     );
+    expect(screen.queryByTestId('observability-read-not-served')).not.toBeInTheDocument();
   });
 
   it('reads the guard from the served capabilities, not a built-in rule', async () => {
@@ -678,7 +833,7 @@ describe('TracingTab — the served sort × filter exclusions', () => {
     expect(screen.queryByText(/Not available with this sort/)).not.toBeInTheDocument();
   });
 
-  it('renders plain headers and an enabled filter bar while the capabilities load', async () => {
+  it('sends no runs read while the capabilities load', async () => {
     let release: (caps: ObservabilityCapabilities) => void = () => undefined;
     const pending = new Promise<ObservabilityCapabilities>((resolve) => {
       release = resolve;
@@ -691,24 +846,22 @@ describe('TracingTab — the served sort × filter exclusions', () => {
       { client: { getObservabilityCapabilities: vi.fn().mockReturnValue(pending), listRuns } },
     );
 
-    await screen.findByTestId('run-row-r1');
-    const headerRow = screen.getAllByRole('row')[0];
-    expect(headerRow).toHaveAttribute('aria-busy', 'true');
-    expect(screen.queryByRole('button', { name: /When/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'When' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Apply filters' })).toBeEnabled();
-    expect(screen.getByLabelText('Min cost')).toBeEnabled();
-    // Nothing is repaired until the served map is known.
-    expect(navigate).not.toHaveBeenCalled();
+    expect(await screen.findByRole('button', { name: 'Refresh' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Apply filters' })).toBeDisabled();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(listRuns).not.toHaveBeenCalled();
 
+    // The cost sort excludes the status filter: the link is shown as it is.
     await act(async () => {
       release(CAPS);
       await pending;
     });
-    await waitFor(() => {
-      expect(navigate).toHaveBeenCalledWith('observability', { tab: 'tracing', status: 'error' });
-    });
-    expect((await screen.findAllByRole('row'))[0]).not.toHaveAttribute('aria-busy');
+    expect(await screen.findByTestId('observability-read-not-served')).toHaveTextContent(
+      'The monitoring backend does not sort runs by Cost with the filters in this link.',
+    );
+    expect(listRuns).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('keeps plain headers and offers a retry when the capabilities cannot be loaded', async () => {

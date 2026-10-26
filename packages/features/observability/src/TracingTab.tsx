@@ -2,15 +2,14 @@
  * Tracing tab — a filterable, sortable, paginated runs table ({@link RunsTable}) over
  * `listRuns(filters)`. The filter set, sort key/direction, and the drilled-in trace id
  * all live in the URL, so a view is linkable. The sorts and sort × filter combinations
- * the monitoring backend serves come from its served capabilities; once they arrive, a
- * combination it cannot serve (only reachable from a shared or hand-edited link) is
- * repaired to a legal query and written back to the URL — the source of truth. Drilling
- * into a trace shows the per-run {@link TraceView}.
+ * the monitoring backend serves come from its served capabilities; a link the backend
+ * does not serve is shown as it is, with the not-served notice in the result area.
+ * Drilling into a trace shows the per-run {@link TraceView}.
  */
 import { useAppNavigate } from '@tai42/studio-sdk';
-import { type ReactNode, useEffect } from 'react';
+import type { ReactNode } from 'react';
 
-import { mergeSearch, type ObservabilitySearch, sanitizeSearch } from './filters';
+import { mergeSearch, type ObservabilitySearch } from './filters';
 import { RunsTable } from './RunsTable';
 import { TraceView } from './TraceView';
 import { useObservabilityCapabilities } from './useObservabilityCapabilities';
@@ -18,28 +17,17 @@ import { useObservabilityCapabilities } from './useObservabilityCapabilities';
 export function TracingTab({ search }: { readonly search: ObservabilitySearch }): ReactNode {
   const navigate = useAppNavigate();
   const capabilities = useObservabilityCapabilities();
-  // No sanitising happens until the capabilities arrive: only the served map says
-  // which combinations are illegal.
-  const cleaned =
-    capabilities.data !== undefined ? sanitizeSearch(search, capabilities.data) : search;
-  const repaired = cleaned !== search;
 
-  // `sanitizeSearch` returns the same reference when nothing needs repair, so this
-  // fires at most once and only for an illegal combo arriving from the URL.
-  useEffect(() => {
-    if (repaired) navigate('observability', cleaned);
-  }, [repaired, cleaned, navigate]);
-
-  if (cleaned.trace !== undefined) {
+  if (search.trace !== undefined) {
     return (
       <TraceView
-        traceId={cleaned.trace}
+        traceId={search.trace}
         onBack={() => {
-          navigate('observability', mergeSearch(cleaned, { trace: undefined }));
+          navigate('observability', mergeSearch(search, { trace: undefined }));
         }}
       />
     );
   }
 
-  return <RunsTable search={cleaned} capabilities={capabilities} />;
+  return <RunsTable search={search} capabilities={capabilities} />;
 }

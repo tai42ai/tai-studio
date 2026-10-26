@@ -86,4 +86,4 @@ export type ReloadConfigResult = z.infer<typeof reloadConfigResult>;
  */
 export const mcpAdvertisedTools = openapi.mcpAdvertisedTools;
 export type McpAdvertisedTools = z.infer<typeof mcpAdvertisedTools>;
-export type McpAdvertisedTool = z.infer<typeof openapi.mcpAdvertisedTool>;
+export type { McpAdvertisedTool } from '../generated/openapi-schemas';

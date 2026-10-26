@@ -3,8 +3,10 @@
  * by-model breakdown, all sourced from `getObservabilityMetrics(from,to,
  * granularity)`. A "View runs" action drills through to the tracing tab carrying
  * the current filter set in the URL. A 501 from the reader renders the dedicated
- * read-not-supported state; a too-broad refusal renders the backend's guidance
- * inline beside the range picker; every other failure is a loud, visible error.
+ * read-not-supported state; a too-broad or not-served refusal renders the backend's
+ * message inline beside the range picker, and a too-broad answer to a range or
+ * granularity change made on this page moves focus to the range picker; every other
+ * failure is a loud, visible error.
  */
 import type { DashboardMetrics } from '@tai42/api-client';
 import {
@@ -20,7 +22,7 @@ import {
   useAppNavigate,
 } from '@tai42/studio-sdk';
 import { useQuery } from '@tanstack/react-query';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useRef, useState } from 'react';
 
 import { AreaChart, type AreaPoint, type BarItem, BarList } from './charts';
 import {
@@ -40,11 +42,14 @@ import {
 } from './format';
 import { metricsKey } from './keys';
 import {
+  isReadNotServed,
   isReadNotSupported,
   isReadTooBroad,
+  ReadNotServedNotice,
   ReadNotSupported,
   ReadTooBroadNotice,
 } from './read-support';
+import { useFocusRangeOnTooBroad } from './time-range-focus';
 
 type TrendMetric = 'runs' | 'cost' | 'avgLatencyMs' | 'totalTokens';
 
@@ -178,6 +183,14 @@ export function StatsTab({ search }: { readonly search: ObservabilitySearch }): 
     queryKey: metricsKey(params),
     queryFn: ({ signal }) => api.getObservabilityMetrics(params, signal),
   });
+  const rangeRef = useRef<HTMLDivElement>(null);
+  const tooBroad = !query.isPending && isReadTooBroad(query.error);
+  useFocusRangeOnTooBroad({
+    tooBroad,
+    hasResult: query.data !== undefined,
+    requestKey: JSON.stringify(params),
+    rangeRef,
+  });
 
   // The full-page marketplace pitch is only the right answer before metrics have
   // ever loaded; a 501 on a refetch of already-loaded data falls through to the
@@ -189,14 +202,16 @@ export function StatsTab({ search }: { readonly search: ObservabilitySearch }): 
   return (
     <div className="tai-stack tai-stack-6">
       <Card>
-        <DateRangePicker
-          aria-label="Metrics time range"
-          value={searchToRange(search)}
-          onValueChange={(value) => {
-            navigate('observability', mergeSearch(search, rangeToPatch(value)));
-          }}
-          disabled={query.isFetching}
-        />
+        <div ref={rangeRef}>
+          <DateRangePicker
+            aria-label="Metrics time range"
+            value={searchToRange(search)}
+            onValueChange={(value) => {
+              navigate('observability', mergeSearch(search, rangeToPatch(value)));
+            }}
+            disabled={query.isFetching}
+          />
+        </div>
       </Card>
 
       <div className="tai-row">
@@ -225,11 +240,13 @@ export function StatsTab({ search }: { readonly search: ObservabilitySearch }): 
           <Skeleton height={96} />
           <Skeleton height={160} />
         </div>
-      ) : isReadTooBroad(query.error) ? (
+      ) : tooBroad ? (
         // A considered "too broad" refusal: the backend can read, this window is
         // just too wide. Show its exact guidance inline with the range picker still
         // above — never the marketplace pitch, never a blanked dashboard.
         <ReadTooBroadNotice message={errorMessage(query.error)} />
+      ) : isReadNotServed(query.error) ? (
+        <ReadNotServedNotice message={errorMessage(query.error)} />
       ) : query.isError ? (
         <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
       ) : (

@@ -31,8 +31,10 @@ import { type CSSProperties, type ReactNode, useMemo, useState } from 'react';
 import { formatCost, formatLatencyMs, formatTokenCount } from './format';
 import { traceKey } from './keys';
 import {
+  isReadNotServed,
   isReadNotSupported,
   isReadTooBroad,
+  ReadNotServedNotice,
   ReadNotSupported,
   ReadTooBroadNotice,
 } from './read-support';
@@ -250,6 +252,8 @@ export function TraceView({
           <ReadNotSupported />
         ) : isReadTooBroad(query.error) ? (
           <ReadTooBroadNotice message={errorMessage(query.error)} />
+        ) : isReadNotServed(query.error) ? (
+          <ReadNotServedNotice message={errorMessage(query.error)} />
         ) : isNotFound(query.error) ? (
           <EmptyState
             title="Trace not available"

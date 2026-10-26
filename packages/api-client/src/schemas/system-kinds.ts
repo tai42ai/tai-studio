@@ -6,11 +6,12 @@ import { fleetResult } from './fleet';
 import { reloadConfigResult } from './manifest-mcp';
 
 // `GET /api/system/kinds` — one row per pluggable kind (identity, accounts,
-// monitoring, storage, backend, channels, webhook_verifiers, config,
-// studio_plugins). `state` is the kind's active/default/off status: `active` = a
-// real plugin serves it, `default` = a built-in fallback serves it, `off` =
-// nothing is registered (a legal state, reported not "fixed"). `plugin` is the
-// provider/module name when known, else null.
+// monitoring, storage, files, backend, sandbox, channels, webhook_verifiers,
+// config, studio_plugins). `state` is the kind's active/default/off status:
+// `active` = a real plugin serves it, `default` = a built-in fallback serves it,
+// `off` = nothing is registered (a legal state, reported not "fixed"). `plugin` is
+// the provider/module name when known, else null. The `files` row reports whether
+// the server's optional file-loading dependencies are installed.
 
 export const kindStatus = openapi.kindStatus;
 export const kindStatusList = openapi.systemKindsListing;

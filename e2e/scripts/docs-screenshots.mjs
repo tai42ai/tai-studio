@@ -93,9 +93,13 @@
  *                  the live backend never returns.
  *   - tracing-sort-guard — the Tracing tab under a cost sort with the filters that sort
  *                  cannot carry disabled, via a forced `GET /api/observability/capabilities`
- *                  payload: the Langfuse reader's real served declaration (the api-client
- *                  fixture). The live demo backend declares no sort × filter exclusion, so it
- *                  never disables a filter; the runs list, the sort and the rows stay live.
+ *                  payload: a backend that declares exclusions, held in this script. The live
+ *                  demo backend declares no sort × filter exclusion, so it never disables a
+ *                  filter; the runs list, the sort and the rows stay live.
+ *   - tracing-link-not-served — the Tracing tab opened from a link whose cost sort the same
+ *                  forced declaration excludes with its status filter: the not-served notice
+ *                  with its "Sort newest first" button in place of the table, the filter bar
+ *                  keeping the link's values. No runs read is sent for that link.
  *   - trace-llm-parts — the newest seeded trace's model-call span: its input and output
  *                  messages in the parts view (the user prompt, the assistant text and the
  *                  "finish: stop" footer).
@@ -234,9 +238,7 @@
  * not here.
  */
 import { chromium } from '@playwright/test';
-import { readFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { crc32, deflateSync } from 'node:zlib';
 
 const STUDIO_URL = process.env.STUDIO_URL ?? 'http://127.0.0.1:8765';
@@ -519,22 +521,38 @@ const BY_MODEL_UNAVAILABLE_METRICS = {
   granularity: 'day',
 };
 
-// A forced served-capabilities payload for the sort-guard state: the Langfuse reader's
-// real served declaration (its metric sorts cannot carry the status / cost / token /
-// latency / version filters), read from the api-client fixture that holds that reader's
-// `capabilities_view` output. The live demo backend combines every sort with every
-// filter, so it never declares an exclusion.
-const LANGFUSE_CAPABILITIES = JSON.parse(
-  readFileSync(
-    fileURLToPath(
-      new URL(
-        '../../packages/api-client/fixtures/redacted/observability-capabilities.json',
-        import.meta.url,
-      ),
-    ),
-    'utf8',
-  ),
-);
+// A forced served-capabilities payload for the sort-guard and not-served states: a
+// backend that declares exclusions (its metric sorts cannot carry the status / cost /
+// token / latency / version filters). The live demo backend combines every sort with
+// every filter, so it never declares an exclusion.
+const METRIC_FILTERS = [
+  'maxCost',
+  'maxLatencyMs',
+  'maxTokens',
+  'minCost',
+  'minLatencyMs',
+  'minTokens',
+  'status',
+  'version',
+];
+const EXCLUDING_CAPABILITIES = {
+  pageSizeMax: 100,
+  sortKeys: ['createdAt', 'cost', 'latencyMs', 'totalTokens'],
+  incompatibleFilters: {
+    cost: METRIC_FILTERS,
+    latencyMs: METRIC_FILTERS,
+    totalTokens: METRIC_FILTERS,
+  },
+  metrics: { measures: ['cost', 'count', 'latency', 'tokens'], dimensions: ['model'] },
+};
+
+/** Serve the declaration that excludes the metric filters under a metric sort. */
+async function forceExcludingCapabilities(page) {
+  await page.route(
+    (url) => url.pathname === '/api/observability/capabilities',
+    (route) => route.fulfill({ json: { data: EXCLUDING_CAPABILITIES } }),
+  );
+}
 
 // The newest seeded docs-demo trace: its model call records its prompt and answer in the
 // GenAI parts shape, its `summarise` step references that answer, and its `follow_up` step
@@ -2221,14 +2239,9 @@ const AUTHED_PAGES = [
     // A seeded run row: the runs list is the live demo backend's, under the live cost sort.
     wait: '[data-testid^="run-row-docs-demo-"]',
     // Force the served capabilities to a declaration the live demo backend never makes
-    // (the Langfuse reader's real one), so the filters a cost sort cannot carry render
+    // (a backend that declares exclusions), so the filters a cost sort cannot carry render
     // disabled. Matched on the pathname, registered before navigation.
-    setup: async (page) => {
-      await page.route(
-        (url) => url.pathname === '/api/observability/capabilities',
-        (route) => route.fulfill({ json: { data: LANGFUSE_CAPABILITIES } }),
-      );
-    },
+    setup: forceExcludingCapabilities,
     // The guard is the shot: refuse to capture unless the excluded filters are disabled.
     action: async (page) => {
       for (const label of ['Min cost', 'Max latency (ms)']) {
@@ -2242,6 +2255,31 @@ const AUTHED_PAGES = [
               { cause: error },
             );
           });
+      }
+    },
+  },
+  {
+    name: 'tracing-link-not-served',
+    path: '/observability?tab=tracing&sort=cost&dir=desc&status=error',
+    wait: '[data-testid="observability-read-not-served"]',
+    // The same forced declaration: a cost sort cannot carry the status filter the link sets.
+    setup: forceExcludingCapabilities,
+    // The notice is the shot: refuse to capture unless it names the sort and offers the way out.
+    action: async (page) => {
+      const notice = page.getByTestId('observability-read-not-served');
+      const expected = [
+        notice.getByText(
+          'The monitoring backend does not sort runs by Cost with the filters in this link.',
+        ),
+        notice.getByRole('button', { name: 'Sort newest first' }),
+      ];
+      for (const locator of expected) {
+        await locator.waitFor({ state: 'visible', timeout: WAIT_TIMEOUT }).catch((error) => {
+          throw new Error(
+            'tracing-link-not-served: the not-served notice does not show its message and its "Sort newest first" button — refusing to ship a wrong screenshot',
+            { cause: error },
+          );
+        });
       }
     },
   },

@@ -10,7 +10,7 @@
  */
 import type { ObservabilityCapabilities } from '@tai42/api-client';
 import { Badge, Button, Card, DateRangePicker, useAppNavigate } from '@tai42/studio-sdk';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, type Ref, useState } from 'react';
 
 import {
   ADVANCED_FILTER_KEYS,
@@ -38,6 +38,8 @@ export interface FilterBarProps {
   readonly capabilities: ObservabilityCapabilities | undefined;
   readonly capabilitiesError: boolean;
   readonly onRetryCapabilities: () => void;
+  /** The container around the time-range picker, for the table to move focus into. */
+  readonly rangeRef?: Ref<HTMLDivElement>;
 }
 
 export function FilterBar({
@@ -46,6 +48,7 @@ export function FilterBar({
   capabilities,
   capabilitiesError,
   onRetryCapabilities,
+  rangeRef,
 }: FilterBarProps): ReactNode {
   const navigate = useAppNavigate();
   const [draft, setDraft] = useState<FilterDraft>(() => draftFromSearch(search));
@@ -84,12 +87,14 @@ export function FilterBar({
   return (
     <Card>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
-        <DateRangePicker
-          aria-label="Run time range"
-          value={searchToRange(search)}
-          onValueChange={onRangeChange}
-          disabled={disabled}
-        />
+        <div ref={rangeRef}>
+          <DateRangePicker
+            aria-label="Run time range"
+            value={searchToRange(search)}
+            onValueChange={onRangeChange}
+            disabled={disabled}
+          />
+        </div>
         <MetricFilterFields draft={draft} unavailable={unavailable} onChange={set} />
         <div
           style={{

@@ -8,8 +8,9 @@
  *
  * They also read the sort × filter combinations the monitoring backend serves from
  * its served capabilities (`getObservabilityCapabilities`), so a shared or
- * hand-edited URL is repaired to a legal query before it reaches the backend, and
- * the widgets that would create an unserved combination are guarded on both sides.
+ * hand-edited URL whose sort the backend does not serve is named before any read
+ * is sent, and the widgets that would create an unserved combination are guarded
+ * on both sides.
  */
 import type { MetricsQuery, ObservabilityCapabilities, RunsQuery } from '@tai42/api-client';
 import type { DateRangeValue, PageProps } from '@tai42/studio-sdk';
@@ -97,23 +98,41 @@ export function hasIncompatibleFilter(
   return incompatibleFilters(cap, sort).some((param) => values[param] !== undefined);
 }
 
+/** The header label of each runs-table sort. */
+export const SORT_LABELS: Readonly<Record<SortKey, string>> = {
+  createdAt: 'When',
+  cost: 'Cost',
+  latencyMs: 'Latency',
+  totalTokens: 'Tokens',
+};
+
+/** A search's sort the backend does not serve, alone or with the filters it sets. */
+export interface BlockedSort {
+  readonly sort: SortKey;
+  readonly withFilters: boolean;
+}
+
 /**
- * Repair a sort × filter combination the backend cannot serve that arrived through
- * the URL (a shared or hand-edited link the widget guard never mediated). The
- * filter set is the more specific expression of intent, so the conflict is
- * repaired by DROPPING the sort and its direction — falling back to the default
- * order — rather than silently discarding the operator's filters. A legal search
- * is returned unchanged (same reference), so callers can detect a repair by identity.
+ * The search's sort when the backend does not serve it, alone or with a filter
+ * the search sets; ``null`` when the backend serves the search as it is.
  */
-export function sanitizeSearch(
+export function blockedSort(
   search: ObservabilitySearch,
   cap: ObservabilityCapabilities,
-): ObservabilitySearch {
-  if (hasIncompatibleFilter(search, cap, search.sort)) {
-    const { sort: _sort, dir: _dir, ...rest } = search;
-    return rest;
-  }
-  return search;
+): BlockedSort | null {
+  const sort = search.sort;
+  if (sort === undefined) return null;
+  if (!isSortServed(cap, sort)) return { sort, withFilters: false };
+  if (hasIncompatibleFilter(search, cap, sort)) return { sort, withFilters: true };
+  return null;
+}
+
+/** The one sentence the runs table shows for a sort the backend does not serve. */
+export function blockedSortMessage(blocked: BlockedSort): string {
+  const label = SORT_LABELS[blocked.sort];
+  return blocked.withFilters
+    ? `The monitoring backend does not sort runs by ${label} with the filters in this link.`
+    : `The monitoring backend does not sort runs by ${label}.`;
 }
 
 // -- date range ⇄ search window ----------------------------------------------

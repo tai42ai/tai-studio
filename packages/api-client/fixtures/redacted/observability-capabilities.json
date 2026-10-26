@@ -1,37 +1,6 @@
 {
   "pageSizeMax": 100,
   "sortKeys": ["createdAt", "cost", "latencyMs", "totalTokens"],
-  "incompatibleFilters": {
-    "cost": [
-      "maxCost",
-      "maxLatencyMs",
-      "maxTokens",
-      "minCost",
-      "minLatencyMs",
-      "minTokens",
-      "status",
-      "version"
-    ],
-    "latencyMs": [
-      "maxCost",
-      "maxLatencyMs",
-      "maxTokens",
-      "minCost",
-      "minLatencyMs",
-      "minTokens",
-      "status",
-      "version"
-    ],
-    "totalTokens": [
-      "maxCost",
-      "maxLatencyMs",
-      "maxTokens",
-      "minCost",
-      "minLatencyMs",
-      "minTokens",
-      "status",
-      "version"
-    ]
-  },
+  "incompatibleFilters": {},
   "metrics": { "measures": ["cost", "count", "latency", "tokens"], "dimensions": ["model"] }
 }

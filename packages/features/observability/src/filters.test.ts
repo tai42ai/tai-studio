@@ -8,6 +8,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   activeTab,
+  blockedSort,
+  blockedSortMessage,
   hasIncompatibleFilter,
   incompatibleFilters,
   isSortServed,
@@ -16,7 +18,6 @@ import {
   type ObservabilitySearch,
   rangeToPatch,
   runsParams,
-  sanitizeSearch,
   searchToRange,
 } from './filters';
 
@@ -142,18 +143,22 @@ describe('isSortServed / incompatibleFilters / hasIncompatibleFilter', () => {
   });
 });
 
-describe('sanitizeSearch', () => {
-  it('drops the sort (and its direction) when the served map says it cannot carry a set filter', () => {
-    const cleaned = sanitizeSearch(
-      { tab: 'tracing', sort: 'createdAt', dir: 'asc', tags: ['x'] },
-      CAP,
-    );
-    expect(cleaned).toEqual({ tab: 'tracing', tags: ['x'] });
-    expect(cleaned).not.toHaveProperty('sort');
-    expect(cleaned).not.toHaveProperty('dir');
+describe('blockedSort', () => {
+  it('names a sort the backend does not list, alone', () => {
+    expect(blockedSort({ tab: 'tracing', sort: 'latencyMs', dir: 'asc' }, CAP)).toEqual({
+      sort: 'latencyMs',
+      withFilters: false,
+    });
   });
 
-  it('keeps a sort the served map lets combine with every set filter', () => {
+  it('names a listed sort with a filter the search sets that the sort cannot carry', () => {
+    expect(blockedSort({ tab: 'tracing', sort: 'createdAt', tags: ['x'] }, CAP)).toEqual({
+      sort: 'createdAt',
+      withFilters: true,
+    });
+  });
+
+  it('is null for a listed sort without an excluded filter set', () => {
     const search: ObservabilitySearch = {
       tab: 'tracing',
       sort: 'cost',
@@ -162,12 +167,32 @@ describe('sanitizeSearch', () => {
       status: 'error',
       tags: ['x'],
     };
-    expect(sanitizeSearch(search, CAP)).toBe(search);
+    expect(blockedSort(search, CAP)).toBeNull();
+    expect(blockedSort({ tab: 'tracing', sort: 'createdAt', status: 'error' }, CAP)).toBeNull();
   });
 
-  it('returns the same reference when nothing needs repair', () => {
-    const search: ObservabilitySearch = { tab: 'tracing', sort: 'createdAt', status: 'error' };
-    expect(sanitizeSearch(search, CAP)).toBe(search);
+  it('is null for a search with no sort', () => {
+    expect(blockedSort({ tab: 'tracing', tags: ['x'] }, CAP)).toBeNull();
+  });
+});
+
+describe('blockedSortMessage', () => {
+  it('names the header label of a sort the backend does not serve', () => {
+    expect(blockedSortMessage({ sort: 'latencyMs', withFilters: false })).toBe(
+      'The monitoring backend does not sort runs by Latency.',
+    );
+    expect(blockedSortMessage({ sort: 'createdAt', withFilters: false })).toBe(
+      'The monitoring backend does not sort runs by When.',
+    );
+  });
+
+  it('says the filters in the link are why a listed sort is not served', () => {
+    expect(blockedSortMessage({ sort: 'cost', withFilters: true })).toBe(
+      'The monitoring backend does not sort runs by Cost with the filters in this link.',
+    );
+    expect(blockedSortMessage({ sort: 'totalTokens', withFilters: true })).toBe(
+      'The monitoring backend does not sort runs by Tokens with the filters in this link.',
+    );
   });
 });
 
