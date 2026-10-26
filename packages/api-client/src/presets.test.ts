@@ -209,6 +209,7 @@ describe('toolTags — additive per-tool native surface', () => {
 describe('holdersPreview — rename and delete preflight', () => {
   const holder = {
     kind: 'preset',
+    tag: 'presets',
     name: 'nightly',
     locator: { preset: 'nightly' },
     summary: 'base of preset nightly',
@@ -222,7 +223,7 @@ describe('holdersPreview — rename and delete preflight', () => {
   it('defaults an absent holder locator to an empty map', () => {
     const parsed = schemas.holdersPreview.parse({
       action: 'delete',
-      holders: [{ kind: 'preset', name: 'nightly', summary: 'base' }],
+      holders: [{ kind: 'preset', tag: 'presets', name: 'nightly', summary: 'base' }],
     });
     expect(parsed.holders[0]?.locator).toEqual({});
   });
@@ -231,7 +232,16 @@ describe('holdersPreview — rename and delete preflight', () => {
     expect(() =>
       schemas.holdersPreview.parse({
         action: 'delete',
-        holders: [{ kind: 'preset', name: 'nightly', locator: {} }],
+        holders: [{ kind: 'preset', tag: 'presets', name: 'nightly', locator: {} }],
+      }),
+    ).toThrow();
+  });
+
+  it('throws loudly when a holder carries no tag', () => {
+    expect(() =>
+      schemas.holdersPreview.parse({
+        action: 'delete',
+        holders: [{ kind: 'preset', name: 'nightly', locator: {}, summary: 'base' }],
       }),
     ).toThrow();
   });

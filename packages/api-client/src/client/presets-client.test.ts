@@ -415,6 +415,7 @@ describe('preset client transport', () => {
   it('getPresetReferees GETs the referees route for the action and parses the holders', async () => {
     const holder = {
       kind: 'preset',
+      tag: 'presets',
       name: 'nightly',
       locator: { preset: 'nightly' },
       summary: 'base of preset nightly',

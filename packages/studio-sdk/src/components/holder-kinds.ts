@@ -50,6 +50,21 @@ const CORE_ROUTES: Readonly<Record<string, (holder: ReferenceHolder) => CoreHold
   setting: () => ({ token: 'settings', search: {} }),
 };
 
+/**
+ * A count holder stands for the holders of one kind and tag the caller's role cannot
+ * read: its name is the tag and its locator carries only the count. It names no holder,
+ * so it has no page to link to.
+ */
+export function isCountHolder(holder: ReferenceHolder): boolean {
+  const keys = Object.keys(holder.locator);
+  return (
+    holder.name === holder.tag &&
+    keys.length === 1 &&
+    keys[0] === 'count' &&
+    typeof holder.locator.count === 'number'
+  );
+}
+
 /** Every kind the platform reports; a plugin cannot register a link for one. */
 export const CORE_HOLDER_KINDS: ReadonlySet<string> = new Set(Object.keys(CORE_ROUTES));
 

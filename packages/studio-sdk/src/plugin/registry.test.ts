@@ -607,7 +607,13 @@ describe('plugin registry — holder links', () => {
     const link = getContributions().holderLinks.get('report node');
     expect(link?.pluginId).toBe('acme');
     expect(
-      link?.resolve({ kind: 'report node', name: 'f', locator: { node: 'n1' }, summary: 's' }),
+      link?.resolve({
+        kind: 'report node',
+        tag: 'reports',
+        name: 'f',
+        locator: { node: 'n1' },
+        summary: 's',
+      }),
     ).toEqual({ pagePath: 'reports', params: 'f' });
   });
 

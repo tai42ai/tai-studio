@@ -454,7 +454,7 @@ export type FormField = z.infer<typeof formField>;
 export const formMethod = z.object({ "fields": z.array(formField).min(1), "id": z.string().min(1), "purpose": z.enum(["login","invite"]).default("login"), "shape": z.literal("form").default("form"), "submit_path": z.string(), "title": z.string().min(1) }).strict();
 export type FormMethod = z.infer<typeof formMethod>;
 
-export const referenceHolder = z.object({ "kind": z.string().min(1), "locator": z.record(z.string(), z.union([z.string(), z.number().int()])).default({}), "name": z.string().min(1), "summary": z.string().min(1) }).strict();
+export const referenceHolder = z.object({ "kind": z.string().min(1), "locator": z.record(z.string(), z.union([z.string(), z.number().int()])).default({}), "name": z.string().min(1), "summary": z.string().min(1), "tag": z.string().min(1) }).strict();
 export type ReferenceHolder = z.infer<typeof referenceHolder>;
 
 export const holdersPreview = z.object({ "action": z.enum(["rename","delete","detach"]), "holders": z.array(referenceHolder) });

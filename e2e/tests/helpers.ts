@@ -236,6 +236,7 @@ export async function openHeldPresetDelete(page: Page): Promise<Locator> {
       holders: [
         {
           kind: 'conversation route',
+          tag: 'conversations',
           name: HELD_ROUTE,
           locator: {},
           summary: `conversation route '${HELD_ROUTE}'`,

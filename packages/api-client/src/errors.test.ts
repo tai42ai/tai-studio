@@ -6,6 +6,7 @@ import { ApiError, holdersFromError, storedPresetFaultFromError } from './errors
 
 const holder = {
   kind: 'hook',
+  tag: 'hooks',
   name: 'h',
   locator: { hook: 'h' },
   summary: "hook 'h' names 'jq/gate' at condition",

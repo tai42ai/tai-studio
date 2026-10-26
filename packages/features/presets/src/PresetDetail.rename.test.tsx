@@ -75,8 +75,8 @@ describe('PresetDetail — rename preflight + delete', () => {
       getPresetReferees: vi.fn().mockResolvedValue({
         action: 'rename',
         holders: [
-          { kind: 'preset', name: 'a_ref', locator: {}, summary: "preset 'a_ref'" },
-          { kind: 'hook', name: 'h1', locator: {}, summary: "hook 'h1'" },
+          { kind: 'preset', tag: 'presets', name: 'a_ref', locator: {}, summary: "preset 'a_ref'" },
+          { kind: 'hook', tag: 'hooks', name: 'h1', locator: {}, summary: "hook 'h1'" },
         ],
       }),
       renamePreset,
@@ -208,7 +208,7 @@ describe('PresetDetail — rename preflight + delete', () => {
     const message = "preset 'paris_weather' cannot be renamed — held by:\n  hook 'h1'";
     const refusal = new ApiError(message, 409, undefined, undefined, {
       error: message,
-      holders: [{ kind: 'hook', name: 'h1', locator: {}, summary: "hook 'h1'" }],
+      holders: [{ kind: 'hook', tag: 'hooks', name: 'h1', locator: {}, summary: "hook 'h1'" }],
     });
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
@@ -242,7 +242,9 @@ describe('PresetDetail — rename preflight + delete', () => {
       listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
       getPresetReferees: vi.fn().mockResolvedValue({
         action: 'delete',
-        holders: [{ kind: 'schedule', name: 's1', locator: {}, summary: "schedule 's1'" }],
+        holders: [
+          { kind: 'schedule', tag: 'schedules', name: 's1', locator: {}, summary: "schedule 's1'" },
+        ],
       }),
       deletePreset,
     };

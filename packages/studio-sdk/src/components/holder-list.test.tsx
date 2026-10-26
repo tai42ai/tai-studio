@@ -36,7 +36,7 @@ function holder(
   name: string,
   locator: ReferenceHolder['locator'] = {},
 ): ReferenceHolder {
-  return { kind, name, locator, summary: `${kind} ${name}` };
+  return { kind, tag: 'presets', name, locator, summary: `${kind} ${name}` };
 }
 
 function renderList(
@@ -133,6 +133,37 @@ describe('HolderList', () => {
     expect(screen.getByText('Still used by — remove these first:')).toHaveClass('tai-holder-lead');
     const list = screen.getByRole('list', { name: 'Holders of p' });
     expect(list.parentElement).toHaveClass('tai-scroll-region', 'tai-holder-list');
+  });
+
+  it('shows a count of holders the role cannot read as text, for a core and a plugin kind', () => {
+    const resolveHolderLink = vi.fn(() => ({ pluginId: 'acme', pagePath: 'reports' }));
+    const count = (kind: string): ReferenceHolder => ({
+      kind,
+      tag: 'states',
+      name: 'states',
+      locator: { count: 2 },
+      summary: `${kind}: 2 not readable with your role`,
+    });
+    renderList(
+      [count('preset version'), count('report node'), holder('hook', 'h')],
+      makeNav({ resolveHolderLink }),
+    );
+    const list = screen.getByRole('list', { name: 'Holders of p' });
+    expect(
+      within(list).getByText('preset version: 2 not readable with your role').closest('a'),
+    ).toBeNull();
+    expect(
+      within(list).getByText('report node: 2 not readable with your role').closest('a'),
+    ).toBeNull();
+    expect(resolveHolderLink).not.toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: 'hook h' })).toBeInTheDocument();
+  });
+
+  it('links a holder whose locator carries a count beside other fields', () => {
+    renderList([holder('preset version', 'presets', { version: 3, count: 1 })], makeNav());
+    expect(screen.getByRole('link', { name: 'preset version presets' }).getAttribute('href')).toBe(
+      '/presets?preset=presets&version=3',
+    );
   });
 
   it('throws on a core holder missing the locator its kind carries', () => {

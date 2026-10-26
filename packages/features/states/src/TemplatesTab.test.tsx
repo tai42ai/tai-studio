@@ -548,6 +548,7 @@ describe('TemplatesTab — orphan reconcile on a declarations edit', () => {
       detail([{ template: 'notes', path: [], parameters: {}, declarations: {} }]);
     const presetHolder = {
       kind: 'preset',
+      tag: 'presets',
       name: 'welcome',
       locator: { version: 1 },
       summary: "preset 'welcome' version 1",

@@ -337,6 +337,7 @@ const referenceHolder: z.ZodObject<{
     locator: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>>;
     name: z.ZodString;
     summary: z.ZodString;
+    tag: z.ZodString;
 }, z.core.$strict>;
 
 // @public

@@ -6,6 +6,7 @@ import { createApiClient } from './client';
 
 const holder = {
   kind: 'hook',
+  tag: 'hooks',
   name: 'h',
   locator: { hook: 'h' },
   summary: "hook 'h' names 'p'",
