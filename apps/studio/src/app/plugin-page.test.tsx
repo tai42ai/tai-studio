@@ -38,7 +38,7 @@ function serveShell(pages: string[]): void {
 }
 
 /** A page that echoes the params + search it was handed. */
-function FlowsPage({ params, search }: PluginPageProps) {
+function ReportsPage({ params, search }: PluginPageProps) {
   return <div data-testid="echo">{JSON.stringify({ params, search })}</div>;
 }
 
@@ -49,14 +49,14 @@ describe('plugin deep-link page', () => {
   });
 
   it('forwards the validated sub-path params and search to the page', async () => {
-    serveShell(['flows']);
+    serveShell(['reports']);
     const register = (ctx: PluginContext): void => {
       ctx.registerPage({
-        path: 'flows',
-        title: 'Flows',
-        component: FlowsPage,
+        path: 'reports',
+        title: 'Reports',
+        component: ReportsPage,
         params: {
-          parseParams: (remainder) => ({ flow: remainder }),
+          parseParams: (remainder) => ({ report: remainder }),
           parseSearch: (raw) => ({ dir: typeof raw.dir === 'string' ? raw.dir : 'root' }),
         },
       });
@@ -64,29 +64,29 @@ describe('plugin deep-link page', () => {
     const importModule = vi.fn(() => Promise.resolve({ register }));
 
     renderStudio({
-      initialPath: '/plugins/acme/flows/myflow?dir=eu',
+      initialPath: '/plugins/acme/reports/myreport?dir=eu',
       sessionKey: 'k-deep',
       importModule,
     });
 
     const echo = await screen.findByTestId('echo');
     expect(JSON.parse(echo.textContent)).toEqual({
-      params: { flow: 'myflow' },
+      params: { report: 'myreport' },
       search: { dir: 'eu' },
     });
   });
 
   it('renders a loud error card when the sub-path fails the page schema', async () => {
-    serveShell(['flows']);
+    serveShell(['reports']);
     const register = (ctx: PluginContext): void => {
       ctx.registerPage({
-        path: 'flows',
-        title: 'Flows',
-        component: FlowsPage,
+        path: 'reports',
+        title: 'Reports',
+        component: ReportsPage,
         params: {
           parseParams: (remainder) => {
-            if (remainder === '') throw new Error('a flow id is required');
-            return { flow: remainder };
+            if (remainder === '') throw new Error('a report id is required');
+            return { report: remainder };
           },
         },
       });
@@ -94,28 +94,28 @@ describe('plugin deep-link page', () => {
     const importModule = vi.fn(() => Promise.resolve({ register }));
 
     renderStudio({
-      initialPath: '/plugins/acme/flows',
+      initialPath: '/plugins/acme/reports',
       sessionKey: 'k-deep',
       importModule,
     });
 
-    expect(await screen.findByText(/a flow id is required/)).toBeInTheDocument();
+    expect(await screen.findByText(/a report id is required/)).toBeInTheDocument();
     expect(screen.queryByTestId('echo')).toBeNull();
   });
 
   it('forwards ONLY the rendered plugin’s own entryState slot, never a sibling’s', async () => {
-    serveShell(['flows']);
+    serveShell(['reports']);
     // The page echoes the entryState it was handed.
     function EntryEcho({ entryState }: PluginPageProps) {
       return <div data-testid="entry">{JSON.stringify(entryState ?? null)}</div>;
     }
     const register = (ctx: PluginContext): void => {
-      ctx.registerPage({ path: 'flows', title: 'Flows', component: EntryEcho });
+      ctx.registerPage({ path: 'reports', title: 'Reports', component: EntryEcho });
     };
     const importModule = vi.fn(() => Promise.resolve({ register }));
 
     const { studio } = renderStudio({
-      initialPath: '/plugins/acme/flows',
+      initialPath: '/plugins/acme/reports',
       sessionKey: 'k-entry',
       importModule,
     });
@@ -137,14 +137,14 @@ describe('plugin deep-link page', () => {
   });
 
   it('is a not-found card for a sub-path against a schemaless page', async () => {
-    serveShell(['flows']);
+    serveShell(['reports']);
     const register = (ctx: PluginContext): void => {
-      ctx.registerPage({ path: 'flows', title: 'Flows', component: FlowsPage });
+      ctx.registerPage({ path: 'reports', title: 'Reports', component: ReportsPage });
     };
     const importModule = vi.fn(() => Promise.resolve({ register }));
 
     renderStudio({
-      initialPath: '/plugins/acme/flows/orphan',
+      initialPath: '/plugins/acme/reports/orphan',
       sessionKey: 'k-deep',
       importModule,
     });

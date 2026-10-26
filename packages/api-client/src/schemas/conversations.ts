@@ -51,8 +51,8 @@ export const conversationAnswerStatus = openapi.conversationRecordView.shape.ans
 export type ConversationAnswerStatus = z.infer<typeof conversationAnswerStatus>;
 
 /**
- * Who authored a record's outgoing side. `client` is the ordinary turn the flow
- * answered; `operator` is a message a human sent into the thread; `send` is a
+ * Who authored a record's outgoing side. `client` is the ordinary turn the route's
+ * target answered; `operator` is a message a human sent into the thread; `send` is a
  * message the platform sent on its own (a notification, an ask, a notice), named
  * by `sent_by`. An `operator` or `send` record answers no message: its text rides
  * `answer` and its `inbound_text` is empty.
@@ -142,9 +142,9 @@ export const conversationMessageSearchPage = openapi.messageSearchEnvelope;
 export type ConversationMessageSearchPage = z.infer<typeof conversationMessageSearchPage>;
 
 /**
- * Who answers a thread's incoming messages: `agent` lets the flow reply on its
- * own; `manual` holds the flow back so a human answers. `source` says whether the
- * setting is the thread's own (`thread`) or inherited from its route (`route`).
+ * Who answers a thread's incoming messages: `agent` lets the route's target reply on
+ * its own; `manual` holds the target back so a human answers. `source` says whether
+ * the setting is the thread's own (`thread`) or inherited from its route (`route`).
  */
 export const conversationThreadMode = openapi.threadModeView.shape.mode;
 export type ConversationThreadMode = z.infer<typeof conversationThreadMode>;

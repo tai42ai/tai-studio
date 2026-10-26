@@ -76,7 +76,7 @@ describe('HolderList', () => {
         holder('api key', 'k'),
         holder('principal', 'u'),
         holder('role', 'ro'),
-        holder('setting', 'FLOW_DEFAULT_ON_ERROR'),
+        holder('setting', 'LOG_LEVEL'),
       ],
       makeNav(),
     );
@@ -97,26 +97,26 @@ describe('HolderList', () => {
     expect(href('api key k')).toBe('/settings');
     expect(href('principal u')).toBe('/settings');
     expect(href('role ro')).toBe('/settings');
-    expect(href('setting FLOW_DEFAULT_ON_ERROR')).toBe('/settings');
+    expect(href('setting LOG_LEVEL')).toBe('/settings');
   });
 
   it('links a plugin kind through the registered resolver, and shows an unresolved kind as text', () => {
     const nav = makeNav({
       resolveHolderLink: (h) =>
-        h.kind === 'flow node' ? { pluginId: 'acme', pagePath: 'flows', params: h.name } : null,
+        h.kind === 'report node' ? { pluginId: 'acme', pagePath: 'reports', params: h.name } : null,
     });
-    renderList([holder('flow node', 'f', { node: 'n1' }), holder('widget', 'w')], nav);
-    expect(screen.getByRole('link', { name: 'flow node f' }).getAttribute('href')).toBe(
-      '/plugins/acme/flows/f',
+    renderList([holder('report node', 'f', { node: 'n1' }), holder('widget', 'w')], nav);
+    expect(screen.getByRole('link', { name: 'report node f' }).getAttribute('href')).toBe(
+      '/plugins/acme/reports/f',
     );
     const list = screen.getByRole('list', { name: 'Holders of p' });
     expect(within(list).getByText('widget w').closest('a')).toBeNull();
   });
 
   it('shows a plugin kind as text when the host resolves no plugin kinds', () => {
-    renderList([holder('flow node', 'f')], makeNav());
+    renderList([holder('report node', 'f')], makeNav());
     expect(screen.queryByRole('link')).toBeNull();
-    expect(screen.getByText('flow node f')).toBeInTheDocument();
+    expect(screen.getByText('report node f')).toBeInTheDocument();
   });
 
   it('calls onNavigate, then navigates, on a plain click', async () => {

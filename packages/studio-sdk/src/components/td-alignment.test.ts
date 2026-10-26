@@ -1,7 +1,7 @@
 /**
  * The td vertical-alignment guard.
  *
- * The flows-list misalignment (a 36px centered action button beside top-aligned
+ * A table-row misalignment (a 36px centered action button beside top-aligned
  * text cells) traced to a single rule: `.tai-table td` set `vertical-align: top`.
  * The fix is `middle`. `components.css` legitimately uses `top`/`bottom` in OTHER
  * rules (`.tai-prose td`, `.tai-table th`), so a whole-file contains-check would

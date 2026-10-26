@@ -147,8 +147,8 @@ export function InteractionsPage(_props: PageProps<'interactions'>): ReactNode {
           }}
         >
           <p style={{ margin: 0 }}>
-            Withdraw this question without answering it? The ask is cancelled and the flow that
-            asked it will not resume. This cannot be undone.
+            Withdraw this question without answering it? The ask is cancelled and the run that asked
+            it will not resume. This cannot be undone.
           </p>
         </ConfirmDialog>
       ) : null}

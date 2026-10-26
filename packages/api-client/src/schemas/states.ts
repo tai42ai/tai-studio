@@ -177,10 +177,10 @@ export const consumerLink = openapi.consumerLink;
 export type ConsumerLink = z.infer<typeof consumerLink>;
 
 /**
- * One thing that binds a state (mirrors ConsumerRow): its `kind` (flow / hook / schedule
- * / agent), `name`, human `detail` and optional `link`. `unavailable` marks a consumer
- * family that cannot be listed on this deployment (e.g. no scheduling backend), surfaced
- * as a muted line — never swallowed.
+ * One thing that binds a state (mirrors ConsumerRow): its `kind` (hook / schedule / agent
+ * / preset / a consumer plugin's own kind), `name`, human `detail` and optional `link`.
+ * `unavailable` marks a consumer family that cannot be listed on this deployment (e.g.
+ * no scheduling backend), surfaced as a muted line — never swallowed.
  */
 export const consumerRow = openapi.consumerRow;
 export type ConsumerRow = z.infer<typeof consumerRow>;

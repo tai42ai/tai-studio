@@ -1,6 +1,6 @@
 /**
  * The optional state-binding editor — one shape on every door (a preset, a channel
- * route, a schedule, a hook) and, in the flow engine, per node. It attaches one or
+ * route, a schedule, a hook, or a plugin's own door). It attaches one or
  * more states, each with the templates it attaches on save, a subject/scope, input
  * injections evaluated before the run, and updates applied after it.
  *

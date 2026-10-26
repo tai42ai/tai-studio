@@ -73,7 +73,7 @@ function EntryStatePage({
       <button
         type="button"
         onClick={() => {
-          navigatePluginWithOptions('flows', 'index', 'myflow', undefined, navOptions);
+          navigatePluginWithOptions('reports', 'index', 'myreport', undefined, navOptions);
         }}
       >
         nav-with-options
@@ -81,7 +81,7 @@ function EntryStatePage({
       <button
         type="button"
         onClick={() => {
-          updatePluginEntryState('flows', updateState);
+          updatePluginEntryState('reports', updateState);
         }}
       >
         update-state
@@ -120,14 +120,14 @@ describe('usePluginEntryNavigation — old-host guard', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'nav-with-options' }));
     expect(nav.navigatePluginWithOptions).toHaveBeenCalledWith(
-      'flows',
+      'reports',
       'index',
-      'myflow',
+      'myreport',
       undefined,
       { state: { sel: 3 } },
     );
     await userEvent.click(screen.getByRole('button', { name: 'update-state' }));
-    expect(nav.updatePluginEntryState).toHaveBeenCalledWith('flows', undefined);
+    expect(nav.updatePluginEntryState).toHaveBeenCalledWith('reports', undefined);
   });
 });
 
@@ -193,7 +193,7 @@ describe('committedRef fix — a vetoed Back restores the just-written entry sta
     await waitFor(() => {
       expect(nav.navigatePluginWithOptions).toHaveBeenCalledTimes(1);
     });
-    const targetHref = nav.resolvePluginPath('flows', 'index', 'myflow', undefined);
+    const targetHref = nav.resolvePluginPath('reports', 'index', 'myreport', undefined);
 
     // A subsequent Back is canceled by restoring the NEW entry WITH its plugin state,
     // not null — so the state this navigation just wrote is not clobbered off the entry.
@@ -201,7 +201,7 @@ describe('committedRef fix — a vetoed Back restores the just-written entry sta
     vi.spyOn(window.history, 'go').mockImplementation(() => undefined);
     window.dispatchEvent(new Event('popstate'));
     expect(pushSpy).toHaveBeenCalledWith(
-      { studioPluginEntryState: { flows: { sel: 7 } } },
+      { studioPluginEntryState: { reports: { sel: 7 } } },
       '',
       targetHref,
     );
@@ -219,7 +219,7 @@ describe('committedRef fix — a vetoed Back restores the just-written entry sta
     await waitFor(() => {
       expect(nav.navigatePluginWithOptions).toHaveBeenCalledTimes(1);
     });
-    const targetHref = nav.resolvePluginPath('flows', 'index', 'myflow', undefined);
+    const targetHref = nav.resolvePluginPath('reports', 'index', 'myreport', undefined);
     const pushSpy = vi.spyOn(window.history, 'pushState');
     vi.spyOn(window.history, 'go').mockImplementation(() => undefined);
     window.dispatchEvent(new Event('popstate'));
@@ -238,7 +238,7 @@ describe('updatePluginEntryState — guard-free, merges + refreshes committedRef
     );
     await userEvent.click(screen.getByRole('button', { name: 'update-state' }));
     // No guard run: the update is not a navigation away, so it commits immediately.
-    expect(nav.updatePluginEntryState).toHaveBeenCalledWith('flows', { sel: 9 });
+    expect(nav.updatePluginEntryState).toHaveBeenCalledWith('reports', { sel: 9 });
     expect(handler).not.toHaveBeenCalled();
   });
 
@@ -267,7 +267,7 @@ describe('updatePluginEntryState — guard-free, merges + refreshes committedRef
     vi.spyOn(window.history, 'go').mockImplementation(() => undefined);
     window.dispatchEvent(new Event('popstate'));
     expect(pushSpy).toHaveBeenCalledWith(
-      { studioPluginEntryState: { other: { x: 1 }, flows: { sel: 9 } }, __TSR_key: 'k1' },
+      { studioPluginEntryState: { other: { x: 1 }, reports: { sel: 9 } }, __TSR_key: 'k1' },
       '',
       committedHref,
     );

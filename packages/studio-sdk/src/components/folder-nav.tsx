@@ -1,7 +1,7 @@
 /**
  * Folder navigation primitives for the tool-organization tree — shared by the tools
- * screen and the flows page so both explore, breadcrumb, and re-file against
- * one identical set of controls.
+ * screen and any plugin screen that shows the same tree, so all explore, breadcrumb, and
+ * re-file against one identical set of controls.
  *
  * The tree is passed FLAT (a {@link Folder} list keyed by `id`, each naming its
  * `parentId`); these helpers derive the current directory, the breadcrumb path, and
@@ -10,7 +10,7 @@
  * looping forever — bad data degrades to a truncated path, never a hang.
  *
  * `FolderPicker` carries inline new-folder creation, so a folder can be created from
- * BOTH consuming screens through this one component — never a flows-page-only
+ * EVERY consuming screen through this one component — never one screen's own
  * affordance.
  */
 import { type ReactNode, useState } from 'react';

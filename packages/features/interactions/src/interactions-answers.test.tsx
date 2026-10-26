@@ -370,7 +370,7 @@ describe('InteractionsPage — cancel (withdraw) a pending question', () => {
     const grouped = (id: string): string =>
       encodeInteraction({
         interaction_id: id,
-        group_id: 'flow-1',
+        group_id: 'run-1',
         answer_format: 'text',
         question: `Step ${id}`,
         format_payload: {},

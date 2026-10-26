@@ -62,10 +62,12 @@ describe('shell navigation', () => {
     // Plugin paths are runtime contributions resolved through the catch-all route,
     // never a RouteToken — so they carry a pluginId, a page path, an optional sub-path
     // remainder, and an open search bag.
-    expect(nav.resolvePluginPath('acme', 'flows')).toBe('/plugins/acme/flows');
-    expect(nav.resolvePluginPath('acme', 'flows', 'myflow')).toBe('/plugins/acme/flows/myflow');
-    expect(nav.resolvePluginPath('acme', 'flows', 'myflow', { dir: 'eu' })).toBe(
-      '/plugins/acme/flows/myflow?dir=eu',
+    expect(nav.resolvePluginPath('acme', 'reports')).toBe('/plugins/acme/reports');
+    expect(nav.resolvePluginPath('acme', 'reports', 'myreport')).toBe(
+      '/plugins/acme/reports/myreport',
+    );
+    expect(nav.resolvePluginPath('acme', 'reports', 'myreport', { dir: 'eu' })).toBe(
+      '/plugins/acme/reports/myreport?dir=eu',
     );
   });
 
@@ -77,9 +79,9 @@ describe('shell navigation', () => {
     );
     const { studio } = renderStudio({ initialPath: '/interactions', sessionKey: 'k-nav-plugin' });
     await screen.findByRole('link', { name: 'Tools' });
-    studio.navigation.navigatePlugin('acme', 'flows', 'myflow', { dir: 'eu' });
+    studio.navigation.navigatePlugin('acme', 'reports', 'myreport', { dir: 'eu' });
     await waitFor(() => {
-      expect(studio.router.state.location.pathname).toBe('/plugins/acme/flows/myflow');
+      expect(studio.router.state.location.pathname).toBe('/plugins/acme/reports/myreport');
       expect(studio.router.state.location.searchStr).toBe('?dir=eu');
     });
   });
@@ -262,63 +264,63 @@ describe('shell plugin nav', () => {
   });
 
   it('marks ONLY the longest-prefix entry when nested nav entries share a prefix', async () => {
-    serveShell(['flows', 'flows/detail']);
+    serveShell(['reports', 'reports/detail']);
     // A plugin registers two nested pages + nav entries whose hrefs are prefixes of
     // one another. Both pages accept a sub-path so the deep link resolves cleanly.
     const register = (ctx: PluginContext): void => {
       ctx.registerPage({
-        path: 'flows',
-        title: 'Flows',
-        component: () => <div>flows page</div>,
+        path: 'reports',
+        title: 'Reports',
+        component: () => <div>reports page</div>,
         params: { parseParams: (remainder) => ({ rest: remainder }) },
       });
       ctx.registerPage({
-        path: 'flows/detail',
-        title: 'Flows detail',
-        component: () => <div>flows detail page</div>,
+        path: 'reports/detail',
+        title: 'Reports detail',
+        component: () => <div>reports detail page</div>,
         params: { parseParams: (remainder) => ({ rest: remainder }) },
       });
-      ctx.registerNavEntry({ path: 'flows', title: 'Flows' });
-      ctx.registerNavEntry({ path: 'flows/detail', title: 'Detail' });
+      ctx.registerNavEntry({ path: 'reports', title: 'Reports' });
+      ctx.registerNavEntry({ path: 'reports/detail', title: 'Detail' });
     };
     const importModule = vi.fn(() => Promise.resolve({ register }));
 
     renderStudio({
-      initialPath: '/plugins/acme/flows/detail/x',
+      initialPath: '/plugins/acme/reports/detail/x',
       sessionKey: 'k-nav',
       importModule,
     });
 
     const list = await screen.findByRole('list', { name: 'Plugins' });
     const detailLink = within(list).getByRole('link', { name: 'Detail' });
-    const flowsLink = within(list).getByRole('link', { name: 'Flows' });
+    const reportsLink = within(list).getByRole('link', { name: 'Reports' });
     // The deep path sits under BOTH hrefs, but aria-current marks EXACTLY the
-    // deepest match (`flows/detail`) — never both, so a single winner is announced.
+    // deepest match (`reports/detail`) — never both, so a single winner is announced.
     expect(detailLink).toHaveAttribute('aria-current', 'page');
-    expect(flowsLink).not.toHaveAttribute('aria-current');
+    expect(reportsLink).not.toHaveAttribute('aria-current');
   });
 
   it('still highlights a lone nav entry on a deep sub-path (no nesting)', async () => {
-    serveShell(['flows']);
+    serveShell(['reports']);
     const register = (ctx: PluginContext): void => {
       ctx.registerPage({
-        path: 'flows',
-        title: 'Flows',
-        component: () => <div>flows page</div>,
+        path: 'reports',
+        title: 'Reports',
+        component: () => <div>reports page</div>,
         params: { parseParams: (remainder) => ({ rest: remainder }) },
       });
-      ctx.registerNavEntry({ path: 'flows', title: 'Flows' });
+      ctx.registerNavEntry({ path: 'reports', title: 'Reports' });
     };
     const importModule = vi.fn(() => Promise.resolve({ register }));
 
     renderStudio({
-      initialPath: '/plugins/acme/flows/deep',
+      initialPath: '/plugins/acme/reports/deep',
       sessionKey: 'k-nav',
       importModule,
     });
 
     // The ordinary case is unchanged: a deep sub-path still highlights its one entry.
-    const link = await screen.findByRole('link', { name: 'Flows' });
+    const link = await screen.findByRole('link', { name: 'Reports' });
     expect(link).toHaveAttribute('aria-current', 'page');
   });
 
@@ -371,9 +373,9 @@ describe('shell plugin entry-state channel', () => {
     expect(nav).toBeDefined();
     if (nav === undefined) throw new Error('host is missing navigatePluginWithOptions');
 
-    nav('acme', 'flows', 'myflow', { dir: 'eu' }, { state: { sel: 3 } });
+    nav('acme', 'reports', 'myreport', { dir: 'eu' }, { state: { sel: 3 } });
     await waitFor(() => {
-      expect(studio.router.state.location.pathname).toBe('/plugins/acme/flows/myflow');
+      expect(studio.router.state.location.pathname).toBe('/plugins/acme/reports/myreport');
     });
     expect(studio.router.state.location.searchStr).toBe('?dir=eu');
     // The state rides history.state under the plugin's own namespace slot.
@@ -388,9 +390,9 @@ describe('shell plugin entry-state channel', () => {
     if (nav === undefined) throw new Error('host is missing navigatePluginWithOptions');
 
     // Push acme's page carrying acme's slot.
-    nav('acme', 'flows', 'a', undefined, { state: { a: 1 } });
+    nav('acme', 'reports', 'a', undefined, { state: { a: 1 } });
     await waitFor(() => {
-      expect(studio.router.state.location.pathname).toBe('/plugins/acme/flows/a');
+      expect(studio.router.state.location.pathname).toBe('/plugins/acme/reports/a');
     });
     // REPLACE the current entry with beta's page + beta's slot: acme's slot on the same
     // entry is merge-preserved, and only beta's TARGET slot is (re)written.
@@ -411,9 +413,9 @@ describe('shell plugin entry-state channel', () => {
       throw new Error('host is missing the entry-state channel');
     }
 
-    nav('acme', 'flows', 'x', undefined, { state: { sel: 1 } });
+    nav('acme', 'reports', 'x', undefined, { state: { sel: 1 } });
     await waitFor(() => {
-      expect(studio.router.state.location.pathname).toBe('/plugins/acme/flows/x');
+      expect(studio.router.state.location.pathname).toBe('/plugins/acme/reports/x');
     });
     const hrefBefore = studio.router.state.location.href;
     const depth = studio.router.history.length;
@@ -437,9 +439,9 @@ describe('shell plugin entry-state channel', () => {
       throw new Error('host is missing the entry-state channel');
     }
 
-    nav('acme', 'flows', 'x', undefined, { state: { a: 1 } });
+    nav('acme', 'reports', 'x', undefined, { state: { a: 1 } });
     await waitFor(() => {
-      expect(studio.router.state.location.pathname).toBe('/plugins/acme/flows/x');
+      expect(studio.router.state.location.pathname).toBe('/plugins/acme/reports/x');
     });
     // A second plugin writes its own slot onto the SAME entry; neither clobbers the other.
     update('beta', { b: 2 });

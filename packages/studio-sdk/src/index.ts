@@ -496,7 +496,7 @@ export {
 export type { SchemaEditorChange, SchemaEditorProps, SchemaLintResult } from './schema-editor';
 export { lintSchemaText, SchemaEditor } from './schema-editor';
 
-// -- State-binding editor (the one binding shape every door + flow node authors) --
+// -- State-binding editor (the one binding shape every door authors, plugin doors included) --
 export type {
   AdapterCompileResult,
   AdapterMappingProps,

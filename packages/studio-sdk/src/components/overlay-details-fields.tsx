@@ -1,8 +1,8 @@
 /**
  * `OverlayDetailsFields` — the display-name + user-tags editor shared by EVERY
  * tool_meta edit surface (the tools-screen edit dialog, the presets screen, and
- * the flows page). One canonical control means the merge-patch write semantics
- * exist exactly once.
+ * any plugin screen that edits tool_meta). One canonical control means the
+ * merge-patch write semantics exist exactly once.
  *
  * Controlled: the caller owns `value` (prefilled from the tool's overlay row) and
  * receives every keystroke through `onChange`. This component edits ONLY the two

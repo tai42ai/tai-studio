@@ -1,10 +1,11 @@
 /**
- * The Consumers tab: everything that binds this state — flows, hooks, schedules and
- * agents — read from the union of registered listers (`GET /api/states/{name}/consumers`).
- * A consumer whose FAMILY cannot be listed on this deployment (e.g. no scheduling
- * backend) is surfaced as a muted line, never swallowed. A bound consumer with a link
- * opens its own screen: a feature token (hooks / scheduling / agents) navigates in-shell,
- * a plugin path opens the plugin's screen.
+ * The Consumers tab: everything that binds this state — hooks, schedules, agents,
+ * presets and a consumer plugin's own kinds — read from the union of registered
+ * listers (`GET /api/states/{name}/consumers`). A consumer whose FAMILY cannot be
+ * listed on this deployment (e.g. no scheduling backend) is surfaced as a muted line,
+ * never swallowed. A bound consumer with a link opens its own screen: a feature token
+ * (hooks / scheduling / agents / presets) navigates in-shell, a plugin path opens the
+ * plugin's screen.
  */
 import type { ConsumerRow, StateDetail } from '@tai42/api-client';
 import {

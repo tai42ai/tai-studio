@@ -1,5 +1,5 @@
 /**
- * A thread's reply mode: whether the flow answers on its own (`agent`) or is held
+ * A thread's reply mode: whether the route's target answers on its own (`agent`) or is held
  * back so a human answers (`manual`). One of the conversation monitor's thread
  * mutations, grafted onto the otherwise read-only monitor.
  *

@@ -135,7 +135,7 @@ class DemoSpan:
                 self._obs.level = level.value
             if status_message is not None:
                 self._obs.status_message = status_message
-        except Exception:  # fail-safe: a monitoring outage must not break a flow
+        except Exception:  # fail-safe: a monitoring outage must not break the caller
             logger.exception("DemoSpan.update failed")
 
     def set_trace_metadata(self, *, name: str | None = None, tags: list[str] | None = None) -> None:
