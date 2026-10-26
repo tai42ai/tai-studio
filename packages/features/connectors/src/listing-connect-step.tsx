@@ -8,7 +8,8 @@
  *
  * The wait checks every 2 s and on "Check again". It gives up loudly at once when
  * the reload converged and a check made after it still misses, and otherwise after
- * {@link INSTALL_SETTLE_TIMEOUT_MS}.
+ * {@link INSTALL_SETTLE_TIMEOUT_MS}; a wait that gave up checks no more until
+ * "Check again" starts it over.
  */
 import {
   type MarketplaceInstallResult,
@@ -28,12 +29,19 @@ import {
   Spinner,
   useApi,
 } from '@tai42/studio-sdk';
-import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import {
+  type QueryFunction,
+  type QueryKey,
+  useQuery,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 import { ConnectForm } from './connect-form';
 import { PROVIDERS_KEY } from './keys';
 import type { OnConnected } from './use-connect-form';
+import type { McpStatusView } from './use-directory';
 
 /** How long the step waits for the installed plugin to show before it gives up. */
 export const INSTALL_SETTLE_TIMEOUT_MS = 60_000;
@@ -63,15 +71,34 @@ interface Settle {
   readonly restart: () => void;
 }
 
+interface SettleRead<T> {
+  readonly queryKey: QueryKey;
+  readonly queryFn: QueryFunction<T>;
+  /** Whether a read shows what the install added. */
+  readonly isFound: (data: T) => boolean;
+}
+
 /**
- * The wait's clock over `query`: a check is a refetch this hook started, so "a
- * check made after the reload" never counts a read that answered before it.
+ * The wait: its read and its clock. The read polls until it finds what the install
+ * added or the wait gives up; a check is a refetch this hook started, so "a check
+ * made after the reload" never counts a read that answered before it.
  */
-function useSettle(query: UseQueryResult, found: boolean, converged: boolean): Settle {
+function useSettle<T>(
+  { queryKey, queryFn, isFound }: SettleRead<T>,
+  converged: boolean,
+): { readonly query: UseQueryResult<T>; readonly found: boolean; readonly settle: Settle } {
   const [checked, setChecked] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const [round, setRound] = useState(0);
   const roundRef = useRef(0);
+  const over = timedOut || (converged && checked);
+  const query = useQuery({
+    queryKey,
+    queryFn,
+    refetchInterval: ({ state }) =>
+      over || (state.data !== undefined && isFound(state.data)) ? false : SETTLE_POLL_MS,
+  });
+  const found = query.data !== undefined && isFound(query.data);
   const { refetch } = query;
 
   const checkNow = useCallback((): void => {
@@ -109,7 +136,7 @@ function useSettle(query: UseQueryResult, found: boolean, converged: boolean): S
     setRound((n) => n + 1);
   }, []);
 
-  return { gaveUp: !found && (timedOut || (converged && checked)), checkNow, restart };
+  return { query, found, settle: { gaveUp: !found && over, checkNow, restart } };
 }
 
 function WaitView({
@@ -170,16 +197,18 @@ function ProviderWait({
 }): ReactNode {
   const api = useApi();
   const [found, setFound] = useState<ProviderView | null>(null);
-  const query = useQuery({
-    queryKey: PROVIDERS_KEY,
-    queryFn: ({ signal }) => api.listProviders(signal),
-    refetchInterval: found === null ? SETTLE_POLL_MS : false,
-  });
+  const { query, settle } = useSettle(
+    {
+      queryKey: PROVIDERS_KEY,
+      queryFn: ({ signal }) => api.listProviders(signal),
+      isFound: (data) => data.providers.some((provider) => provider.id === providerId),
+    },
+    converged,
+  );
   const listed = query.data?.providers.find((provider) => provider.id === providerId) ?? null;
   useEffect(() => {
     if (found === null && listed !== null) setFound(listed);
   }, [found, listed]);
-  const settle = useSettle(query, found !== null || listed !== null, converged);
 
   if (found !== null) {
     return (
@@ -194,6 +223,15 @@ function ProviderWait({
   return (
     <WaitView name={name} missing={providerId} query={query} settle={settle} onClose={onClose} />
   );
+}
+
+/** The titles the status read lists neither as bound nor as failed. */
+function missingTitles(titles: readonly string[], status: McpStatusView): string[] {
+  const listed = new Set([
+    ...Object.keys(status.bound),
+    ...status.failed.map((record) => record.title),
+  ]);
+  return titles.filter((title) => !listed.has(title));
 }
 
 function ServersWait({
@@ -211,24 +249,21 @@ function ServersWait({
 }): ReactNode {
   const api = useApi();
   const [handedOn, setHandedOn] = useState(false);
-  const query = useQuery({
-    queryKey: mcpStatusKey,
-    queryFn: ({ signal }) => api.getMcpStatus(signal),
-    refetchInterval: handedOn ? false : SETTLE_POLL_MS,
-  });
-  const listed = new Set([
-    ...Object.keys(query.data?.bound ?? {}),
-    ...(query.data?.failed ?? []).map((record) => record.title),
-  ]);
-  const missing = titles.filter((title) => !listed.has(title));
-  const found = query.data !== undefined && missing.length === 0;
+  const { query, found, settle } = useSettle(
+    {
+      queryKey: mcpStatusKey,
+      queryFn: ({ signal }) => api.getMcpStatus(signal),
+      isFound: (data) => missingTitles(titles, data).length === 0,
+    },
+    converged,
+  );
+  const missing = query.data === undefined ? titles : missingTitles(titles, query.data);
   useEffect(() => {
     if (found && !handedOn) {
       setHandedOn(true);
       onServersReady(titles);
     }
   }, [found, handedOn, onServersReady, titles]);
-  const settle = useSettle(query, found, converged);
 
   if (found) return null;
   return (
