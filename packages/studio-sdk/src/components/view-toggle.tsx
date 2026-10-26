@@ -5,9 +5,9 @@
  * option's text label is rendered for assistive tech only (`visuallyHiddenLabel`),
  * so the segment shows just its glyph while keeping a real accessible name. A single
  * screen's choice persists across sessions in `localStorage`, keyed per SURFACE —
- * the tools screen and the flows page each remember their own view — via
- * {@link useViewMode}. The two live in the SDK so every entity screen (and the
- * flows page) toggles identically; `EntityCardGrid` renders the card half.
+ * the tools screen and each plugin screen that uses it remember their own view — via
+ * {@link useViewMode}. The two live in the SDK so every entity screen (a plugin's
+ * included) toggles identically; `EntityCardGrid` renders the card half.
  */
 import { type ReactNode, useCallback, useState } from 'react';
 

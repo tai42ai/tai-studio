@@ -147,7 +147,7 @@ def test_disable_suppresses_mutation_of_a_live_trace() -> None:
 
 def test_emit_is_fail_safe_when_the_store_raises() -> None:
     # The FAIL-SAFE invariant: an internal backend error must never propagate
-    # into the calling flow. A store that raises inside add_observation must not
+    # into the caller. A store that raises inside add_observation must not
     # break start_span / record_span / create_event.
     class FailingStore(TraceStore):
         def add_observation(self, trace_id: str, observation: object) -> None:  # type: ignore[override]

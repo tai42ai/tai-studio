@@ -30,25 +30,25 @@ describe('resolvePluginPage', () => {
   });
 
   it('consumes the sub-path remainder as params when the page declares parseParams', () => {
-    const schema: PluginPageParamsSchema = { parseParams: (remainder) => ({ flow: remainder }) };
-    const resolution = resolvePluginPage([page('flows', schema)], 'flows/myflow', NO_SEARCH);
+    const schema: PluginPageParamsSchema = { parseParams: (remainder) => ({ report: remainder }) };
+    const resolution = resolvePluginPage([page('reports', schema)], 'reports/myreport', NO_SEARCH);
     expect(resolution.status).toBe('matched');
     if (resolution.status !== 'matched') throw new Error('expected match');
-    expect(resolution.params).toEqual({ flow: 'myflow' });
+    expect(resolution.params).toEqual({ report: 'myreport' });
   });
 
   it('passes the EMPTY remainder to parseParams on an exact match', () => {
-    const schema: PluginPageParamsSchema = { parseParams: (remainder) => ({ flow: remainder }) };
-    const resolution = resolvePluginPage([page('flows', schema)], 'flows', NO_SEARCH);
+    const schema: PluginPageParamsSchema = { parseParams: (remainder) => ({ report: remainder }) };
+    const resolution = resolvePluginPage([page('reports', schema)], 'reports', NO_SEARCH);
     if (resolution.status !== 'matched') throw new Error('expected match');
-    expect(resolution.params).toEqual({ flow: '' });
+    expect(resolution.params).toEqual({ report: '' });
   });
 
   it('validates and shapes the raw search through parseSearch', () => {
     const schema: PluginPageParamsSchema = {
       parseSearch: (raw) => ({ dir: typeof raw.dir === 'string' ? raw.dir : 'root' }),
     };
-    const resolution = resolvePluginPage([page('flows', schema)], 'flows', { dir: 'eu' });
+    const resolution = resolvePluginPage([page('reports', schema)], 'reports', { dir: 'eu' });
     if (resolution.status !== 'matched') throw new Error('expected match');
     expect(resolution.search).toEqual({ dir: 'eu' });
   });
@@ -65,13 +65,13 @@ describe('resolvePluginPage', () => {
   it('is invalid (loud) when parseParams throws', () => {
     const schema: PluginPageParamsSchema = {
       parseParams: () => {
-        throw new Error('bad flow id');
+        throw new Error('bad report id');
       },
     };
-    const resolution = resolvePluginPage([page('flows', schema)], 'flows/x', NO_SEARCH);
+    const resolution = resolvePluginPage([page('reports', schema)], 'reports/x', NO_SEARCH);
     expect(resolution.status).toBe('invalid');
     if (resolution.status !== 'invalid') throw new Error('expected invalid');
-    expect(resolution.error).toBe('bad flow id');
+    expect(resolution.error).toBe('bad report id');
   });
 
   it('is invalid when parseSearch throws', () => {
@@ -80,7 +80,7 @@ describe('resolvePluginPage', () => {
         throw new Error('bad search');
       },
     };
-    const resolution = resolvePluginPage([page('flows', schema)], 'flows', { dir: 1 });
+    const resolution = resolvePluginPage([page('reports', schema)], 'reports', { dir: 1 });
     expect(resolution.status).toBe('invalid');
     if (resolution.status !== 'invalid') throw new Error('expected invalid');
     expect(resolution.error).toBe('bad search');

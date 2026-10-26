@@ -47,7 +47,7 @@ describe('useViewMode', () => {
   });
 
   it('persists the choice per surface across a remount', () => {
-    const first = renderHook(() => useViewMode('flows'));
+    const first = renderHook(() => useViewMode('reports'));
     act(() => {
       first.result.current[1]('cards');
     });
@@ -56,7 +56,7 @@ describe('useViewMode', () => {
     const other = renderHook(() => useViewMode('tools'));
     expect(other.result.current[0]).toBe('list');
     // A fresh mount of the same surface reads the stored choice.
-    const second = renderHook(() => useViewMode('flows'));
+    const second = renderHook(() => useViewMode('reports'));
     expect(second.result.current[0]).toBe('cards');
   });
 

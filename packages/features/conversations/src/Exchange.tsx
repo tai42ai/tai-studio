@@ -49,7 +49,7 @@ const bubbleStyle: CSSProperties = {
 /**
  * The visitor speaks on the leading edge in the accent tint; the agent answers
  * below it. An operator answers on the agent's side too, set apart by an accent
- * border so a human's message reads as distinct from the flow's. A send whose
+ * border so a human's message reads as distinct from the target's. A send whose
  * author the record does not prove sits on the same side in neutral tokens with a
  * dashed border, carrying no author's colour.
  */

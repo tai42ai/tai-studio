@@ -13,7 +13,7 @@ A genuine implementation of the vendor-neutral monitoring contract
 (`tai42_contract.monitoring`):
 
 - `DemoWriter` — the full `MonitoringWriter`, recording live spans/events into an
-  in-memory `TraceStore` (fail-safe: an emit never raises into a flow).
+  in-memory `TraceStore` (fail-safe: an emit never raises into the caller).
 - `DemoReader` — the full `MonitoringReader`, doing real aggregation over the
   store (summary totals, a day/hour/week trend series, a by-model breakdown, the
   run list, and single-trace detail).

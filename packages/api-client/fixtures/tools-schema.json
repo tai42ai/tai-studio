@@ -229,7 +229,7 @@
       "type": "object"
     },
     "output": null,
-    "description": "Re-register one app tool (e.g. kind \"flow\") from its current stored definition.\n\nApplied on this worker and broadcast to the fleet (all workers, or only\n``targets``); each worker re-reads the definition itself, so the op carries only\nthe kind and name. The response embeds the per-worker fleet report."
+    "description": "Re-register one app tool (e.g. kind \"example_tool\") from its current stored definition.\n\nApplied on this worker and broadcast to the fleet (all workers, or only\n``targets``); each worker re-reads the definition itself, so the op carries only\nthe kind and name. The response embeds the per-worker fleet report."
   },
   "remove_tool": {
     "input": {
@@ -260,7 +260,7 @@
       "type": "object"
     },
     "output": null,
-    "description": "Remove one app tool (e.g. kind \"flow\") from the live registry.\n\nApplied on this worker and broadcast to the fleet (all workers, or only\n``targets``); the response embeds the per-worker fleet report."
+    "description": "Remove one app tool (e.g. kind \"example_tool\") from the live registry.\n\nApplied on this worker and broadcast to the fleet (all workers, or only\n``targets``); the response embeds the per-worker fleet report."
   },
   "reload_config": {
     "input": {

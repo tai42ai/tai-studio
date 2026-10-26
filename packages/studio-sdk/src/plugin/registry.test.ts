@@ -591,24 +591,24 @@ describe('plugin registry — routeBase', () => {
 });
 
 describe('plugin registry — holder links', () => {
-  const flowNode = {
-    kind: 'flow node',
-    resolve: (holder: { name: string }) => ({ pagePath: 'flows', params: holder.name }),
+  const reportNode = {
+    kind: 'report node',
+    resolve: (holder: { name: string }) => ({ pagePath: 'reports', params: holder.name }),
   };
 
   it('commits a resolver keyed by its kind, stamped with the plugin', async () => {
     await loadPlugin(
       'acme',
       (ctx) => {
-        ctx.registerHolderLink(flowNode);
+        ctx.registerHolderLink(reportNode);
       },
       NO_HOST_INPUTS,
     );
-    const link = getContributions().holderLinks.get('flow node');
+    const link = getContributions().holderLinks.get('report node');
     expect(link?.pluginId).toBe('acme');
     expect(
-      link?.resolve({ kind: 'flow node', name: 'f', locator: { node: 'n1' }, summary: 's' }),
-    ).toEqual({ pagePath: 'flows', params: 'f' });
+      link?.resolve({ kind: 'report node', name: 'f', locator: { node: 'n1' }, summary: 's' }),
+    ).toEqual({ pagePath: 'reports', params: 'f' });
   });
 
   it('throws on a core kind, committing nothing', async () => {
@@ -616,7 +616,7 @@ describe('plugin registry — holder links', () => {
       loadPlugin(
         'acme',
         (ctx) => {
-          ctx.registerHolderLink({ ...flowNode, kind: 'preset' });
+          ctx.registerHolderLink({ ...reportNode, kind: 'preset' });
         },
         NO_HOST_INPUTS,
       ),
@@ -629,12 +629,12 @@ describe('plugin registry — holder links', () => {
       loadPlugin(
         'acme',
         (ctx) => {
-          ctx.registerHolderLink(flowNode);
-          ctx.registerHolderLink(flowNode);
+          ctx.registerHolderLink(reportNode);
+          ctx.registerHolderLink(reportNode);
         },
         NO_HOST_INPUTS,
       ),
-    ).rejects.toThrow('a holder link is already registered for kind “flow node”');
+    ).rejects.toThrow('a holder link is already registered for kind “report node”');
     expect(getContributions().holderLinks.size).toBe(0);
   });
 
@@ -642,7 +642,7 @@ describe('plugin registry — holder links', () => {
     await loadPlugin(
       'acme',
       (ctx) => {
-        ctx.registerHolderLink(flowNode);
+        ctx.registerHolderLink(reportNode);
       },
       NO_HOST_INPUTS,
     );
@@ -650,12 +650,12 @@ describe('plugin registry — holder links', () => {
       loadPlugin(
         'globex',
         (ctx) => {
-          ctx.registerHolderLink(flowNode);
+          ctx.registerHolderLink(reportNode);
         },
         NO_HOST_INPUTS,
       ),
-    ).rejects.toThrow('a holder link is already registered for kind “flow node”');
-    expect(getContributions().holderLinks.get('flow node')?.pluginId).toBe('acme');
+    ).rejects.toThrow('a holder link is already registered for kind “report node”');
+    expect(getContributions().holderLinks.get('report node')?.pluginId).toBe('acme');
   });
 
   it('seals registerHolderLink once register settles', async () => {
@@ -664,7 +664,7 @@ describe('plugin registry — holder links', () => {
       'acme',
       (ctx) => {
         late = () => {
-          ctx.registerHolderLink(flowNode);
+          ctx.registerHolderLink(reportNode);
         };
       },
       NO_HOST_INPUTS,

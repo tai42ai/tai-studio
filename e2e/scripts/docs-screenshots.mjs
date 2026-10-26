@@ -75,7 +75,7 @@
  *                  fields, Write policies, Parameters (name, schema, default) and the Trace writes line.
  *   - states-pending-saves — the States page's Pending saves card on its All outstanding tab:
  *                  the newer save held behind a failed save (Retry / Discard), newest first, via a
- *                  forced `GET /api/state-pending-saves` payload (the demo backend runs no flow
+ *                  forced `GET /api/state-pending-saves` payload (the demo backend runs nothing
  *                  whose save can fail).
  *   - states-records-held — the Records tab with the line above the subjects table that counts
  *                  the subjects held by a failed pending save and links to the Pending saves card,
@@ -587,7 +587,7 @@ async function showResolved(page, text) {
 
 // The pending-saves payload is FORCED through a route override: a save fails only when its
 // apply is refused after the run committed (a re-declare between the two, or a deferred call
-// that fails), and the demo backend runs no flow that defers a call or stages across a
+// that fails), and the demo backend runs nothing that defers a call or stages across a
 // re-declare. Two saves on one `notes` subject: the older one failed its records phase, the
 // newer one waits behind it. Each answer is the door's real page shape (decoded by the
 // studio's strict `pendingSavesPage` schema), answered per `status` filter the way the door
@@ -3173,7 +3173,7 @@ async function waitForPopulated(page, entry, theme) {
 /**
  * Frame a React Flow canvas so a TALL graph is captured WHOLE, not cut off.
  *
- * WHY: a canvas pane caps zoom at the flow's `minZoom` (0.5) and this harness shoots
+ * WHY: a canvas pane caps zoom at the canvas's `minZoom` (0.5) and this harness shoots
  * a FIXED 1440x900 viewport. A graph taller than the ~900px pane cannot fit at >= 0.5
  * zoom, so `fitView` centers it and the top/bottom overflow is transformed off-screen
  * — present in the DOM but clipped by the pane's overflow, so the fixed-viewport shot

@@ -217,7 +217,7 @@ describe('useNavigationGuard — browser back/forward (popstate)', () => {
         <button
           type="button"
           onClick={() => {
-            navigatePlugin('flows', 'index', 'myflow');
+            navigatePlugin('reports', 'index', 'myreport');
           }}
         >
           go
@@ -232,9 +232,9 @@ describe('useNavigationGuard — browser back/forward (popstate)', () => {
     // An allowed guarded navigatePlugin advances committedRef to the shell-resolved target.
     await userEvent.click(screen.getByRole('button', { name: 'go' }));
     await waitFor(() => {
-      expect(nav.navigatePlugin).toHaveBeenCalledWith('flows', 'index', 'myflow', undefined);
+      expect(nav.navigatePlugin).toHaveBeenCalledWith('reports', 'index', 'myreport', undefined);
     });
-    const targetHref = nav.resolvePluginPath('flows', 'index', 'myflow', undefined);
+    const targetHref = nav.resolvePluginPath('reports', 'index', 'myreport', undefined);
     // A subsequent Back is now canceled by restoring the NEW plugin page, not the arm-time URL.
     const pushSpy = vi.spyOn(window.history, 'pushState');
     vi.spyOn(window.history, 'go').mockImplementation(() => undefined);

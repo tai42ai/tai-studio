@@ -33,8 +33,8 @@ interface Candidate {
 
 /**
  * Whether the URL `path` is covered by `prefix` under the `/`-boundary rule: an exact
- * match, or a strictly deeper sub-path (`prefix/…`). The boundary stops `flow` from
- * matching `flowers`. This is the single-winner prefix semantic shared with the shell
+ * match, or a strictly deeper sub-path (`prefix/…`). The boundary stops `report` from
+ * matching `reporting`. This is the single-winner prefix semantic shared with the shell
  * nav's active-entry highlight (see `shell-layout.tsx`).
  */
 export function pathHasPrefix(path: string, prefix: string): boolean {

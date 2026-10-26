@@ -34,7 +34,7 @@ const INBOUND_TURN_KEYS = [
   {
     name: 'route',
     gloss:
-      'the name of the route the turn entered through, so a flow bound to several routes can tell them apart',
+      'the name of the route the turn entered through, so a target bound to several routes can tell them apart',
   },
   { name: 'thread_id', gloss: "the turn's canonical thread id (the thread doors' id)" },
   { name: 'person_id', gloss: 'the linked person id, when the sender is a paired person' },

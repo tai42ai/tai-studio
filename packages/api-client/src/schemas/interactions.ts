@@ -374,7 +374,7 @@ export type InteractionAnswered = z.infer<typeof interactionAnswered>;
 
 /**
  * The cancel door's response — a pending ask was WITHDRAWN without an answer (the
- * asking flow does not resume). `status` is `"cancelled"`; the shape mirrors the
+ * asking run does not resume). `status` is `"cancelled"`; the shape mirrors the
  * answer door's terminal reply, but the door is distinct so it carries its own
  * schema.
  */

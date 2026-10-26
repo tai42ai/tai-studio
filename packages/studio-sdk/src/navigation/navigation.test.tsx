@@ -131,19 +131,21 @@ describe('navigation', () => {
         <button
           type="button"
           onClick={() => {
-            navigatePlugin('flows', 'index', 'myflow', { dir: 'root' });
+            navigatePlugin('reports', 'index', 'myreport', { dir: 'root' });
           }}
         >
-          {resolvePluginPath('flows', 'index', 'myflow', { dir: 'root' })}
+          {resolvePluginPath('reports', 'index', 'myreport', { dir: 'root' })}
         </button>
       );
     }
     wrap(nav, <Go />);
     const button = screen.getByRole('button');
     // `resolvePluginPath` yields the deep-link href verbatim.
-    expect(button).toHaveTextContent('/plugins/flows/index/myflow?dir=root');
+    expect(button).toHaveTextContent('/plugins/reports/index/myreport?dir=root');
     await userEvent.click(button);
-    expect(nav.navigatePlugin).toHaveBeenCalledWith('flows', 'index', 'myflow', { dir: 'root' });
+    expect(nav.navigatePlugin).toHaveBeenCalledWith('reports', 'index', 'myreport', {
+      dir: 'root',
+    });
   });
 
   it('usePluginNavigation throws loudly outside a NavigationProvider', () => {

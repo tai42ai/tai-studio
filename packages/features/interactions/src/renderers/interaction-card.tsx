@@ -86,7 +86,7 @@ function Attribution({ interaction }: { readonly interaction: StreamInteraction 
  * `useInteractionsStream`, not this component.
  *
  * A PENDING card also carries a quiet "Cancel question" ghost action when the page
- * supplies `onCancel`: it withdraws the ask without answering it (the flow that
+ * supplies `onCancel`: it withdraws the ask without answering it (the run that
  * asked never resumes). The action rides ONLY the pending branch — an answered card
  * is already terminal, so there is nothing to withdraw. The confirm dialog and the
  * cancel request itself are owned by the page, not this card.

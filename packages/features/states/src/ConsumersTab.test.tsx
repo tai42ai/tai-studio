@@ -23,7 +23,7 @@ const state = {
 } as unknown as StateDetail;
 
 function row(over: Record<string, unknown>) {
-  return { kind: 'flow', name: null, detail: null, link: null, unavailable: null, ...over };
+  return { kind: 'report', name: null, detail: null, link: null, unavailable: null, ...over };
 }
 
 describe('ConsumersTab', () => {
@@ -53,21 +53,21 @@ describe('ConsumersTab', () => {
       client: {
         stateConsumers: vi.fn().mockResolvedValue([
           row({
-            kind: 'flow',
+            kind: 'report',
             name: 'greeter',
             detail: 'binds with subject_expr .turn.subject',
             link: {
               token: null,
-              plugin_path: 'tai42_acme_plugin/flows',
-              search: { flow: 'greeter', tab: 'bindings' },
+              plugin_path: 'tai42_acme_plugin/reports',
+              search: { report: 'greeter', tab: 'bindings' },
             },
           }),
         ]),
       },
     });
-    await user.click(await screen.findByRole('button', { name: 'Open flow greeter' }));
-    expect(navigatePlugin).toHaveBeenCalledWith('tai42_acme_plugin', 'flows', undefined, {
-      flow: 'greeter',
+    await user.click(await screen.findByRole('button', { name: 'Open report greeter' }));
+    expect(navigatePlugin).toHaveBeenCalledWith('tai42_acme_plugin', 'reports', undefined, {
+      report: 'greeter',
       tab: 'bindings',
     });
   });
@@ -127,7 +127,7 @@ describe('ConsumersTab', () => {
         stateConsumers: vi.fn().mockResolvedValue([
           row({ kind: 'agent', name: 'noodle', detail: 'names a state_* builtin' }),
           row({
-            kind: 'flow',
+            kind: 'report',
             name: 'bare',
             link: { token: null, plugin_path: 'no-slash-here', search: null },
           }),

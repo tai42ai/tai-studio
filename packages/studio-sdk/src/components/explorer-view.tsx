@@ -274,8 +274,8 @@ export function ExplorerView<T>({
   const pageStart = (effectivePage - 1) * pageSize;
   const pageEntries = entries.slice(pageStart, pageStart + pageSize);
 
-  // Every surface label is a regular English plural (Tools/Templates/Resources/
-  // Flows), so a count of one drops the trailing "s".
+  // Every surface label is a regular English plural (Tools/Templates/Resources),
+  // so a count of one drops the trailing "s".
   const countLabel =
     items.length === 1 ? label.toLowerCase().replace(/s$/, '') : label.toLowerCase();
 

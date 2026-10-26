@@ -6,7 +6,7 @@
  * OLD bundle that lazily imports a sibling chunk by its old hashed name AFTER a
  * new deploy hits a 404 ("Failed to fetch dynamically imported module") and the
  * feature silently breaks. This covers the shell's OWN chunks AND the Vite-built
- * plugin bundles loaded into the same page (e.g. the flows plugin).
+ * plugin bundles loaded into the same page.
  *
  * The cure is to reload ONCE: the reload re-fetches the no-cache HTML entry and
  * with it a consistent, current chunk set. The one-shot guard is load-bearing —

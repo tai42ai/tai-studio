@@ -6,9 +6,9 @@ const ALREADY_ANSWERED_MESSAGE = 'This question was already answered elsewhere.'
 
 /**
  * The withdraw-confirm's specific failure copy. A 409 means the question was answered
- * (by another client, or the flow, in the meantime) and is no longer cancellable; a
- * 404 means it is already gone (answered, withdrawn, or expired). Both are states the
- * operator cannot retry, so the dialog names them plainly rather than showing a raw
+ * (by another client, or by a door resuming the run that asked it, in the meantime) and is no
+ * longer cancellable; a 404 means it is already gone (answered, withdrawn, or expired). Both are
+ * states the operator cannot retry, so the dialog names them plainly rather than showing a raw
  * server line. Any other failure falls through to the generic message.
  */
 const CANCEL_CONFLICT_MESSAGE =

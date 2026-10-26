@@ -147,7 +147,7 @@ describe('useNavigationGuard — SDK navigation interception', () => {
         <button
           type="button"
           onClick={() => {
-            navigatePlugin('flows', 'index', 'myflow');
+            navigatePlugin('reports', 'index', 'myreport');
           }}
         >
           go

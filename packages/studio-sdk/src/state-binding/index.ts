@@ -1,7 +1,7 @@
 /**
- * The shared state-binding editor — the ONE binding shape every door and every flow
- * node authors. Consumed by the platform door screens, the tai42 states surface, and
- * (in the flow engine) the node State tab. Holds no edge to jq; paints from SDK
+ * The shared state-binding editor — the ONE binding shape every door authors.
+ * Consumed by the platform door screens, the tai42 states surface, and any plugin
+ * screen that binds states. Holds no edge to jq; paints from SDK
  * tokens only.
  */
 export type {

@@ -1,8 +1,8 @@
 # State-binding editor
 
-The one binding shape every door (preset, channel route, schedule, hook) and every
-flow node authors, plus its pure helpers. Lives in the SDK so any plugin door reuses
-it; holds no edge to jq (the jq fields render through the host's ambient
+The one binding shape every door (preset, channel route, schedule, hook, or a
+plugin's own door) authors, plus its pure helpers. Lives in the SDK so any plugin
+door reuses it; holds no edge to jq (the jq fields render through the host's ambient
 `ExpressionFieldContext`, else a plain textarea) and paints from SDK tokens only.
 
 ## The canonical jq contracts

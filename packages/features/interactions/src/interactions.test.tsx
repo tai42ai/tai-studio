@@ -176,8 +176,8 @@ describe('InteractionsPage — group_id grouping', () => {
   it('folds questions sharing a group_id into one collapsible group with a pending count', async () => {
     const user = userEvent.setup();
     const { channel } = renderInbox();
-    await emitFrame(channel, 'interaction.add', groupedJson('q1', 'flow-1', 'First step?'));
-    await emitFrame(channel, 'interaction.add', groupedJson('q2', 'flow-1', 'Second step?'));
+    await emitFrame(channel, 'interaction.add', groupedJson('q1', 'run-1', 'First step?'));
+    await emitFrame(channel, 'interaction.add', groupedJson('q2', 'run-1', 'Second step?'));
 
     const group = screen.getByTestId('interaction-group');
     expect(within(group).getAllByTestId('interaction-card')).toHaveLength(2);
@@ -192,7 +192,7 @@ describe('InteractionsPage — group_id grouping', () => {
 
   it('leaves a lone question in its own group as a bare card (no group chrome)', async () => {
     const { channel } = renderInbox();
-    await emitFrame(channel, 'interaction.add', groupedJson('solo', 'flow-solo', 'Only one?'));
+    await emitFrame(channel, 'interaction.add', groupedJson('solo', 'run-solo', 'Only one?'));
 
     expect(screen.getByTestId('interaction-card')).toBeInTheDocument();
     expect(screen.queryByTestId('interaction-group')).not.toBeInTheDocument();
