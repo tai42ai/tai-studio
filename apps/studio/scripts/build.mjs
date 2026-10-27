@@ -29,13 +29,19 @@
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, resolve } from 'node:path';
 import { readdir, readFile } from 'node:fs/promises';
-import { build } from 'vite';
+import { build, esmExternalRequirePlugin } from 'vite';
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 /** The shared-vendor entries, keyed by the served filename (== wrapper basename).
  * The output paths MUST match the served-vendor paths the skeleton's import map
- * resolves to exactly. */
+ * resolves to exactly.
+ *
+ * Each entry's `external` list is handed to `esmExternalRequirePlugin`, never to
+ * `rollupOptions.external`: react and react-dom ship as CommonJS that
+ * `require('react')`, and the plugin turns each such call into an ESM `import` the
+ * import map resolves. A plain external leaves the call to Rolldown's `require` shim,
+ * which throws in the browser. */
 const VENDOR_ENTRIES = [
   { out: 'react', external: [] },
   { out: 'react-jsx-runtime', external: ['react'] },
@@ -435,7 +441,7 @@ async function buildJqStudioVendor(external) {
     base: './',
     configFile: false,
     logLevel: 'warn',
-    plugins: [dropExtractedAssetsExceptWasm],
+    plugins: [dropExtractedAssetsExceptWasm, esmExternalRequirePlugin({ external })],
     publicDir: false,
     define: { 'process.env.NODE_ENV': JSON.stringify('production') },
     resolve: { dedupe: ['react', 'react-dom'] },
@@ -450,7 +456,6 @@ async function buildJqStudioVendor(external) {
       modulePreload: { polyfill: false },
       rollupOptions: {
         input: { 'jq-studio': resolve(appRoot, 'vendor/jq-studio.ts') },
-        external,
         preserveEntrySignatures: 'allow-extension',
         output: {
           format: 'es',
@@ -483,7 +488,7 @@ async function buildVendor() {
       root: appRoot,
       configFile: false,
       logLevel: 'warn',
-      plugins: [dropExtractedCss],
+      plugins: [dropExtractedCss, esmExternalRequirePlugin({ external: entry.external })],
       // The SPA stage already copied public/ into dist/; vendor stages must not
       // re-copy it into dist/vendor/.
       publicDir: false,
@@ -501,7 +506,6 @@ async function buildVendor() {
           formats: ['es'],
           fileName: () => `${entry.out}.js`,
         },
-        rollupOptions: { external: entry.external },
       },
     });
   }

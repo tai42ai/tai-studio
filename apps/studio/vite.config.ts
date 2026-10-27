@@ -1,6 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig, esmExternalRequirePlugin, loadEnv } from 'vite';
 
 const DEFAULT_API_PROXY_TARGET = 'http://localhost:8765';
 
@@ -18,6 +18,12 @@ const DEFAULT_API_PROXY_TARGET = 'http://localhost:8765';
  * matching standalone vendor assets are emitted by
  * `scripts/build.mjs`; this config never bundles them. `resolve.dedupe` guards
  * against a second copy sneaking in through a transitive dependency.
+ *
+ * The externals are declared through `esmExternalRequirePlugin`, not
+ * `build.rollupOptions.external`: bundled CommonJS dependencies `require('react')`,
+ * and the plugin turns each such call into an ESM `import` the import map resolves.
+ * A plain external leaves the call to Rolldown's `require` shim, which throws in the
+ * browser and fails the boot.
  *
  * The full production pipeline (SPA → vendor assets → standalone bridge) runs via
  * `scripts/build.mjs`; this config is the SPA stage and the `vite dev` server.
@@ -45,7 +51,11 @@ export default defineConfig(({ mode }) => {
   const apiProxyTarget = env.VITE_API_PROXY_TARGET ?? DEFAULT_API_PROXY_TARGET;
 
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      esmExternalRequirePlugin({ external: [...SHARED_EXTERNALS] }),
+    ],
     resolve: {
       // One React/ReactDOM instance — the singleton the import map serves.
       dedupe: ['react', 'react-dom'],
@@ -65,9 +75,6 @@ export default defineConfig(({ mode }) => {
       // No inline module-preload polyfill script (CSP): the import map is the
       // ONLY first-party inline script the page carries.
       modulePreload: { polyfill: false },
-      rollupOptions: {
-        external: (id: string): boolean => SHARED_EXTERNALS.includes(id),
-      },
     },
   };
 });
