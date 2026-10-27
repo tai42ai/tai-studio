@@ -3,6 +3,7 @@
  * provider's card, servers drawn from the live status when the configuration is
  * refused, a listing folded once installed, and the search match.
  */
+import { matchesSearch } from '@tai42/studio-sdk';
 import { describe, expect, it, vi } from 'vitest';
 
 import { connection, listing, provider } from './test-utils';
@@ -10,7 +11,7 @@ import {
   type DirectoryReads,
   directoryRows,
   type ReadState,
-  rowMatches,
+  rowSearchTexts,
   type ServerEntry,
 } from './use-directory';
 
@@ -141,15 +142,16 @@ describe('directoryRows', () => {
   });
 });
 
-describe('rowMatches', () => {
+describe('rowSearchTexts', () => {
   const [row] = directoryRows(reads({ providers: ready([provider()]) }));
   if (row === undefined) throw new Error('no provider row');
+  const matches = (query: string): boolean => matchesSearch(query, ...rowSearchTexts(row));
 
-  it('matches the display name, the description and the id, ignoring case', () => {
-    expect(rowMatches(row, 'GITHUB')).toBe(true);
-    expect(rowMatches(row, 'your github account')).toBe(true);
-    expect(rowMatches(row, 'git')).toBe(true);
-    expect(rowMatches(row, 'mail')).toBe(false);
-    expect(rowMatches(row, '  ')).toBe(true);
+  it('searches the display name, the description and the id, ignoring case', () => {
+    expect(matches('GITHUB')).toBe(true);
+    expect(matches('your github account')).toBe(true);
+    expect(matches('git')).toBe(true);
+    expect(matches('mail')).toBe(false);
+    expect(matches('  ')).toBe(true);
   });
 });

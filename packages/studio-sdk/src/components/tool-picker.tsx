@@ -1,16 +1,23 @@
 /**
  * `ToolPicker` — a controlled single-select over the tool names a host offers, built
- * on the DS `Select` so features share one picker instead of each re-implementing
- * a listbox (the same reason `SchemaForm` lives in the SDK). It is
+ * on the DS `SearchableSelect` so features share one picker instead of each
+ * re-implementing a listbox (the same reason `SchemaForm` lives in the SDK). It is
  * PRESENTATIONAL: the host owns the tool list read and hands it in as `query`, and
  * owns the selected value; this component fetches nothing.
  *
+ * Opening the picker opens a search box: typing narrows the options to the tools whose
+ * label contains the text, ignoring case. The label carries the display name and the
+ * raw name, so either finds the tool.
+ *
  * The picker owns its `Field` (with `label`) and draws the read's states in it: pending
- * (a disabled `Select` reading "Loading tools…"), error (`ErrorState` with Retry, or the
+ * (a disabled select reading "Loading tools…"), error (`ErrorState` with Retry, or the
  * host's `errorNote` line where the same failure is drawn with Retry elsewhere), refused
- * (a 403 with `forbiddenNote` set), and loaded with nothing to offer (the host's
- * `emptyNote`, then its `emptyAction`). The host's `error` shows, and the `Field` claims
- * its control id, exactly while a `Select` renders.
+ * (a 403 where the host sets no `errorNote`: the session may not list tools, so a text
+ * input takes the tool's name, with a note saying why there is no list; the server
+ * checks the name on save), and loaded with
+ * nothing to offer (the host's `emptyNote`, then its `emptyAction`). The host's `error`
+ * shows, and the `Field` claims its control id, exactly while a select or the typed
+ * entry renders.
  *
  * Optional extensions, each inert unless supplied:
  *  - `excludeNames` removes names from the options (e.g. a preset cannot be
@@ -30,8 +37,8 @@
  *  - `displayNames` (from the tool-meta overlay) overlays a human name onto the
  *    LABEL: a mapped option reads `Display Name (raw_name)`, an unmapped name (or a
  *    mapping equal to the raw name) reads the bare raw name. The value stays the raw
- *    name and grouping/filtering/exclusion key off raw names alone, so a display
- *    name is purely cosmetic.
+ *    name and grouping/tag filtering/exclusion key off raw names alone; the display
+ *    name only labels the option, and so is what the search reads with the raw name.
  *  - `badgesByTool` (native ∪ overlay, from the tool-meta merge) surfaces the
  *    SELECTED tool's DECLARED capability badges as read-only chips beneath the
  *    select. Badges are INFORMATIONAL — the tooltip says so — never a gate, so they
@@ -40,7 +47,7 @@
  * SAFETY: a tool name, a tag, a display name, AND a badge are server-supplied, so
  * every one renders as TEXT (React escapes it) — never an HTML sink. Pinned by a test.
  */
-import { type ReactNode, useId, useState } from 'react';
+import { type ReactNode, useId, useMemo, useState } from 'react';
 
 import { errorMessage, isForbiddenError } from '../errors';
 import { Badge } from './badge';
@@ -49,6 +56,7 @@ import { ErrorState } from './primitives';
 import type { SelectOption } from './select';
 import { SelectedToolBadges } from './selected-tool-badges';
 import { ALL_TAGS, TagFilterField } from './tag-filter-field';
+import { ToolNameEntry } from './tool-name-entry';
 import { ToolSelect } from './tool-select';
 
 export { BADGES_NOTE } from './selected-tool-badges';
@@ -79,12 +87,11 @@ export interface ToolPickerProps {
   /** Drawn after `emptyNote` in the empty state (e.g. a link to where tools come from). */
   readonly emptyAction?: ReactNode;
   /**
-   * Drawn in place of the `ErrorState` and the control when the read fails, with no
-   * Retry: for a host that already draws the same read's failure with Retry elsewhere.
+   * Drawn in place of the `ErrorState` and the control when the read fails, a 403
+   * included, with no Retry: for a host that already draws the same read's failure
+   * elsewhere. Such a host draws no typed entry on a 403.
    */
   readonly errorNote?: string;
-  /** Drawn on a 403 of the read in place of the error state (the no-grant state). */
-  readonly forbiddenNote?: string;
   /** Flags a stored value the loaded list does not carry (see the module docs). */
   readonly unlistedLabel?: string;
   readonly disabled?: boolean;
@@ -94,13 +101,12 @@ export interface ToolPickerProps {
   readonly label?: string;
   /** Handed to the picker's `Field` (with `label`). */
   readonly description?: string;
-  /** The host's field error, shown under the control while a `Select` renders (with `label`). */
+  /** The host's field error, shown under the control while one renders (with `label`). */
   readonly error?: string;
   /**
-   * Accessible name for the tool listbox when `label` renders none and no
-   * enclosing `Field` names it. `label` wins where both are given: it names the
-   * control from visible text, and the `Select` drops a caller name it would
-   * otherwise override.
+   * Accessible name for the control when `label` renders none and no enclosing
+   * `Field` names it. `label` wins where both are given: it names the control from
+   * visible text, and the control drops a caller name it would otherwise override.
    */
   readonly 'aria-label'?: string;
   /** Names removed from the options (the server remains the authority). */
@@ -129,7 +135,6 @@ type PickerPhase = 'refused' | 'error' | 'unlisted' | 'empty' | 'select';
 
 interface PickerState {
   readonly phase: PickerPhase;
-  readonly available: readonly string[];
   /** The stored value, or `null` for none. */
   readonly stored: string | null;
   readonly pending: boolean;
@@ -150,23 +155,31 @@ function phaseOf(
   return empty ? 'empty' : 'select';
 }
 
+/** The loaded names the picker offers: the read's data without `excludeNames`. */
+function availableNames(
+  data: readonly string[] | undefined,
+  excludeNames: readonly string[] | undefined,
+): readonly string[] {
+  const excluded = new Set(excludeNames ?? []);
+  return (data ?? []).filter((name) => !excluded.has(name));
+}
+
 function pickerState(
   query: ToolListQuery,
+  available: readonly string[],
   value: string | null,
-  excludeNames: readonly string[] | undefined,
-  forbiddenNote: string | undefined,
   unlistedLabel: string | undefined,
+  errorNote: string | undefined,
 ): PickerState {
-  const excluded = new Set(excludeNames ?? []);
-  const available = (query.data ?? []).filter((name) => !excluded.has(name));
   const stored = value !== null && value !== '' ? value : null;
   const loaded = query.isSuccess && !query.isError;
   const unlisted =
     unlistedLabel !== undefined && loaded && stored !== null && !available.includes(stored);
   const empty = loaded && available.length === 0;
-  const refused = forbiddenNote !== undefined && query.isError && isForbiddenError(query.error);
+  // A host with `errorNote` draws the read's failure itself, a 403 included.
+  const refused = errorNote === undefined && query.isError && isForbiddenError(query.error);
   const phase = phaseOf(refused, query.isError, unlisted, empty);
-  return { phase, available, stored, pending: !loaded && !query.isError, unlisted, empty };
+  return { phase, stored, pending: !loaded && !query.isError, unlisted, empty };
 }
 
 /** The distinct tags across `names`, sorted, feeding the filter control. */
@@ -181,19 +194,29 @@ function tagsAcross(
 
 /** The tag filter's choices, and the available names the chosen tag keeps. */
 function tagView(
-  state: PickerState,
+  available: readonly string[],
+  listed: boolean,
   tagsByTool: Readonly<Record<string, readonly string[]>> | undefined,
   tagFilter: string,
 ): { readonly allTags: readonly string[]; readonly filtered: readonly string[] } {
-  if (tagsByTool === undefined) return { allTags: [], filtered: state.available };
-  const listed = !state.pending && state.phase !== 'error' && state.phase !== 'refused';
+  if (tagsByTool === undefined) return { allTags: [], filtered: available };
   return {
-    allTags: listed ? tagsAcross(state.available, tagsByTool) : [],
+    allTags: listed ? tagsAcross(available, tagsByTool) : [],
     filtered:
       tagFilter === ALL_TAGS
-        ? state.available
-        : state.available.filter((name) => (tagsByTool[name] ?? []).includes(tagFilter)),
+        ? available
+        : available.filter((name) => (tagsByTool[name] ?? []).includes(tagFilter)),
   };
+}
+
+/** The option drawn ahead of the list's own: an unlisted value, flagged with `unlistedLabel`. */
+function leadingOption(
+  phase: PickerPhase,
+  stored: string | null,
+  unlistedLabel: string | undefined,
+): SelectOption | undefined {
+  if (stored === null || phase !== 'unlisted') return undefined;
+  return { value: stored, label: `${stored} (${unlistedLabel ?? ''})` };
 }
 
 function MutedLine({ text }: { readonly text: string }): ReactNode {
@@ -222,7 +245,6 @@ export function ToolPicker({
   emptyNote,
   emptyAction,
   errorNote,
-  forbiddenNote,
   unlistedLabel,
   disabled,
   placeholder = 'Select a tool…',
@@ -239,12 +261,26 @@ export function ToolPicker({
 }: ToolPickerProps) {
   const [tagFilter, setTagFilter] = useState<string>(ALL_TAGS);
   const unlistedId = useId();
-  const state = pickerState(query, value, excludeNames, forbiddenNote, unlistedLabel);
+  // Memoised so a host re-render hands the select the same options, and an open
+  // list keeps its rows instead of re-indexing every tool.
+  const available = useMemo(
+    () => availableNames(query.data, excludeNames),
+    [query.data, excludeNames],
+  );
+  const state = pickerState(query, available, value, unlistedLabel, errorNote);
   const { phase, stored } = state;
 
-  const { allTags, filtered } = tagView(state, tagsByTool, tagFilter);
+  const listed = !state.pending && phase !== 'error' && phase !== 'refused';
+  const { allTags, filtered } = useMemo(
+    () => tagView(available, listed, tagsByTool, tagFilter),
+    [available, listed, tagsByTool, tagFilter],
+  );
 
-  const select = (options: readonly string[], leading: SelectOption | undefined): ReactNode => (
+  const leading = useMemo(
+    () => leadingOption(phase, stored, unlistedLabel),
+    [phase, stored, unlistedLabel],
+  );
+  const select = (options: readonly string[]): ReactNode => (
     <ToolSelect
       tagsByTool={tagsByTool}
       filtered={options}
@@ -266,26 +302,23 @@ export function ToolPicker({
     </>
   );
 
-  // Only a rendered `Select` claims the field's control id; with none the host's
+  // Only a rendered control claims the field's control id; with none the host's
   // error is hidden and the note in its place says why the field is empty.
-  const selectRenders =
-    phase === 'unlisted' || phase === 'select' || (phase === 'refused' && stored !== null);
+  const controlRenders = phase === 'unlisted' || phase === 'select' || phase === 'refused';
   const contentByPhase: Record<PickerPhase, () => ReactNode> = {
-    // A stored value stays as the sole, unflagged option: without the list the form claims nothing about it.
     refused: () => (
-      <>
-        {stored !== null ? select([], { value: stored, label: stored }) : null}
-        <MutedLine text={forbiddenNote ?? ''} />
-      </>
+      <ToolNameEntry
+        value={stored}
+        onChange={onChange}
+        disabled={disabled === true}
+        ariaLabel={ariaLabel}
+      />
     ),
     error: () =>
       errorNote !== undefined ? <MutedLine text={errorNote} /> : <ReadError query={query} />,
     unlisted: () => (
       <>
-        {select(filtered, {
-          value: stored ?? '',
-          label: `${stored ?? ''} (${unlistedLabel ?? ''})`,
-        })}
+        {select(filtered)}
         {state.empty ? emptyState : null}
         <p id={unlistedId} className="tai-field-hint" style={{ margin: 0 }}>
           <Badge variant="warning">{unlistedLabel}</Badge> {stored} is {unlistedLabel}. Pick
@@ -294,7 +327,7 @@ export function ToolPicker({
       </>
     ),
     empty: () => emptyState,
-    select: () => select(filtered, undefined),
+    select: () => select(filtered),
   };
   const content = contentByPhase[phase]();
 
@@ -312,8 +345,8 @@ export function ToolPicker({
         <Field
           label={label}
           description={description}
-          error={selectRenders ? error : undefined}
-          group={!selectRenders}
+          error={controlRenders ? error : undefined}
+          group={!controlRenders}
         >
           {content}
         </Field>

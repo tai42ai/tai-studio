@@ -64,7 +64,7 @@ test('the Edit door opens the register form prefilled from the hook', async ({ p
   // The form starts from the hook's own values, not blank.
   await expect(dialog.getByLabel('Name')).toHaveValue(HOOK.name);
   await expect(dialog.getByLabel('Topic')).toHaveValue(HOOK.topic);
-  await expect(dialog.getByLabel('Tool', { exact: true })).toHaveValue(HOOK.tool);
+  await expect(dialog.getByRole('combobox', { name: 'Tool' })).toContainText(HOOK.tool);
 });
 
 test('typing an existing name into the create form warns before the overwrite', async ({

@@ -161,7 +161,7 @@ describe('ExplorerView empty-state ladder', () => {
       search: {
         value: 'zzz',
         onChange: vi.fn(),
-        matches: (row, query) => row.name.includes(query),
+        texts: (row) => [row.name],
         label: 'Search rows',
       },
     });
@@ -396,7 +396,7 @@ describe('ExplorerView tag filter', () => {
       search: {
         value: 'match',
         onChange: vi.fn(),
-        matches: (row, query) => row.name.includes(query),
+        texts: (row) => [row.name],
         label: 'Search rows',
       },
     });
@@ -424,7 +424,7 @@ describe('ExplorerView tag filter', () => {
 });
 
 describe('ExplorerView search', () => {
-  it('filters items by the caller matcher and reports typing', async () => {
+  it('filters items by the texts the caller names and reports typing', async () => {
     const onChange = vi.fn();
     renderExplorer({
       items: ROWS.filter((r) => r.folderId === null),
@@ -432,7 +432,7 @@ describe('ExplorerView search', () => {
       search: {
         value: 'al',
         onChange,
-        matches: (row, query) => row.name.includes(query),
+        texts: (row) => [row.name],
         label: 'Search rows',
       },
     });
@@ -442,6 +442,21 @@ describe('ExplorerView search', () => {
     expect(onChange).toHaveBeenCalled();
   });
 
+  it('matches the texts the caller names by the SDK search rule: trimmed, ignoring case', () => {
+    renderExplorer({
+      items: ROWS.filter((r) => r.folderId === null),
+      folders: [],
+      search: {
+        value: ' AL ',
+        onChange: vi.fn(),
+        texts: (row) => [row.name],
+        label: 'Search rows',
+      },
+    });
+    expect(screen.getByText('alpha')).toBeInTheDocument();
+    expect(screen.queryByText('beta')).not.toBeInTheDocument();
+  });
+
   it('renders the magnifier as a leading icon INSIDE the filter field, not a detached glyph', () => {
     renderExplorer({
       items: ROWS.filter((r) => r.folderId === null),
@@ -449,7 +464,7 @@ describe('ExplorerView search', () => {
       search: {
         value: '',
         onChange: vi.fn(),
-        matches: () => true,
+        texts: (row) => [row.name],
         label: 'Search rows',
       },
     });
@@ -777,7 +792,7 @@ describe('ExplorerView pagination and count', () => {
     const search: ExplorerSearch<Row> = {
       value: '',
       onChange: vi.fn(),
-      matches: (row, query) => row.name.includes(query),
+      texts: (row) => [row.name],
       label: 'Search rows',
     };
     const { rerender } = renderPaged({ viewSurface: surface, items: items(15), search });

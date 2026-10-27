@@ -42,6 +42,12 @@ export interface RenderWithProvidersResult extends RenderResult {
   readonly queryClient: QueryClient;
 }
 
+/**
+ * The registered tools every render serves through `listTools` unless the test's
+ * client stubs its own: the names the register and edit tests pick and prefill.
+ */
+export const HOOK_TOOLS: readonly string[] = ['notify', 'slack.post_message'];
+
 export function renderWithProviders(
   ui: ReactElement,
   { client, projection }: { client: StubApiClient; projection?: MeProjection },
@@ -59,10 +65,11 @@ export function renderWithProviders(
   // The stub only implements the methods exercised by a given test; the cast
   // asserts the shape the SDK context expects. A seeded projection stubs `getMe`
   // so `CapabilityProvider` resolves to `ready`.
+  const withTools: StubApiClient = { listTools: () => Promise.resolve([...HOOK_TOOLS]), ...client };
   const apiClient =
     projection !== undefined
-      ? ({ ...client, getMe: () => Promise.resolve(projection) } as ApiClient)
-      : (client as ApiClient);
+      ? ({ ...withTools, getMe: () => Promise.resolve(projection) } as ApiClient)
+      : (withTools as ApiClient);
 
   // The stack is a `wrapper`, not part of the rendered element: RTL's `rerender`
   // replaces only the element, so a wrapper keeps the providers (and the unit's own
@@ -226,6 +233,15 @@ export async function openSelect(
   });
   await user.click(combobox);
   return combobox;
+}
+
+/** Choose `tool` in the register form's Tool picker. */
+export async function pickTool(
+  user: ReturnType<typeof userEvent.setup>,
+  tool: string,
+): Promise<void> {
+  await openSelect(user, 'Tool');
+  await user.click(await screen.findByRole('option', { name: tool }));
 }
 
 /**

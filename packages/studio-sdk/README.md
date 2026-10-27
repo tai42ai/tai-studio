@@ -440,8 +440,17 @@ label. It reads a structural query interface
 disabled with the placeholder "Loading <plural noun>…"; error is an `ErrorState`
 with retry inside the field (`group` set); empty is a muted `role="status"` line
 naming where to create one; no grant to read the list is the no-grant line in
-place of the control. Values render as text, never HTML. A picker is composed
-outside `SchemaForm`. Two cases differ:
+place of the control. `ToolPicker` differs on a 403: the server checks a named
+tool on save, so it draws a text input that takes the tool's exact name, with a
+line under it saying the session cannot list tools (a host that draws the read's
+failure elsewhere through `errorNote` keeps that line instead). Values render as text, never
+HTML. A picker is composed outside `SchemaForm`. A picker whose list can grow long
+(`ToolPicker`, `AgentPicker` and `ChannelPicker` are the cases the SDK ships) is built on
+`SearchableSelect`, which opens with a search box over the option labels. Every
+list searches by one rule, `matchesSearch(query, ...texts)`: the trimmed query,
+ignoring case, inside any one of the texts a row is searched by. A filterable
+checklist calls it over the label each row shows, and an `ExplorerView` search
+names its texts per item (`texts`) and the view applies the rule. Two cases differ:
 
 - A picker that is one control of a larger group on its host (a `fieldset` whose
   `legend` names the group) takes no label of its own: its control carries an

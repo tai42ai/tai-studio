@@ -119,6 +119,8 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
         replacesExisting={replacesExisting}
         trimmedName={trimmedName}
         keysQuery={data.keysQuery}
+        toolsQuery={data.toolsQuery}
+        toolDisplayNames={data.toolDisplayNames}
         binding={data.binding}
       />
       <HookSubjectSection fields={fields} targetOptions={data.targetOptions} />

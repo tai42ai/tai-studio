@@ -6,7 +6,13 @@
  * keyboard-select. A text filter, jump-to-error / jump-to-slowest, and
  * collapse-all speed navigation through a large trace.
  */
-import { AlertTriangleIcon, Button, TextInput } from '@tai42/studio-sdk';
+import {
+  AlertTriangleIcon,
+  Button,
+  isBlankSearch,
+  matchesSearch,
+  TextInput,
+} from '@tai42/studio-sdk';
 import { type CSSProperties, type ReactNode, useMemo, useState } from 'react';
 
 import { type SpanNode, type TraceTree } from './trace-tree';
@@ -63,13 +69,10 @@ export function TraceWaterfall({
   };
 
   const matches = useMemo(() => {
-    const query = filter.trim().toLowerCase();
-    if (query === '') return null;
+    if (isBlankSearch(filter)) return null;
     const out: SpanNode[] = [];
     for (const node of tree.byId.values()) {
-      const name = (node.span.name ?? '').toLowerCase();
-      const kind = (node.span.kind ?? '').toLowerCase();
-      if (name.includes(query) || kind.includes(query)) out.push(node);
+      if (matchesSearch(filter, node.span.name ?? '', node.span.kind ?? '')) out.push(node);
     }
     out.sort(
       (a, b) =>

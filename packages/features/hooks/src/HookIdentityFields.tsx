@@ -1,6 +1,8 @@
 /**
  * The register form's required identity block: name (with the overwrite notice when
- * the typed name hits another hook), topic, tool, the execution-key picker, and the
+ * the typed name hits another hook), topic, the tool picker (searchable, labelled with
+ * display names, flagging a stored tool the deployment no longer lists), the
+ * execution-key picker, and the
  * optional `tool_kwargs` JSON textarea. Required-field errors show only after a
  * submit attempt.
  */
@@ -11,6 +13,8 @@ import {
   Field,
   Textarea,
   TextInput,
+  type ToolListQuery,
+  ToolPicker,
 } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
@@ -28,6 +32,10 @@ export interface HookIdentityFieldsProps {
   readonly trimmedName: string;
   /** The api-key list read the execution-key picker renders. */
   readonly keysQuery: ExecutionKeyQuery;
+  /** The registered-tools read the tool picker offers. */
+  readonly toolsQuery: ToolListQuery;
+  /** The raw-name → display-name map the tool picker labels its options with. */
+  readonly toolDisplayNames: Readonly<Record<string, string>>;
   /** How the form binds its key (`useExecutionKeyBinding()`). */
   readonly binding: ExecutionKeyBinding;
 }
@@ -38,6 +46,8 @@ export function HookIdentityFields({
   replacesExisting,
   trimmedName,
   keysQuery,
+  toolsQuery,
+  toolDisplayNames,
   binding,
 }: HookIdentityFieldsProps): ReactNode {
   const { submitted } = fields;
@@ -67,15 +77,16 @@ export function HookIdentityFields({
           }}
         />
       </Field>
-      <Field label="Tool" error={submitted && missing.tool ? 'A tool is required.' : undefined}>
-        <TextInput
-          value={fields.tool}
-          placeholder="e.g. slack.post_message"
-          onChange={(event) => {
-            fields.setTool(event.target.value);
-          }}
-        />
-      </Field>
+      <ToolPicker
+        query={toolsQuery}
+        value={fields.tool === '' ? null : fields.tool}
+        onChange={fields.setTool}
+        label="Tool"
+        unlistedLabel="not registered"
+        displayNames={toolDisplayNames}
+        error={submitted && missing.tool ? 'A tool is required.' : undefined}
+        emptyNote="No tools are registered on this deployment."
+      />
       <ExecutionKeyPicker
         query={keysQuery}
         binding={binding}

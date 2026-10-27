@@ -1,14 +1,17 @@
 /**
- * `ToolPicker`'s tool `Select`: grouped by tag or flat, with the option-label and
- * grouping helpers it renders from.
+ * `ToolPicker`'s tool select: a `SearchableSelect`, grouped by tag or flat, with the
+ * option-label and grouping helpers it renders from. Its search matches the option
+ * label, which carries both the display name and the raw name (`toolDisplayLabel`).
  */
-import type { ReactNode } from 'react';
+import { type ReactNode, useMemo } from 'react';
 
 import { toolDisplayLabel } from '../hooks/useToolDisplayNames';
-import { Select, type SelectGroup, type SelectOption } from './select';
+import { SearchableSelect } from './searchable-select';
+import type { SelectGroup, SelectOption } from './select';
 
 const NO_DISPLAY_NAMES: Readonly<Record<string, string>> = {};
 const UNTAGGED = 'Untagged';
+const SEARCH_LABEL = 'Search tools';
 
 /** The group a tool sorts into: its alphabetically-first tag, else "Untagged". */
 function groupFor(name: string, tagsByTool: Readonly<Record<string, readonly string[]>>): string {
@@ -73,8 +76,31 @@ interface ToolSelectProps {
   readonly ariaDescribedBy: string | undefined;
 }
 
+/** The select's options: tag groups when `tagsByTool` is present, else one flat run,
+ *  with `leading` ahead of either. */
+function toolListing(
+  filtered: readonly string[],
+  tagsByTool: Readonly<Record<string, readonly string[]>> | undefined,
+  displayNames: Readonly<Record<string, string>> | undefined,
+  agentToolNames: ReadonlySet<string> | undefined,
+  leading: SelectOption | undefined,
+): { readonly groups: readonly SelectGroup[] } | { readonly options: readonly SelectOption[] } {
+  if (tagsByTool !== undefined) {
+    const groups = buildGroups(filtered, tagsByTool, displayNames, agentToolNames);
+    return {
+      groups:
+        leading === undefined ? groups : [{ label: leading.label, options: [leading] }, ...groups],
+    };
+  }
+  const options = filtered.map((name) => ({
+    value: name,
+    label: optionLabel(name, displayNames, agentToolNames),
+  }));
+  return { options: leading === undefined ? options : [leading, ...options] };
+}
+
 /** The tool select: grouped by tag when `tagsByTool` is present, else a flat list.
- *  Either branch is a `Select`, which claims the enclosing `Field`'s control id. */
+ *  Either branch is a `SearchableSelect`, which claims the enclosing `Field`'s control id. */
 export function ToolSelect({
   tagsByTool,
   filtered,
@@ -88,38 +114,23 @@ export function ToolSelect({
   leading,
   ariaDescribedBy,
 }: ToolSelectProps): ReactNode {
-  if (tagsByTool !== undefined) {
-    const groups = buildGroups(filtered, tagsByTool, displayNames, agentToolNames);
-    return (
-      <Select
-        groups={
-          leading === undefined ? groups : [{ label: leading.label, options: [leading] }, ...groups]
-        }
-        value={value ?? ''}
-        onValueChange={onChange}
-        placeholder={placeholder}
-        aria-label={ariaLabel}
-        aria-describedby={ariaDescribedBy}
-        disabled={disabled}
-      />
-    );
-  }
-  const options = filtered.map((name) => ({
-    value: name,
-    label: optionLabel(name, displayNames, agentToolNames),
-  }));
-  return (
-    <Select
-      // Keep Radix controlled even when the caller's value is null: `''` matches no
-      // item (placeholder still shows) and avoids the uncontrolled→controlled warning
-      // a subsequent selection would otherwise trigger.
-      options={leading === undefined ? options : [leading, ...options]}
-      value={value ?? ''}
-      onValueChange={onChange}
-      placeholder={placeholder}
-      aria-label={ariaLabel}
-      aria-describedby={ariaDescribedBy}
-      disabled={disabled}
-    />
+  // Memoised so a host re-render keeps the indexed options of an open list.
+  const listing = useMemo(
+    () => toolListing(filtered, tagsByTool, displayNames, agentToolNames, leading),
+    [filtered, tagsByTool, displayNames, agentToolNames, leading],
+  );
+  const shared = {
+    value: value ?? '',
+    onValueChange: onChange,
+    placeholder,
+    'aria-label': ariaLabel,
+    'aria-describedby': ariaDescribedBy,
+    disabled,
+    searchLabel: SEARCH_LABEL,
+  };
+  return 'groups' in listing ? (
+    <SearchableSelect {...shared} groups={listing.groups} />
+  ) : (
+    <SearchableSelect {...shared} options={listing.options} />
   );
 }

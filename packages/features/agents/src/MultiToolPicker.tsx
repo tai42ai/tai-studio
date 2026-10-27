@@ -5,8 +5,9 @@ import type { ReactNode } from 'react';
 /**
  * A multi-select over tool names, built by REUSING the shared single-select
  * `ToolPicker` as an "add" control plus a removable chip list — so `tool_names`
- * composes without a second picker implementation. Only registered tools are
- * offered (an unknown name cannot be added here; the server stays the loud backstop).
+ * composes without a second picker implementation. Only listed tools are offered;
+ * where the session may not list tools the add control takes a typed name instead, and
+ * the server stays the loud backstop for a name it does not serve.
  */
 export function MultiToolPicker({
   query,

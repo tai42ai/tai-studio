@@ -318,7 +318,7 @@ const EXPRESSION_CHILD_SITES: Readonly<Record<string, string>> = {
  * The children that DO claim the `Field`'s control id, so a `Field` around one
  * of them correctly renders `htmlFor`. Everything else must be marked `group`.
  *
- * The first eight spread `useFieldControl()` straight onto a labelable element
+ * The first nine spread `useFieldControl()` straight onto a labelable element
  * (`grep -rl useFieldControl` finds exactly those modules — `UploadDropZone` is
  * split out of `MediaField` for precisely this reason, so its hook call runs
  * inside the `Field`). The last one claims it THROUGH an inner control and is
@@ -332,6 +332,7 @@ const CLAIMING_CHILDREN = new Set([
   'NumberInput',
   'RevealInput',
   'Select',
+  'SearchableSelect',
   'Checkbox',
   'CompletionInput',
   'UploadDropZone',
