@@ -62,6 +62,14 @@ function listClient(
   };
 }
 
+/** The active-explorer table row of a preset, found by its accessible name link. */
+async function findPresetRow(name: string): Promise<HTMLElement> {
+  const link = await screen.findByRole('link', { name: `Open preset ${name}` });
+  const row = link.closest('tr');
+  if (row === null) throw new Error(`no table row holds preset ${name}`);
+  return row;
+}
+
 describe('PresetsList', () => {
   it('renders every column for a row, with OVERLAY tags + display name', async () => {
     // Tags and the display name are the tool_meta overlay's, not the record's.
@@ -74,7 +82,7 @@ describe('PresetsList', () => {
       client,
     });
 
-    const row = await screen.findByTestId('preset-row-paris_weather');
+    const row = await findPresetRow('paris_weather');
     expect(
       within(row).getByRole('link', { name: 'Open preset paris_weather' }),
     ).toBeInTheDocument();
@@ -97,7 +105,7 @@ describe('PresetsList', () => {
       client: listClient([normal]),
     });
 
-    await screen.findByTestId('preset-row-paris_weather');
+    await findPresetRow('paris_weather');
     expect(screen.getByRole('columnheader', { name: 'Extensions' })).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Combos' })).toBeNull();
   });
@@ -125,7 +133,7 @@ describe('PresetsList', () => {
       client: listClient([normal]),
     });
 
-    const row = await screen.findByTestId('preset-row-paris_weather');
+    const row = await findPresetRow('paris_weather');
     expect(within(row).queryByTestId('preset-display-name-paris_weather')).toBeNull();
     expect(within(row).queryByText('geo')).toBeNull();
   });
@@ -167,8 +175,8 @@ describe('PresetsList', () => {
     // The conflicted row lives inside the Conflicted section…
     expect(within(section).getByTestId('preset-row-stale_preset')).toBeInTheDocument();
     // …and the active row lives outside it.
-    expect(within(section).queryByTestId('preset-row-paris_weather')).toBeNull();
-    expect(screen.getByTestId('preset-row-paris_weather')).toBeInTheDocument();
+    expect(within(section).queryByRole('link', { name: 'Open preset paris_weather' })).toBeNull();
+    expect(await findPresetRow('paris_weather')).toBeInTheDocument();
   });
 
   it('renders no Conflicted section when every preset is active', async () => {
@@ -177,7 +185,7 @@ describe('PresetsList', () => {
       client: listClient([normal]),
     });
 
-    await screen.findByTestId('preset-row-paris_weather');
+    await findPresetRow('paris_weather');
     expect(screen.queryByTestId('presets-conflicted-section')).toBeNull();
   });
 
@@ -199,7 +207,7 @@ describe('PresetsList', () => {
       client: listClient([normal]),
     });
 
-    await screen.findByTestId('preset-row-paris_weather');
+    await findPresetRow('paris_weather');
     // The description cell is plain, non-interactive text — a body click.
     await user.click(screen.getByText('Paris weather'));
     expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
@@ -230,6 +238,26 @@ describe('PresetsList', () => {
       expect(table.closest('.tai-scroll-region')).not.toBeNull();
     }
     expect(link).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('gives the selected preset the shared selected look, active or conflicted', async () => {
+    const view = renderWithProviders(<PresetsList selected="paris_weather" />, {
+      projection: fullProjection(),
+      client: listClient([normal, conflicted]),
+    });
+    expect(await findPresetRow('paris_weather')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('preset-row-stale_preset')).not.toHaveAttribute('data-selected');
+    view.unmount();
+
+    renderWithProviders(<PresetsList selected="stale_preset" />, {
+      projection: fullProjection(),
+      client: listClient([normal, conflicted]),
+    });
+    expect(await screen.findByTestId('preset-row-stale_preset')).toHaveAttribute(
+      'data-selected',
+      'true',
+    );
+    expect(await findPresetRow('paris_weather')).not.toHaveAttribute('data-selected');
   });
 
   it('shows a loud error state when the list request fails', async () => {
@@ -289,8 +317,151 @@ describe('PresetsList', () => {
       systemKinds: [{ kind: 'versioning', state: 'active', plugin: 'pg', detail: '' }],
     });
 
-    await screen.findByTestId('preset-row-paris_weather');
+    await findPresetRow('paris_weather');
     expect(screen.getByRole('button', { name: 'Create preset' })).toBeInTheDocument();
     expect(screen.queryByTestId('feature-disabled')).toBeNull();
+  });
+
+  describe('folders', () => {
+    const folderRow = (id: string, name: string, parentId: string | null = null) => ({
+      id,
+      name,
+      parent_id: parentId,
+    });
+
+    function folderClient(): StubApiClient {
+      return {
+        listPresets: vi.fn().mockResolvedValue([normal]),
+        listToolMeta: vi.fn().mockResolvedValue({
+          folders: [
+            folderRow('f-mine', 'Forecasts'),
+            folderRow('f-theirs', 'Other tools'),
+            folderRow('f-empty', 'Fresh'),
+          ],
+          meta: [
+            { ...metaRow('paris_weather'), folder_id: 'f-mine' },
+            { ...metaRow('http_get'), folder_id: 'f-theirs' },
+          ],
+        }),
+      };
+    }
+
+    it('draws the folders holding a preset or nothing, and not those holding only other tools', async () => {
+      renderWithProviders(<PresetsList selected={undefined} />, {
+        projection: fullProjection(),
+        client: folderClient(),
+      });
+
+      expect(await screen.findByRole('button', { name: 'Forecasts' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Fresh' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Other tools' })).toBeNull();
+      // The filed preset is inside its folder, not at the root.
+      expect(screen.queryByRole('link', { name: 'Open preset paris_weather' })).toBeNull();
+    });
+
+    it('opens a folder to show the presets filed in it, with a breadcrumb back', async () => {
+      const user = userEvent.setup({ delay: null });
+      renderWithProviders(<PresetsList selected={undefined} />, {
+        projection: fullProjection(),
+        client: folderClient(),
+      });
+
+      await user.click(await screen.findByRole('button', { name: 'Forecasts' }));
+      expect(await findPresetRow('paris_weather')).toBeInTheDocument();
+      const path = screen.getByRole('navigation', { name: 'Folder path' });
+      await user.click(within(path).getByRole('button', { name: 'All presets' }));
+      expect(screen.getByRole('button', { name: 'Forecasts' })).toBeInTheDocument();
+    });
+
+    it('offers the folder actions to a writer', async () => {
+      renderWithProviders(<PresetsList selected={undefined} />, {
+        projection: fullProjection(),
+        client: folderClient(),
+      });
+
+      expect(
+        await screen.findByRole('button', { name: 'Rename folder Forecasts' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Move folder Forecasts' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Delete folder Fresh' })).toBeInTheDocument();
+    });
+
+    it('offers each folder action only on its own route', async () => {
+      renderWithProviders(<PresetsList selected={undefined} />, {
+        projection: fullProjection({
+          admin: false,
+          routes: [{ path: '/api/tool-meta/folders/{folder_id}/rename', methods: ['POST'] }],
+        }),
+        client: folderClient(),
+      });
+
+      expect(
+        await screen.findByRole('button', { name: 'Rename folder Forecasts' }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Move folder Forecasts' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Delete folder Fresh' })).toBeNull();
+    });
+
+    it('offers no folder action to a caller who may only file a tool', async () => {
+      renderWithProviders(<PresetsList selected={undefined} />, {
+        projection: fullProjection({
+          admin: false,
+          routes: [{ path: '/api/tool-meta/tools/{tool_name}', methods: ['PATCH'] }],
+        }),
+        client: folderClient(),
+      });
+
+      expect(await screen.findByRole('button', { name: 'Forecasts' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^(Rename|Move|Delete) folder / })).toBeNull();
+    });
+
+    it('names the Edit dialog in an empty folder only to a caller who may file a preset', async () => {
+      const user = userEvent.setup({ delay: null });
+      const hint = 'File a preset here from its Edit dialog.';
+      const view = renderWithProviders(<PresetsList selected={undefined} />, {
+        projection: fullProjection(),
+        client: folderClient(),
+      });
+      await user.click(await screen.findByRole('button', { name: 'Fresh' }));
+      expect(await screen.findByText(hint)).toBeInTheDocument();
+      view.unmount();
+
+      renderWithProviders(<PresetsList selected={undefined} />, {
+        projection: fullProjection({ admin: false }),
+        client: folderClient(),
+      });
+      await user.click(await screen.findByRole('button', { name: 'Fresh' }));
+      expect(await screen.findByText('This folder is empty')).toBeInTheDocument();
+      expect(screen.queryByText(hint)).toBeNull();
+    });
+
+    it('shows the no-active-presets state, not a folder tree, when no preset is active', async () => {
+      renderWithProviders(<PresetsList selected={undefined} />, {
+        projection: fullProjection(),
+        client: {
+          listPresets: vi.fn().mockResolvedValue([conflicted]),
+          listToolMeta: vi.fn().mockResolvedValue({
+            folders: [folderRow('f-empty', 'Fresh')],
+            meta: [],
+          }),
+        },
+      });
+
+      expect(await screen.findByText('No active presets')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Fresh' })).toBeNull();
+    });
+
+    it('states a failed overlay read loudly and still lists every preset at the root', async () => {
+      renderWithProviders(<PresetsList selected={undefined} />, {
+        projection: fullProjection(),
+        client: {
+          listPresets: vi.fn().mockResolvedValue([normal]),
+          listToolMeta: vi.fn().mockRejectedValue(new Error('overlay store unreachable')),
+        },
+      });
+
+      expect(await findPresetRow('paris_weather')).toBeInTheDocument();
+      expect(await screen.findByRole('alert')).toHaveTextContent('overlay store unreachable');
+    });
   });
 });

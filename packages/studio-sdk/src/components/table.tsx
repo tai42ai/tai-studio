@@ -8,6 +8,10 @@
  * A numeric column opts in with `numeric`, which stamps `data-numeric="true"` —
  * the hook the stylesheet right-aligns on tabular figures so digits line up.
  *
+ * A selected body row opts in with `selected`, which stamps `data-selected="true"` —
+ * the hook the stylesheet draws as the one selected-row look every table shares. It
+ * is presentation only: the row's own link carries `aria-current` for assistive tech.
+ *
  * Each wrapper FORWARDS a consumer `ref` to the native element it renders — the
  * attribute spread carries it, the same way it carries every other native prop —
  * so a caller that has to measure or scroll a cell is not forced back to a raw
@@ -48,10 +52,16 @@ export interface TableRowProps extends HTMLAttributes<HTMLTableRowElement> {
   readonly children?: ReactNode;
   /** A consumer ref for the `<tr>` itself. */
   readonly ref?: Ref<HTMLTableRowElement>;
+  /** Draw the row as the selected one. */
+  readonly selected?: boolean;
 }
 
-export function TR({ children, ...props }: TableRowProps) {
-  return <tr {...props}>{children}</tr>;
+export function TR({ children, selected = false, ...props }: TableRowProps) {
+  return (
+    <tr {...props} data-selected={selected ? 'true' : undefined}>
+      {children}
+    </tr>
+  );
 }
 
 /** Right-align a column of digits on tabular figures. */

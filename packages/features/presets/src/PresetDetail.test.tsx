@@ -13,6 +13,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { presetDetailKey, presetsListKey, presetToolMetaKey, presetVersionsKey } from './keys';
 import { PresetDetail } from './PresetDetail';
+import { PresetsList } from './PresetsList';
 import {
   clickWhenInteractable,
   detail,
@@ -69,7 +70,7 @@ describe('PresetDetail', () => {
     expect(screen.getByText('geo')).toBeInTheDocument();
   });
 
-  it('edits the overlay display name + tags via the two-field merge-patch', async () => {
+  it('edits the overlay display name, tags and folder via the merge-patch', async () => {
     const user = userEvent.setup({ delay: null });
     const upsertToolMeta = vi.fn().mockResolvedValue({
       tool_name: 'paris_weather',
@@ -82,7 +83,7 @@ describe('PresetDetail', () => {
       getPreset: vi.fn().mockResolvedValue(detail),
       listPresetVersions: vi.fn().mockResolvedValue(versions),
       listToolMeta: vi.fn().mockResolvedValue({
-        folders: [],
+        folders: [{ id: 'f1', name: 'Weather', parent_id: null }],
         meta: [
           {
             tool_name: 'paris_weather',
@@ -115,12 +116,16 @@ describe('PresetDetail', () => {
     // textbox by role to disambiguate it from the Field's own "Tags" group label.
     await user.type(screen.getByRole('textbox', { name: 'Tags' }), 'eu');
     await user.click(screen.getByRole('button', { name: 'Add tag' }));
+    // The folder picker offers the full tree; filing moves the preset into Weather.
+    await user.click(screen.getByRole('combobox', { name: 'Folder' }));
+    await user.click(await screen.findByRole('option', { name: 'Weather' }));
     await user.click(screen.getByRole('button', { name: 'Save details' }));
 
-    // The write is a merge-patch of ONLY display_name + tags (folder/hidden untouched).
+    // The write is a merge-patch of display_name, tags and folder_id (hidden untouched).
     expect(upsertToolMeta).toHaveBeenCalledWith('paris_weather', {
       display_name: 'Paris Weather',
       tags: ['geo', 'eu'],
+      folder_id: 'f1',
     });
     // The overlay map behind the detail grid + list is refetched on success.
     await waitFor(() => {
@@ -225,6 +230,43 @@ describe('PresetDetail', () => {
     // the page background aria-hidden).
     expect(
       screen.queryByRole('button', { name: 'Edit details for paris_weather', hidden: true }),
+    ).toBeNull();
+  });
+
+  it('withdraws the folder actions of the list beside it after a tool_meta 501', async () => {
+    const user = userEvent.setup({ delay: null });
+    const client: StubApiClient = {
+      getPreset: vi.fn().mockResolvedValue(detail),
+      listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listPresets: vi.fn().mockResolvedValue([detail]),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [{ id: 'f-empty', name: 'Fresh', parent_id: null }],
+        meta: [],
+      }),
+      upsertToolMeta: vi
+        .fn()
+        .mockRejectedValue(new ApiError('tool_meta is off', 501, 'tool-meta-not-configured')),
+    };
+    renderWithProviders(
+      <>
+        <PresetsList selected="paris_weather" />
+        <PresetDetail name="paris_weather" />
+      </>,
+      { projection: fullProjection(), client },
+    );
+
+    expect(await screen.findByRole('button', { name: 'Rename folder Fresh' })).toBeInTheDocument();
+    const edit = await screen.findByRole('button', { name: 'Edit details for paris_weather' });
+    await waitFor(() => {
+      expect(edit).toBeEnabled();
+    });
+    await user.click(edit);
+    const dialog = await screen.findByRole('dialog');
+    await clickWhenInteractable(user, within(dialog).getByRole('button', { name: 'Save details' }));
+    await within(dialog).findByTestId('feature-disabled');
+
+    expect(
+      screen.queryByRole('button', { name: /^(Rename|Move|Delete) folder /, hidden: true }),
     ).toBeNull();
   });
 

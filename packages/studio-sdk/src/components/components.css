@@ -1330,6 +1330,19 @@
     background: var(--tai-color-accent-tint);
   }
 
+  /* The selected row (`TR selected`) takes the look the nav gives its current item:
+     the accent tint with an accent bar on the leading edge. The tint sits on the
+     cells, over the row's own ground, so a hovered selected row shows the hover
+     tint under it — the doubled tint the current nav item shows on hover — and a
+     diff row keeps its meaning beneath. */
+  .tai-table tbody tr[data-selected='true'] > td {
+    background-image: linear-gradient(var(--tai-color-accent-tint), var(--tai-color-accent-tint));
+  }
+
+  .tai-table tbody tr[data-selected='true'] > td:first-child {
+    box-shadow: inset 3px 0 0 0 var(--tai-color-accent);
+  }
+
   .tai-table td[data-numeric='true'],
   .tai-table th[data-numeric='true'] {
     text-align: right;
@@ -2235,6 +2248,13 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
+  }
+
+  /* The selected card: the same accent tint the selected table row takes, edged by
+     the accent border. */
+  .tai-grid-cards > [role='listitem'][data-selected='true'] > .tai-card {
+    border-color: var(--tai-color-accent);
+    background-image: linear-gradient(var(--tai-color-accent-tint), var(--tai-color-accent-tint));
   }
 
   /* Card description clamp so grid rows stay uniform: two lines, then ellipsis. */

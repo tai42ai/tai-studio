@@ -16,8 +16,8 @@ import { useCallback, useMemo } from 'react';
 
 import { hasField } from './authoring-schema';
 import {
+  agentsToolMetaKey,
   authoredPresetsKey,
-  authoredToolMetaKey,
   authoredToolsKey,
   authoredToolTagsKey,
 } from './keys';
@@ -35,7 +35,7 @@ export function useComposeAgentData(baseAgent: AgentSummary | null, baseSchema: 
 
   const toolsQuery = useQuery({ queryKey: authoredToolsKey, queryFn: () => api.listTools() });
   const tagsQuery = useQuery({ queryKey: authoredToolTagsKey, queryFn: () => api.listToolTags() });
-  const metaQuery = useQuery({ queryKey: authoredToolMetaKey, queryFn: () => api.listToolMeta() });
+  const metaQuery = useQuery({ queryKey: agentsToolMetaKey, queryFn: () => api.listToolMeta() });
   const presetsQuery = useQuery({ queryKey: authoredPresetsKey, queryFn: () => api.listPresets() });
 
   // A conflicted/quarantined preset is delete-only — it must NEVER seed a

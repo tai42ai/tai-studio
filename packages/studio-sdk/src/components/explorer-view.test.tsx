@@ -138,8 +138,17 @@ describe('ExplorerView empty-state ladder', () => {
     expect(screen.queryByRole('navigation', { name: 'Folder path' })).not.toBeInTheDocument();
   });
 
+  it('shows the bare nothing-anywhere state when no item exists, even with folders', () => {
+    // Folders are places for items: with no item anywhere there is nothing to browse,
+    // so the screen says so instead of drawing an empty folder.
+    renderExplorer({ items: [] });
+    expect(screen.getByText('No rows anywhere')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Weather' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Folder path' })).not.toBeInTheDocument();
+  });
+
   it('shows "this folder is empty" for a folder with no items and no subfolders', () => {
-    renderExplorer({ items: [], currentFolderId: 'eu' });
+    renderExplorer({ currentFolderId: 'eu' });
     expect(screen.getByText('This folder is empty')).toBeInTheDocument();
     // Controls are present so the operator can navigate back out.
     expect(screen.getByRole('navigation', { name: 'Folder path' })).toBeInTheDocument();
@@ -157,6 +166,49 @@ describe('ExplorerView empty-state ladder', () => {
       },
     });
     expect(screen.getByText('No rows match')).toBeInTheDocument();
+  });
+});
+
+describe('ExplorerView current folder that is not drawn', () => {
+  it('shows the root and navigates there when the current folder is not among the folders', () => {
+    const onNavigate = vi.fn();
+    renderExplorer({ currentFolderId: 'gone', onNavigate });
+    const path = screen.getByRole('navigation', { name: 'Folder path' });
+    expect(within(path).getByRole('button', { name: 'All rows' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.queryByText('This folder is empty')).not.toBeInTheDocument();
+    expect(screen.getByText('alpha')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Weather' })).toBeInTheDocument();
+    expect(onNavigate).toHaveBeenCalledWith(null);
+  });
+
+  it('does not navigate while the current folder is drawn', () => {
+    const onNavigate = vi.fn();
+    renderExplorer({ currentFolderId: 'w', onNavigate });
+    expect(screen.getByText('delta')).toBeInTheDocument();
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+});
+
+describe('ExplorerView selected item', () => {
+  it('marks only the selected item row', () => {
+    renderExplorer({ selectedItemKey: 'beta' });
+    expect(screen.getByText('beta').closest('tr')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByText('alpha').closest('tr')).not.toHaveAttribute('data-selected');
+  });
+
+  it('marks only the selected item card', async () => {
+    renderExplorer({ selectedItemKey: 'beta' });
+    await userEvent.click(screen.getByRole('radio', { name: 'Card view' }));
+    expect(screen.getByText('beta').closest('[role="listitem"]')).toHaveAttribute(
+      'data-selected',
+      'true',
+    );
+    expect(screen.getByText('alpha').closest('[role="listitem"]')).not.toHaveAttribute(
+      'data-selected',
+    );
   });
 });
 

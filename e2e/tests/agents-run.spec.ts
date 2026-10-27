@@ -46,11 +46,7 @@ async function stubAgents(page: Page): Promise<void> {
 /** Open the agent's run view and fire the run. */
 async function startRun(page: Page): Promise<void> {
   await page.goto('/agents');
-  await page
-    .getByTestId('agent-row')
-    .filter({ hasText: 'echo-agent' })
-    .getByRole('button', { name: 'Run' })
-    .click();
+  await page.getByRole('button', { name: 'Run agent echo-agent' }).click();
   await expect(page.getByRole('button', { name: 'Run', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Run', exact: true }).click();
 }

@@ -69,10 +69,11 @@ export interface ExplorerEmptyState {
 
 /** The folder-aware empty-state ladder — every label caller-supplied. */
 export interface ExplorerEmptyStates {
-  /** No items and no folders exist at all. */
+  /** No item exists at all. Folders are places for items, so with no item there is
+   *  nothing to browse: this state shows whatever folders exist. */
   readonly empty: ExplorerEmptyState;
-  /** The current folder holds nothing — no items, no subfolders — yet the
-   *  entity set is not globally empty. */
+  /** The current folder holds nothing — no items, no subfolders — while items
+   *  exist elsewhere. */
   readonly emptyFolder: ExplorerEmptyState;
   /** The current folder has items but the active tag/search filter excludes
    *  every one, and it has no subfolders to show. */
@@ -86,6 +87,8 @@ export interface ExplorerViewProps<T> {
   readonly getFolderId: (item: T) => string | null;
 
   readonly folders: readonly Folder[];
+  /** The open folder. One that is not among `folders` (deleted, or no longer drawn
+   *  on this screen) shows as the root, and the explorer asks `onNavigate(null)`. */
   readonly currentFolderId: string | null;
   readonly onNavigate: (folderId: string | null) => void;
   readonly rootLabel: string;
@@ -106,6 +109,12 @@ export interface ExplorerViewProps<T> {
    *  the cell (the name link), so the row is never a focusable button; a click
    *  originating on a nested control is left to that control. */
   readonly onOpenItem?: (item: T) => void;
+
+  /** The key (as `getItemKey` gives it) of the item the screen has selected. Its
+   *  row/card carries `data-selected="true"`, which the stylesheet draws as the one
+   *  selected look every explorer shares. The screen still marks the item's name
+   *  link `aria-current`, which is what assistive tech reads. */
+  readonly selectedItemKey?: string;
 
   readonly tags?: ExplorerTags<T>;
   readonly search?: ExplorerSearch<T>;
@@ -196,6 +205,25 @@ function filterInFolder<T>(
   });
 }
 
+/**
+ * The folder the explorer shows. The open folder can stop being drawn while the user
+ * is inside it (deleted, or its last item on this screen filed elsewhere); the
+ * explorer then shows the root, so the breadcrumb and the body agree, and hands the
+ * root back to the screen's navigation state. One linear pass over the drawn folders.
+ */
+function useShownFolderId(
+  currentFolderId: string | null,
+  folders: readonly Folder[],
+  onNavigate: (folderId: string | null) => void,
+): string | null {
+  const currentDrawn =
+    currentFolderId === null || folders.some((folder) => folder.id === currentFolderId);
+  useEffect(() => {
+    if (!currentDrawn) onNavigate(null);
+  }, [currentDrawn, onNavigate]);
+  return currentDrawn ? currentFolderId : null;
+}
+
 export function ExplorerView<T>({
   items,
   getItemKey,
@@ -210,6 +238,7 @@ export function ExplorerView<T>({
   renderRow,
   renderCard,
   onOpenItem,
+  selectedItemKey,
   tags,
   search,
   renderFolderActions,
@@ -222,22 +251,24 @@ export function ExplorerView<T>({
   const query = search ? search.value.trim() : '';
   const tagKey = tags !== undefined ? tags.selected.join('\0') : '';
 
+  const folderId = useShownFolderId(currentFolderId, folders, onNavigate);
+
   // A new filter view starts on its first page; the clamp below then handles a
   // set that shrinks under the current page without a reset.
   useEffect(() => {
     setPage(1);
-  }, [currentFolderId, query, tagKey, pageSize]);
+  }, [folderId, query, tagKey, pageSize]);
 
   if (viewSurface === '') throw new Error('ExplorerView requires a non-empty viewSurface key.');
   if (columns.length === 0) throw new Error('ExplorerView requires at least one column.');
 
-  // Nothing anywhere: no items and no folders. A bare empty state, no controls.
-  if (items.length === 0 && folders.length === 0) {
+  // No item anywhere: a bare empty state, no controls — whatever folders exist.
+  if (items.length === 0) {
     return <EmptyState {...emptyStates.empty} />;
   }
 
-  const subfolders = childFolders(folders, currentFolderId);
-  const inFolder = items.filter((item) => getFolderId(item) === currentFolderId);
+  const subfolders = childFolders(folders, folderId);
+  const inFolder = items.filter((item) => getFolderId(item) === folderId);
 
   const selectedSet = tags !== undefined ? new Set(tags.selected) : undefined;
   const filtered = filterInFolder(inFolder, tags, selectedSet, search, query);
@@ -292,7 +323,7 @@ export function ExplorerView<T>({
 
       <FolderBreadcrumb
         folders={folders}
-        currentFolderId={currentFolderId}
+        currentFolderId={folderId}
         onNavigate={onNavigate}
         rootLabel={rootLabel}
       />
@@ -316,6 +347,7 @@ export function ExplorerView<T>({
         columns={columns}
         pageEntries={pageEntries}
         getItemKey={getItemKey}
+        selectedItemKey={selectedItemKey}
         renderRow={renderRow}
         renderCard={renderCard}
         openProps={openProps}

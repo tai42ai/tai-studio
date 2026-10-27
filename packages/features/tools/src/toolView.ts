@@ -14,8 +14,8 @@
  *              overlay `false` unhides a plugin-hidden tool and `null` defers;
  *  - folder  = overlay `folder_id` else unfiled (`null`).
  */
-import type { FolderRecord, ToolMetaRecord, ToolTagEntry } from '@tai42/api-client';
-import { effectiveHidden, type Folder, mergeToolBadges } from '@tai42/studio-sdk';
+import type { ToolMetaRecord, ToolTagEntry } from '@tai42/api-client';
+import { effectiveHidden, mergeToolBadges } from '@tai42/studio-sdk';
 
 export interface ToolView {
   readonly name: string;
@@ -114,13 +114,4 @@ export function toolMatches(view: ToolView, query: string): boolean {
   return (
     view.name.toLowerCase().includes(needle) || view.displayName.toLowerCase().includes(needle)
   );
-}
-
-/** Map the overlay's folder records into the SDK's camelCase folder shape. */
-export function toFolders(records: readonly FolderRecord[]): Folder[] {
-  return records.map((record) => ({
-    id: record.id,
-    name: record.name,
-    parentId: record.parent_id,
-  }));
 }

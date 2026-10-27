@@ -342,10 +342,10 @@ describe('Storage detail: navigation and header actions', () => {
     });
 
     expect(await screen.findByRole('heading', { level: 2, name: text.id })).toBeInTheDocument();
-    expect(await screen.findByRole('link', { name: `Open ${text.id}` })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    const link = await screen.findByRole('link', { name: `Open ${text.id}` });
+    expect(link).toHaveAttribute('aria-current', 'page');
+    // The open object's row carries the shared selected look.
+    expect(link.closest('tr')).toHaveAttribute('data-selected', 'true');
   });
 
   it('a missing object shows the not-found state and its Back link', async () => {

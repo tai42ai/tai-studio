@@ -845,6 +845,48 @@ describe('ToolsPage — overlay edit affordance', () => {
     });
   });
 
+  it('picks and files into a folder created from the dialog’s own Folder field', async () => {
+    const user = userEvent.setup();
+    let folders: { id: string; name: string; parent_id: string | null }[] = [];
+    const upsertToolMeta = vi.fn().mockResolvedValue({
+      tool_name: 'echo',
+      display_name: null,
+      folder_id: 'f-new',
+      tags: [],
+      hidden: null,
+    });
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['echo']),
+      listToolTags: vi.fn().mockResolvedValue([]),
+      listToolMeta: vi
+        .fn()
+        .mockImplementation(() => Promise.resolve({ folders: [...folders], meta: [] })),
+      createFolder: vi.fn().mockImplementation((name: string) => {
+        const created = { id: 'f-new', name, parent_id: null };
+        folders = [...folders, created];
+        return Promise.resolve(created);
+      }),
+      upsertToolMeta,
+    };
+    renderWithProviders(<ToolsPage search={{}} />, { client, projection: fullProjection() });
+
+    await user.click(await screen.findByRole('button', { name: 'Edit tool echo' }));
+    await screen.findByText('Edit echo');
+    await user.click(screen.getByRole('button', { name: /New folder/ }));
+    await user.type(screen.getByRole('textbox', { name: /folder name/i }), 'Reports');
+    await user.click(screen.getByRole('button', { name: /^Create/ }));
+
+    // The dialog reads the live tree: the folder it just created is the picked one.
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: /Folder/ })).toHaveTextContent('Reports');
+    });
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(upsertToolMeta).toHaveBeenCalledWith(
+      'echo',
+      expect.objectContaining({ folder_id: 'f-new' }),
+    );
+  });
+
   it('withdraws the Edit affordance and shows the OFF note once the overlay store is not configured', async () => {
     const user = userEvent.setup();
     const upsertToolMeta = vi
@@ -929,6 +971,106 @@ describe('ToolsPage — the Edit gate reads the overlay write route', () => {
 
     expect(await screen.findByRole('link', { name: 'Open tool echo' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Edit tool / })).toBeNull();
+  });
+});
+
+describe('ToolsPage — folder actions and the tool_meta store', () => {
+  const folderClient = (over: StubApiClient = {}): StubApiClient => ({
+    listTools: vi.fn().mockResolvedValue(['echo']),
+    listToolTags: vi.fn().mockResolvedValue([]),
+    listToolMeta: vi.fn().mockResolvedValue({
+      folders: [{ id: 'f1', name: 'Weather', parent_id: null }],
+      meta: [],
+    }),
+    ...over,
+  });
+
+  it('offers each folder action only on its own route', async () => {
+    renderWithProviders(<ToolsPage search={{}} />, {
+      client: folderClient(),
+      projection: scopedProjection({
+        tools: ['echo'],
+        routes: [{ path: '/api/tool-meta/folders/{folder_id}/rename', methods: ['POST'] }],
+      }),
+    });
+
+    expect(
+      await screen.findByRole('button', { name: 'Rename folder Weather' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Move folder Weather' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Delete folder Weather' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Edit tool echo' })).toBeNull();
+  });
+
+  it('withdraws the folder actions with the Edit once a write reveals the store off', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ToolsPage search={{}} />, {
+      client: folderClient({
+        upsertToolMeta: vi
+          .fn()
+          .mockRejectedValue(new ApiError('tool_meta is off', 501, 'tool-meta-not-configured')),
+      }),
+      projection: fullProjection(),
+    });
+
+    expect(
+      await screen.findByRole('button', { name: 'Rename folder Weather' }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Edit tool echo' }));
+    await screen.findByText('Edit echo');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByTestId('feature-disabled')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('button', { name: /^(Rename|Move|Delete) folder /, hidden: true }),
+      ).toBeNull();
+    });
+  });
+
+  it('offers no overlay write when the kind-status table reports the store off', async () => {
+    renderWithProviders(<ToolsPage search={{}} />, {
+      client: folderClient({
+        getSystemKinds: vi
+          .fn()
+          .mockResolvedValue([{ kind: 'tool_meta', state: 'off', plugin: null, detail: 'off' }]),
+      }),
+      projection: fullProjection(),
+    });
+
+    expect(await screen.findByRole('button', { name: 'Weather' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Edit tool echo' })).toBeNull();
+    });
+    expect(screen.queryByRole('button', { name: /^(Rename|Move|Delete) folder / })).toBeNull();
+  });
+
+  it('gives the selected tool the shared selected look', async () => {
+    renderWithProviders(<ToolsPage search={{ tool: 'echo' }} />, {
+      client: { ...detailClient(['echo', 'ping']) },
+      projection: fullProjection(),
+    });
+
+    const link = await screen.findByRole('link', { name: 'Open tool echo' });
+    expect(link.closest('tr')).toHaveAttribute('data-selected', 'true');
+    const other = screen.getByRole('link', { name: 'Open tool ping' });
+    expect(other.closest('tr')).not.toHaveAttribute('data-selected');
+  });
+
+  it('shows the no-visible-tools state, not a folder tree, when every tool is hidden', async () => {
+    renderWithProviders(<ToolsPage search={{}} />, {
+      client: folderClient({
+        listToolMeta: vi.fn().mockResolvedValue({
+          folders: [{ id: 'f1', name: 'Weather', parent_id: null }],
+          meta: [
+            { tool_name: 'echo', display_name: null, folder_id: null, tags: [], hidden: true },
+          ],
+        }),
+      }),
+    });
+
+    expect(await screen.findByText('No visible tools')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Weather' })).toBeNull();
   });
 });
 

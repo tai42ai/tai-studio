@@ -31,7 +31,6 @@ export function PresetDetailHeader({
   conflicted,
   headingRef,
   metaReady,
-  metaWriteDisabled,
   onNewVersion,
   onEditDetails,
   onRename,
@@ -41,7 +40,6 @@ export function PresetDetailHeader({
   readonly conflicted: boolean;
   readonly headingRef?: Ref<HTMLHeadingElement>;
   readonly metaReady: boolean;
-  readonly metaWriteDisabled: boolean;
   readonly onNewVersion: () => void;
   readonly onEditDetails: () => void;
   readonly onRename: () => void;
@@ -57,7 +55,6 @@ export function PresetDetailHeader({
         presetName={presetName}
         conflicted={conflicted}
         metaReady={metaReady}
-        metaWriteDisabled={metaWriteDisabled}
         onNewVersion={onNewVersion}
         onEditDetails={onEditDetails}
         onRename={onRename}

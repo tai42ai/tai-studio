@@ -114,6 +114,7 @@ export function ResourceExplorer({
       folders={deriveFolders(ids)}
       currentFolderId={currentFolderId}
       onNavigate={onNavigate}
+      selectedItemKey={selected}
       rootLabel="All resources"
       viewSurface={STORAGE_VIEW_SURFACE}
       label="Resources"

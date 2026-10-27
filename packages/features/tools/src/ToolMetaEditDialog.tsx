@@ -1,8 +1,8 @@
 /**
  * The per-tool tool_meta edit dialog for the tools screen: display name, user tags,
- * folder, and a THREE-WAY visibility control (Default / Shown / Hidden). It is the
- * ONLY surface that edits all four overlay fields — the presets screen edits just
- * display name + tags, and hide management is centralized here.
+ * badges, folder, and a THREE-WAY visibility control (Default / Shown / Hidden). It is
+ * the ONLY surface that edits visibility and badges — the presets screen edits display
+ * name, tags and folder, and hide management is centralized here.
  *
  * The display-name + tags portion is the shared SDK `OverlayDetailsFields`, so those
  * two fields' edit semantics (the pinned blank→null mapping) exist exactly once. The
@@ -21,6 +21,7 @@
 import type { ToolMetaPatch } from '@tai42/api-client';
 import {
   Button,
+  type CreateFolder,
   Dialog,
   FeatureDisabled,
   featureDisabledMessage,
@@ -32,6 +33,7 @@ import {
   overlayDetailsPatch,
   RadioGroup,
   TagsInput,
+  ToolMetaWriteError,
 } from '@tai42/studio-sdk';
 import { type ReactNode, useState } from 'react';
 
@@ -64,10 +66,12 @@ export interface ToolMetaEditDialogProps {
   readonly folders: readonly Folder[];
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
-  readonly onCreateFolder: (name: string, parentId: string | null) => Promise<string>;
+  /** Create a folder inline; absent when the caller may not, so no create is offered. */
+  readonly onCreateFolder: CreateFolder | undefined;
   readonly onSubmit: (patch: ToolMetaPatch) => void;
   readonly saving: boolean;
-  /** The overlay write's error; a 501 `tool-meta-not-configured` stands the disabled note. */
+  /** The overlay write's error: a 501 `tool-meta-not-configured` replaces the form with
+   *  the disabled note; any other failure shows above the form, which stays to retry. */
   readonly writeError: unknown;
 }
 
@@ -104,6 +108,7 @@ export function ToolMetaEditDialog({
             onOpenChange(false);
           }}
           saving={saving}
+          writeError={writeError}
         />
       )}
     </Dialog>
@@ -117,13 +122,15 @@ function EditForm({
   onSubmit,
   onCancel,
   saving,
+  writeError,
 }: {
   readonly tool: ToolView;
   readonly folders: readonly Folder[];
-  readonly onCreateFolder: (name: string, parentId: string | null) => Promise<string>;
+  readonly onCreateFolder: CreateFolder | undefined;
   readonly onSubmit: (patch: ToolMetaPatch) => void;
   readonly onCancel: () => void;
   readonly saving: boolean;
+  readonly writeError: unknown;
 }): ReactNode {
   const [displayName, setDisplayName] = useState(tool.overlayDisplayName ?? '');
   const [tags, setTags] = useState<readonly string[]>(tool.overlayTags);
@@ -188,6 +195,7 @@ function EditForm({
         }}
         disabled={saving}
       />
+      <ToolMetaWriteError error={writeError} />
       <div className="tai-row">
         <Button variant="primary" onClick={submit} disabled={saving}>
           Save

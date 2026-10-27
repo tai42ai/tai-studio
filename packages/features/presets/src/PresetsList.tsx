@@ -1,23 +1,19 @@
 /**
- * The presets master table (left pane). One row per store-backed preset. Active
- * presets fill the main table; the conflicted (quarantined) ones — whose names
- * collided with a foreign tool at boot — are split into their own danger-accented
- * "Conflicted" Card below, each row carrying the server's `conflicted_reason` (a
- * conflicted preset is DELETE-ONLY; the detail pane offers only Delete for it, so
- * the table never presents a dead button). The name cell is an `AppLink` that sets
- * `?preset=` to drive the detail pane from either table; the active row is
- * highlighted.
+ * The presets list (left pane). The active presets fill a folder explorer
+ * (`PresetExplorer`) over the one tool-organization tree, drawn for this screen's
+ * presets; the conflicted (quarantined) ones — whose names collided with a foreign
+ * tool at boot — stay outside it in their own danger-accented "Conflicted" Card,
+ * each row carrying the server's `conflicted_reason` (a conflicted preset is
+ * DELETE-ONLY; the detail pane offers only Delete for it, so the table never
+ * presents a dead button). The name link sets `?preset=` to drive the detail pane
+ * from either place.
  *
- * The Name cell also surfaces the tool's overlay DISPLAY NAME (from `listToolMeta`)
- * as a muted sub-line, and the Tags column renders the tool's OVERLAY tags — record
- * categorization tags are gone; that curation lives in the tool_meta overlay now.
- *
- * SAFETY: a preset carries arbitrary server-supplied strings, so every cell renders
- * them as ESCAPED text through the DS components, never an HTML sink.
+ * The overlay read (`listToolMeta`) supplies the folders, each preset's folder, its
+ * DISPLAY NAME sub-line and its OVERLAY tags; a failed overlay read is stated loudly
+ * above the explorer.
  */
-import { apiRoutes, type PresetRecord } from '@tai42/api-client';
+import { apiRoutes, type PresetRecord, type ToolMetaOverlay } from '@tai42/api-client';
 import {
-  AppLink,
   Badge,
   Button,
   Card,
@@ -25,13 +21,13 @@ import {
   errorMessage,
   ErrorState,
   FeatureDisabled,
+  type FoldersChanged,
   openTargetProps,
   ScrollRegion,
   Skeleton,
   Spinner,
   Table,
   TBody,
-  TD,
   TH,
   THead,
   TR,
@@ -40,129 +36,18 @@ import {
   useCanWrite,
   useFeatureOffMessage,
 } from '@tai42/studio-sdk';
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { type CSSProperties, type ReactNode, useState } from 'react';
+import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
 
 import { CreatePresetForm } from './CreatePresetForm';
 import { presetsListKey, presetToolMetaKey } from './keys';
+import { type OverlayDetail, PRESET_COLUMNS, PresetCells } from './PresetEntry';
+import { PresetExplorer } from './PresetExplorer';
 import { StoredPresetFault } from './StoredPresetFault';
-import { TagChips } from './tags';
 
-/** A tool's overlay projection the table cells read: its display name + user tags. */
-interface OverlayDetail {
-  readonly displayName: string | null;
-  readonly tags: readonly string[];
-}
-
-/** The generic fallback shown when a conflicted row carries no server reason. */
-const GENERIC_CONFLICT_REASON =
-  'Name collided with an existing tool at startup — delete to resolve.';
-
-const linkStyle: CSSProperties = {
-  color: 'var(--tai-color-accent)',
-  textDecoration: 'none',
-  fontFamily: 'var(--tai-font-mono)',
-  // The name is one token: keep it on a single line so auto table layout gives the
-  // column its width rather than collapsing it to a character. The ScrollRegion
-  // scrolls a very long name; sibling sub-lines (display name, reason) still wrap.
-  whiteSpace: 'nowrap',
-};
-
-function PresetRow({
-  preset,
-  overlay,
-  selected,
-}: {
-  readonly preset: PresetRecord;
-  readonly overlay: OverlayDetail | undefined;
-  readonly selected: boolean;
-}): ReactNode {
-  const navigate = useAppNavigate();
-  const rowStyle: CSSProperties = {
-    background: selected ? 'var(--tai-color-surface)' : undefined,
-    opacity: preset.conflicted ? 0.7 : undefined,
-  };
-  const displayName = overlay?.displayName ?? null;
-  const tags = overlay?.tags ?? [];
-
-  // The whole row opens the preset — the same destination as the name-cell link
-  // below — via the shared house pattern. The link stays as the accessible path;
-  // the helper yields to it (and to any nested control) so a click there
-  // navigates once, never twice. Its `cursor: pointer` merges over `rowStyle`.
-  const openProps = openTargetProps({
-    onOpen: () => {
-      navigate('presets', { preset: preset.name });
-    },
-  });
-
-  return (
-    <TR
-      data-testid={`preset-row-${preset.name}`}
-      {...openProps}
-      style={{ ...rowStyle, ...openProps.style }}
-    >
-      <TD>
-        <AppLink
-          to="presets"
-          search={{ preset: preset.name }}
-          aria-label={`Open preset ${preset.name}`}
-          aria-current={selected ? 'page' : undefined}
-        >
-          <span style={linkStyle}>{preset.name}</span>
-        </AppLink>
-        {displayName !== null && displayName !== '' ? (
-          <div
-            style={{ color: 'var(--tai-color-text-muted)', fontSize: 'var(--tai-text-sm)' }}
-            data-testid={`preset-display-name-${preset.name}`}
-          >
-            {displayName}
-          </div>
-        ) : null}
-        {preset.conflicted ? (
-          <div
-            data-testid={`preset-conflicted-${preset.name}`}
-            style={{
-              marginTop: 'var(--tai-space-1)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 'var(--tai-space-1)',
-            }}
-          >
-            <span>
-              <Badge variant="danger">Conflicted</Badge>
-            </span>
-            <span style={{ color: 'var(--tai-color-text-muted)', fontSize: 'var(--tai-text-sm)' }}>
-              {preset.conflicted_reason ?? GENERIC_CONFLICT_REASON}
-            </span>
-          </div>
-        ) : null}
-      </TD>
-      <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{preset.base_tool}</TD>
-      <TD>{preset.description || '—'}</TD>
-      <TD>{preset.active_version}</TD>
-      <TD>{tags.length > 0 ? <TagChips tags={tags} /> : '—'}</TD>
-      <TD>{preset.extensions.length}</TD>
-    </TR>
-  );
-}
-
-/** The shared column header row — identical for the active and conflicted tables. */
-function PresetTableHead(): ReactNode {
-  return (
-    <THead>
-      <TR>
-        <TH>Name</TH>
-        <TH>Base tool</TH>
-        <TH>Description</TH>
-        <TH>Active version</TH>
-        <TH>Tags</TH>
-        <TH>Extensions</TH>
-      </TR>
-    </THead>
-  );
-}
-
-function PresetTable({
+/** The conflicted presets' table — outside the folder explorer, since a conflicted
+ *  preset is delete-only and never filed. */
+function ConflictedTable({
   presets,
   overlayByTool,
   selected,
@@ -171,19 +56,46 @@ function PresetTable({
   readonly overlayByTool: ReadonlyMap<string, OverlayDetail>;
   readonly selected: string | undefined;
 }): ReactNode {
+  const navigate = useAppNavigate();
   return (
-    <ScrollRegion label="Presets">
+    <ScrollRegion label="Conflicted presets">
       <Table>
-        <PresetTableHead />
+        <THead>
+          <TR>
+            {PRESET_COLUMNS.map((column) => (
+              <TH key={column.key}>{column.header}</TH>
+            ))}
+          </TR>
+        </THead>
         <TBody>
-          {presets.map((preset) => (
-            <PresetRow
-              key={preset.name}
-              preset={preset}
-              overlay={overlayByTool.get(preset.name)}
-              selected={preset.name === selected}
-            />
-          ))}
+          {presets.map((preset) => {
+            // The whole row opens the preset — the same destination as the name link,
+            // which stays the accessible path; the helper yields to it.
+            const openProps = openTargetProps({
+              onOpen: () => {
+                navigate('presets', { preset: preset.name });
+              },
+            });
+            const isSelected = preset.name === selected;
+            return (
+              <TR
+                key={preset.name}
+                data-testid={`preset-row-${preset.name}`}
+                selected={isSelected}
+                {...openProps}
+                style={{
+                  opacity: 0.7,
+                  ...openProps.style,
+                }}
+              >
+                <PresetCells
+                  preset={preset}
+                  overlay={overlayByTool.get(preset.name)}
+                  selected={isSelected}
+                />
+              </TR>
+            );
+          })}
         </TBody>
       </Table>
     </ScrollRegion>
@@ -192,23 +104,34 @@ function PresetTable({
 
 /**
  * The list's body below its header: the versioning OFF note, the loading rows, the
- * stored-row fault or a read error, the empty state, or the active and conflicted tables.
+ * stored-row fault or a read error, the empty state, or the active-preset explorer and
+ * the conflicted table.
  */
 function PresetsListBody({
   query,
+  metaQuery,
   versioningOffMessage,
   overlayByTool,
   selected,
+  onFoldersChanged,
 }: {
   readonly query: UseQueryResult<PresetRecord[]>;
+  readonly metaQuery: UseQueryResult<ToolMetaOverlay>;
   readonly versioningOffMessage: string | null;
   readonly overlayByTool: ReadonlyMap<string, OverlayDetail>;
   readonly selected: string | undefined;
+  readonly onFoldersChanged: FoldersChanged;
 }): ReactNode {
   const api = useApi();
   const faulted = query.isError ? api.storedPresetFaultFromError(query.error) : null;
-  const active = (query.data ?? []).filter((preset) => !preset.conflicted);
-  const conflicted = (query.data ?? []).filter((preset) => preset.conflicted);
+  const active = useMemo(
+    () => (query.data ?? []).filter((preset) => !preset.conflicted),
+    [query.data],
+  );
+  const conflicted = useMemo(
+    () => (query.data ?? []).filter((preset) => preset.conflicted),
+    [query.data],
+  );
 
   return versioningOffMessage !== null ? (
     // The versioning store is OFF, so the preset store is empty and create is
@@ -239,14 +162,24 @@ function PresetsListBody({
   ) : (
     <>
       <Card>
-        {active.length > 0 ? (
-          <PresetTable presets={active} overlayByTool={overlayByTool} selected={selected} />
-        ) : (
-          <EmptyState
-            title="No active presets"
-            description="Every preset is currently conflicted — resolve them below."
+        <div className="tai-stack">
+          {metaQuery.isError ? (
+            // Without the overlay the folders, display names and tags are unknown, so
+            // every preset shows at the root — said loudly, with a retry.
+            <ErrorState
+              message={`Folders, display names and tags could not be loaded: ${errorMessage(metaQuery.error)}`}
+              onRetry={() => void metaQuery.refetch()}
+            />
+          ) : null}
+          <PresetExplorer
+            presets={active}
+            overlay={metaQuery.data}
+            overlayByTool={overlayByTool}
+            selected={selected}
+            onFoldersChanged={onFoldersChanged}
+            overlayLoaded={metaQuery.isSuccess}
           />
-        )}
+        </div>
       </Card>
 
       {conflicted.length > 0 ? (
@@ -267,7 +200,11 @@ function PresetsListBody({
             >
               Conflicted <Badge variant="danger">{conflicted.length}</Badge>
             </h3>
-            <PresetTable presets={conflicted} overlayByTool={overlayByTool} selected={selected} />
+            <ConflictedTable
+              presets={conflicted}
+              overlayByTool={overlayByTool}
+              selected={selected}
+            />
           </div>
         </Card>
       ) : null}
@@ -278,10 +215,15 @@ function PresetsListBody({
 export function PresetsList({ selected }: { readonly selected: string | undefined }): ReactNode {
   const api = useApi();
   const query = useQuery({ queryKey: presetsListKey, queryFn: () => api.listPresets() });
-  // The overlay read is enrichment: a preset row renders fully without it, so its
-  // failure never walls the table — the display-name sub-line and the overlay tags
-  // simply fall back to their empty state rather than blocking the list.
+  // The overlay read (folders, display names, tags) is enrichment: a preset row renders
+  // fully without it, so its failure never walls the list — the body states it loudly
+  // with a retry and shows every preset at the root.
   const metaQuery = useQuery({ queryKey: presetToolMetaKey, queryFn: () => api.listToolMeta() });
+  const queryClient = useQueryClient();
+  const onFoldersChanged = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: presetToolMetaKey }),
+    [queryClient],
+  );
   const [createOpen, setCreateOpen] = useState(false);
 
   // Preset CREATE is refused (501 `versioning-not-configured`) on a deployment whose
@@ -294,11 +236,15 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
   const versioningOffMessage = useFeatureOffMessage('versioning');
   const versioningOff = versioningOffMessage !== null;
   const canCreate = useCanWrite(apiRoutes.post_api_presets.path);
-  const overlayByTool = new Map<string, OverlayDetail>(
-    (metaQuery.data?.meta ?? []).map((row) => [
-      row.tool_name,
-      { displayName: row.display_name, tags: row.tags },
-    ]),
+  const overlayByTool = useMemo(
+    () =>
+      new Map<string, OverlayDetail>(
+        (metaQuery.data?.meta ?? []).map((row) => [
+          row.tool_name,
+          { displayName: row.display_name, tags: row.tags },
+        ]),
+      ),
+    [metaQuery.data],
   );
 
   return (
@@ -347,9 +293,11 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
 
       <PresetsListBody
         query={query}
+        metaQuery={metaQuery}
         versioningOffMessage={versioningOffMessage}
         overlayByTool={overlayByTool}
         selected={selected}
+        onFoldersChanged={onFoldersChanged}
       />
 
       {createOpen ? (
