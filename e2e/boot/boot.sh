@@ -197,47 +197,36 @@ if [[ -n "${EXTRA_PLUGINS:-}" ]]; then
   set +f
 fi
 
-# Apply the platform migration chains the way production does: the kit Flyway-model
-# runner (tai42_kit.db.apply_migrations) over the packaged chains, recorded in
-# `tai_schema_history`. The skeleton chain always; the tai42-accounts-postgres plugin
-# chain (accounts_users / accounts_sessions / accounts_invites) when the docs-screenshot
-# runner sets APPLY_ACCOUNTS_DDL=1 — gated so the lean e2e boot (no accounts plugin
-# installed) is untouched. NOT `tai db migrate`: that discovers only marketplace-installed
-# plugins, so it would migrate the skeleton chain but skip the pip-installed accounts
-# plugin — the entries are built directly instead. The platform state-store chain is
-# always applied: the manifest mounts the `states` router, whose store binds to the
-# `default` database when TAI_DB_BINDING_STATES is unset, and its boot gate refuses to
-# start until the chain is applied there. A chain binds to its component's database
-# when a TAI_DB_BINDING_<COMPONENT> is exported and to the `default` database
-# (TAI_DATABASE_DEFAULT_PG_* exported above) otherwise, resolved through the registry's
-# migrator identity. The compose Postgres is up (step 1) and the plugins are installed above, so
-# this runs cleanly here; a discovery/apply failure exits non-zero.
-log "applying the platform migration chains (kit migration runner)"
-APPLY_ACCOUNTS_DDL="${APPLY_ACCOUNTS_DDL:-0}" "${VENV_PY}" - <<'PY' >&2
-import asyncio
-import importlib.resources
-import os
+# The file config backend anchors its `.env` (and its lock) at TAI_CONFIG_DIR_PATH,
+# which defaults to `/app` — a path that exists only inside the deployment image, not
+# on a bare runner. Point it at a writable directory so the config doors work (e.g.
+# POST /api/config/env, which a suite seeds an env key through) rather than failing on
+# a missing path. It also holds the manifest the server serves, which the
+# migration step below reads first.
+# Every boot starts it fresh: an empty env file, which every config reload reads (a
+# missing one fails the reload), and a copy of MANIFEST_PATH. The server rewrites the
+# manifest it serves (a config door's save writes it back, with a lock file beside it),
+# so serving the copy means a run never rewrites the checked-in manifest.
+export TAI_CONFIG_DIR_PATH="${BOOT_DIR}/.config-state"
+rm -rf "${TAI_CONFIG_DIR_PATH}"
+mkdir -p "${TAI_CONFIG_DIR_PATH}"
+: > "${TAI_CONFIG_DIR_PATH}/.env"
+SERVED_MANIFEST_PATH="${TAI_CONFIG_DIR_PATH}/manifest.yml"
+cp "${MANIFEST_PATH}" "${SERVED_MANIFEST_PATH}"
 
-from tai42_kit.db import apply_migrations
-from tai42_kit.plugins import parse_plugin_spec
-from tai42_skeleton.db.discovery import plugin_migration_entry, skeleton_entry
-from tai42_skeleton.states.db import states_entry
-
-entries = [skeleton_entry(), states_entry()]
-if os.environ.get("APPLY_ACCOUNTS_DDL", "0") == "1":
-    package = importlib.resources.files("tai42_accounts_postgres")
-    spec = parse_plugin_spec(
-        package.joinpath("tai-plugin.yml").read_bytes(),
-        source="tai42_accounts_postgres/tai-plugin.yml",
-    )
-    entry = plugin_migration_entry(spec)
-    if entry is None:
-        raise RuntimeError("tai42-accounts-postgres declares no 'migrations' chain; its schema cannot be applied")
-    entries.append(entry)
-
-applied = asyncio.run(apply_migrations(entries))
-print(f"[boot] applied {len(applied)} migration file(s) across {len(entries)} chain(s)")
-PY
+# Apply the platform migration chains the way production does: `tai db migrate`, the kit
+# Flyway-model runner over every chain the boot-time schema gate checks, recorded in
+# `tai_schema_history`. It discovers the skeleton chains (the baseline and the `states`
+# record store), the chain of every plugin installed into the venv above (the accounts
+# plugin's accounts_* tables when the docs-screenshot runner installs it) and of every
+# plugin the served manifest loads — so the chains migrated are the chains the skeleton
+# refuses to start without. A chain binds to its component's database when a
+# TAI_DB_BINDING_<COMPONENT> is exported and to the `default` database
+# (TAI_DATABASE_DEFAULT_PG_* exported above) otherwise. The compose Postgres is up (step
+# 1), the plugins are installed above and the served manifest is in place, so this runs
+# cleanly here; a discovery/apply failure exits non-zero.
+log "applying the platform migration chains (tai db migrate)"
+( cd "${MONOREPO_DIR}" && uv run --no-sync tai db migrate ) >&2
 
 # --- 4. Route mappings (always) + seeded identity (STUDIO_SEED_AUTH=1) --------
 # Route mappings — Postgres `access_control_routes`. Each row's `url` is the route
@@ -311,21 +300,6 @@ export ACCESS_CONTROL_REDIS_URL="${REDIS_URL}"
 # token validation finds the seeded key. Without this the provider's redis_url is unset
 # and the probe aborts the boot.
 export TAI_IDENTITY_REDIS_URL="${REDIS_URL}"
-# The file config backend anchors its `.env` (and its lock) at TAI_CONFIG_DIR_PATH,
-# which defaults to `/app` — a path that exists only inside the deployment image, not
-# on a bare runner. Point it at a writable directory so the config doors work (e.g.
-# POST /api/config/env, which a suite seeds an env key through) rather than failing on
-# a missing path. It also holds the manifest the server serves (below).
-# Every boot starts it fresh: an empty env file, which every config reload reads (a
-# missing one fails the reload), and a copy of MANIFEST_PATH. The server rewrites the
-# manifest it serves (a config door's save writes it back, with a lock file beside it),
-# so serving the copy means a run never rewrites the checked-in manifest.
-export TAI_CONFIG_DIR_PATH="${BOOT_DIR}/.config-state"
-rm -rf "${TAI_CONFIG_DIR_PATH}"
-mkdir -p "${TAI_CONFIG_DIR_PATH}"
-: > "${TAI_CONFIG_DIR_PATH}/.env"
-SERVED_MANIFEST_PATH="${TAI_CONFIG_DIR_PATH}/manifest.yml"
-cp "${MANIFEST_PATH}" "${SERVED_MANIFEST_PATH}"
 # The access-control policy store (policy bodies + route mappings), the versioned-document
 # store (the policy-version history every api-key mint/edit appends), and the tool-metadata
 # overlay store (the tools page's folder tree + per-tool overlay, read on every ToolsPage

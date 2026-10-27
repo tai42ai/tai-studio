@@ -3070,7 +3070,8 @@ const AUTHED_PAGES = [
       const form = page.getByRole('form', { name: 'Register hook' });
       await form.getByLabel('Name').fill('notify-on-event');
       await form.getByLabel('Topic').fill('events.created');
-      await form.getByLabel('Tool', { exact: true }).fill('slack.post_message');
+      await form.getByRole('combobox', { name: 'Tool', exact: true }).click();
+      await page.getByRole('option', { name: 'studio_demo_form' }).first().click();
       await pickFirstExecutionKey(page, form);
       // Wait on the picked value so the shot shows a bound key, not the placeholder.
       await form

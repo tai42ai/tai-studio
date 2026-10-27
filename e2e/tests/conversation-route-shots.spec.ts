@@ -923,6 +923,63 @@ test.describe('route dialog pickers', () => {
     });
   });
 
+  test('the Agent and Channel pickers narrow by typed text and choose from the keyboard', async ({
+    page,
+  }) => {
+    const agent = (name: string) => ({
+      name,
+      description: '',
+      tool_name: `run_${name}`,
+      input_schema: {},
+      spec_runnable: false,
+    });
+    await stubGet(page, '/api/agents', {
+      items: [agent(PICKED.agent), agent('relay-agent'), agent('status-agent')],
+      total: 3,
+    });
+    await stubGet(page, '/api/channels', {
+      channels: [
+        { name: PICKED.channel, identity_hint: 'The address visitors message.' },
+        { name: 'chat-line', identity_hint: null },
+      ],
+    });
+    await page.goto('/conversations');
+    await page.getByRole('button', { name: 'Create route' }).click();
+    const dialog = page.getByRole('dialog');
+    await pick(page, dialog, 'Target kind', 'Agent');
+
+    const agentTrigger = dialog.getByRole('combobox', { name: 'Agent', exact: true });
+    await agentTrigger.click();
+    const agentSearch = page.getByRole('combobox', { name: 'Search agents' });
+    await expect(agentSearch).toBeFocused();
+    await expect(page.getByRole('option')).toHaveCount(3);
+    await agentSearch.fill('STATUS');
+    await expect(page.getByRole('option')).toHaveCount(1);
+    await expect(page.getByRole('option', { name: 'status-agent' })).toHaveAttribute(
+      'data-highlighted',
+    );
+    await agentSearch.fill('nobody');
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Nothing matches “nobody”.' }),
+    ).toBeVisible();
+    await expect(page.getByRole('option')).toHaveCount(0);
+    await agentSearch.fill('relay');
+    await agentSearch.press('Enter');
+    await expect(agentSearch).toBeHidden();
+    await expect(agentTrigger).toContainText('relay-agent');
+
+    await pick(page, dialog, 'Door', 'Channel');
+    const channelTrigger = dialog.getByRole('combobox', { name: 'Channel', exact: true });
+    await channelTrigger.click();
+    const channelSearch = page.getByRole('combobox', { name: 'Search channels' });
+    await expect(channelSearch).toBeFocused();
+    await channelSearch.fill('chat');
+    await expect(page.getByRole('option')).toHaveCount(1);
+    await channelSearch.press('Enter');
+    await expect(channelSearch).toBeHidden();
+    await expect(channelTrigger).toContainText('chat-line');
+  });
+
   test('a session that cannot list agents reads the note in place of the agent list', async ({
     page,
   }) => {

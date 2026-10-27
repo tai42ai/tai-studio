@@ -2,9 +2,9 @@
  * The Manifest screen's Extensions section against the LIVE boot skeleton. The boot
  * manifest loads `ask_external` and the reference plugin's `studio_demo_label` wrapper
  * through `extensions_modules`, names the RQ backend in
- * `backend_module`, and maps `schedule_task` onto `studio_demo_echo` in the
- * `reference-plugin-tools` entry; the section lists the loaded extension under its kind
- * and shows those settings in its "In the manifest" part.
+ * `backend_module`, and maps `schedule_task` onto `studio_demo_echo` and `studio_demo_form`
+ * in the `reference-plugin-tools` entry; the section lists the loaded extension under its
+ * kind and shows those settings in its "In the manifest" part, one map row per tool.
  */
 import { expect } from '@playwright/test';
 
@@ -43,7 +43,11 @@ test('the Extensions section lists the loaded extensions and the manifest settin
   await expect(section.getByText('tai42_backend_rq', { exact: true })).toBeVisible();
 
   const maps = section.getByRole('table', { name: 'Extension maps declared in the manifest' });
-  const row = maps.getByRole('row').filter({ hasText: 'tools › reference-plugin-tools' });
-  await expect(row.getByRole('cell').nth(1)).toHaveText('studio_demo_echo');
-  await expect(row.getByRole('cell').nth(2)).toContainText('schedule_task');
+  const entryRows = maps.getByRole('row').filter({ hasText: 'tools › reference-plugin-tools' });
+  await expect(entryRows).toHaveCount(2);
+  for (const tool of ['studio_demo_echo', 'studio_demo_form']) {
+    const row = entryRows.filter({ has: page.getByRole('cell', { name: tool, exact: true }) });
+    await expect(row.getByRole('cell').nth(1)).toHaveText(tool);
+    await expect(row.getByRole('cell').nth(2)).toContainText('schedule_task');
+  }
 });

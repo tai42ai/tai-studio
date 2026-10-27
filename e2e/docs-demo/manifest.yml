@@ -27,7 +27,7 @@
 # and its /api/login route has a live provider. It also declares the member-admin
 # actions (invite, resend, cancel, role/access change, remove) the generic Members
 # page renders and invokes. Its own accounts_* tables are applied to the compose
-# Postgres by boot.sh (APPLY_ACCOUNTS_DDL=1) and its demo members are seeded by the
+# Postgres by boot.sh (`tai db migrate`) and its demo members are seeded by the
 # runner after boot (through the member-action invoke door), so the login screen
 # renders its password form and the Members page renders a populated directory.
 lifecycle_modules:
