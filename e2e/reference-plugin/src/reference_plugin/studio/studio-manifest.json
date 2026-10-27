@@ -2,10 +2,10 @@
   "name": "reference_plugin",
   "version": "0.1.0",
   "api_version": 2,
-  "entry": "reference-plugin-ChqcK95k.js",
+  "entry": "reference-plugin-CXvVfvVW.js",
   "integrity": {
-    "reference-plugin-ChqcK95k.js": "sha384-D6qR68x0851eXGFYiC+xkDbP1MjEfz9GbZVbLBXCHnnik5wuEZjr1gZ1kXctUiI+",
-    "reference-plugin-DSwDHUoz.css": "sha384-Mud0KJQiWnrAsfSqCmJvqz4Ul6inFqfXMzfqUJFAPdWGmhNEBnZBcAFMx9zYS95z"
+    "reference-plugin-CXvVfvVW.js": "sha384-ReFZuLDDA7PkuxEpsB5OAGxLzJx/7KrdJiAyX2Wjwc/26y8wtEBsnf2DHpKqpCt4",
+    "reference-plugin-DSwDHUoz.css": "sha384-96ueStbpeCsV0cVxEL7qPy5rn/bkqlDQuJLTpsQ597VyEnph734X/MQHa0TEccZw"
   },
   "contributions": {
     "tool_panels": {
