@@ -13,18 +13,20 @@
  *
  *   loading → a skeleton placeholder;
  *   ready   → replace-navigate to the first covered entry;
- *   failed  → the shell's own retry treatment, plus a sign-out escape.
+ *   failed  → the shell's own retry treatment, plus a sign-out escape that
+ *             revokes the server session like the shell's own sign-out.
  */
-import { Button, ErrorState, Skeleton, useAuth, useCapabilities } from '@tai42/studio-sdk';
+import { Button, ErrorState, Skeleton, useCapabilities } from '@tai42/studio-sdk';
 import { useNavigate } from '@tanstack/react-router';
 import { type ReactNode, useEffect } from 'react';
 
 import { FEATURE_TOKENS, PATH } from './routes';
 import { tokenCovered } from './token-requirements';
+import { useSignOut } from './use-sign-out';
 
 export function LandingRoute(): ReactNode {
   const { state, retry } = useCapabilities();
-  const { logout } = useAuth();
+  const signOut = useSignOut();
   const navigate = useNavigate();
 
   // The first covered entry under a ready projection; Dashboard leads the list,
@@ -46,7 +48,7 @@ export function LandingRoute(): ReactNode {
           onRetry={retry}
         />
         <div>
-          <Button variant="secondary" onClick={logout}>
+          <Button variant="secondary" onClick={signOut}>
             Sign out
           </Button>
         </div>
