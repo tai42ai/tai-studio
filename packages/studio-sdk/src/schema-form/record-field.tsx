@@ -23,6 +23,7 @@ import { defaultValueForSchema } from './default-value';
 import { FieldGroup } from './field-group';
 import { FieldNode } from './field-node';
 import { useKeyedCallbacks } from './keyed-callbacks';
+import { useSeedingAction } from './seeding-action';
 import type { JsonSchema, SchemaFormErrors } from './types';
 
 interface Row {
@@ -126,8 +127,10 @@ export function RecordField({
     setValue,
     rows.map((row) => row.id),
   );
+  const add = useSeedingAction(values);
   const addRow = (): void => {
-    commit([...rows, { id: nextId.current++, key: '', value: newEntryValue(values, root) }]);
+    const entry = add.seed(() => newEntryValue(values, root));
+    if (entry.ok) commit([...rows, { id: nextId.current++, key: '', value: entry.value }]);
   };
   const removeRow = (id: number): void => {
     commit(rows.filter((row) => row.id !== id));
@@ -137,7 +140,12 @@ export function RecordField({
   const summary = keyFaultSummary(blankRowIds.size, duplicateRowIds.size);
 
   return (
-    <FieldGroup heading={heading} description={description} error={error} atRoot={false}>
+    <FieldGroup
+      heading={heading}
+      description={description}
+      error={add.failure ?? error}
+      atRoot={false}
+    >
       {rows.length === 0 ? <span className="tai-field-hint">No entries</span> : null}
       {summary !== undefined ? (
         <span role="alert" className="tai-field-error">

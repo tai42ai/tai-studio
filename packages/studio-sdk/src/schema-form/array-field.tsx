@@ -18,6 +18,7 @@ import { defaultValueForSchema } from './default-value';
 import { FieldGroup } from './field-group';
 import { FieldNode } from './field-node';
 import { useKeyedCallbacks } from './keyed-callbacks';
+import { useSeedingAction } from './seeding-action';
 import type { FieldWords, JsonSchema, SchemaFormErrors } from './types';
 
 export function ArrayField({
@@ -49,8 +50,10 @@ export function ArrayField({
   const itemLabel = (index: number): string =>
     (words?.itemLabel ?? 'Item {n}').split('{n}').join(String(index + 1));
   const list = Array.isArray(value) ? (value as unknown[]) : [];
+  const add = useSeedingAction(items);
   const addItem = (): void => {
-    onChange([...list, newItemValue(items, root)]);
+    const item = add.seed(() => newItemValue(items, root));
+    if (item.ok) onChange([...list, item.value]);
   };
   const removeItem = (index: number): void => {
     onChange(list.filter((_, position) => position !== index));
@@ -61,7 +64,12 @@ export function ArrayField({
   const changeFor = useKeyedCallbacks<number, unknown>(setItem, list.keys());
 
   return (
-    <FieldGroup heading={heading} description={description} error={error} atRoot={false}>
+    <FieldGroup
+      heading={heading}
+      description={description}
+      error={add.failure ?? error}
+      atRoot={false}
+    >
       {list.length === 0 ? (
         <span className="tai-field-hint">{words?.noItems ?? 'No items'}</span>
       ) : null}

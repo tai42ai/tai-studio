@@ -204,6 +204,11 @@ export interface JsonSchema {
 export type JsonSchemaType = 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array' | 'null';
 
 // @public
+export class NoFiniteValueError extends Error {
+    constructor();
+}
+
+// @public
 export interface RecordEntryContext {
     readonly defaultField: ReactNode;
     readonly keyName: string;
@@ -272,6 +277,33 @@ export interface SecretRefFieldProps {
     readonly pasteDisabledReason?: string;
     readonly value: SecretRef | undefined;
 }
+
+// @public
+interface TemplatedTextCatalog {
+    // (undocumented)
+    readonly error?: string;
+    // (undocumented)
+    readonly loading?: boolean;
+    // (undocumented)
+    readonly onRetry?: () => void;
+    readonly storageAbsent?: boolean;
+    readonly storagePresenceLoading?: boolean;
+    // (undocumented)
+    readonly templates?: readonly TemplatedTextTemplateOption[];
+}
+
+// @public
+export const TemplatedTextCatalogContext: Context<UseTemplatedTextCatalog>;
+
+// @public
+interface TemplatedTextTemplateOption {
+    // (undocumented)
+    readonly id: string;
+    readonly label?: string;
+}
+
+// @public
+export type UseTemplatedTextCatalog = () => TemplatedTextCatalog | undefined;
 
 // @public
 export function validateAgainstSchema(schema: JsonSchema, value: unknown, options?: ValidateOptions): SchemaFormErrors;

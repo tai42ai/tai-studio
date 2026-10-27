@@ -4,14 +4,16 @@
  * inline; every other kind delegates to a dedicated field component). Object,
  * array, and union renderers recurse back through here for their children.
  */
-import { memo, type ReactNode } from 'react';
+import { memo, type ReactNode, useContext } from 'react';
 
 import { Checkbox } from '../components/checkbox';
 import { Field } from '../components/field';
 import { NumberInput, TextInput } from '../components/inputs';
-import { ownValue } from '../guards';
+import { isRecord, ownValue } from '../guards';
 import { ArrayField } from './array-field';
 import { classifySchema } from './classify';
+import { CollapsedObjectField } from './collapsed-object-field';
+import { ExpandedShapesContext } from './context';
 import { EnumField } from './enum-field';
 import { FieldGroup } from './field-group';
 import type { FieldModel } from './field-model';
@@ -21,6 +23,7 @@ import { ObjectFields } from './object-fields';
 import { RecordField } from './record-field';
 import { scalarLabel } from './resolve';
 import { StringField } from './string-field';
+import { TemplatedField } from './templated-field';
 import type { FieldWords, JsonSchema, SchemaFormErrors } from './types';
 import { UnionField } from './union-field';
 
@@ -67,12 +70,15 @@ function labelText(explicit: string | undefined, label: string | undefined): str
  */
 function FieldNodeImpl(props: FieldNodeProps): ReactNode {
   const { root, value, onChange, path, required, idPrefix, errors } = props;
+  const expanded = useContext(ExpandedShapesContext);
   const classified = classifySchema(props.schema, root);
   const base = labelText(classified.title, props.label);
   const heading = props.markRequired === true && required ? `${base} *` : base;
   const { model, description } = classified;
   return renderField({
     model,
+    definition: classified.schema,
+    expanded,
     nullable: classified.nullable,
     heading,
     description,
@@ -93,6 +99,10 @@ function FieldNodeImpl(props: FieldNodeProps): ReactNode {
 /** The props the per-kind renderer needs, computed once by {@link FieldNodeImpl}. */
 interface RenderFieldArgs {
   readonly model: FieldModel;
+  /** The ref-resolved schema the model was classified from. */
+  readonly definition: JsonSchema;
+  /** The object shapes the fields above this one are drawing. */
+  readonly expanded: ReadonlySet<object>;
   readonly nullable: boolean;
   readonly heading: string;
   readonly description: string | undefined;
@@ -187,6 +197,19 @@ function renderField(args: RenderFieldArgs): ReactNode {
           onChange={onChange}
         />
       );
+    case 'templated-text':
+      return (
+        <TemplatedField
+          heading={heading}
+          description={description}
+          error={error}
+          expression={model.expression}
+          argName={path}
+          required={required}
+          value={value}
+          onChange={onChange}
+        />
+      );
     case 'multiselect':
       return (
         <MultiSelectField
@@ -228,10 +251,26 @@ function renderCompositeField(
         />
       );
     case 'object':
+      // A definition nested inside itself draws its fields only for a level the
+      // value holds; an absent level is one Add button, so the nesting stops at the data.
+      if (args.expanded.has(model.shape) && !isRecord(value)) {
+        return (
+          <CollapsedObjectField
+            heading={heading}
+            description={description}
+            error={error}
+            definition={args.definition}
+            shape={model.shape}
+            root={root}
+            onChange={onChange}
+          />
+        );
+      }
       return (
         <FieldGroup heading={heading} description={description} error={error} atRoot={path === ''}>
           <ObjectFields
             properties={model.properties}
+            shape={model.shape}
             requiredKeys={model.required}
             root={root}
             value={value}

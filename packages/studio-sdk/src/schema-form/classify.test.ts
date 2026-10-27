@@ -251,3 +251,49 @@ describe('classifySchema — x-tai42-expression annotation', () => {
     }
   });
 });
+
+/**
+ * The expression annotation is a property-site key: on a `$ref` site, or on a union
+ * wrapper whose string member is a `$ref`, it survives the `$ref` resolution. A
+ * referenced definition that carries its own annotation keeps it.
+ */
+describe('classifySchema — x-tai42-expression beside a $ref', () => {
+  const siteMark = { language: 'jq', label: 'site words' };
+  const ownMark = { language: 'jq', label: 'definition words' };
+  const root: JsonSchema = {
+    $defs: { Jq: { type: 'string' }, MarkedJq: { type: 'string', 'x-tai42-expression': ownMark } },
+  };
+
+  function expressionLabel(schema: JsonSchema): string | undefined {
+    const model = classifySchema(schema, root).model;
+    expect(model.kind).toBe('string');
+    return model.kind === 'string' ? model.expression?.label : undefined;
+  }
+
+  it('keeps the door on a REQUIRED field annotated beside its $ref', () => {
+    expect(expressionLabel({ $ref: '#/$defs/Jq', 'x-tai42-expression': siteMark })).toBe(
+      'site words',
+    );
+  });
+
+  it('keeps the door on an OPTIONAL field whose string member is a $ref', () => {
+    const schema: JsonSchema = {
+      anyOf: [{ $ref: '#/$defs/Jq' }, { type: 'null' }],
+      'x-tai42-expression': siteMark,
+    };
+    expect(classifySchema(schema, root).nullable).toBe(true);
+    expect(expressionLabel(schema)).toBe('site words');
+  });
+
+  it("keeps a referenced definition's own annotation over the site's", () => {
+    expect(expressionLabel({ $ref: '#/$defs/MarkedJq', 'x-tai42-expression': siteMark })).toBe(
+      'definition words',
+    );
+    expect(
+      expressionLabel({
+        anyOf: [{ $ref: '#/$defs/MarkedJq' }, { type: 'null' }],
+        'x-tai42-expression': siteMark,
+      }),
+    ).toBe('definition words');
+  });
+});

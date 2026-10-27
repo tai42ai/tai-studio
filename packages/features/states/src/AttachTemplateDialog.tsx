@@ -9,6 +9,7 @@ import {
   defaultValueForSchema,
   Field,
   FormDialog,
+  NoFiniteValueError,
   SchemaForm,
   Select,
   useApi,
@@ -21,6 +22,34 @@ import {
   objectLevelPaths,
   paramsSchema,
 } from './stateTemplateSchemas';
+
+/** A template's starting parameter and declaration values. */
+interface AttachmentSeed {
+  readonly params: unknown;
+  readonly declarations: unknown;
+}
+
+/**
+ * Seed a chosen template's parameter and declaration values, or the message saying
+ * why it cannot be attached: a schema that admits no finite value has no value the
+ * user could ever submit. Any other error propagates.
+ */
+function seedAttachment(
+  name: string,
+  template: StateTemplateListItem | undefined,
+): AttachmentSeed | string {
+  try {
+    const declarations = declarationsSchema(template);
+    return {
+      params: defaultValueForSchema(paramsSchema(template)),
+      declarations: declarations === null ? {} : defaultValueForSchema(declarations),
+    };
+  } catch (error) {
+    if (!(error instanceof NoFiniteValueError)) throw error;
+    console.error(`Template '${name}' cannot be attached`, error);
+    return `Template '${name}' cannot be attached: ${error.message}`;
+  }
+}
 
 export interface AttachTemplateDialogProps {
   readonly stateName: string;
@@ -41,6 +70,7 @@ export function AttachTemplateDialog({
 }: AttachTemplateDialogProps): ReactNode {
   const api = useApi();
   const [template, setTemplate] = useState('');
+  const [templateError, setTemplateError] = useState<string | undefined>(undefined);
   const [path, setPath] = useState('');
   const selected = templates.find((t) => t.name === template);
   const paramSchema = paramsSchema(selected);
@@ -73,15 +103,24 @@ export function AttachTemplateDialog({
       onSubmit={onSubmit}
       onClose={onClose}
     >
-      <Field label="Template">
+      <Field label="Template" error={templateError}>
         <Select
           value={template}
           onValueChange={(next) => {
+            // A template that cannot be seeded is refused: the choice stays as it was
+            // and the field says why.
+            const seed = seedAttachment(
+              next,
+              templates.find((t) => t.name === next),
+            );
+            if (typeof seed === 'string') {
+              setTemplateError(seed);
+              return;
+            }
+            setTemplateError(undefined);
             setTemplate(next);
-            const nextTemplate = templates.find((t) => t.name === next);
-            setParams(defaultValueForSchema(paramsSchema(nextTemplate)));
-            const nextDecl = declarationsSchema(nextTemplate);
-            setDeclarations(nextDecl === null ? {} : defaultValueForSchema(nextDecl));
+            setParams(seed.params);
+            setDeclarations(seed.declarations);
           }}
           aria-label="Template"
           placeholder="Choose a template"

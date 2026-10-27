@@ -37,6 +37,8 @@ export interface SchemaEditorChange {
   readonly schema: Record<string, unknown> | null;
   /** False when the text is non-empty but unparseable or failing lint — gate submit on this. */
   readonly valid: boolean;
+  /** The editor's text as typed, so a host can hold a draft the editor rejects. */
+  readonly text: string;
 }
 
 export interface SchemaEditorProps {
@@ -162,7 +164,7 @@ export function SchemaEditor({
   const emit = (nextText: string): void => {
     setText(nextText);
     const next = lintSchemaText(nextText, requireTitle);
-    onChange({ schema: next.valid ? next.schema : null, valid: next.valid });
+    onChange({ schema: next.valid ? next.schema : null, valid: next.valid, text: nextText });
   };
 
   return (

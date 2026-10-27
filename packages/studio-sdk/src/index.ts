@@ -465,6 +465,7 @@ export type {
   SchemaFormProps,
   SecretRef,
   SecretRefFieldProps,
+  UseTemplatedTextCatalog,
 } from './schema-form';
 export {
   dateRangePairs,
@@ -478,10 +479,15 @@ export {
   ExpressionFieldContext,
   fieldDrawingOrder,
   isFieldVisible,
+  NoFiniteValueError,
   RecordEntryRendererContext,
   resolveRef,
   SchemaForm,
   SecretRefField,
+  // The stored-template source for schema-built templated-text fields: a host
+  // mounts a hook here that returns the template catalog, so those fields offer
+  // stored templates beside inline content.
+  TemplatedTextCatalogContext,
   validateAgainstSchema,
 } from './schema-form';
 

@@ -2,8 +2,9 @@
  * The marketplace shell page. It owns the tab (browse / installed) and the
  * drill-in `plugin` search param: when a plugin is selected the detail view
  * replaces the browse chrome. Browse is a text search + facet chips (kind,
- * category, tags) + a sort control over an infinite-scrolling set of listing
- * cards, one card per listing row. Every filter lives in the URL; the page number
+ * category, tags) + a sort control over a server-paged ("Load more") set of
+ * listings, shown as a card grid or a table by the shared list/card switch, whose
+ * choice persists per tab. Every filter lives in the URL; the page number
  * does not (the infinite query owns it).
  */
 import {
@@ -18,13 +19,16 @@ import {
   Tabs,
   useApi,
   useAppNavigate,
+  useViewMode,
+  ViewToggle,
 } from '@tai42/studio-sdk';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { type ReactNode } from 'react';
+import { type ReactNode, useMemo } from 'react';
 
 import { activeTab, type MarketplaceSearch, mergeSearch, searchParams } from './filters';
 import { InstalledTab } from './InstalledTab';
 import { marketplaceSearchKey } from './keys';
+import { BROWSE_VIEW_SURFACE, ListingResults } from './listing-views';
 import {
   CategoryFacet,
   FacetChip,
@@ -33,7 +37,6 @@ import {
   SortFacet,
   vocabularyWith,
 } from './marketplace-facets';
-import { PluginCard } from './PluginCard';
 import { PluginDetail } from './PluginDetail';
 
 function BrowseSection({ search }: { readonly search: MarketplaceSearch }): ReactNode {
@@ -49,12 +52,23 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
       last.page * last.page_size < last.total ? last.page + 1 : undefined,
   });
 
-  const rows = query.data?.pages.flatMap((page) => page.listings) ?? [];
+  const [viewMode, setViewMode] = useViewMode(BROWSE_VIEW_SURFACE, 'cards');
+
+  // The loaded pages flattened once per fetch, not on every render: a long
+  // "Load more" session re-renders on each facet hover and view switch.
+  const rows = useMemo(
+    () => query.data?.pages.flatMap((page) => page.listings) ?? [],
+    [query.data],
+  );
   const selectedTags = search.tags ?? [];
 
-  const tagVocab = vocabularyWith(
-    rows.flatMap((row) => row.tags),
-    selectedTags,
+  const tagVocab = useMemo(
+    () =>
+      vocabularyWith(
+        rows.flatMap((row) => row.tags),
+        search.tags ?? [],
+      ),
+    [rows, search.tags],
   );
   const selectedTagSet = new Set(selectedTags);
 
@@ -72,6 +86,9 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
       <div className="tai-row">
         <SortFacet search={search} />
         <CategoryFacet search={search} />
+        <div style={{ marginLeft: 'auto' }}>
+          <ViewToggle value={viewMode} onValueChange={setViewMode} aria-label="Plugins view" />
+        </div>
       </div>
 
       <KindFacet search={search} />
@@ -123,9 +140,7 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
             />
           ) : (
             <>
-              {rows.map((row) => (
-                <PluginCard key={row.ref} row={row} search={search} />
-              ))}
+              <ListingResults rows={rows} search={search} mode={viewMode} />
               {query.isFetchNextPageError ? (
                 <div
                   role="alert"

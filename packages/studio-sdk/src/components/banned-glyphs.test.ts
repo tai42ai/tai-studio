@@ -219,9 +219,14 @@ function decodeGlyphEntities(source: string): string {
   return out;
 }
 
-/** Tests state their own expectations; a test file is not a rendering surface. */
+/**
+ * Tests state their own expectations; a test file is not a rendering surface. A
+ * test-only module is named by the same two conventions the build excludes it by:
+ * a `*.test.*`/`*.spec.*` suite, or a `test-*` helper the suites import (fixtures
+ * there hold the platform's own wording verbatim, and never ship).
+ */
 function isTestSource(fileName: string): boolean {
-  return /\.(?:test|spec)\.tsx?$/.test(fileName);
+  return /\.(?:test|spec)\.tsx?$/.test(fileName) || /^test-.*\.tsx?$/.test(fileName);
 }
 
 function sourcesWithin(directory: string): string[] {

@@ -18,6 +18,7 @@ import type { FieldModel, UnionVariant } from './field-model';
 import { FieldNode } from './field-node';
 import { ObjectFields } from './object-fields';
 import { resolveRef } from './resolve';
+import { useSeedingAction } from './seeding-action';
 import { groupClass } from './styles';
 import type { JsonSchema, SchemaFormErrors } from './types';
 import { activeVariantIndex } from './union';
@@ -132,11 +133,15 @@ export function UnionField({
     value: String(position),
     label: variant.label,
   }));
+  const switching = useSeedingAction(model.members);
   const selectVariant = (key: string): void => {
     const position = Number(key);
     const variant = model.variants[position];
     if (variant === undefined) return;
-    onChange(switchVariantValue(value, variant, model.discriminator, root));
+    const switched = switching.seed(() =>
+      switchVariantValue(value, variant, model.discriminator, root),
+    );
+    if (switched.ok) onChange(switched.value);
   };
 
   const active = index === -1 ? undefined : model.variants[index];
@@ -147,7 +152,10 @@ export function UnionField({
     // and describes — a synthetic heading there is noise, so it is suppressed
     // exactly as a root object's is; nested unions keep theirs.
     <FieldGroup heading={heading} description={description} error={error} atRoot={path === ''}>
-      <Field label={pickerLabel(model.discriminator, model.variants, root)}>
+      <Field
+        label={pickerLabel(model.discriminator, model.variants, root)}
+        error={switching.failure}
+      >
         <Select
           options={options}
           value={index === -1 ? '' : String(index)}
@@ -159,6 +167,7 @@ export function UnionField({
         <div className={groupClass}>
           <ObjectFields
             properties={activeClassified.model.properties}
+            shape={activeClassified.model.shape}
             requiredKeys={activeClassified.model.required}
             root={root}
             value={value}

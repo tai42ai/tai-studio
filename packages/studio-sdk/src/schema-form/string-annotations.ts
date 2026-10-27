@@ -1,9 +1,12 @@
 /**
- * Detect the annotations that opt a (ref-resolved) string schema out of the plain
- * text box: the media-upload annotations (`contentEncoding`/`contentMediaType`/
- * `format: "data-url"`) and the `x-tai42-expression` expression-editor annotation.
- * Both degrade to `undefined` on anything malformed, so an annotated field never
- * renders differently from the plain string it falls back to.
+ * Detect the vendor and media annotations that opt a property out of its plain
+ * editor: the media-upload annotations (`contentEncoding`/`contentMediaType`/
+ * `format: "data-url"`) on a string, the `x-tai42-expression` expression-editor
+ * annotation on a string or templated-text property (or on a union of them, where
+ * it governs every member), and the `x-tai42-templated-text` mark the platform's
+ * templated-text type carries. The first two degrade to
+ * `undefined` on anything malformed, so an annotated field never renders differently
+ * from the plain field it falls back to.
  */
 import { isRecord } from '../guards';
 import type {
@@ -15,6 +18,29 @@ import type {
 import type { JsonSchema } from './types';
 
 const EXPRESSION_KEYWORD = 'x-tai42-expression';
+const TEMPLATED_TEXT_KEYWORD = 'x-tai42-templated-text';
+
+/**
+ * Is this (ref-resolved) schema the platform's templated-text type? The type stamps
+ * `x-tai42-templated-text` on its own schema, so every property of the type is
+ * recognised by the mark, never by a field name or a property layout.
+ */
+export function isTemplatedText(schema: JsonSchema): boolean {
+  return isRecord(schema[TEMPLATED_TEXT_KEYWORD]);
+}
+
+/**
+ * A schema node as its property site declares it: the `x-tai42-expression`
+ * annotation sits on the property site (a union wrapper, or the node holding a
+ * `$ref`), and it governs the node the value is checked against (the union member
+ * the value takes, or the referenced definition), so a node that carries none of its
+ * own gets the site's. The node is returned unchanged when there is nothing to carry.
+ */
+export function withSiteExpression(member: JsonSchema, site: JsonSchema): JsonSchema {
+  const annotation: unknown = site[EXPRESSION_KEYWORD];
+  if (annotation === undefined || member[EXPRESSION_KEYWORD] !== undefined) return member;
+  return { ...member, [EXPRESSION_KEYWORD]: annotation };
+}
 
 /**
  * Detect the media-upload annotations on a (ref-resolved) string schema. A field
@@ -99,20 +125,20 @@ function parseCaveatList(value: unknown): readonly string[] | undefined | null {
 }
 
 /**
- * Detect the `x-tai42-expression` annotation on a (ref-resolved) string schema,
- * mirroring {@link mediaUpload}: a well-formed annotation opts the field into the
- * jq expression editor; anything else — absent, non-object, unknown language, or
- * any wrongly-typed member — yields `undefined`, so the field renders EXACTLY as
- * the plain string input it is today. Malformed payloads NEVER throw: a bad
- * annotation is a server-side authoring bug, and degrading to the ordinary text
- * box keeps the form usable while staying byte-identical to the unannotated
- * rendering.
+ * Detect the `x-tai42-expression` annotation on a property schema (a string, or the
+ * property site of a templated-text field), mirroring {@link mediaUpload}: a
+ * well-formed annotation opts the field into the jq expression editor; anything
+ * else — absent, non-object, unknown language, or any wrongly-typed member — yields
+ * `undefined`, so the field renders EXACTLY as its unannotated editor. Malformed
+ * payloads NEVER throw: a bad annotation is a server-side authoring bug, and
+ * degrading to the ordinary editor keeps the form usable while staying
+ * byte-identical to the unannotated rendering.
  */
 export function expressionAnnotation(schema: JsonSchema): ExpressionAnnotation | undefined {
   const raw: unknown = schema[EXPRESSION_KEYWORD];
   if (!isRecord(raw)) return undefined;
   // The language gate doubles as the forward-compatibility valve: a future
-  // language this client does not understand degrades to a plain string field.
+  // language this client does not understand degrades to the unannotated field.
   if (raw.language !== 'jq') return undefined;
 
   const label = optionalString(raw.label);
