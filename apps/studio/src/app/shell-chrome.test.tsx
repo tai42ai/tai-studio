@@ -2,14 +2,15 @@
  * Shell chrome behaviors: the globally-mounted interactions badge gates on the
  * projection (never opens a stream the server would deny), and sign-out revokes the
  * server session before clearing local auth (quiet on the expected 404, loud on a real
- * failure).
+ * failure), then sends the browser to the identity provider's end-session URL when the
+ * logout result carries one.
  */
 import type { ApiClient } from '@tai42/api-client';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 import { meHandler, okChannels, okPlugins, scoped } from './test-capabilities-support';
 import { installServer, renderStudio, server } from './test-harness';
@@ -73,6 +74,26 @@ describe('sign-out', () => {
     return { handler, calls: () => calls };
   }
 
+  const END_SESSION_URL =
+    'https://issuer.example/logout?id_token_hint=t&post_logout_redirect_uri=https%3A%2F%2Fstudio.example%2Flogin';
+
+  // jsdom cannot navigate, so `location` is replaced by a stub carrying the real URL
+  // parts and an `assign` that records each call together with the session key
+  // remembered at that moment.
+  let assign: Mock<(url: string) => void>;
+  let keyAtAssign: (string | null)[];
+  beforeEach(() => {
+    keyAtAssign = [];
+    assign = vi.fn((_url: string) => {
+      keyAtAssign.push(globalThis.sessionStorage.getItem('tai-studio.apiKey'));
+    });
+    const { href, origin, pathname, search, hash } = globalThis.location;
+    vi.stubGlobal('location', { href, origin, pathname, search, hash, assign });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('revokes server-side then clears local auth on a 200 {revoked}', async () => {
     const logout = logoutHandler(200, { data: { revoked: true } });
     server.use(logout.handler, okPlugins, okChannels);
@@ -87,6 +108,27 @@ describe('sign-out', () => {
     expect(logout.calls()).toBe(1);
     // Local credential cleared: the remembered session key is gone.
     expect(globalThis.sessionStorage.getItem('tai-studio.apiKey')).toBeNull();
+    // No end-session URL: the browser stays on the Studio's own login screen.
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it('sends the browser to the end-session URL after clearing local auth', async () => {
+    const logout = logoutHandler(200, {
+      data: { revoked: true, end_session_url: END_SESSION_URL },
+    });
+    server.use(logout.handler, okPlugins, okChannels);
+    const user = userEvent.setup();
+    renderStudio({ initialPath: '/interactions', sessionKey: 'k-cap' });
+
+    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
+
+    await waitFor(() => {
+      expect(assign).toHaveBeenCalledWith(END_SESSION_URL);
+    });
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(logout.calls()).toBe(1);
+    // The local credential was already gone when the page left.
+    expect(keyAtAssign).toEqual([null]);
   });
 
   it('the landing sign-out escape (access failed to load) revokes server-side too', async () => {
@@ -113,6 +155,36 @@ describe('sign-out', () => {
     });
     expect(logout.calls()).toBe(1);
     expect(globalThis.sessionStorage.getItem('tai-studio.apiKey')).toBeNull();
+    expect(assign).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('the landing sign-out escape sends the browser to the end-session URL too', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const logout = logoutHandler(200, {
+      data: { revoked: true, end_session_url: END_SESSION_URL },
+    });
+    server.use(
+      http.get('*/api/auth/me', () => HttpResponse.json({ error: 'boom' }, { status: 500 })),
+      logout.handler,
+      okPlugins,
+      okChannels,
+    );
+    const user = userEvent.setup();
+    renderStudio({ initialPath: '/', sessionKey: 'k-cap' });
+
+    const message = await screen.findByText(
+      /Your access could not be loaded\. Retry to reload, or sign out/,
+    );
+    const landing = message.closest('.tai-stack');
+    if (!(landing instanceof HTMLElement)) throw new Error('landing error stack not found');
+    await user.click(within(landing).getByRole('button', { name: 'Sign out' }));
+
+    await waitFor(() => {
+      expect(assign).toHaveBeenCalledWith(END_SESSION_URL);
+    });
+    expect(logout.calls()).toBe(1);
+    expect(keyAtAssign).toEqual([null]);
     spy.mockRestore();
   });
 
@@ -131,6 +203,7 @@ describe('sign-out', () => {
     expect(logout.calls()).toBe(1);
     // A 404 is expected, not a failure — never a loud log.
     expect(spy).not.toHaveBeenCalled();
+    expect(assign).not.toHaveBeenCalled();
     spy.mockRestore();
   });
 
@@ -148,6 +221,7 @@ describe('sign-out', () => {
     });
     // The diagnostic is logged (a real session may not have revoked), never swallowed.
     expect(spy).toHaveBeenCalled();
+    expect(assign).not.toHaveBeenCalled();
     spy.mockRestore();
   });
 

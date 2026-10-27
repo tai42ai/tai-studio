@@ -57,8 +57,9 @@ export type ClaimLinkCreated = z.infer<typeof claimLinkCreated>;
  * `POST /api/auth/logout` — the single authed logout dispatcher's result.
  * `revoked` is `true` when a live accounts session was revoked; a plain `sk-` key
  * has nothing to revoke and answers `404` (a loud absent-session signal), never a
- * `revoked: false` body. Non-strict, so a SUCCESSFUL logout never throws
- * `ApiSchemaError` on an additive field.
+ * `revoked: false` body. `end_session_url` is the identity provider's end-session
+ * URL when the session came through one, `null` otherwise. Non-strict, so a
+ * SUCCESSFUL logout never throws `ApiSchemaError` on an additive field.
  */
 export const logoutResult = openapi.logoutResult;
 export type LogoutResult = z.infer<typeof logoutResult>;

@@ -1027,6 +1027,7 @@ active_version: number;
 user_id: string;
 }>;
 readonly logout: () => Promise<{
+end_session_url: string | null;
 revoked: boolean;
 }>;
 readonly getAuthCapabilities: (signal?: AbortSignal) => Promise<{
@@ -9607,6 +9608,7 @@ function createApiClient(config: ApiConfig): {
         user_id: string;
     }>;
     readonly logout: () => Promise<{
+        end_session_url: string | null;
         revoked: boolean;
     }>;
     readonly getAuthCapabilities: (signal?: AbortSignal) => Promise<{
@@ -16440,6 +16442,7 @@ type LogoutResult = z.infer<typeof logoutResult>;
 
 // @public
 const logoutResult: z.ZodObject<{
+    end_session_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     revoked: z.ZodBoolean;
 }, z.core.$strip>;
 
