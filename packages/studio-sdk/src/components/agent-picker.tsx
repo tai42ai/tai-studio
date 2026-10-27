@@ -19,7 +19,7 @@ export interface AgentPickerProps {
   readonly query: AgentListQuery;
   readonly value: string;
   readonly onValueChange: (value: string) => void;
-  /** The host form's field error, shown under the control while a `Select` renders. */
+  /** The host form's field error, shown under the control while the select renders. */
   readonly error?: string | undefined;
 }
 
@@ -36,6 +36,7 @@ const COPY: NamedListCopy = {
     </AppLink>
   ),
   unlistedLabel: 'not registered',
+  searchLabel: 'Search agents',
 };
 
 export function AgentPicker({ query, value, onValueChange, error }: AgentPickerProps): ReactNode {

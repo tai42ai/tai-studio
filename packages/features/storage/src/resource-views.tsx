@@ -124,7 +124,7 @@ export function ResourceExplorer({
       search={{
         value: query,
         onChange: onQueryChange,
-        matches: (id, q) => id.includes(q),
+        texts: (id) => [id],
         label: SEARCH_LABEL,
         placeholder: 'Substring of the resource id',
       }}

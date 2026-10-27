@@ -677,6 +677,39 @@
     cursor: not-allowed;
   }
 
+  /* The searchable select's popup is the select popup with a search box on top.
+     It is a column whose LIST alone scrolls, so the search box stays in view
+     however far the reader scrolls; the cap follows the space the Radix popover
+     publishes, as the select's follows its own. It is at least as wide as its
+     trigger, so the options line up under the field they fill. */
+  .tai-search-select-content {
+    display: flex;
+    flex-direction: column;
+    min-width: var(--radix-popover-trigger-width);
+    /* The fallback is the live viewport (`dvh`) after its `vh` line for browsers
+       below the `dvh` floor; Radix supplies the measured value either way. */
+    max-height: min(22rem, var(--radix-popover-content-available-height, 60vh));
+    max-height: min(22rem, var(--radix-popover-content-available-height, 60dvh));
+    overflow: hidden;
+  }
+
+  /* The search box's side and top inset is the option viewport's, which leaves the
+     shared focus ring the room it needs inside the popup's clipped box. */
+  .tai-search-select-search {
+    padding: var(--tai-space-2) var(--tai-space-2) 0;
+  }
+
+  .tai-search-select-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .tai-search-select-empty {
+    margin: 0;
+    padding: var(--tai-space-2) var(--tai-space-3);
+  }
+
   /* -- Checkbox + radio ------------------------------------------------------ */
   .tai-checkbox,
   .tai-radio {

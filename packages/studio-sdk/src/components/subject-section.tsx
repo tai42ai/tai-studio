@@ -16,7 +16,7 @@ import { type ReactNode, useState } from 'react';
 
 import { Field } from './field';
 import { TextInput } from './inputs';
-import { Select } from './select';
+import { SearchableSelect } from './searchable-select';
 
 /** One conversation-target option: `target_kind:target_name` value, `kind · name` label. */
 export interface SubjectTargetOption {
@@ -141,12 +141,13 @@ export function SubjectSection({
         >
           <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>{caption}</p>
           <Field label="Target">
-            <Select
+            <SearchableSelect
               value={target}
               onValueChange={onTargetChange}
               aria-label="Subject target"
               placeholder={targetPlaceholder}
               options={targetOptions}
+              searchLabel="Search targets"
             />
           </Field>
           <Field

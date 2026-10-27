@@ -208,34 +208,89 @@ describe('ToolPicker', () => {
     expect(screen.queryByRole('combobox')).toBeNull();
   });
 
-  it('draws forbiddenNote on a 403 and keeps a stored value as its sole unflagged option', () => {
-    const { rerender } = render(
+  it('takes a typed tool name on a 403, labelled by its Field, with the reason and the host error shown', async () => {
+    const onChange = vi.fn();
+    render(
+      <ToolPicker
+        query={failed({ status: 403 })}
+        value={null}
+        onChange={onChange}
+        emptyNote={EMPTY}
+        label="Tool"
+        error="A tool is required."
+      />,
+    );
+    const input = screen.getByRole('textbox', { name: 'Tool' });
+    expect(input).toHaveAccessibleDescription(/cannot list tools, so type the tool's exact name/);
+    expect(screen.getByText('A tool is required.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
+    await userEvent.type(input, '  echo  ');
+    expect(onChange).not.toHaveBeenCalled();
+    await userEvent.tab();
+    expect(onChange).toHaveBeenCalledExactlyOnceWith('echo');
+  });
+
+  it('draws the host errorNote on a 403, with no typed entry, where the host draws the failure', () => {
+    render(
       <ToolPicker
         query={failed({ status: 403 })}
         value={null}
         onChange={vi.fn()}
         emptyNote={EMPTY}
-        forbiddenNote="This session cannot list tools."
+        errorNote="This server's tools could not be read."
+        aria-label="Tool name"
       />,
     );
-    expect(screen.getByRole('status')).toHaveTextContent('This session cannot list tools.');
-    expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.queryByRole('combobox')).toBeNull();
-    rerender(
+    expect(screen.getByRole('status')).toHaveTextContent("This server's tools could not be read.");
+    expect(screen.queryByRole('textbox')).toBeNull();
+  });
+
+  it('commits a typed name on Enter without submitting the enclosing form', async () => {
+    const onChange = vi.fn();
+    const onSubmit = vi.fn((event: { preventDefault: () => void }) => {
+      event.preventDefault();
+    });
+    render(
+      <form onSubmit={onSubmit}>
+        <ToolPicker
+          query={failed({ status: 403 })}
+          value={null}
+          onChange={onChange}
+          emptyNote={EMPTY}
+          aria-label="Tool name"
+        />
+        <button type="submit">Save</button>
+      </form>,
+    );
+    await userEvent.type(screen.getByRole('textbox', { name: 'Tool name' }), 'echo{Enter}');
+    expect(onChange).toHaveBeenCalledExactlyOnceWith('echo');
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('shows the stored name in the typed entry and emits nothing for a blank or unchanged draft', async () => {
+    const onChange = vi.fn();
+    render(
       <ToolPicker
         query={failed({ status: 403 })}
         value="kept"
-        onChange={vi.fn()}
+        onChange={onChange}
         emptyNote={EMPTY}
-        forbiddenNote="This session cannot list tools."
         unlistedLabel="not registered"
+        aria-label="Tool name"
       />,
     );
-    expect(screen.getByRole('combobox')).toHaveTextContent('kept');
+    const input = screen.getByRole('textbox', { name: 'Tool name' });
+    expect(input).toHaveValue('kept');
     expect(screen.queryByText(/not registered/)).toBeNull();
+    await userEvent.clear(input);
+    await userEvent.tab();
+    expect(input).toHaveValue('kept');
+    await userEvent.click(input);
+    await userEvent.tab();
+    expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('hands label, description and error to its Field while a Select renders', () => {
+  it('hands label, description and error to its Field while the select renders', () => {
     render(
       <ToolPicker
         query={loaded(TOOLS)}
@@ -417,7 +472,7 @@ describe('ToolPicker', () => {
     const tool = toolCombobox();
     await user.click(tool);
 
-    // Radix renders group labels with role="group"; the tag names label them.
+    // Each tag is a role="group" section named by its label.
     expect(await screen.findByText('geo')).toBeInTheDocument();
     expect(screen.getByText('scratch')).toBeInTheDocument();
   });
@@ -458,6 +513,45 @@ describe('ToolPicker', () => {
     await user.click(tool);
 
     expect(await screen.findByRole('option', { name: 'Beta Tool (beta)' })).toBeInTheDocument();
+  });
+
+  it('searches the display name and the raw name, ignoring case', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToolPicker
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
+        value={null}
+        onChange={vi.fn()}
+        displayNames={{ beta: 'Beta Tool' }}
+      />,
+    );
+    await user.click(screen.getByRole('combobox'));
+    const search = screen.getByRole('combobox', { name: 'Search tools' });
+    const shown = (): string[] => screen.getAllByRole('option').map((option) => option.textContent);
+
+    await user.type(search, 'TOOL');
+    expect(shown()).toEqual(['Beta Tool (beta)']);
+    await user.clear(search);
+    await user.type(search, 'gam');
+    expect(shown()).toEqual(['gamma']);
+  });
+
+  it('searches within the tag groups, dropping a group the search empties', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToolPicker
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
+        value={null}
+        onChange={vi.fn()}
+        tagsByTool={{ alpha: ['one'], beta: ['two'] }}
+      />,
+    );
+    await user.click(toolCombobox());
+    await user.type(screen.getByRole('combobox', { name: 'Search tools' }), 'alp');
+    expect(screen.getByRole('group', { name: 'one' })).toHaveTextContent('alpha');
+    expect(screen.queryByRole('group', { name: 'two' })).not.toBeInTheDocument();
   });
 
   it('falls back to the bare raw name for an unmapped tool', async () => {

@@ -27,7 +27,7 @@ import {
   type DirectoryReads,
   type DirectoryRow,
   type ReadState,
-  rowMatches,
+  rowSearchTexts,
 } from './use-directory';
 
 const SEARCH_LABEL = 'Search servers and apps';
@@ -396,7 +396,7 @@ export function DirectoryExplorer({
           search={{
             value: query,
             onChange: onQueryChange,
-            matches: rowMatches,
+            texts: rowSearchTexts,
             label: SEARCH_LABEL,
             placeholder: 'Search by name or description',
           }}

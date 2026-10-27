@@ -212,6 +212,54 @@ describe('ComposeAgentDialog', () => {
     expect(screen.queryByRole('option', { name: 'quarantined' })).toBeNull();
   });
 
+  it('searches the stored presets to expand, ignoring case', async () => {
+    renderWithProviders(
+      <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+      composeClient({
+        listPresets: () =>
+          Promise.resolve([
+            presetRecord({ name: 'echo_pinned', base_tool: 'echo', conflicted: false }),
+            presetRecord({ name: 'weather_daily', base_tool: 'weather', conflicted: false }),
+          ]),
+      }),
+    );
+
+    await pickBaseAgent();
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Preset to expand' }));
+    await userEvent.type(screen.getByRole('combobox', { name: 'Search presets' }), 'WEATHER');
+
+    expect(screen.getByRole('option', { name: 'weather_daily' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'echo_pinned' })).toBeNull();
+    await userEvent.keyboard('{Enter}');
+    expect(screen.getByRole('combobox', { name: 'Preset to expand' })).toHaveTextContent(
+      'weather_daily',
+    );
+  });
+
+  it('searches the base agents by name and by description', async () => {
+    renderWithProviders(
+      <ComposeAgentDialog
+        agents={[
+          authorableAgent(),
+          authorableAgent({ name: 'second_agent', description: 'Answers relay questions' }),
+        ]}
+        onClose={vi.fn()}
+      />,
+      composeClient(),
+    );
+
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Base agent' }));
+    const search = screen.getByRole('combobox', { name: 'Search agents' });
+    await userEvent.type(search, 'relay');
+    expect(screen.getByRole('option', { name: /second_agent/ })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /authorable_agent/ })).toBeNull();
+
+    await userEvent.clear(search);
+    await userEvent.type(search, 'SECOND_AGENT');
+    expect(screen.getByRole('option', { name: /second_agent/ })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /authorable_agent/ })).toBeNull();
+  });
+
   it('excludes an EFFECTIVE-hidden tool from the tools picker, keeping an overlay-`false` unhidden one', async () => {
     // `secret` is plugin-hidden with no overlay opinion → excluded. `open_tool` is
     // plugin-hidden but the overlay forces it visible (`hidden: false`) → offered.

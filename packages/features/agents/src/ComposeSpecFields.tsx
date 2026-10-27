@@ -5,8 +5,9 @@
  *
  * A tool/preset read the pickers depend on renders a loud `ErrorState` instead of an
  * enabled empty control ("nothing to choose" and "the read failed" must never be the
- * same screen); a tags failure degrades the group to flat mode but is stated, never
- * silently ungrouped.
+ * same screen); a 403 on the tools list is not such a failure, as the tool pickers
+ * then take a typed name. A tags failure degrades the group to flat mode but is
+ * stated, never silently ungrouped.
  */
 import {
   defaultValueForSchema,
@@ -71,7 +72,8 @@ function ToolsField({
     <Field label="Tools" description="The tools this agent may call." group>
       {/* A tags failure must not take down tool picking: the picker keeps its flat
           mode and the failure is stated rather than silently ungrouping. A failed
-          tools read is the picker's own error state, so this line stands aside. */}
+          tools read is the picker's own state (its error, or its typed-name entry on a
+          403), which has no grouping, so this line stands aside. */}
       {tagsQuery.isError && !toolsQuery.isError ? (
         <ErrorState
           message={errorMessage(tagsQuery.error)}
@@ -132,23 +134,25 @@ function SubAgentsField({
   readonly value: InlineSubAgentSpec[];
   readonly onChange: (value: InlineSubAgentSpec[]) => void;
 }): ReactNode {
-  const { toolsQuery, presetsQuery, tagsQuery } = data;
+  const { toolsQuery, toolsReadFailed, presetsQuery, tagsQuery } = data;
   return (
     <Field
       label="Sub-agents"
       description="Inline sub-agent specs this agent can delegate to."
       group
     >
-      {toolsQuery.isError || presetsQuery.isError ? (
+      {toolsReadFailed || presetsQuery.isError ? (
         <ErrorState
-          message={errorMessage(toolsQuery.isError ? toolsQuery.error : presetsQuery.error)}
+          message={errorMessage(toolsReadFailed ? toolsQuery.error : presetsQuery.error)}
           onRetry={data.retryReads}
         />
       ) : (
         <>
           {/* A tags failure must not take down sub-agent tool picking: the composer's
-              pickers keep flat mode and the failure is stated. */}
-          {tagsQuery.isError ? (
+              pickers keep flat mode and the failure is stated. Under a 403 on the tools
+              list the pickers take a typed name, which has no grouping, so this line
+              stands aside. */}
+          {tagsQuery.isError && !toolsQuery.isError ? (
             <ErrorState
               message={errorMessage(tagsQuery.error)}
               onRetry={() => void tagsQuery.refetch()}

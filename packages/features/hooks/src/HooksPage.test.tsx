@@ -19,6 +19,7 @@ import {
   fullProjection,
   hook,
   openSelect,
+  pickTool,
   renderWithProviders,
   type StubApiClient,
 } from './test-utils';
@@ -33,7 +34,7 @@ async function fillRegisterRequired(
     within(screen.getByRole('form', { name: 'Register hook' })).getByLabelText('Topic'),
     topic,
   );
-  await user.type(screen.getByLabelText('Tool'), tool);
+  await pickTool(user, tool);
   await openSelect(user, 'Execution key');
   await user.click(await screen.findByRole('option', { name: /svc-events/ }));
 }
@@ -553,7 +554,7 @@ describe('HooksPage — register: execution key + trigger auth', () => {
       within(screen.getByRole('form', { name: 'Register hook' })).getByLabelText('Topic'),
       'events.created',
     );
-    await user.type(screen.getByLabelText('Tool'), 'notify');
+    await pickTool(user, 'notify');
     await user.click(screen.getByRole('button', { name: 'Register' }));
 
     expect(await screen.findByText('An execution key is required.')).toBeInTheDocument();

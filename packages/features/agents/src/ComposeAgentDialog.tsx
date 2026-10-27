@@ -25,7 +25,7 @@ import {
   Field,
   type JsonSchema,
   type SchemaEditorChange,
-  Select,
+  SearchableSelect,
   Spinner,
 } from '@tai42/studio-sdk';
 import { type ReactNode, type SyntheticEvent, useMemo, useRef, useState } from 'react';
@@ -64,6 +64,14 @@ export function ComposeAgentDialog({
     [baseAgent, baseSchema],
   );
   const hasResponseFormat = baseAgent !== null && hasField(baseSchema, RESPONSE_FORMAT_FIELD);
+  const baseOptions = useMemo(
+    () =>
+      agents.map((agent) => ({
+        value: agent.name,
+        label: agent.description ? `${agent.name} — ${agent.description}` : agent.name,
+      })),
+    [agents],
+  );
 
   const data = useComposeAgentData(baseAgent, baseSchema);
   const create = useCreateComposedAgent(tags, onClose);
@@ -121,11 +129,8 @@ export function ComposeAgentDialog({
           label="Base agent"
           error={submitted && baseAgent === null ? 'A base agent is required.' : undefined}
         >
-          <Select
-            options={agents.map((agent) => ({
-              value: agent.name,
-              label: agent.description ? `${agent.name} — ${agent.description}` : agent.name,
-            }))}
+          <SearchableSelect
+            options={baseOptions}
             value={baseName}
             onValueChange={(next) => {
               setBaseName(next);
@@ -134,6 +139,7 @@ export function ComposeAgentDialog({
               setResponseFormat({ schema: null, valid: true });
             }}
             placeholder="Select a base agent…"
+            searchLabel="Search agents"
           />
         </Field>
 

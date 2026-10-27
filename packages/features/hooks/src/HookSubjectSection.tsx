@@ -5,7 +5,7 @@
  * on submit (the error is surfaced here).
  */
 import { JqField } from '@tai42/jq-studio';
-import { Field, Select, TextInput } from '@tai42/studio-sdk';
+import { Field, SearchableSelect, TextInput } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
 import { HOOK_SUBJECT_KEY_DECLARATION } from './hookJqDeclarations';
@@ -43,12 +43,13 @@ export function HookSubjectSection({ fields, targetOptions }: HookSubjectSection
             Key this fire&rsquo;s state writes to a subject; leave blank for none.
           </p>
           <Field label="Target">
-            <Select
+            <SearchableSelect
               value={fields.subjectTarget}
               onValueChange={fields.setSubjectTarget}
               aria-label="Subject target"
               placeholder="Choose a conversation target"
               options={targetOptions}
+              searchLabel="Search targets"
             />
           </Field>
           <Field

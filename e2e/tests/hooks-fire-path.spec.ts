@@ -38,6 +38,17 @@ function registerForm(page: Page): Locator {
   return page.getByRole('form', { name: 'Register hook' });
 }
 
+/**
+ * Choose `tool` in the register form's Tool picker: search for its raw name, then take
+ * the option that reads the raw name bare or as the `Display (raw)` suffix.
+ */
+async function pickTool(page: Page, form: Locator, tool: string): Promise<void> {
+  await form.getByRole('combobox', { name: 'Tool' }).click();
+  await page.getByRole('combobox', { name: 'Search tools' }).fill(tool);
+  const escaped = tool.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  await page.getByRole('option', { name: new RegExp(`(^|\\()${escaped}\\)?$`) }).click();
+}
+
 /** Fill the register form's required fields and bind the seeded execution key. */
 async function fillRegisterForm(
   page: Page,
@@ -46,7 +57,7 @@ async function fillRegisterForm(
   const form = registerForm(page);
   await form.getByLabel('Name').fill(name);
   await form.getByLabel('Topic').fill(topic);
-  await form.getByLabel('Tool', { exact: true }).fill(tool);
+  await pickTool(page, form, tool);
   await pickExecutionKey(page, form);
 }
 
@@ -122,7 +133,7 @@ test("a key the server refuses to bind surfaces the server's message VERBATIM", 
   const form = registerForm(page);
   await form.getByLabel('Name').fill(name);
   await form.getByLabel('Topic').fill('e2e-hook-refused');
-  await form.getByLabel('Tool', { exact: true }).fill('studio_demo_echo');
+  await pickTool(page, form, 'studio_demo_echo');
   await pickExecutionKey(page, form, conditionalKeyId);
 
   const refusal = page.waitForResponse(
@@ -148,7 +159,7 @@ async function fillHookFields(page: Page, name: string): Promise<void> {
   const form = registerForm(page);
   await form.getByLabel('Name').fill(name);
   await form.getByLabel('Topic').fill('e2e-hook-session');
-  await form.getByLabel('Tool', { exact: true }).fill('studio_demo_echo');
+  await pickTool(page, form, 'studio_demo_echo');
 }
 
 const isHooks = (pathname: string): boolean => pathname === '/api/hooks';

@@ -1,10 +1,11 @@
 /**
  * The compose dialog — the opt-in bake checklist for non-spec fields, the
  * response_format editor, the shared-tools-list invalidation, and the picker-read
- * failure resilience (a failed load walls the picker and blocks submit; a tags
- * failure is stated but degrades gracefully).
+ * failure resilience (a failed load walls the picker and blocks submit; a 403 on the
+ * tools list takes typed names and composes; a tags failure is stated but degrades
+ * gracefully).
  */
-import { type CreatePresetBody } from '@tai42/api-client';
+import { ApiError, type CreatePresetBody } from '@tai42/api-client';
 import { toolsListKey } from '@tai42/studio-sdk';
 import { QueryClient } from '@tanstack/react-query';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
@@ -281,6 +282,63 @@ describe('ComposeAgentDialog', () => {
       expect(createPreset).not.toHaveBeenCalled();
     },
   );
+
+  // A session that may not list tools types each tool's exact name; the server
+  // checks the names on save, so the dialog composes rather than walling the pickers.
+  const refusedTools = () => Promise.reject(new ApiError('forbidden', 403));
+
+  it('composes with a typed tool name when the session may not list tools', async () => {
+    const createPreset = vi.fn((_body: CreatePresetBody) => Promise.resolve(presetRecord()));
+    renderWithProviders(
+      <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+      composeClient({ listTools: refusedTools, createPreset }),
+    );
+
+    await fillNameAndDescription('assistant');
+    await pickBaseAgent();
+
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Add a tool' }), 'echo{Enter}');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    const submit = screen.getByRole('button', { name: 'Compose agent' });
+    expect(submit).toBeEnabled();
+    await userEvent.click(submit);
+
+    await waitFor(() => {
+      expect(createPreset).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fixed_kwargs: expect.objectContaining({ tool_names: ['echo'] }) as unknown,
+        }),
+      );
+    });
+  });
+
+  it('composes a sub-agent with a typed tool name when the session may not list tools', async () => {
+    const createPreset = vi.fn((_body: CreatePresetBody) => Promise.resolve(presetRecord()));
+    renderWithProviders(
+      <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+      composeClient({ listTools: refusedTools, createPreset }),
+    );
+
+    await fillNameAndDescription('assistant');
+    await pickBaseAgent();
+
+    await userEvent.click(await screen.findByRole('button', { name: /Add sub-agent/ }));
+    const card = within(screen.getByTestId('subagent-0'));
+    await userEvent.type(card.getByLabelText('Name'), 'researcher');
+    await userEvent.type(card.getByRole('textbox', { name: 'Add a tool' }), 'weather{Enter}');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Compose agent' }));
+
+    await waitFor(() => {
+      expect(createPreset).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fixed_kwargs: expect.objectContaining({
+            subagents: [expect.objectContaining({ name: 'researcher', tool_names: ['weather'] })],
+          }) as unknown,
+        }),
+      );
+    });
+  });
 
   it('states a failed TAG read without walling the tool picker or the submit', async () => {
     // Tags only group the picker's options, so their failure degrades the control

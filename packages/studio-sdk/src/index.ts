@@ -190,6 +190,9 @@ export { effectiveHidden, hiddenToolNames } from './tool-visibility';
 // -- Tool declared-badge merge (native ∪ overlay) ----------------------------
 export { mergeToolBadges, toolBadgesByName } from './tool-badges';
 
+// -- Text search shared by pickers and filterable lists ----------------------
+export { isBlankSearch, matchesSearch } from './search-match';
+
 // -- Design system -----------------------------------------------------------
 export type { ActionMenuItem, ActionMenuProps } from './components/action-menu';
 export { ActionMenu } from './components/action-menu';
@@ -263,6 +266,11 @@ export type {
   ScrollRegionProps,
 } from './components/scroll-region';
 export { ScrollRegion, useOverflowRegion, useProseScrollRegions } from './components/scroll-region';
+export type {
+  SearchableSelectGroupsProps,
+  SearchableSelectProps,
+} from './components/searchable-select';
+export { SearchableSelect } from './components/searchable-select';
 export type {
   SelectGroup,
   SelectGroupsProps,

@@ -2,9 +2,10 @@
  * The shared subject sub-form: the `buildSubject` parse (untouched → no subject, fully
  * filled → a subject, partial → a loud refusal), the target-option mapping, the field
  * state hook, and the presentational section's collapsed/expanded render with its
- * host-supplied copy.
+ * host-supplied copy and its searchable target.
  */
 import { act, render, renderHook, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -154,5 +155,34 @@ describe('SubjectSection', () => {
     expect(screen.getByLabelText('Subject key')).toBeInTheDocument();
     expect(screen.getByText(SECTION_COPY.subjectKeyDescription)).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent(SUBJECT_INCOMPLETE_MESSAGE);
+  });
+  it('searches the targets and reports the one chosen', async () => {
+    const user = userEvent.setup({ delay: null });
+    const onTargetChange = vi.fn();
+    render(
+      <SubjectSection
+        open
+        onToggle={vi.fn()}
+        target=""
+        onTargetChange={onTargetChange}
+        kind=""
+        onKindChange={vi.fn()}
+        subjectKey=""
+        onKeyChange={vi.fn()}
+        error={null}
+        targetOptions={[
+          { value: 'agent:assistant', label: 'agent · assistant' },
+          { value: 'tool:relay', label: 'tool · relay' },
+        ]}
+        {...SECTION_COPY}
+      />,
+    );
+    await user.click(screen.getByRole('combobox', { name: 'Target' }));
+    await user.type(screen.getByRole('combobox', { name: 'Search targets' }), 'RELAY');
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'tool · relay',
+    ]);
+    await user.keyboard('{Enter}');
+    expect(onTargetChange).toHaveBeenCalledWith('tool:relay');
   });
 });

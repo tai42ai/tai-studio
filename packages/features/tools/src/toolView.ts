@@ -108,12 +108,9 @@ export function buildToolViews(
   return names.map((name) => toolViewFor(name, nativeByName.get(name), overlayByName.get(name)));
 }
 
-/** Case-insensitive substring over a tool's real name and display label. */
-export function toolMatches(view: ToolView, query: string): boolean {
-  const needle = query.toLowerCase();
-  return (
-    view.name.toLowerCase().includes(needle) || view.displayName.toLowerCase().includes(needle)
-  );
+/** The texts a tool is searched by: its real name and its display name. */
+export function toolSearchTexts(view: ToolView): readonly string[] {
+  return [view.name, view.displayName];
 }
 
 /** Map the overlay's folder records into the SDK's camelCase folder shape. */

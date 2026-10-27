@@ -142,6 +142,26 @@ describe('RecordsTab', () => {
     });
   });
 
+  it('searches the known targets', async () => {
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<RecordsTab state={state} />, {
+      client: client({
+        listConversationRoutes: vi.fn().mockResolvedValue({
+          items: [
+            { target_kind: 'tool', target_name: 'relay' },
+            { target_kind: 'agent', target_name: 'assistant' },
+          ],
+          total: 2,
+        }),
+      }),
+    });
+    await user.click(await screen.findByLabelText('Known targets'));
+    await user.type(screen.getByRole('combobox', { name: 'Search targets' }), 'ASSIST');
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'agent · assistant',
+    ]);
+  });
+
   it('a subjects read error surfaces loudly', async () => {
     renderWithProviders(<RecordsTab state={state} />, {
       client: client({

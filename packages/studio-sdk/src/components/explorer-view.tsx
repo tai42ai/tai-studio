@@ -14,6 +14,7 @@
  */
 import { type ReactNode, useEffect, useState } from 'react';
 
+import { matchesSearch } from '../search-match';
 import { ExplorerBody, type ExplorerEntry } from './explorer-body';
 import { usePageSize } from './explorer-page-size';
 import { TagFilterRow } from './explorer-tag-filter';
@@ -50,12 +51,13 @@ export interface ExplorerTags<T> {
   readonly maxVisibleTags?: number;
 }
 
-/** Controlled free-text search. `matches` owns the item shape and casing; it is
- *  called only with a non-empty, already-trimmed query. */
+/** Controlled free-text search. The caller names the texts an item is searched by;
+ *  the explorer matches them with the SDK's one search rule (`matchesSearch`). */
 export interface ExplorerSearch<T> {
   readonly value: string;
   readonly onChange: (value: string) => void;
-  readonly matches: (item: T, query: string) => boolean;
+  /** The texts the reader sees for `item` (its name, display name, description…). */
+  readonly texts: (item: T) => readonly string[];
   /** The input's accessible name. */
   readonly label: string;
   readonly placeholder?: string;
@@ -183,15 +185,12 @@ function filterInFolder<T>(
   tags: ExplorerTags<T> | undefined,
   selectedSet: ReadonlySet<string> | undefined,
   search: ExplorerSearch<T> | undefined,
-  query: string,
 ): readonly T[] {
   return inFolder.filter((item) => {
     if (tags !== undefined && selectedSet !== undefined && selectedSet.size > 0) {
       if (!matchesSelectedTags(tags.getTags(item), selectedSet)) return false;
     }
-    if (search !== undefined && query !== '') {
-      if (!search.matches(item, query)) return false;
-    }
+    if (search !== undefined && !matchesSearch(search.value, ...search.texts(item))) return false;
     return true;
   });
 }
@@ -240,7 +239,7 @@ export function ExplorerView<T>({
   const inFolder = items.filter((item) => getFolderId(item) === currentFolderId);
 
   const selectedSet = tags !== undefined ? new Set(tags.selected) : undefined;
-  const filtered = filterInFolder(inFolder, tags, selectedSet, search, query);
+  const filtered = filterInFolder(inFolder, tags, selectedSet, search);
 
   const vocabulary =
     tags !== undefined

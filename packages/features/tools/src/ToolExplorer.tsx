@@ -21,7 +21,7 @@ import {
 import type { ReactNode } from 'react';
 
 import { ToolItem } from './ToolItem';
-import { toolMatches, type ToolView } from './toolView';
+import { toolSearchTexts, type ToolView } from './toolView';
 
 /** The search box's accessible name; the commit listener keys the search input on it. */
 export const SEARCH_LABEL = 'Filter tools';
@@ -146,7 +146,7 @@ export function ToolExplorer({
         search={{
           value: query,
           onChange: onQueryChange,
-          matches: toolMatches,
+          texts: toolSearchTexts,
           label: SEARCH_LABEL,
           placeholder: 'Filter by name',
         }}

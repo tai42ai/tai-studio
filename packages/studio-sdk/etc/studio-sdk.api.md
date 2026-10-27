@@ -14600,11 +14600,10 @@ export interface ExplorerEmptyStates {
 export interface ExplorerSearch<T> {
     readonly label: string;
     // (undocumented)
-    readonly matches: (item: T, query: string) => boolean;
-    // (undocumented)
     readonly onChange: (value: string) => void;
     // (undocumented)
     readonly placeholder?: string;
+    readonly texts: (item: T) => readonly string[];
     // (undocumented)
     readonly value: string;
 }
@@ -16124,6 +16123,9 @@ const invokeMemberActionResult: z.ZodObject<{
 }, z.core.$strict>;
 
 // @public
+export function isBlankSearch(query: string): boolean;
+
+// @public
 export function isExecutionKeyListEmpty(query: ExecutionKeyQuery): boolean;
 
 // @public
@@ -17424,6 +17426,9 @@ const marketplaceVersion: z.ZodObject<{
     status: z.ZodString;
     published_at: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
+
+// @public
+export function matchesSearch(query: string, ...texts: readonly string[]): boolean;
 
 // @public
 export function matchesSelectedTags(itemTags: readonly string[], selected: ReadonlySet<string>): boolean;
@@ -21594,6 +21599,42 @@ export interface ScrollRegionProps {
     readonly ref?: Ref<HTMLDivElement>;
     // (undocumented)
     readonly style?: CSSProperties;
+}
+
+// @public (undocumented)
+export function SearchableSelect(props: SearchableSelectArgs): ReactNode;
+
+// @public (undocumented)
+type SearchableSelectArgs = (SearchableSelectProps & {
+    readonly groups?: undefined;
+}) | (SearchableSelectGroupsProps & {
+    readonly options?: undefined;
+});
+
+// @public
+export interface SearchableSelectGroupsProps extends SearchableSelectSharedProps {
+    // (undocumented)
+    readonly groups: readonly SelectGroup[];
+}
+
+// @public
+export interface SearchableSelectProps extends SearchableSelectSharedProps {
+    // (undocumented)
+    readonly options: readonly SelectOption[];
+}
+
+// @public
+interface SearchableSelectSharedProps {
+    readonly 'aria-describedby'?: string;
+    readonly 'aria-label'?: string;
+    // (undocumented)
+    readonly disabled?: boolean;
+    // (undocumented)
+    readonly onValueChange: (value: string) => void;
+    // (undocumented)
+    readonly placeholder?: string;
+    readonly searchLabel: string;
+    readonly value: string;
 }
 
 // @public
@@ -30319,7 +30360,6 @@ export interface ToolPickerProps {
     readonly error?: string;
     readonly errorNote?: string;
     readonly excludeNames?: readonly string[];
-    readonly forbiddenNote?: string;
     // (undocumented)
     readonly idPrefix?: string;
     // (undocumented)
