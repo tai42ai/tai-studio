@@ -40,7 +40,8 @@ export interface ExtensionConfigEditorProps {
   readonly idPrefix: string;
 }
 
-type SchemaSettings = Readonly<Record<string, SchemaEditorChange>>;
+type SchemaSetting = Pick<SchemaEditorChange, 'schema' | 'valid'>;
+type SchemaSettings = Readonly<Record<string, SchemaSetting>>;
 
 const isMetaRef = (node: JsonSchema): boolean => node.$ref === JSON_SCHEMA_META_URI;
 
@@ -240,7 +241,7 @@ function RenderableSettings({
     return seeded;
   });
   const [schemaSettings, setSchemaSettings] = useState<SchemaSettings>(() => {
-    const seeded: Record<string, SchemaEditorChange> = {};
+    const seeded: Record<string, SchemaSetting> = {};
     for (const key of schemaKeys) {
       const stored = value?.[key];
       seeded[key] = { schema: isRecord(stored) ? stored : null, valid: true };

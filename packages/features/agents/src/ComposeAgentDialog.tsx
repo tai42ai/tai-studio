@@ -51,6 +51,7 @@ export function ComposeAgentDialog({
   const [responseFormat, setResponseFormat] = useState<SchemaEditorChange>({
     schema: null,
     valid: true,
+    text: '',
   });
   const [tags, setTags] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -131,7 +132,7 @@ export function ComposeAgentDialog({
               setBaseName(next);
               // Reset the response-format editor in the SAME update as the base switch,
               // so its base-keyed remount seeds from the cleared value.
-              setResponseFormat({ schema: null, valid: true });
+              setResponseFormat({ schema: null, valid: true, text: '' });
             }}
             placeholder="Select a base agent…"
           />

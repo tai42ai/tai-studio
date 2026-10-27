@@ -21526,6 +21526,7 @@ export function SchemaEditor(input: SchemaEditorProps): ReactNode;
 // @public
 export interface SchemaEditorChange {
     readonly schema: Record<string, unknown> | null;
+    readonly text: string;
     readonly valid: boolean;
 }
 
