@@ -1,9 +1,10 @@
 // Unit tests for scripts/release-label-check.mjs — the pre-merge label-honesty check.
 // The projection helpers are exercised directly with synthetic titles and bodies; the
 // end-to-end `check` is driven through the gate's injectable I/O seams with in-memory
-// api-extractor reports, so no git, npm or build is touched. The gate's own
-// classification/decision logic has its own suite (api-gate.test.mjs); these tests pin
-// the title/body -> bump -> version projection and that a dishonest release is refused.
+// api-extractor reports, so no git, npm or build is touched. The gate's own decision
+// logic and the surface classification have their own suites (api-gate.test.mjs and
+// api-surface-diff.test.mjs); these tests pin the title/body -> bump -> version
+// projection and that a dishonest release is refused.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

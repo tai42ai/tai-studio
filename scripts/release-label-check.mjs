@@ -41,13 +41,10 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-import { runGate, GateError } from './api-gate.mjs';
+import { runGate } from './api-gate.mjs';
+import { GateError, fail } from './gate-error.mjs';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-
-function fail(message) {
-  throw new GateError(message);
-}
 
 // release-please starts a new bumping chunk only at a blank line immediately followed by a
 // whitelisted `type(scope)?: ` header. The `!` breaking marker is NOT in this lookahead, so
