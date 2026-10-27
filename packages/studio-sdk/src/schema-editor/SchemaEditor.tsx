@@ -31,12 +31,18 @@ import { SchemaForm } from '../schema-form/SchemaForm';
 import type { JsonSchema } from '../schema-form/types';
 import { lintSchemaText } from './lint';
 
-/** What {@link SchemaEditor} reports up on every edit. */
-export interface SchemaEditorChange {
+/** The parsed schema and its validity: what a host keeps of a {@link SchemaEditor}. */
+export interface SchemaEditorDraft {
   /** The authored schema dict when valid and non-empty; `null` when the editor is empty. */
   readonly schema: Record<string, unknown> | null;
   /** False when the text is non-empty but unparseable or failing lint — gate submit on this. */
   readonly valid: boolean;
+}
+
+/** What {@link SchemaEditor} reports up on every edit. */
+export interface SchemaEditorChange extends SchemaEditorDraft {
+  /** The editor's text as typed, so a host can hold a draft the editor rejects. */
+  readonly text: string;
 }
 
 export interface SchemaEditorProps {
@@ -162,7 +168,7 @@ export function SchemaEditor({
   const emit = (nextText: string): void => {
     setText(nextText);
     const next = lintSchemaText(nextText, requireTitle);
-    onChange({ schema: next.valid ? next.schema : null, valid: next.valid });
+    onChange({ schema: next.valid ? next.schema : null, valid: next.valid, text: nextText });
   };
 
   return (

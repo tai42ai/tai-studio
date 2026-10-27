@@ -2,7 +2,8 @@
  * Test harness for the tools feature. `renderWithProviders` wraps the unit under
  * test in the exact provider stack the shell supplies at runtime — a
  * retry-disabled TanStack Query client, the SDK's raw `ApiProvider` (a stub
- * client, passed via `value=`), `ThemeProvider`, and a `NavigationProvider` whose
+ * client, passed via `value=`), the auth, capability and kind-status providers,
+ * `ThemeProvider`, and a `NavigationProvider` whose
  * `navigate` is a spy so navigation can be asserted. Only test dependencies are
  * imported here; no production module is stubbed.
  */
@@ -12,6 +13,7 @@ import {
   AuthProvider,
   CapabilityProvider,
   NavigationProvider,
+  SystemKindsProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -55,27 +57,33 @@ export function renderWithProviders(
   }
   // The stub only implements the methods exercised by a given test; the cast
   // asserts the shape the SDK context expects.
-  const apiClient = (
-    projection !== undefined ? { ...client, getMe: () => Promise.resolve(projection) } : client
-  ) as ApiClient;
+  // The kind-status table defaults to empty (every kind not off) unless the test
+  // supplies its own read.
+  const apiClient = {
+    getSystemKinds: () => Promise.resolve([]),
+    ...client,
+    ...(projection !== undefined ? { getMe: () => Promise.resolve(projection) } : {}),
+  } as ApiClient;
 
   const result = render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ApiProvider value={apiClient}>
           <CapabilityProvider>
-            <ThemeProvider>
-              <NavigationProvider
-                value={{
-                  navigate,
-                  resolvePath: () => '/x',
-                  navigatePlugin: vi.fn(),
-                  resolvePluginPath: () => '/x',
-                }}
-              >
-                {ui}
-              </NavigationProvider>
-            </ThemeProvider>
+            <SystemKindsProvider>
+              <ThemeProvider>
+                <NavigationProvider
+                  value={{
+                    navigate,
+                    resolvePath: () => '/x',
+                    navigatePlugin: vi.fn(),
+                    resolvePluginPath: () => '/x',
+                  }}
+                >
+                  {ui}
+                </NavigationProvider>
+              </ThemeProvider>
+            </SystemKindsProvider>
           </CapabilityProvider>
         </ApiProvider>
       </AuthProvider>

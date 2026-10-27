@@ -11,20 +11,32 @@
  *
  * `FolderPicker` carries inline new-folder creation, so a folder can be created from
  * EVERY consuming screen through this one component — never one screen's own
- * affordance.
+ * affordance. A failed creation is shown loudly under the draft by the picker
+ * itself, so every screen that files through it surfaces the failure the same way.
  */
+import type { FolderRecord } from '@tai42/api-client';
 import { type ReactNode, useState } from 'react';
 
 import { ChevronRightIcon, FolderIcon } from './icons';
 import { TextInput } from './inputs';
 import { Button } from './primitives';
 import { Select } from './select';
+import { ToolMetaWriteError } from './tool-meta-access';
 
 /** A folder in the tree, in the SDK's camelCase UI shape (`parentId`, `null` = root). */
 export interface Folder {
   readonly id: string;
   readonly name: string;
   readonly parentId: string | null;
+}
+
+/** Map the overlay's wire folder records into the UI {@link Folder} shape. */
+export function toFolders(records: readonly FolderRecord[]): Folder[] {
+  return records.map((record) => ({
+    id: record.id,
+    name: record.name,
+    parentId: record.parent_id,
+  }));
 }
 
 /** The subfolders directly under `parentId` (`null` = the root directory), name-sorted. */
@@ -143,10 +155,11 @@ export interface FolderPickerProps {
   readonly folders: readonly Folder[];
   /**
    * Create a folder under `parentId` (the current selection) and resolve with its
-   * id; the picker selects it. Rejection is the caller's to surface — the picker
-   * leaves the draft in place so the operator can retry.
+   * id; the picker selects it. On a rejection the picker shows the error and keeps
+   * the draft in place so the operator can retry. Without it the picker offers no
+   * create — the caller may not create folders.
    */
-  readonly onCreateFolder: (name: string, parentId: string | null) => Promise<string>;
+  readonly onCreateFolder?: (name: string, parentId: string | null) => Promise<string>;
   readonly disabled?: boolean;
   /** The unfiled option's label (e.g. "No folder"). */
   readonly unfiledLabel: string;
@@ -164,22 +177,23 @@ export function FolderPicker({
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  const [createError, setCreateError] = useState<unknown>(null);
 
   const options = [{ value: UNFILED_VALUE, label: unfiledLabel }, ...folderOptions(folders)];
 
   const create = async (): Promise<void> => {
     const name = draft.trim();
-    if (name === '' || busy) return;
+    if (name === '' || busy || onCreateFolder === undefined) return;
     setBusy(true);
+    setCreateError(null);
     try {
       const id = await onCreateFolder(name, value);
       onChange(id);
       setDraft('');
       setCreating(false);
-    } catch {
-      // The caller owns surfacing the failure (its `onCreateFolder` is the loud
-      // surface); the picker's part is to keep the draft OPEN with its text so the
-      // operator can retry — never to clear it or select nothing.
+    } catch (error: unknown) {
+      // Shown under the draft, which stays OPEN with its text for a retry.
+      setCreateError(error);
     } finally {
       setBusy(false);
     }
@@ -196,7 +210,7 @@ export function FolderPicker({
         }}
         disabled={disabled ?? busy}
       />
-      {creating ? (
+      {onCreateFolder === undefined ? null : creating ? (
         <div className="tai-row">
           <div style={{ flex: 1 }}>
             <TextInput
@@ -231,6 +245,7 @@ export function FolderPicker({
             onClick={() => {
               setCreating(false);
               setDraft('');
+              setCreateError(null);
             }}
             disabled={busy}
           >
@@ -250,6 +265,7 @@ export function FolderPicker({
           <span>New folder</span>
         </Button>
       )}
+      <ToolMetaWriteError error={createError} />
     </div>
   );
 }

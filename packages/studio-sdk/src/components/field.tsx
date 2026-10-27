@@ -13,6 +13,8 @@ import { XCircleIcon } from './icons';
 
 interface FieldContextValue {
   readonly controlId: string | undefined;
+  /** The label element's id, published only while `controlId` is (a non-group Field). */
+  readonly labelId: string | undefined;
   readonly describedBy: string | undefined;
   readonly invalid: boolean;
 }
@@ -46,6 +48,15 @@ export function useFieldControl(): FieldControlProps {
     'aria-describedby': ctx.describedBy,
     'aria-invalid': ctx.invalid ? true : undefined,
   };
+}
+
+/**
+ * The id of the enclosing Field's label while it names one control, else `undefined`.
+ * A control whose popup holds a second labelled surface (a listbox, a dialog) points
+ * that surface's `aria-labelledby` at it, so the popup carries the field's name.
+ */
+export function useFieldLabelId(): string | undefined {
+  return useContext(FieldContext)?.labelId;
 }
 
 export interface FieldProps {
@@ -133,8 +144,13 @@ export function Field({
   // if the group Field withheld it too, a group Field carrying an `error` would
   // expose its invalid state NOWHERE in the accessibility tree.
   const value: FieldContextValue = group
-    ? { controlId: undefined, describedBy: undefined, invalid: error !== undefined }
-    : { controlId, describedBy, invalid: error !== undefined };
+    ? {
+        controlId: undefined,
+        labelId: undefined,
+        describedBy: undefined,
+        invalid: error !== undefined,
+      }
+    : { controlId, labelId, describedBy, invalid: error !== undefined };
 
   // The label keeps its `htmlFor`/`id` wiring either way — `hideLabel` only drops
   // its PAINT, so the accessible name it gives the control is unchanged.

@@ -1,6 +1,6 @@
 /**
- * The `presets` field editor: a picker over stored presets that expands the chosen
- * one into an inline `PresetSpec` object and appends it.
+ * The `presets` field editor: a searchable picker over stored presets that expands the
+ * chosen one into an inline `PresetSpec` object and appends it.
  */
 import type { PresetRecord } from '@tai42/api-client';
 import {
@@ -8,12 +8,12 @@ import {
   CloseIcon,
   errorMessage,
   ErrorState,
-  Select,
+  SearchableSelect,
   Spinner,
   useApi,
 } from '@tai42/studio-sdk';
 import { useMutation } from '@tanstack/react-query';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 
 import type { InlinePresetSpec } from './authoring-types';
 
@@ -39,10 +39,12 @@ export function PresetSpecEditor({
   const api = useApi();
   const [pick, setPick] = useState<string>('');
 
-  const chosen = new Set(value.map((entry) => entry.name));
-  const options = presetRecords
-    .filter((record) => !chosen.has(record.name))
-    .map((record) => ({ value: record.name, label: record.name }));
+  const options = useMemo(() => {
+    const chosen = new Set(value.map((entry) => entry.name));
+    return presetRecords
+      .filter((record) => !chosen.has(record.name))
+      .map((record) => ({ value: record.name, label: record.name }));
+  }, [presetRecords, value]);
 
   const expand = useMutation({
     mutationFn: (name: string) => api.getPreset(name),
@@ -87,13 +89,14 @@ export function PresetSpecEditor({
         </div>
       ) : null}
       <div className="tai-row">
-        <Select
+        <SearchableSelect
           options={options}
           value={pick}
           onValueChange={setPick}
           placeholder="Pick a stored preset…"
           disabled={(disabled ?? false) || options.length === 0}
           aria-label="Preset to expand"
+          searchLabel="Search presets"
         />
         <Button
           type="button"

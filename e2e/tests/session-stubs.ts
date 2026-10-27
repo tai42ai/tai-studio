@@ -72,6 +72,18 @@ export function scopedKeySession(
 }
 
 /**
+ * A non-admin key session named `userId` that reaches ONLY `reach`: the live routes are
+ * dropped, so every door not listed there is one the session may not use.
+ */
+export function onlyReachSession(
+  userId: string,
+  reach: readonly RouteReach[],
+): (live: LiveSession) => SessionFields {
+  const scoped = scopedKeySession(userId, reach);
+  return (live) => ({ ...scoped(live), routes: [...reach] });
+}
+
+/**
  * Serve `GET /api/auth/me` as the live answer with `session(live)` laid over it. A live
  * answer that is not a projection fails the case loudly.
  */

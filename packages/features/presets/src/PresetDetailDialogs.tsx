@@ -8,13 +8,13 @@ import type { ReactNode } from 'react';
 
 import { DeletePresetDialog } from './DeletePresetDialog';
 import { EditOverlayDialog } from './EditOverlayDialog';
+import type { PresetOverlay } from './preset-overlay';
 import { RenamePresetDialog } from './RenamePresetDialog';
 import { SaveVersionDialog } from './SaveVersionDialog';
 
 export function PresetDetailDialogs({
   preset,
-  overlayDisplayName,
-  overlayTags,
+  overlay,
   saveOpen,
   renameOpen,
   editOpen,
@@ -25,11 +25,10 @@ export function PresetDetailDialogs({
   onCloseDelete,
   onRenamed,
   onDeleted,
-  onMetaDisabled,
 }: {
   readonly preset: PresetDetail;
-  readonly overlayDisplayName: string | null;
-  readonly overlayTags: readonly string[];
+  /** The preset's overlay row and the FULL folder tree its folder picker offers. */
+  readonly overlay: PresetOverlay;
   readonly saveOpen: boolean;
   readonly renameOpen: boolean;
   readonly editOpen: boolean;
@@ -40,7 +39,6 @@ export function PresetDetailDialogs({
   readonly onCloseDelete: () => void;
   readonly onRenamed: (newName: string) => void;
   readonly onDeleted: () => void;
-  readonly onMetaDisabled: () => void;
 }): ReactNode {
   return (
     <>
@@ -51,9 +49,10 @@ export function PresetDetailDialogs({
       {editOpen ? (
         <EditOverlayDialog
           toolName={preset.name}
-          initial={{ displayName: overlayDisplayName ?? '', tags: overlayTags }}
+          initial={{ displayName: overlay.displayName ?? '', tags: overlay.tags }}
+          initialFolderId={overlay.folderId}
+          folders={overlay.folders}
           onClose={onCloseEdit}
-          onDisabled={onMetaDisabled}
         />
       ) : null}
 

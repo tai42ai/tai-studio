@@ -37,7 +37,7 @@ function renderPicker(query: StubQuery<AgentListing>, value = '', error?: string
 }
 
 describe('AgentPicker', () => {
-  it('pending: a disabled Select reading "Loading agents…"', () => {
+  it('pending: a disabled select reading "Loading agents…"', () => {
     renderPicker(stubQuery(pendingRead));
     const combobox = screen.getByRole('combobox', { name: 'Agent' });
     expect(combobox).toBeDisabled();
@@ -66,6 +66,21 @@ describe('AgentPicker', () => {
       'beta',
     ]);
     await user.click(screen.getByRole('option', { name: 'beta' }));
+    expect(onValueChange).toHaveBeenCalledWith('beta');
+  });
+
+  it('loaded: the search box narrows the agents, ignoring case, and Enter picks', async () => {
+    const { onValueChange } = renderPicker(
+      stubQuery({ data: listing(['alpha', 'beta', 'alphabet']), isSuccess: true }),
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('combobox', { name: 'Agent' }));
+    await user.type(screen.getByRole('combobox', { name: 'Search agents' }), 'BET');
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'beta',
+      'alphabet',
+    ]);
+    await user.keyboard('{Enter}');
     expect(onValueChange).toHaveBeenCalledWith('beta');
   });
 

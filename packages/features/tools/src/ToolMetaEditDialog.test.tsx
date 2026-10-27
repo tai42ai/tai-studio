@@ -219,3 +219,24 @@ describe('ToolMetaEditDialog — store not configured', () => {
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
   });
 });
+
+describe('ToolMetaEditDialog — a failed save', () => {
+  it('shows the server error above a still-usable form', () => {
+    render(
+      <ToolMetaEditDialog
+        tool={toolView()}
+        folders={NO_FOLDERS}
+        open
+        onOpenChange={vi.fn()}
+        onCreateFolder={vi.fn(() => Promise.resolve('f-new'))}
+        onSubmit={vi.fn()}
+        saving={false}
+        writeError={new Error('database exploded')}
+      />,
+    );
+
+    expect(screen.getByText('database exploded')).toBeInTheDocument();
+    expect(screen.queryByTestId('feature-disabled')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+  });
+});

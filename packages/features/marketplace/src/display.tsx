@@ -2,7 +2,8 @@
  * Listing display helpers: the title a listing shows (its `display_name`, or its
  * `name` titleized when the display name is null) and the small icon that sits
  * beside it — a rounded thumbnail when the registry serves a safe http(s)
- * `icon_url`, otherwise a generated monogram badge from the title's initials.
+ * `icon_url`, otherwise a generated monogram badge from the title's initials —
+ * and the plain date a listing's last update reads as.
  */
 import { isSafeHttpUrl } from '@tai42/studio-sdk';
 import { type CSSProperties, type ReactNode, useState } from 'react';
@@ -96,4 +97,14 @@ export function ListingIcon({
       {monogramInitials(title)}
     </span>
   );
+}
+
+/**
+ * An ISO-8601 `updated_at` rendered as a plain date for a listing's recency.
+ * An unparseable value is shown verbatim rather than swallowed.
+ */
+export function formatUpdatedAt(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString();
 }

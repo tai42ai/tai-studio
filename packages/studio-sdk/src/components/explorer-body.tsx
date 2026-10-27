@@ -122,6 +122,7 @@ export interface ExplorerBodyProps<T> {
   readonly columns: readonly ExplorerColumn[];
   readonly pageEntries: readonly ExplorerEntry<T>[];
   readonly getItemKey: (item: T) => string;
+  readonly selectedItemKey: string | undefined;
   readonly renderRow: (item: T) => ReactNode;
   readonly renderCard: (item: T) => ReactNode;
   readonly openProps: (item: T) => OpenTargetProps;
@@ -134,7 +135,15 @@ export interface ExplorerBodyProps<T> {
 function CardEntry<T>(
   props: ExplorerBodyProps<T> & { readonly entry: ExplorerEntry<T> },
 ): ReactNode {
-  const { entry, onNavigate, renderFolderActions, getItemKey, renderCard, openProps } = props;
+  const {
+    entry,
+    onNavigate,
+    renderFolderActions,
+    getItemKey,
+    selectedItemKey,
+    renderCard,
+    openProps,
+  } = props;
   if (entry.kind === 'folder') {
     return (
       <div role="listitem" key={`folder:${entry.folder.id}`}>
@@ -148,8 +157,14 @@ function CardEntry<T>(
       </div>
     );
   }
+  const key = getItemKey(entry.item);
   return (
-    <div role="listitem" key={`item:${getItemKey(entry.item)}`} {...openProps(entry.item)}>
+    <div
+      role="listitem"
+      key={`item:${key}`}
+      data-selected={key === selectedItemKey ? 'true' : undefined}
+      {...openProps(entry.item)}
+    >
       {renderCard(entry.item)}
     </div>
   );
@@ -159,8 +174,16 @@ function CardEntry<T>(
 function RowEntry<T>(
   props: ExplorerBodyProps<T> & { readonly entry: ExplorerEntry<T> },
 ): ReactNode {
-  const { entry, columns, onNavigate, renderFolderActions, getItemKey, renderRow, openProps } =
-    props;
+  const {
+    entry,
+    columns,
+    onNavigate,
+    renderFolderActions,
+    getItemKey,
+    selectedItemKey,
+    renderRow,
+    openProps,
+  } = props;
   if (entry.kind === 'folder') {
     return (
       <TR key={`folder:${entry.folder.id}`}>
@@ -174,8 +197,9 @@ function RowEntry<T>(
       </TR>
     );
   }
+  const key = getItemKey(entry.item);
   return (
-    <TR key={`item:${getItemKey(entry.item)}`} {...openProps(entry.item)}>
+    <TR key={`item:${key}`} selected={key === selectedItemKey} {...openProps(entry.item)}>
       {renderRow(entry.item)}
     </TR>
   );

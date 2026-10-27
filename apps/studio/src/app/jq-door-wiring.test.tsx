@@ -19,7 +19,8 @@ import {
   STUDIO_PLUGIN_API_VERSION,
 } from '@tai42/studio-sdk';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { type ReactNode, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -39,13 +40,39 @@ const ANNOTATED_SCHEMA: JsonSchema = {
   },
 };
 
+const TEMPLATED_SCHEMA: JsonSchema = {
+  $defs: {
+    TemplatedText: {
+      type: 'object',
+      title: 'TemplatedText',
+      properties: {
+        content: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        id: { anyOf: [{ type: 'string' }, { type: 'null' }], default: null },
+        kwargs: { type: 'object', additionalProperties: true },
+      },
+      'x-tai42-templated-text': { language: 'jinja' },
+    },
+  },
+  type: 'object',
+  properties: {
+    gate: { $ref: '#/$defs/TemplatedText', 'x-tai42-expression': { language: 'jq' } },
+  },
+  required: ['gate'],
+};
+
+/** A plugin page whose form carries a jq-typed templated-text field set to a stored id. */
+function TemplatedPage(): ReactNode {
+  const [value, setValue] = useState<unknown>({ gate: { id: 'checks/ready' } });
+  return <SchemaForm schema={TEMPLATED_SCHEMA} value={value} onChange={setValue} />;
+}
+
 /** A plugin page whose form carries an expression-annotated field. */
 function ExpressionPage(): ReactNode {
   const [value, setValue] = useState<unknown>({ condition: '.meta' });
   return <SchemaForm schema={ANNOTATED_SCHEMA} value={value} onChange={setValue} />;
 }
 
-function serveShell(): void {
+function serveShell(...extra: Parameters<typeof server.use>): void {
   server.use(
     http.get('*/api/plugins', () =>
       HttpResponse.json({
@@ -64,6 +91,7 @@ function serveShell(): void {
     ),
     http.get('*/api/tools', () => HttpResponse.json({ data: [] })),
     http.get('*/api/tools/tags', () => HttpResponse.json({ data: [] })),
+    ...extra,
   );
 }
 
@@ -90,5 +118,43 @@ describe('the shell injects the jq door into every SchemaForm below it', () => {
     ).toBeInTheDocument();
     // The door's own resting control, not the form's plain text input.
     expect(screen.getByRole('textbox', { name: /Route condition/ }).tagName).toBe('TEXTAREA');
+  });
+
+  it('gives a templated-text field the door and the stored templates', async () => {
+    serveShell(
+      http.get('*/api/storage', () =>
+        HttpResponse.json({
+          data: {
+            module: 'acme.storage',
+            present: true,
+            provider: 'local',
+            surfaces: ['storage', 'templates'],
+          },
+        }),
+      ),
+      http.get('*/api/templates', () =>
+        HttpResponse.json({ data: ['checks/ready', 'checks/other'] }),
+      ),
+    );
+    const register = (ctx: PluginContext): void => {
+      ctx.registerPage({ path: 'templated', title: 'Templated', component: TemplatedPage });
+    };
+
+    renderStudio({
+      initialPath: '/plugins/acme/templated',
+      sessionKey: 'k-templated-door',
+      importModule: vi.fn(() => Promise.resolve({ register })),
+    });
+
+    const user = userEvent.setup();
+    const group = await screen.findByRole('group', { name: 'gate' });
+    expect(await within(group).findByRole('radio', { name: 'Stored template' })).toBeChecked();
+    await user.click(await within(group).findByRole('combobox', { name: 'gate' }));
+    expect(await screen.findByRole('option', { name: 'checks/other' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await user.click(within(group).getByRole('radio', { name: 'Inline text' }));
+    expect(
+      await screen.findByRole('button', { name: 'Open the visual editor for gate' }),
+    ).toBeInTheDocument();
   });
 });

@@ -61,7 +61,9 @@ describe('HooksList — row doors', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'Edit hook' });
     expect(within(dialog).getByLabelText('Name')).toHaveValue('notify-event');
-    expect(within(dialog).getByLabelText('Tool')).toHaveValue('slack.post_message');
+    expect(within(dialog).getByRole('combobox', { name: 'Tool' })).toHaveTextContent(
+      'slack.post_message',
+    );
 
     // Save stays gated until the execution-key list resolves; wait it out.
     await waitFor(() =>

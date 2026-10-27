@@ -1,9 +1,9 @@
 /**
  * The detail panel for the selected preset. Reads `getPreset` (the record plus the
  * active version's baked `fixed_kwargs`, rendered via `JsonTree`) and exposes the
- * lifecycle actions: New version, Edit details (the tool_meta overlay's display name +
- * tags), Rename, Version history, and Delete. A conflicted (quarantined) preset is not
- * registered and is DELETE-ONLY (the server 409s every other action).
+ * lifecycle actions: New version, Edit details (the tool_meta overlay's display name,
+ * tags and folder), Rename, Version history, and Delete. A conflicted (quarantined)
+ * preset is not registered and is DELETE-ONLY (the server 409s every other action).
  *
  * The record does not carry categorization tags; the Tags row and the display name
  * both read the tool_meta overlay (`listToolMeta`), keyed by the preset's tool name.
@@ -23,6 +23,7 @@ import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, type Ref, useState } from 'react';
 
 import { presetDetailKey, presetToolMetaKey } from './keys';
+import { presetOverlay } from './preset-overlay';
 import { PresetBodyCards } from './PresetBodyCards';
 import { PresetDetailDialogs } from './PresetDetailDialogs';
 import { PresetDetailHeader } from './PresetDetailHeader';
@@ -49,7 +50,7 @@ export function PresetDetail({
     queryKey: presetDetailKey(name),
     queryFn: ({ signal }) => api.getPreset(name, signal),
   });
-  // The overlay row (display name + tags) for this preset's live tool. Enrichment, not
+  // The overlay row (display name, tags, folder) for this preset's live tool. Enrichment, not
   // load-bearing for the record — but the Edit affordance stays disabled until it
   // lands, since a merge-patch built on unread tags would clear them.
   const metaQuery = useQuery({ queryKey: presetToolMetaKey, queryFn: () => api.listToolMeta() });
@@ -57,9 +58,6 @@ export function PresetDetail({
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  // Set once an overlay write reveals the tool_meta store off (501): the Edit-details
-  // affordance is then hidden — a write it can only refuse is not offered.
-  const [metaWriteDisabled, setMetaWriteDisabled] = useState(false);
 
   if (query.isPending) {
     return (
@@ -87,9 +85,7 @@ export function PresetDetail({
 
   const preset = query.data;
   const conflicted = preset.conflicted;
-  const overlay = metaQuery.data?.meta.find((row) => row.tool_name === preset.name);
-  const overlayTags = overlay?.tags ?? [];
-  const overlayDisplayName = overlay?.display_name ?? null;
+  const overlay = presetOverlay(metaQuery.data, preset.name);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
@@ -100,7 +96,6 @@ export function PresetDetail({
             conflicted={conflicted}
             headingRef={headingRef}
             metaReady={metaQuery.isSuccess}
-            metaWriteDisabled={metaWriteDisabled}
             onNewVersion={() => {
               setSaveOpen(true);
             }}
@@ -124,8 +119,8 @@ export function PresetDetail({
 
           <PresetRecordFields
             preset={preset}
-            overlayDisplayName={overlayDisplayName}
-            overlayTags={overlayTags}
+            overlayDisplayName={overlay.displayName}
+            overlayTags={overlay.tags}
           />
 
           {metaQuery.isError ? (
@@ -151,8 +146,7 @@ export function PresetDetail({
 
       <PresetDetailDialogs
         preset={preset}
-        overlayDisplayName={overlayDisplayName}
-        overlayTags={overlayTags}
+        overlay={overlay}
         saveOpen={saveOpen}
         renameOpen={renameOpen}
         editOpen={editOpen}
@@ -178,9 +172,6 @@ export function PresetDetail({
         onDeleted={() => {
           setDeleteOpen(false);
           navigate('presets', {});
-        }}
-        onMetaDisabled={() => {
-          setMetaWriteDisabled(true);
         }}
       />
     </div>

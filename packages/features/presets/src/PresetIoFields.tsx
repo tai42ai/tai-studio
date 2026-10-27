@@ -9,18 +9,18 @@ import type { TemplatedText } from '@tai42/api-client';
 import {
   BindingTemplatedJqField,
   SchemaEditor,
-  type SchemaEditorChange,
+  type SchemaEditorDraft,
   type TemplatedTextCatalog,
 } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
 export interface PresetIoFieldsProps {
-  readonly inputSchema: SchemaEditorChange;
-  readonly onInputSchemaChange: (change: SchemaEditorChange) => void;
+  readonly inputSchema: SchemaEditorDraft;
+  readonly onInputSchemaChange: (change: SchemaEditorDraft) => void;
   readonly inputMap: TemplatedText | null;
   readonly onInputMapChange: (map: TemplatedText | null) => void;
-  readonly outputSchema: SchemaEditorChange;
-  readonly onOutputSchemaChange: (change: SchemaEditorChange) => void;
+  readonly outputSchema: SchemaEditorDraft;
+  readonly onOutputSchemaChange: (change: SchemaEditorDraft) => void;
   readonly outputMap: TemplatedText | null;
   readonly onOutputMapChange: (map: TemplatedText | null) => void;
   readonly inputSchemaDescription: string;

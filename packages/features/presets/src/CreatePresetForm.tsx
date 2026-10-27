@@ -28,7 +28,7 @@ import {
 import {
   Dialog,
   Field,
-  type SchemaEditorChange,
+  type SchemaEditorDraft,
   StateBindingSection,
   useCanWrite,
   useFeatureOff,
@@ -63,12 +63,12 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
   const [base, setBase] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [combos, setCombos] = useState<PresetExtensionElement[][]>([]);
-  const [inputSchema, setInputSchema] = useState<SchemaEditorChange>({
+  const [inputSchema, setInputSchema] = useState<SchemaEditorDraft>({
     schema: null,
     valid: true,
   });
   const [inputMap, setInputMap] = useState<TemplatedText | null>(null);
-  const [outputSchema, setOutputSchema] = useState<SchemaEditorChange>({
+  const [outputSchema, setOutputSchema] = useState<SchemaEditorDraft>({
     schema: null,
     valid: true,
   });

@@ -1910,23 +1910,23 @@ const AUTHED_PAGES = [
         .locator('.tai-card')
         .filter({ has: page.getByRole('heading', { name: 'Export', level: 3 }) }),
   },
-  // The registered demo agent renders one row per agent (`data-testid`).
-  { name: 'agents', path: '/agents', wait: '[data-testid="agent-row"]' },
+  // The agents explorer marks every entry's name (`data-testid="agent-name"`).
+  { name: 'agents', path: '/agents', wait: '[data-testid="agent-name"]' },
   {
     // The Presets screen's list — the two seeded `studio_demo_echo` presets (name +
     // fixed `message`), rendered by the presets router the docs-demo manifest mounts.
     // With NO `?preset=` selection the list is the FULL-WIDTH master pane; the detail
     // is deliberately not shot because its version-history panel renders each version's
     // server-stamped `created_at` (a per-run churn). The list columns (Name, Base tool,
-    // Description, Active version, Tags, Combos) carry no timestamps, so this shot is
-    // deterministic — NO `nondeterministic` flag. Waits on the first seeded row, and
-    // the action requires the second so the frame is always the full seeded table.
+    // Description, Active version, Tags, Extensions) carry no timestamps, so this shot is
+    // deterministic — NO `nondeterministic` flag. Waits on the first seeded name link,
+    // and the action requires the second so the frame is always the full seeded table.
     name: 'presets',
     path: '/presets',
-    wait: '[data-testid="preset-row-morning_greeting"]',
+    wait: 'a[aria-label="Open preset morning_greeting"]',
     action: async (page) => {
       await page
-        .locator('[data-testid="preset-row-shift_handover"]')
+        .getByRole('link', { name: 'Open preset shift_handover' })
         .waitFor({ state: 'visible', timeout: 8000 });
     },
   },
@@ -3070,7 +3070,8 @@ const AUTHED_PAGES = [
       const form = page.getByRole('form', { name: 'Register hook' });
       await form.getByLabel('Name').fill('notify-on-event');
       await form.getByLabel('Topic').fill('events.created');
-      await form.getByLabel('Tool', { exact: true }).fill('slack.post_message');
+      await form.getByRole('combobox', { name: 'Tool', exact: true }).click();
+      await page.getByRole('option', { name: 'studio_demo_form' }).first().click();
       await pickFirstExecutionKey(page, form);
       // Wait on the picked value so the shot shows a bound key, not the placeholder.
       await form

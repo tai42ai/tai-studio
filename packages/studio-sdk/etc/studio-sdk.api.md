@@ -14101,6 +14101,9 @@ const createdApiKey: z.ZodPipe<z.ZodObject<{
 }>>;
 
 // @public
+export type CreateFolder = (name: string, parentId: string | null) => Promise<string>;
+
+// @public
 interface CreatePresetBody {
     // (undocumented)
     readonly base_tool: string;
@@ -14600,11 +14603,10 @@ export interface ExplorerEmptyStates {
 export interface ExplorerSearch<T> {
     readonly label: string;
     // (undocumented)
-    readonly matches: (item: T, query: string) => boolean;
-    // (undocumented)
     readonly onChange: (value: string) => void;
     // (undocumented)
     readonly placeholder?: string;
+    readonly texts: (item: T) => readonly string[];
     // (undocumented)
     readonly value: string;
 }
@@ -14629,7 +14631,6 @@ export function ExplorerView<T>(input: ExplorerViewProps<T>): ReactNode;
 export interface ExplorerViewProps<T> {
     // (undocumented)
     readonly columns: readonly ExplorerColumn[];
-    // (undocumented)
     readonly currentFolderId: string | null;
     // (undocumented)
     readonly emptyStates: ExplorerEmptyStates;
@@ -14651,6 +14652,7 @@ export interface ExplorerViewProps<T> {
     readonly rootLabel: string;
     // (undocumented)
     readonly search?: ExplorerSearch<T>;
+    readonly selectedItemKey?: string;
     // (undocumented)
     readonly tags?: ExplorerTags<T>;
     readonly viewSurface: string;
@@ -15150,6 +15152,16 @@ export interface Folder {
 }
 
 // @public
+export function FolderActionsMenu(input: FolderActionsMenuProps): ReactNode;
+
+// @public
+export interface FolderActionsMenuProps {
+    readonly folder: Folder;
+    readonly folders: readonly Folder[];
+    readonly onFoldersChanged: FoldersChanged;
+}
+
+// @public
 export function FolderBreadcrumb(input: FolderBreadcrumbProps): ReactNode;
 
 // @public (undocumented)
@@ -15186,7 +15198,7 @@ export interface FolderPickerProps {
     readonly folders: readonly Folder[];
     // (undocumented)
     readonly onChange: (folderId: string | null) => void;
-    readonly onCreateFolder: (name: string, parentId: string | null) => Promise<string>;
+    readonly onCreateFolder?: (name: string, parentId: string | null) => Promise<string>;
     readonly unfiledLabel: string;
     readonly value: string | null;
 }
@@ -15211,6 +15223,12 @@ export interface FolderRowProps {
     // (undocumented)
     readonly onOpen: (folderId: string) => void;
 }
+
+// @public
+export type FoldersChanged = () => Promise<void>;
+
+// @public
+export function foldersForView(folders: readonly Folder[], rows: readonly Pick<ToolMetaRecord, 'tool_name' | 'folder_id'>[], population: ReadonlySet<string>): Folder[];
 
 // @public
 export function formatEnvMarker(key: string, defaultValue?: string): string;
@@ -16122,6 +16140,9 @@ type InvokeMemberActionResult = z.infer<typeof invokeMemberActionResult>;
 const invokeMemberActionResult: z.ZodObject<{
     result: z.ZodRecord<z.ZodString, z.ZodUnknown>;
 }, z.core.$strict>;
+
+// @public
+export function isBlankSearch(query: string): boolean;
 
 // @public
 export function isExecutionKeyListEmpty(query: ExecutionKeyQuery): boolean;
@@ -17426,6 +17447,9 @@ const marketplaceVersion: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public
+export function matchesSearch(query: string, ...texts: readonly string[]): boolean;
+
+// @public
 export function matchesSelectedTags(itemTags: readonly string[], selected: ReadonlySet<string>): boolean;
 
 // @public (undocumented)
@@ -17820,6 +17844,19 @@ export interface MountInstallDialogProps {
 export function MountInstallForm(props: MountInstallDialogProps): ReactNode;
 
 // @public
+export function MoveToFolderDialog(input: MoveToFolderDialogProps): ReactNode;
+
+// @public
+export interface MoveToFolderDialogProps {
+    readonly currentFolderId: string | null;
+    readonly folders: readonly Folder[];
+    readonly label: string;
+    readonly onClose: () => void;
+    readonly onFoldersChanged: FoldersChanged;
+    readonly toolName: string;
+}
+
+// @public
 export const NAV_ICONS: Readonly<Record<Exclude<RouteToken, 'login'>, IconComponent>>;
 
 // @public (undocumented)
@@ -17864,6 +17901,11 @@ export function NavigationProvider(input: {
     value: NavigationContextValue;
     children: ReactNode;
 }): ReactNode;
+
+// @public
+export class NoFiniteValueError extends Error {
+    constructor();
+}
 
 // @public
 export function normalizeCustomRange(fromInput: string, toInput: string, now: Date): {
@@ -21519,7 +21561,12 @@ export const SchedulingIcon: IconComponent;
 export function SchemaEditor(input: SchemaEditorProps): ReactNode;
 
 // @public
-export interface SchemaEditorChange {
+export interface SchemaEditorChange extends SchemaEditorDraft {
+    readonly text: string;
+}
+
+// @public
+export interface SchemaEditorDraft {
     readonly schema: Record<string, unknown> | null;
     readonly valid: boolean;
 }
@@ -21594,6 +21641,42 @@ export interface ScrollRegionProps {
     readonly ref?: Ref<HTMLDivElement>;
     // (undocumented)
     readonly style?: CSSProperties;
+}
+
+// @public (undocumented)
+export function SearchableSelect(props: SearchableSelectArgs): ReactNode;
+
+// @public (undocumented)
+type SearchableSelectArgs = (SearchableSelectProps & {
+    readonly groups?: undefined;
+}) | (SearchableSelectGroupsProps & {
+    readonly options?: undefined;
+});
+
+// @public
+export interface SearchableSelectGroupsProps extends SearchableSelectSharedProps {
+    // (undocumented)
+    readonly groups: readonly SelectGroup[];
+}
+
+// @public
+export interface SearchableSelectProps extends SearchableSelectSharedProps {
+    // (undocumented)
+    readonly options: readonly SelectOption[];
+}
+
+// @public
+interface SearchableSelectSharedProps {
+    readonly 'aria-describedby'?: string;
+    readonly 'aria-label'?: string;
+    // (undocumented)
+    readonly disabled?: boolean;
+    // (undocumented)
+    readonly onValueChange: (value: string) => void;
+    // (undocumented)
+    readonly placeholder?: string;
+    readonly searchLabel: string;
+    readonly value: string;
 }
 
 // @public
@@ -29516,10 +29599,19 @@ interface SurfaceProps {
 // @public
 export const SystemIcon: IconComponent;
 
+// @public (undocumented)
+interface SystemKindsContextValue {
+    readonly refusedOff: ReadonlyMap<string, string>;
+    // (undocumented)
+    readonly reportOff: (kind: string, message: string) => void;
+    // (undocumented)
+    readonly state: SystemKindsState;
+}
+
 // @public
 export function SystemKindsProvider(input: {
     children: ReactNode;
-}): FunctionComponentElement<ProviderProps<SystemKindsState | null>>;
+}): FunctionComponentElement<ProviderProps<SystemKindsContextValue | null>>;
 
 // @public (undocumented)
 export type SystemKindsState = {
@@ -29559,6 +29651,7 @@ export interface TableRowProps extends HTMLAttributes<HTMLTableRowElement> {
     // (undocumented)
     readonly children?: ReactNode;
     readonly ref?: Ref<HTMLTableRowElement>;
+    readonly selected?: boolean;
 }
 
 // @public
@@ -29789,6 +29882,9 @@ export interface TemplatedTextCatalog {
 
 // @public (undocumented)
 export function templatedTextCatalog(storage: StoragePresenceQueryLike, templates: TemplateNamesQueryLike): TemplatedTextCatalog;
+
+// @public
+export const TemplatedTextCatalogContext: Context<UseTemplatedTextCatalog>;
 
 // @public (undocumented)
 export function TemplatedTextField(input: TemplatedTextFieldProps): ReactNode;
@@ -30030,6 +30126,9 @@ export interface THProps extends ThHTMLAttributes<HTMLTableCellElement>, Numeric
     readonly children?: ReactNode;
     readonly ref?: Ref<HTMLTableCellElement>;
 }
+
+// @public
+export function toFolders(records: readonly FolderRecord[]): Folder[];
 
 // @public
 export const TOKEN_NAMES: readonly ["--tai-color-bg", "--tai-color-surface", "--tai-color-surface-raised", "--tai-color-surface-disabled", "--tai-color-code-bg", "--tai-color-border", "--tai-color-border-strong", "--tai-color-control-border", "--tai-color-border-disabled", "--tai-color-text", "--tai-color-heading", "--tai-color-text-muted", "--tai-color-text-disabled", "--tai-color-placeholder", "--tai-color-decor", "--tai-color-accent", "--tai-color-accent-hover", "--tai-color-accent-on-tint", "--tai-color-on-accent", "--tai-color-accent-tint", "--tai-color-ok-text", "--tai-color-err-text", "--tai-color-warn-text", "--tai-color-ok-fill", "--tai-color-err-fill", "--tai-color-warn-fill", "--tai-color-ok-tint", "--tai-color-err-tint", "--tai-color-warn-tint", "--tai-color-on-fill", "--tai-color-focus-ring", "--tai-color-scrim", "--tai-color-prose-link", "--tai-color-prose-link-hover", "--tai-color-syntax-key", "--tai-color-syntax-string", "--tai-color-syntax-number", "--tai-color-syntax-bool", "--tai-color-destructive", "--tai-color-destructive-hover", "--tai-color-on-destructive", "--tai-space-1", "--tai-space-2", "--tai-space-3", "--tai-space-4", "--tai-space-5", "--tai-space-6", "--tai-space-8", "--tai-radius-sm", "--tai-radius-code", "--tai-radius-md", "--tai-radius-tile", "--tai-radius-lg", "--tai-radius-overlay", "--tai-radius-full", "--tai-font-sans", "--tai-font-mono", "--tai-text-display", "--tai-text-xl", "--tai-text-section", "--tai-text-lg", "--tai-text-md", "--tai-text-sm", "--tai-text-code", "--tai-text-xs", "--tai-control-height", "--tai-control-height-coarse", "--tai-motion-fast", "--tai-motion-base", "--tai-shadow-lift-color", "--tai-shadow-overlay-color", "--tai-shadow-lift", "--tai-shadow-overlay", "--tai-z-sticky", "--tai-z-dropdown", "--tai-z-overlay", "--tai-z-dialog", "--tai-z-popover", "--tai-z-tooltip"];
@@ -30284,6 +30383,24 @@ const toolMetaRecord: z.ZodObject<{
     tool_name: z.ZodString;
 }, z.core.$strip>;
 
+// @public
+export interface ToolMetaWriteAccess {
+    // (undocumented)
+    readonly createFolder: boolean;
+    // (undocumented)
+    readonly deleteFolder: boolean;
+    readonly editTool: boolean;
+    // (undocumented)
+    readonly moveFolder: boolean;
+    // (undocumented)
+    readonly renameFolder: boolean;
+}
+
+// @public
+export function ToolMetaWriteError(input: {
+    readonly error: unknown;
+}): ReactNode;
+
 // @public (undocumented)
 const toolNames: z.ZodArray<z.ZodString>;
 
@@ -30319,7 +30436,6 @@ export interface ToolPickerProps {
     readonly error?: string;
     readonly errorNote?: string;
     readonly excludeNames?: readonly string[];
-    readonly forbiddenNote?: string;
     // (undocumented)
     readonly idPrefix?: string;
     // (undocumented)
@@ -30704,6 +30820,9 @@ export function useCanWrite(path: string, method?: string): boolean;
 export function useCapabilities(): CapabilityContextValue;
 
 // @public
+export function useCreateFolder(onFoldersChanged: FoldersChanged): CreateFolder | undefined;
+
+// @public
 export function useDebouncedValue<T>(value: T, delayMs: number): T;
 
 // @public
@@ -30764,6 +30883,9 @@ export function useRegisterDirty(dirty: boolean): void;
 export function useReloadToolDisplayNames(): () => void;
 
 // @public
+export function useReportToolMetaRefusal(): (error: unknown) => void;
+
+// @public
 export function useResolvePath(): NavigationContextValue['resolvePath'];
 
 // @public
@@ -30786,11 +30908,17 @@ export function useSubjectFields(): {
 // @public
 export function useSystemKinds(): SystemKindsState;
 
+// @public
+export type UseTemplatedTextCatalog = () => TemplatedTextCatalog | undefined;
+
 // @public (undocumented)
 export function useTheme(): ThemeState;
 
 // @public
 export function useToolDisplayNames(): Readonly<Record<string, string>>;
+
+// @public
+export function useToolMetaWriteAccess(): ToolMetaWriteAccess;
 
 // @public
 export function useViewMode(surface: string, fallback?: ViewMode): readonly [ViewMode, (mode: ViewMode) => void];

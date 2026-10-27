@@ -1,7 +1,8 @@
 /**
  * The server data the register form reads: the session's execution-key binding and
  * the api-key list it runs as (read only under a checked binding), the full
- * hooks list (overwrite detection), the templated-text template catalog, the
+ * hooks list (overwrite detection), the registered tools and their display names
+ * (the Tool picker), the templated-text template catalog, the
  * conversation targets a subject may point at, and the state-binding editor's
  * catalogs, inherited binding and tool-schema field sources. Every fetch is a
  * shared React Query so the page serves each once.
@@ -17,8 +18,10 @@ import {
   stateTemplatesKey,
   templatedTextCatalog,
   templatesCatalogFromList,
+  toolsListKey,
   useApi,
   useExecutionKeyBinding,
+  useToolDisplayNames,
 } from '@tai42/studio-sdk';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useMemo } from 'react';
@@ -32,6 +35,9 @@ type StateBindingProps = Omit<StateBindingEditorProps, 'value' | 'onChange'>;
 export interface HookFormData {
   readonly hooksQuery: UseQueryResult<HookList>;
   readonly keysQuery: UseQueryResult<TokensPayload>;
+  readonly toolsQuery: UseQueryResult<string[]>;
+  /** The raw-name → display-name map the Tool picker labels its options with. */
+  readonly toolDisplayNames: Readonly<Record<string, string>>;
   readonly binding: ExecutionKeyBinding;
   readonly existingNames: ReadonlySet<string>;
   readonly templatedTextTemplates: TemplatedTextTemplates;
@@ -154,6 +160,11 @@ export function useHookFormData({
     queryKey: hooksListKey(''),
     queryFn: ({ signal }) => api.listHooks(undefined, signal),
   });
+  const toolsQuery = useQuery({
+    queryKey: toolsListKey,
+    queryFn: ({ signal }) => api.listTools(signal),
+  });
+  const toolDisplayNames = useToolDisplayNames();
   const existingNames = useMemo(
     () => new Set((hooksQuery.data?.items ?? []).map((h) => h.name)),
     [hooksQuery.data],
@@ -162,6 +173,8 @@ export function useHookFormData({
   return {
     hooksQuery,
     keysQuery,
+    toolsQuery,
+    toolDisplayNames,
     binding,
     existingNames,
     templatedTextTemplates,

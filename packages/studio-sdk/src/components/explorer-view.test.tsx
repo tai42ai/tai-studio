@@ -138,8 +138,17 @@ describe('ExplorerView empty-state ladder', () => {
     expect(screen.queryByRole('navigation', { name: 'Folder path' })).not.toBeInTheDocument();
   });
 
+  it('shows the bare nothing-anywhere state when no item exists, even with folders', () => {
+    // Folders are places for items: with no item anywhere there is nothing to browse,
+    // so the screen says so instead of drawing an empty folder.
+    renderExplorer({ items: [] });
+    expect(screen.getByText('No rows anywhere')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Weather' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Folder path' })).not.toBeInTheDocument();
+  });
+
   it('shows "this folder is empty" for a folder with no items and no subfolders', () => {
-    renderExplorer({ items: [], currentFolderId: 'eu' });
+    renderExplorer({ currentFolderId: 'eu' });
     expect(screen.getByText('This folder is empty')).toBeInTheDocument();
     // Controls are present so the operator can navigate back out.
     expect(screen.getByRole('navigation', { name: 'Folder path' })).toBeInTheDocument();
@@ -152,11 +161,54 @@ describe('ExplorerView empty-state ladder', () => {
       search: {
         value: 'zzz',
         onChange: vi.fn(),
-        matches: (row, query) => row.name.includes(query),
+        texts: (row) => [row.name],
         label: 'Search rows',
       },
     });
     expect(screen.getByText('No rows match')).toBeInTheDocument();
+  });
+});
+
+describe('ExplorerView current folder that is not drawn', () => {
+  it('shows the root and navigates there when the current folder is not among the folders', () => {
+    const onNavigate = vi.fn();
+    renderExplorer({ currentFolderId: 'gone', onNavigate });
+    const path = screen.getByRole('navigation', { name: 'Folder path' });
+    expect(within(path).getByRole('button', { name: 'All rows' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.queryByText('This folder is empty')).not.toBeInTheDocument();
+    expect(screen.getByText('alpha')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Weather' })).toBeInTheDocument();
+    expect(onNavigate).toHaveBeenCalledWith(null);
+  });
+
+  it('does not navigate while the current folder is drawn', () => {
+    const onNavigate = vi.fn();
+    renderExplorer({ currentFolderId: 'w', onNavigate });
+    expect(screen.getByText('delta')).toBeInTheDocument();
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+});
+
+describe('ExplorerView selected item', () => {
+  it('marks only the selected item row', () => {
+    renderExplorer({ selectedItemKey: 'beta' });
+    expect(screen.getByText('beta').closest('tr')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByText('alpha').closest('tr')).not.toHaveAttribute('data-selected');
+  });
+
+  it('marks only the selected item card', async () => {
+    renderExplorer({ selectedItemKey: 'beta' });
+    await userEvent.click(screen.getByRole('radio', { name: 'Card view' }));
+    expect(screen.getByText('beta').closest('[role="listitem"]')).toHaveAttribute(
+      'data-selected',
+      'true',
+    );
+    expect(screen.getByText('alpha').closest('[role="listitem"]')).not.toHaveAttribute(
+      'data-selected',
+    );
   });
 });
 
@@ -344,7 +396,7 @@ describe('ExplorerView tag filter', () => {
       search: {
         value: 'match',
         onChange: vi.fn(),
-        matches: (row, query) => row.name.includes(query),
+        texts: (row) => [row.name],
         label: 'Search rows',
       },
     });
@@ -372,7 +424,7 @@ describe('ExplorerView tag filter', () => {
 });
 
 describe('ExplorerView search', () => {
-  it('filters items by the caller matcher and reports typing', async () => {
+  it('filters items by the texts the caller names and reports typing', async () => {
     const onChange = vi.fn();
     renderExplorer({
       items: ROWS.filter((r) => r.folderId === null),
@@ -380,7 +432,7 @@ describe('ExplorerView search', () => {
       search: {
         value: 'al',
         onChange,
-        matches: (row, query) => row.name.includes(query),
+        texts: (row) => [row.name],
         label: 'Search rows',
       },
     });
@@ -390,6 +442,21 @@ describe('ExplorerView search', () => {
     expect(onChange).toHaveBeenCalled();
   });
 
+  it('matches the texts the caller names by the SDK search rule: trimmed, ignoring case', () => {
+    renderExplorer({
+      items: ROWS.filter((r) => r.folderId === null),
+      folders: [],
+      search: {
+        value: ' AL ',
+        onChange: vi.fn(),
+        texts: (row) => [row.name],
+        label: 'Search rows',
+      },
+    });
+    expect(screen.getByText('alpha')).toBeInTheDocument();
+    expect(screen.queryByText('beta')).not.toBeInTheDocument();
+  });
+
   it('renders the magnifier as a leading icon INSIDE the filter field, not a detached glyph', () => {
     renderExplorer({
       items: ROWS.filter((r) => r.folderId === null),
@@ -397,7 +464,7 @@ describe('ExplorerView search', () => {
       search: {
         value: '',
         onChange: vi.fn(),
-        matches: () => true,
+        texts: (row) => [row.name],
         label: 'Search rows',
       },
     });
@@ -725,7 +792,7 @@ describe('ExplorerView pagination and count', () => {
     const search: ExplorerSearch<Row> = {
       value: '',
       onChange: vi.fn(),
-      matches: (row, query) => row.name.includes(query),
+      texts: (row) => [row.name],
       label: 'Search rows',
     };
     const { rerender } = renderPaged({ viewSurface: surface, items: items(15), search });

@@ -315,3 +315,21 @@ export const presetDetail = (over: Partial<PresetDetail> = {}): PresetDetail => 
   fixed_kwargs: {},
   ...over,
 });
+
+/** The explorer's table row for one agents entry, found by its name and kind. */
+export async function findAgentRow(
+  name: string,
+  kind: 'registered' | 'authored',
+): Promise<HTMLElement> {
+  const names = await screen.findAllByTestId('agent-name');
+  const match = names.find((node) => node.dataset.agent === name && node.dataset.kind === kind);
+  const row = match?.closest('tr');
+  if (row == null) throw new Error(`no ${kind} agent row for ${name}`);
+  return row;
+}
+
+/** Every agents-explorer entry name of one kind, in list order. */
+export async function findAgentNames(kind: 'registered' | 'authored'): Promise<string[]> {
+  const names = await screen.findAllByTestId('agent-name');
+  return names.filter((node) => node.dataset.kind === kind).map((node) => node.dataset.agent ?? '');
+}

@@ -68,7 +68,8 @@ function normalizeHref(href: string): string {
  * evil.com.
  *
  * Callers render the returned string rather than their input, so the URL that was
- * judged is always the URL that is navigated.
+ * judged is always the URL that is navigated. `isSafeHttpUrl` gives the yes/no
+ * answer for a caller that does not need the URL itself.
  */
 export function safeHttpUrl(href: string): string | undefined {
   const normalized = normalizeHref(href);

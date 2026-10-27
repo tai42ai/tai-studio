@@ -677,6 +677,39 @@
     cursor: not-allowed;
   }
 
+  /* The searchable select's popup is the select popup with a search box on top.
+     It is a column whose LIST alone scrolls, so the search box stays in view
+     however far the reader scrolls; the cap follows the space the Radix popover
+     publishes, as the select's follows its own. It is at least as wide as its
+     trigger, so the options line up under the field they fill. */
+  .tai-search-select-content {
+    display: flex;
+    flex-direction: column;
+    min-width: var(--radix-popover-trigger-width);
+    /* The fallback is the live viewport (`dvh`) after its `vh` line for browsers
+       below the `dvh` floor; Radix supplies the measured value either way. */
+    max-height: min(22rem, var(--radix-popover-content-available-height, 60vh));
+    max-height: min(22rem, var(--radix-popover-content-available-height, 60dvh));
+    overflow: hidden;
+  }
+
+  /* The search box's side and top inset is the option viewport's, which leaves the
+     shared focus ring the room it needs inside the popup's clipped box. */
+  .tai-search-select-search {
+    padding: var(--tai-space-2) var(--tai-space-2) 0;
+  }
+
+  .tai-search-select-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .tai-search-select-empty {
+    margin: 0;
+    padding: var(--tai-space-2) var(--tai-space-3);
+  }
+
   /* -- Checkbox + radio ------------------------------------------------------ */
   .tai-checkbox,
   .tai-radio {
@@ -1328,6 +1361,19 @@
      reconciles this list against the sheet's own semantic row grounds. */
   .tai-table tbody tr:not(.tai-diff-added):not(.tai-diff-removed):not(.tai-diff-changed):hover {
     background: var(--tai-color-accent-tint);
+  }
+
+  /* The selected row (`TR selected`) takes the look the nav gives its current item:
+     the accent tint with an accent bar on the leading edge. The tint sits on the
+     cells, over the row's own ground, so a hovered selected row shows the hover
+     tint under it — the doubled tint the current nav item shows on hover — and a
+     diff row keeps its meaning beneath. */
+  .tai-table tbody tr[data-selected='true'] > td {
+    background-image: linear-gradient(var(--tai-color-accent-tint), var(--tai-color-accent-tint));
+  }
+
+  .tai-table tbody tr[data-selected='true'] > td:first-child {
+    box-shadow: inset 3px 0 0 0 var(--tai-color-accent);
   }
 
   .tai-table td[data-numeric='true'],
@@ -2235,6 +2281,13 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
+  }
+
+  /* The selected card: the same accent tint the selected table row takes, edged by
+     the accent border. */
+  .tai-grid-cards > [role='listitem'][data-selected='true'] > .tai-card {
+    border-color: var(--tai-color-accent);
+    background-image: linear-gradient(var(--tai-color-accent-tint), var(--tai-color-accent-tint));
   }
 
   /* Card description clamp so grid rows stay uniform: two lines, then ellipsis. */

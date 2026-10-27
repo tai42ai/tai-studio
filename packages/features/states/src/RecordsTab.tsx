@@ -17,6 +17,7 @@ import {
   featureDisabledMessage,
   Field,
   isFeatureDisabled,
+  SearchableSelect,
   Select,
   Skeleton,
   Spinner,
@@ -133,10 +134,11 @@ export function RecordsTab({ state }: { readonly state: StateDetail }): ReactNod
             </Field>
             {targetOptions.length > 0 ? (
               <Field label="Known targets">
-                <Select
+                <SearchableSelect
                   value=""
                   placeholder="Pick a target"
                   aria-label="Known targets"
+                  searchLabel="Search targets"
                   onValueChange={(value) => {
                     const [tk, ...rest] = value.split(':');
                     setTargetKind(tk ?? 'agent');

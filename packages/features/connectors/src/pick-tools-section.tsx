@@ -15,6 +15,7 @@ import {
   FleetReport,
   HolderList,
   isForbiddenError,
+  matchesSearch,
   Skeleton,
   TextInput,
   toolDisplayLabel,
@@ -69,9 +70,7 @@ export function SectionBody({
   const names = useToolDisplayNames();
   const [filter, setFilter] = useState('');
   const mode = pickMode(read);
-  const needle = filter.trim().toLowerCase();
-  const shown = (name: string): boolean =>
-    needle === '' || toolDisplayLabel(names, name).toLowerCase().includes(needle);
+  const shown = (name: string): boolean => matchesSearch(filter, toolDisplayLabel(names, name));
   const setTick = (name: string, tick: boolean): void => {
     onDraft({ ...draft, ticks: { ...draft.ticks, [name]: tick } });
   };

@@ -713,6 +713,22 @@ describe('component sheet contract', () => {
       expect(excluded).toEqual(semanticRows);
     });
 
+    it('draws a selected row and a selected card with one shared selected look', () => {
+      // `TR selected` and the explorer's selected card stamp `data-selected="true"`;
+      // both take the accent tint, edged in the accent, so every explorer screen
+      // marks its selected item the same way.
+      const tint = 'linear-gradient(var(--tai-color-accent-tint), var(--tai-color-accent-tint))';
+      expect(
+        declaredValues(".tai-table tbody tr[data-selected='true'] > td", 'background-image'),
+      ).toEqual([tint]);
+      expect(
+        declaredValues(".tai-table tbody tr[data-selected='true'] > td:first-child", 'box-shadow'),
+      ).toEqual(['inset 3px 0 0 0 var(--tai-color-accent)']);
+      const card = ".tai-grid-cards > [role='listitem'][data-selected='true'] > .tai-card";
+      expect(declaredValues(card, 'background-image')).toEqual([tint]);
+      expect(declaredValues(card, 'border-color')).toEqual(['var(--tai-color-accent)']);
+    });
+
     it('caps every floating surface on the box it actually paints', () => {
       // A cap on the CONTENT box is not a cap: with the default `box-sizing` the
       // padding and boundary sit outside it, and `.tai-tooltip` painted 314 px

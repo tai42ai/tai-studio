@@ -173,6 +173,22 @@ describe('StoragePage', () => {
     expect(within(table).queryByText('alpha.txt')).not.toBeInTheDocument();
   });
 
+  it('filters the listing ignoring case, as every Studio list searches', async () => {
+    const user = userEvent.setup();
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['Alpha.txt', 'beta.txt'] }),
+    });
+    renderPage(<StoragePage search={{}} />, { client });
+
+    await screen.findByRole('table');
+    await user.type(screen.getByRole('textbox', { name: 'Filter resources' }), 'ALPHA');
+
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('Alpha.txt')).toBeInTheDocument();
+    expect(within(table).queryByText('beta.txt')).not.toBeInTheDocument();
+  });
+
   it('re-seeds the filter box when the url filter changes underneath it', async () => {
     const client = stubClient({
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),

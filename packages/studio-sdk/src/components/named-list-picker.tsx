@@ -1,10 +1,10 @@
 /**
- * The single-select both `AgentPicker` and `ChannelPicker` render: one list read of
- * names, drawn in its own `Field` with the read's states (pending, error with Retry,
+ * The searchable single-select both `AgentPicker` and `ChannelPicker` render: one list
+ * read of names, drawn in its own `Field` with the read's states (pending, error with Retry,
  * refused on a 403, loaded and empty) and a stored value the loaded list does not
  * hold flagged with the picker's unlisted label. Each picker hands in its own copy.
  * The host's `error` shows, and the `Field` claims its control id, exactly while a
- * `Select` renders.
+ * select renders.
  */
 import { type ReactNode, useId } from 'react';
 
@@ -12,7 +12,8 @@ import { errorMessage, isForbiddenError } from '../errors';
 import { Badge } from './badge';
 import { Field } from './field';
 import { ErrorState } from './primitives';
-import { Select, type SelectOption } from './select';
+import { SearchableSelect } from './searchable-select';
+import type { SelectOption } from './select';
 
 const MUTED_LINE = { margin: 0, color: 'var(--tai-color-text-muted)' } as const;
 
@@ -35,6 +36,8 @@ export interface NamedListCopy {
   readonly emptyNote: string;
   readonly emptyAction: ReactNode;
   readonly unlistedLabel: string;
+  /** Accessible name of the select's search box. */
+  readonly searchLabel: string;
 }
 
 export interface NamedListPickerProps {
@@ -107,7 +110,7 @@ function namedListView(
   return { refused, failed, pending, unlisted, empty, options, selectRenders };
 }
 
-/** The loaded, pending or refused body: the `Select` while one renders, then its notes. */
+/** The loaded, pending or refused body: the select while one renders, then its notes. */
 function NamedListBody({
   view,
   value,
@@ -123,13 +126,14 @@ function NamedListBody({
   return (
     <>
       {view.selectRenders ? (
-        <Select
+        <SearchableSelect
           options={view.options}
           value={value}
           placeholder={view.pending ? copy.loadingPlaceholder : copy.placeholder}
           disabled={view.pending}
           onValueChange={onValueChange}
           aria-describedby={view.unlisted ? unlistedId : undefined}
+          searchLabel={copy.searchLabel}
         />
       ) : null}
       {view.refused ? <MutedLine text={copy.forbiddenNote} /> : null}
@@ -163,7 +167,7 @@ export function NamedListPicker({
       label={copy.label}
       description={copy.description}
       error={view.selectRenders ? error : undefined}
-      // Only the Select claims the field's control id; with nothing to hold no
+      // Only the select claims the field's control id; with nothing to hold no
       // labelable element renders, so `for` would dangle.
       group={!view.selectRenders}
     >

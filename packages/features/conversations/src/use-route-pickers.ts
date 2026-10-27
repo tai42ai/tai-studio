@@ -1,6 +1,6 @@
 /**
  * The reads the route form's pickers draw from: the registered agents, the registered
- * tools, the installed channels and the api-key list, each under the SDK's shared query
+ * tools with their display names, the installed channels and the api-key list, each under the SDK's shared query
  * key so another screen's cached read serves the form and the form's serves it. The
  * pickers themselves are presentational (in the SDK); this feature owns the queries.
  * The key list runs only while the Execution key field shows (a checked binding).
@@ -14,12 +14,15 @@ import {
   toolsListKey,
   useApi,
   useExecutionKeyBinding,
+  useToolDisplayNames,
 } from '@tai42/studio-sdk';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 export interface RoutePickers {
   readonly agents: UseQueryResult<AgentListing>;
   readonly tools: UseQueryResult<string[]>;
+  /** The raw-name → display-name map the tool picker labels its options with. */
+  readonly toolDisplayNames: Readonly<Record<string, string>>;
   readonly channels: UseQueryResult<Channels>;
   readonly keys: UseQueryResult<TokensPayload>;
   /** How the form binds its execution key (`useExecutionKeyBinding()`). */
@@ -29,6 +32,7 @@ export interface RoutePickers {
 export function useRoutePickers(): RoutePickers {
   const api = useApi();
   const binding = useExecutionKeyBinding();
+  const toolDisplayNames = useToolDisplayNames();
   const agents = useQuery({
     queryKey: agentsListKey,
     queryFn: ({ signal }) => api.listAgents(signal),
@@ -46,5 +50,5 @@ export function useRoutePickers(): RoutePickers {
     queryFn: ({ signal }) => api.listTokensPayload(signal),
     enabled: binding.mode === 'checked',
   });
-  return { agents, tools, channels, keys, binding };
+  return { agents, tools, toolDisplayNames, channels, keys, binding };
 }

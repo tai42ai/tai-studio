@@ -139,6 +139,7 @@ function TargetFields({
           onChange={setName}
           label="Tool"
           unlistedLabel="not registered"
+          displayNames={pickers.toolDisplayNames}
           error={nameError}
           emptyNote="No tools are registered on this deployment."
           emptyAction={
@@ -146,7 +147,6 @@ function TargetFields({
               Browse plugins
             </AppLink>
           }
-          forbiddenNote="This session cannot list tools. Picking one needs read access to GET /api/tools; ask an administrator to grant it."
         />
       ) : null}
     </Field>

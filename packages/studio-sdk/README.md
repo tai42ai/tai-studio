@@ -51,8 +51,10 @@ resolves it through the served import map) imports the three stylesheets itself.
 
 ## Expression fields
 
-A string field carrying the `x-tai42-expression` annotation authors through a
-visual expression editor — but **only when the host injects one**. The SDK owns
+A string field carrying the `x-tai42-expression` annotation, or a templated-text
+field (a property whose type carries `x-tai42-templated-text`) carrying it at the
+property site, authors through a visual expression editor — but **only when the
+host injects one**. The SDK owns
 the injection point and nothing else:
 
 - `ExpressionFieldContext` — the ambient door for a whole tree.
@@ -61,8 +63,46 @@ the injection point and nothing else:
   the door contract, which MIRRORS jq-studio's field props without importing
   them.
 
-With no door, an annotated field renders the plain string input, and the SDK's
-module graph reaches no jq at all — no editor, no Web Worker, no wasm.
+With no door, an annotated field renders the plain string input (a templated-text
+field, its plain inline text), and the SDK's module graph reaches no jq at all — no
+editor, no Web Worker, no wasm.
+
+## Templated-text fields
+
+A property typed as the platform's templated text (its schema carries
+`x-tai42-templated-text`) renders as the shared `TemplatedTextField`: inline content
+or a stored template id, plus the render parameters. The stored-template choices
+come from the host, which mounts a catalog hook once above its tree:
+
+- `TemplatedTextCatalogContext` — the ambient source; its value is a stable hook
+  (`UseTemplatedTextCatalog`) returning a `TemplatedTextCatalog`, called only when a
+  templated-text field renders.
+
+```tsx
+import { useQuery } from '@tanstack/react-query';
+import { TemplatedTextCatalogContext, templatedTextCatalog, useApi } from '@tai42/studio-sdk';
+
+function useCatalog() {
+  const api = useApi();
+  const storage = useQuery({
+    queryKey: ['storage', 'info'],
+    queryFn: ({ signal }) => api.getStorageInfo(signal),
+  });
+  const templates = useQuery({
+    queryKey: ['templates', 'names'],
+    queryFn: ({ signal }) => api.listTemplates(signal),
+    enabled: storage.data?.present === true,
+  });
+  return templatedTextCatalog(storage, templates);
+}
+
+<TemplatedTextCatalogContext.Provider value={useCatalog}>
+  {children}
+</TemplatedTextCatalogContext.Provider>;
+```
+
+With no catalog, the stored source offers no templates and inline content is
+authored as usual.
 
 The door itself is `JqField` from
 [`@tai42/jq-studio`](https://www.npmjs.com/package/@tai42/jq-studio), imported
@@ -366,9 +406,9 @@ under its header (Settings, Dashboard, Marketplace, the Conversations landing)
 takes a pattern per tab.
 
 - **Browse and inspect.** A split list and detail (`.tai-split`), with the
-  selection held in the URL search. Tools, whose list pane is an `ExplorerView`;
-  Presets; States; Storage; a Conversations route, its threads beside the open
-  transcript.
+  selection held in the URL search. Tools and Presets, whose list panes are
+  `ExplorerView`s; States; Storage; a Conversations route, its threads beside the
+  open transcript.
 - **Catalog.** A directory of cards with search and filters. Connectors and the
   Tools card view, through `ExplorerView`; the Marketplace Browse tab, a card grid
   with facet filters and Load more.
@@ -384,7 +424,8 @@ takes a pattern per tab.
 - **Replaced detail.** A search param swaps the page or the tab for one item. The
   Marketplace plugin page, a trace in the Dashboard Tracing tab, a state template
   or a state's records.
-- **Run surface.** A list, then the run view in its place. Agents.
+- **Run surface.** A list, then the run view in its place. Agents, whose list is
+  an `ExplorerView`.
 - **Inbox.** Newest-first cards, the rest paged in by a button at the foot: Load
   more where the server pages (Interactions), Show more where the whole feed is
   already loaded (Notifications).
@@ -439,8 +480,17 @@ label. It reads a structural query interface
 disabled with the placeholder "Loading <plural noun>…"; error is an `ErrorState`
 with retry inside the field (`group` set); empty is a muted `role="status"` line
 naming where to create one; no grant to read the list is the no-grant line in
-place of the control. Values render as text, never HTML. A picker is composed
-outside `SchemaForm`. Two cases differ:
+place of the control. `ToolPicker` differs on a 403: the server checks a named
+tool on save, so it draws a text input that takes the tool's exact name, with a
+line under it saying the session cannot list tools (a host that draws the read's
+failure elsewhere through `errorNote` keeps that line instead). Values render as text, never
+HTML. A picker is composed outside `SchemaForm`. A picker whose list can grow long
+(`ToolPicker`, `AgentPicker` and `ChannelPicker` are the cases the SDK ships) is built on
+`SearchableSelect`, which opens with a search box over the option labels. Every
+list searches by one rule, `matchesSearch(query, ...texts)`: the trimmed query,
+ignoring case, inside any one of the texts a row is searched by. A filterable
+checklist calls it over the label each row shows, and an `ExplorerView` search
+names its texts per item (`texts`) and the view applies the rule. Two cases differ:
 
 - A picker that is one control of a larger group on its host (a `fieldset` whose
   `legend` names the group) takes no label of its own: its control carries an
@@ -451,6 +501,44 @@ outside `SchemaForm`. Two cases differ:
   `ErrorState`: in place of the control it shows a muted `role="status"` line
   saying the list could not be read and where that error is shown, with no retry.
   A surface shows one failure with retry once.
+
+**Folders.** There is one folder tree for every tool, read with `listToolMeta`
+and turned into the tree's folders by `toFolders`. A screen that lists only part
+of the tools (presets, agents) draws the tree through `foldersForView`: a folder
+shows when its subtree holds one of the screen's items or holds no tool at all,
+and the folders above a shown folder show too, so a folder holding only other
+tools stays on the screens that list those. Destinations (a move, a folder field) always offer
+the FULL tree. `FolderActionsMenu` (Rename, Move, Delete) goes on each drawn
+folder, `MoveToFolderDialog` files a single tool where the row has no edit dialog
+of its own, and `useCreateFolder` backs a `FolderPicker`'s inline create. Each
+takes the screen's `onFoldersChanged` refresh. A failed create or write is shown
+in its dialog or picker.
+
+Who may make each overlay write is `useToolMetaWriteAccess`: one flag per write
+(`editTool` for `PATCH /api/tool-meta/tools/{tool_name}`, and `createFolder`,
+`renameFolder`, `moveFolder`, `deleteFolder` for the folder routes), each true
+only when the caller's projection reaches that route and method and the
+`tool_meta` store is not known off. `FolderActionsMenu` shows only the actions the
+caller has, and nothing when it has none, so a screen mounts it on every folder
+once its overlay read has loaded. `useCreateFolder` returns `undefined` when the
+caller may not create a folder; a `FolderPicker` without `onCreateFolder` offers
+no create. The store is known off from the kind-status table or from a write's
+501 `tool-meta-not-configured`: a screen hands every failed overlay write to
+`useReportToolMetaRefusal`, which records the refusal app-wide (until the caller
+signs out or in, or the `ApiProvider` client changes) so every screen withdraws
+its overlay writes at once.
+`ToolMetaWriteError` shows a failed write the way the folder dialogs do: the
+muted off note with the server's message for that refusal, an `ErrorState` for
+anything else.
+
+**Explorer states and selection.** `ExplorerView` shows its `empty` state
+whenever it has no items at all, whatever folders exist; `emptyFolder` is for an
+open folder that holds nothing while items exist elsewhere. A hint in either
+names an action only for a caller who has it. When `currentFolderId` names a
+folder that is not drawn (deleted, or no longer holding the screen's items), the
+explorer shows the root and calls `onNavigate(null)`. `selectedItemKey` gives the
+selected item's row or card the shared selected look, the same on every
+explorer screen; a table outside the explorer gets it from `TR selected`.
 
 **Stepper.** An ordered list in a labelled `nav`, with `aria-current="step"` on
 the current step and each step's status spoken in visually hidden text. Done,

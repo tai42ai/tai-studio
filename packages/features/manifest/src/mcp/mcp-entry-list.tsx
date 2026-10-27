@@ -2,8 +2,8 @@
  *  hand-authored entries editable, plus the Add server affordance. */
 import type { Extension, McpEnvRef } from '@tai42/api-client';
 import type { JsonSchema, ToolListQuery } from '@tai42/studio-sdk';
-import { Button, defaultValueForSchema, EmptyState } from '@tai42/studio-sdk';
-import type { ReactNode } from 'react';
+import { Button, defaultValueForSchema, EmptyState, NoFiniteValueError } from '@tai42/studio-sdk';
+import { type ReactNode, useState } from 'react';
 
 import { asRecord, connectorRefOf, STRIPPED_FIELDS, stripSchemaFields } from './mcp-config-parse';
 import { EditableEntryCard, InstalledEntryCard, ManagedEntryCard } from './mcp-entry-cards';
@@ -57,8 +57,22 @@ export function EntryList({
   const removeEntry = (index: number): void => {
     onChange(entries.filter((_, position) => position !== index));
   };
+  // An entry schema that admits no finite value has no entry to add: Add server says
+  // so under the button, for as long as that schema is the one in use. Any other error
+  // propagates.
+  const [addFailure, setAddFailure] = useState<{ schema: JsonSchema; message: string }>();
   const addEntry = (): void => {
-    onChange([...entries, defaultValueForSchema(formSchema)]);
+    let seeded: unknown;
+    try {
+      seeded = defaultValueForSchema(formSchema);
+    } catch (error) {
+      if (!(error instanceof NoFiniteValueError)) throw error;
+      console.error('A server cannot be added', error);
+      setAddFailure({ schema, message: `A server cannot be added: ${error.message}` });
+      return;
+    }
+    setAddFailure(undefined);
+    onChange([...entries, seeded]);
   };
 
   const toolsFor = (entry: unknown): ToolListQuery => {
@@ -124,6 +138,11 @@ export function EntryList({
         <Button type="button" variant="secondary" onClick={addEntry}>
           Add server
         </Button>
+        {addFailure?.schema === schema ? (
+          <p role="alert" className="tai-field-error">
+            {addFailure.message}
+          </p>
+        ) : null}
       </div>
     </div>
   );

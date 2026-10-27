@@ -1,11 +1,14 @@
 /**
  * The compose dialog's data layer: the tool/tag/meta/preset reads and the memos
  * derived from them. A failed read the rendered spec fields depend on is surfaced
- * loudly and blocks submit (`readFailed`) — never a silently-empty picker.
+ * loudly and blocks submit (`readFailed`) — never a silently-empty picker. A 403 on
+ * the tools list is not such a failure: the session may not list tools, so the tool
+ * pickers take a typed name and the server checks it on save.
  */
 import type { AgentSummary } from '@tai42/api-client';
 import {
   hiddenToolNames,
+  isForbiddenError,
   type JsonSchema,
   useApi,
   useFeatureOff,
@@ -16,8 +19,8 @@ import { useCallback, useMemo } from 'react';
 
 import { hasField } from './authoring-schema';
 import {
+  agentsToolMetaKey,
   authoredPresetsKey,
-  authoredToolMetaKey,
   authoredToolsKey,
   authoredToolTagsKey,
 } from './keys';
@@ -35,7 +38,7 @@ export function useComposeAgentData(baseAgent: AgentSummary | null, baseSchema: 
 
   const toolsQuery = useQuery({ queryKey: authoredToolsKey, queryFn: () => api.listTools() });
   const tagsQuery = useQuery({ queryKey: authoredToolTagsKey, queryFn: () => api.listToolTags() });
-  const metaQuery = useQuery({ queryKey: authoredToolMetaKey, queryFn: () => api.listToolMeta() });
+  const metaQuery = useQuery({ queryKey: agentsToolMetaKey, queryFn: () => api.listToolMeta() });
   const presetsQuery = useQuery({ queryKey: authoredPresetsKey, queryFn: () => api.listPresets() });
 
   // A conflicted/quarantined preset is delete-only — it must NEVER seed a
@@ -47,14 +50,16 @@ export function useComposeAgentData(baseAgent: AgentSummary | null, baseSchema: 
 
   // A failed read must never render as an enabled EMPTY picker: each failed read
   // replaces its control with a loud `ErrorState`, and a read the rendered spec
-  // fields depend on blocks submit until it succeeds.
+  // fields depend on blocks submit until it succeeds. A 403 on the tools list is the
+  // pickers' own typed-name entry, so it neither replaces a control nor blocks submit.
+  const toolsReadFailed = toolsQuery.isError && !isForbiddenError(toolsQuery.error);
   const needsTools =
     baseAgent !== null && (hasField(baseSchema, 'tool_names') || hasField(baseSchema, 'subagents'));
   const needsPresets =
     baseAgent !== null && (hasField(baseSchema, 'presets') || hasField(baseSchema, 'subagents'));
-  const readFailed = (needsTools && toolsQuery.isError) || (needsPresets && presetsQuery.isError);
+  const readFailed = (needsTools && toolsReadFailed) || (needsPresets && presetsQuery.isError);
   const retryReads = (): void => {
-    if (toolsQuery.isError) void toolsQuery.refetch();
+    if (toolsReadFailed) void toolsQuery.refetch();
     if (presetsQuery.isError) void presetsQuery.refetch();
   };
 
@@ -93,6 +98,7 @@ export function useComposeAgentData(baseAgent: AgentSummary | null, baseSchema: 
     usablePresets,
     tagsByTool,
     visibleToolsQuery,
+    toolsReadFailed,
     needsTools,
     needsPresets,
     readFailed,

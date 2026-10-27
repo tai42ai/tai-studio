@@ -10,8 +10,9 @@
  * `POST /api/schedules` to a persisted schedule and reads it back from `GET /api/schedules`
  * with its cron cadence intact.
  *
- * The boot gives `studio_demo_echo` the backend `schedule_task` extension, so the server
- * serves it as schedulable and the create door has a real target. The dialog sends the BASE
+ * The boot gives `studio_demo_echo` and `studio_demo_form` the backend `schedule_task`
+ * extension, so the server serves both as schedulable: the create door has a real target,
+ * and the dialog's searchable Tool picker has more than one tool to narrow. The dialog sends the BASE
  * tool and a typed cadence (the five crontab fields split from the typed expression); the
  * door resolves the backend's schedule vehicle itself. The create leg asserts that request
  * against the LIVE door (never a stubbed response), then proves the schedule PERSISTED by
@@ -52,6 +53,8 @@ needs(
 );
 
 const SCHEDULE_TOOL = 'studio_demo_echo';
+/** The boot's other schedulable tool, which the Tool picker's search must leave out. */
+const OTHER_SCHEDULE_TOOL = 'studio_demo_form';
 
 test('the add-schedule dialog carries the execution key + the four door-contract jq fields', async ({
   page,
@@ -86,10 +89,30 @@ test('a schedule created from the dialog persists and reads back with its cadenc
   const dialog = page.getByRole('dialog', { name: 'Add schedule' });
 
   await dialog.getByLabel('Name').fill(name);
-  await dialog.getByRole('combobox', { name: 'Tool' }).click();
-  // The picker offers only the tools the server serves as schedulable, so the base tool names
-  // exactly one option.
-  await page.getByRole('option', { name: SCHEDULE_TOOL }).click();
+  // The Tool picker is searchable. It opens on both schedulable tools with the first one
+  // highlighted, and ArrowDown moves the highlight to the second.
+  const toolTrigger = dialog.getByRole('combobox', { name: 'Tool' });
+  await toolTrigger.click();
+  const search = page.getByRole('combobox', { name: 'Search tools' });
+  await expect(search).toBeFocused();
+  const options = page.getByRole('option');
+  await expect(options).toHaveCount(2);
+  await expect(page.getByRole('option', { name: SCHEDULE_TOOL })).toBeVisible();
+  await expect(page.getByRole('option', { name: OTHER_SCHEDULE_TOOL })).toBeVisible();
+  await expect(options.nth(0)).toHaveAttribute('data-highlighted');
+  await search.press('ArrowDown');
+  await expect(options.nth(1)).toHaveAttribute('data-highlighted');
+  await expect(options.nth(0)).not.toHaveAttribute('data-highlighted');
+  // Part of the raw name in another case narrows the list to the one match, which is
+  // highlighted, and Enter chooses it from the keyboard.
+  await search.fill('DEMO_EC');
+  await expect(options).toHaveCount(1);
+  await expect(page.getByRole('option', { name: SCHEDULE_TOOL })).toHaveAttribute(
+    'data-highlighted',
+  );
+  await search.press('Enter');
+  await expect(search).toBeHidden();
+  await expect(toolTrigger).toContainText(SCHEDULE_TOOL);
   await dialog.getByLabel('Cron expression').fill(cron);
   // studio_demo_echo requires `message`; a schedule fires the tool with these stored kwargs.
   await dialog.getByLabel('Tool kwargs (JSON)').fill('{"message":"tick"}');

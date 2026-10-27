@@ -2,22 +2,27 @@
  * The agent-authoring surface, minus the compose dialog (its own suites):
  *  - the capability gate (empty-state when no authorable agent; the run UI stays,
  *    and Compose is method-aware on the presets write route);
- *  - the authored-agents list (derived, distinct from tool-presets) with its
- *    streaming run, its baked-field read-only display, and a Manage link out to the
- *    presets-page detail;
+ *  - the authored agents as a group on the authoring surface (loading while their
+ *    reads load, "No authored agents yet" with the Compose hint for a caller who may
+ *    compose) and each entry's kind in the list and card views;
+ *  - the authored agents in the one agents explorer (derived, distinct from
+ *    tool-presets) with their streaming run, their baked-field read-only display,
+ *    and a Manage link out to the presets-page detail;
  *  - a run whose stream open 400s surfaces the server message verbatim;
  *  - user-supplied names render as ESCAPED text (XSS-safe).
  */
 import { ApiError } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentsPage } from './agents';
 import { FULL_TRANSCRIPT, parse } from './fixtures';
 import {
   agent,
   authorableAgent,
+  findAgentNames,
+  findAgentRow,
   fullProjection,
   presetDetail,
   presetRecord,
@@ -41,7 +46,7 @@ describe('capability gate', () => {
 
     expect(await screen.findByText('No authorable agent installed')).toBeInTheDocument();
     // The plain run UI is unaffected: the registered agent is still listed.
-    expect(await screen.findByTestId('agent-row')).toHaveAttribute('data-agent', 'writer');
+    expect(await findAgentRow('writer', 'registered')).toBeInTheDocument();
   });
 
   it('fails closed while the projection is not ready — no Compose before the gate is known', async () => {
@@ -53,8 +58,8 @@ describe('capability gate', () => {
     });
     renderWithProviders(<AgentsPage />, client);
 
-    // The authoring section renders (its authored list shows) but the write action is gone.
-    expect(await screen.findByText('No authored agents yet')).toBeInTheDocument();
+    // The agents still list, but the write action is gone.
+    expect(await findAgentRow('authorable_agent', 'registered')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Compose agent' })).not.toBeInTheDocument();
     expect(screen.queryByText('No authorable agent installed')).not.toBeInTheDocument();
   });
@@ -73,9 +78,8 @@ describe('capability gate', () => {
       }),
     });
 
-    // The authoring section rendered read-only (its authored list shows) but the
-    // write action is gone.
-    expect(await screen.findByText('No authored agents yet')).toBeInTheDocument();
+    // The agents still list read-only, but the write action is gone.
+    expect(await findAgentRow('authorable_agent', 'registered')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Compose agent' })).not.toBeInTheDocument();
   });
 
@@ -94,7 +98,7 @@ describe('capability gate', () => {
       }),
     });
 
-    expect(await screen.findByText('No authored agents yet')).toBeInTheDocument();
+    expect(await findAgentRow('authorable_agent', 'registered')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Compose agent' })).not.toBeInTheDocument();
   });
 
@@ -127,7 +131,105 @@ describe('capability gate', () => {
   });
 });
 
-describe('authored-agents list', () => {
+describe('the authored agents as a group', () => {
+  // The explorer persists its list/card choice per surface in localStorage; clear it
+  // so the card-view case leaves later tests on the list.
+  afterEach(() => {
+    globalThis.localStorage.clear();
+  });
+
+  const COMPOSE_HINT = 'Compose an agent to bake a prompt, tools, and presets over a base agent.';
+
+  it('says there are no authored agents yet and how to compose one', async () => {
+    const client = stubClient({
+      listSpecRunnableAgents: listOf(authorableAgent()),
+      listAgents: listOf(authorableAgent()),
+    });
+    renderWithProviders(<AgentsPage />, client, { projection: fullProjection() });
+
+    expect(await screen.findByText('No authored agents yet')).toBeInTheDocument();
+    expect(screen.getByText(COMPOSE_HINT)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Compose agent' })).toBeInTheDocument();
+  });
+
+  it('says there are none yet to a read-only caller, without naming Compose', async () => {
+    const client = stubClient({
+      listSpecRunnableAgents: listOf(authorableAgent()),
+      listAgents: listOf(authorableAgent()),
+    });
+    renderWithProviders(<AgentsPage />, client, {
+      projection: scopedProjection({
+        routes: [{ path: '/api/presets', methods: ['GET'] }],
+        agents: [authorableAgent().name],
+      }),
+    });
+
+    expect(await screen.findByText('No authored agents yet')).toBeInTheDocument();
+    expect(screen.queryByText(COMPOSE_HINT)).not.toBeInTheDocument();
+  });
+
+  it('shows loading while the presets load, then the authored agents', async () => {
+    let resolvePresets: (presets: ReturnType<typeof presetRecord>[]) => void = () => undefined;
+    const client = stubClient({
+      listSpecRunnableAgents: listOf(authorableAgent()),
+      listAgents: listOf(authorableAgent()),
+      listPresets: () =>
+        new Promise((resolve) => {
+          resolvePresets = resolve;
+        }),
+    });
+    renderWithProviders(<AgentsPage />, client, { projection: fullProjection() });
+
+    expect(await screen.findByTestId('authored-agents-loading')).toBeInTheDocument();
+    // Loading never claims there are none.
+    expect(screen.queryByText('No authored agents yet')).not.toBeInTheDocument();
+
+    resolvePresets([presetRecord({ name: 'assistant', base_tool: 'authorable_agent' })]);
+    expect(
+      await screen.findByText('assistant', { selector: '[data-kind="authored"]' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('authored-agents-loading')).not.toBeInTheDocument();
+    expect(screen.queryByText('No authored agents yet')).not.toBeInTheDocument();
+  });
+
+  it('does not claim none yet when the presets read failed', async () => {
+    const client = stubClient({
+      listSpecRunnableAgents: listOf(authorableAgent()),
+      listAgents: listOf(authorableAgent()),
+      listPresets: () => Promise.reject(new ApiError('presets store down', 500)),
+    });
+    renderWithProviders(<AgentsPage />, client, { projection: fullProjection() });
+
+    expect(await screen.findByText(/Authored agents could not be loaded/)).toBeInTheDocument();
+    expect(screen.queryByText('No authored agents yet')).not.toBeInTheDocument();
+  });
+
+  it('tells an authored agent from a registered one in the card view too', async () => {
+    const user = userEvent.setup();
+    const client = stubClient({
+      listSpecRunnableAgents: listOf(authorableAgent()),
+      listAgents: listOf(authorableAgent()),
+      listPresets: () =>
+        Promise.resolve([presetRecord({ name: 'assistant', base_tool: 'authorable_agent' })]),
+    });
+    renderWithProviders(<AgentsPage />, client, { projection: fullProjection() });
+
+    await findAgentRow('assistant', 'authored');
+    await user.click(screen.getByRole('radio', { name: 'Card view' }));
+    const cards = await screen.findAllByRole('listitem');
+    const cardOf = (name: string): HTMLElement => {
+      const card = cards.find(
+        (item) => within(item).queryByText(name, { selector: '[data-agent]' }) !== null,
+      );
+      if (card === undefined) throw new Error(`no card for ${name}`);
+      return card;
+    };
+    expect(within(cardOf('assistant')).getByText('Authored')).toBeInTheDocument();
+    expect(within(cardOf('authorable_agent')).getByText('Registered')).toBeInTheDocument();
+  });
+});
+
+describe('authored agents in the agents explorer', () => {
   function authoredClient(over = {}) {
     return stubClient({
       listSpecRunnableAgents: listOf(authorableAgent()),
@@ -141,13 +243,13 @@ describe('authored-agents list', () => {
   it('lists an authored agent with a Manage link to its presets-page detail', async () => {
     renderWithProviders(<AgentsPage />, authoredClient());
 
-    const row = await screen.findByTestId('authored-agent-row');
+    const row = await findAgentRow('assistant', 'authored');
     // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
     // widens the document instead of scrolling inside its own box.
     for (const table of document.querySelectorAll('table')) {
       expect(table.closest('.tai-scroll-region')).not.toBeNull();
     }
-    expect(row).toHaveAttribute('data-agent', 'assistant');
+    expect(within(row).getByText('Authored')).toBeInTheDocument();
     // Versioning/rollback/delete live on the presets page; Manage links out there
     // with the preset search param (never duplicating those controls here).
     const manage = within(row).getByRole('link', { name: /Manage authored agent assistant/ });
@@ -157,7 +259,7 @@ describe('authored-agents list', () => {
   it('opens Manage (its canonical destination) when the row body is clicked', async () => {
     const { navigate } = renderWithProviders(<AgentsPage />, authoredClient());
 
-    const row = await screen.findByTestId('authored-agent-row');
+    const row = await findAgentRow('assistant', 'authored');
     // The description cell is plain, non-interactive text — a body click, which
     // opens the row's one canonical destination (Manage → the presets page).
     await userEvent.click(within(row).getByText('An assistant agent'));
@@ -167,7 +269,7 @@ describe('authored-agents list', () => {
   it('leaves Run to run and Manage to manage — the row yields to both, no double-nav', async () => {
     const { navigate } = renderWithProviders(<AgentsPage />, authoredClient());
 
-    const row = await screen.findByTestId('authored-agent-row');
+    const row = await findAgentRow('assistant', 'authored');
     // The Manage link navigates exactly once (the row-open yields to it).
     await userEvent.click(
       within(row).getByRole('link', { name: /Manage authored agent assistant/ }),
@@ -185,17 +287,19 @@ describe('authored-agents list', () => {
 
   it('degrades to absence (no wall) when the presets read fails/uncovered, keeping the authorable content', async () => {
     // A scoped caller reaching `/api/agents` but not `/api/presets` gets a 403 on the
-    // presets read. That read only enriches registered agents into authored rows, so the
-    // section degrades to its own empty state rather than walling this reachable surface —
-    // the authorable content (driven by the load-bearing specRunnable read) still renders.
+    // presets read. That read only enriches registered agents into authored entries, so
+    // the explorer lists the registered agents alone rather than walling this reachable
+    // surface — the authorable content (driven by the specRunnable read) still renders.
     renderWithProviders(
       <AgentsPage />,
       authoredClient({ listPresets: () => Promise.reject(new ApiError('forbidden', 403)) }),
     );
 
-    expect(await screen.findByText('No authored agents yet')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Authored agents' })).toBeInTheDocument();
-    // No ErrorState walls the section, and the authorable-agent gate never trips.
+    expect(await findAgentNames('registered')).toEqual(['authorable_agent']);
+    expect(screen.queryAllByTestId('agent-name').map((node) => node.dataset.kind)).toEqual([
+      'registered',
+    ]);
+    // No ErrorState walls the list, and the authorable-agent gate never trips.
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText('No authorable agent installed')).not.toBeInTheDocument();
   });
@@ -207,8 +311,8 @@ describe('authored-agents list', () => {
     'surfaces %s from the presets read instead of degrading it to absence',
     async (_label, rejection) => {
       // Only the scoped-caller 403 is absence. Every other class is a real failure and
-      // must SAY so — silently rendering "No authored agents yet" tells the operator the
-      // deployment has no authored agents when the read simply never landed.
+      // must SAY so — silently listing no authored agent tells the operator the
+      // deployment has none when the read simply never landed.
       renderWithProviders(
         <AgentsPage />,
         authoredClient({ listPresets: () => Promise.reject(rejection) }),
@@ -217,7 +321,7 @@ describe('authored-agents list', () => {
       const alert = await screen.findByRole('alert');
       expect(alert).toHaveTextContent(rejection.message);
       // The list itself is NOT walled — the agents read succeeded, so it still renders.
-      expect(screen.getByRole('heading', { name: 'Authored agents' })).toBeInTheDocument();
+      expect(await findAgentRow('authorable_agent', 'registered')).toBeInTheDocument();
       expect(screen.queryByText('No authorable agent installed')).not.toBeInTheDocument();
     },
   );
@@ -236,8 +340,7 @@ describe('authored-agents list', () => {
       }),
     );
 
-    const row = await screen.findByTestId('authored-agent-row');
-    expect(row).toHaveAttribute('data-agent', 'assistant');
+    const row = await findAgentRow('assistant', 'authored');
     // Base-agent column shows the registration name resolved via base_tool.
     expect(within(row).getByText('reg_name')).toBeInTheDocument();
   });
@@ -358,15 +461,13 @@ describe('authored-agents list', () => {
           Promise.resolve([
             presetRecord({ name: 'assistant', base_tool: 'authorable_agent' }),
             // A plain-tool preset (its base is not an agent registration name) — it
-            // lives on the presets page, never in the authored-agents list.
+            // lives on the presets page, never among the authored agents.
             presetRecord({ name: 'plain_preset', base_tool: 'echo' }),
           ]),
       }),
     );
 
-    const rows = await screen.findAllByTestId('authored-agent-row');
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveAttribute('data-agent', 'assistant');
+    expect(await findAgentNames('authored')).toEqual(['assistant']);
     expect(screen.queryByText('plain_preset')).toBeNull();
   });
 
@@ -438,7 +539,7 @@ describe('authored-agents list', () => {
       }),
     );
 
-    const row = await screen.findByTestId('authored-agent-row');
+    const row = await findAgentRow(evil, 'authored');
     // Rendered as TEXT (React escapes it), never a live <script> sink.
     expect(row).toHaveTextContent(evil);
     expect(row.querySelector('script')).toBeNull();

@@ -14,6 +14,7 @@ import {
   ExpressionFieldContext,
   type ExpressionFieldProps,
 } from '@tai42/studio-sdk';
+import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 import type { QueryClient } from '@tanstack/react-query';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -92,6 +93,7 @@ function renderDialog({
   seed,
   onClose = vi.fn(),
   expressionField,
+  toolDisplayNames = {},
 }: {
   readonly initial?: ReturnType<typeof makeRoute>;
   readonly client?: StubApiClient;
@@ -99,8 +101,13 @@ function renderDialog({
   readonly seed?: (queryClient: QueryClient) => void;
   readonly onClose?: () => void;
   readonly expressionField?: (props: ExpressionFieldProps) => ReactNode;
+  readonly toolDisplayNames?: Readonly<Record<string, string>>;
 } = {}) {
-  const dialog = <RouteFormDialog initial={initial} onClose={onClose} />;
+  const dialog = (
+    <StaticToolDisplayNamesProvider names={toolDisplayNames}>
+      <RouteFormDialog initial={initial} onClose={onClose} />
+    </StaticToolDisplayNamesProvider>
+  );
   return renderWithProviders(
     expressionField === undefined ? (
       dialog
@@ -192,6 +199,24 @@ describe('RouteFormDialog — create', () => {
 
     expect(await screen.findByText('An agent name is required.')).toBeInTheDocument();
     expect(createOrReplaceConversationRoute).not.toHaveBeenCalled();
+  });
+
+  it('labels the tool options with their display names and searches either name', async () => {
+    const user = userEvent.setup({ delay: null });
+    renderDialog({ toolDisplayNames: { lookup_record: 'Find Record' } });
+
+    await pickOption(user, 'Target kind', 'Tool');
+    await user.click(await screen.findByRole('combobox', { name: 'Tool' }));
+    const search = screen.getByRole('combobox', { name: 'Search tools' });
+    await user.type(search, 'find');
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Find Record (lookup_record)',
+    ]);
+    await user.clear(search);
+    await user.type(search, 'lookup_acc');
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'lookup_account',
+    ]);
   });
 
   it('shows only the api door field for the api door and the channel fields for channel', async () => {
@@ -545,18 +570,32 @@ describe('RouteFormDialog — refused and failed picker reads', () => {
     });
   });
 
-  it('shows the tools note under a 403', async () => {
+  it('takes a typed tool name under a 403 and saves it', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
+      created: false,
+      route_name: 'chat',
+      route: makeRoute(),
+      callback_secret: null,
+    });
     renderDialog({
       initial: makeRoute({ target_kind: 'tool', target_name: 'lookup_record' }),
-      client: { listTools: vi.fn(forbidden) },
+      client: { listTools: vi.fn(forbidden), createOrReplaceConversationRoute },
     });
 
-    expect(
-      await screen.findByText(
-        'This session cannot list tools. Picking one needs read access to GET /api/tools; ask an administrator to grant it.',
-      ),
-    ).toBeInTheDocument();
+    const input = await screen.findByRole('textbox', { name: 'Tool' });
+    expect(input).toHaveValue('lookup_record');
+    expect(input).toHaveAccessibleDescription(/cannot list tools, so type the tool's exact name/);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await user.clear(input);
+    await user.type(input, 'fetch_record');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => {
+      expect(createOrReplaceConversationRoute).toHaveBeenCalledWith(
+        expect.objectContaining({ target_kind: 'tool', target_name: 'fetch_record' }),
+      );
+    });
   });
 
   it('shows the error state when the tool list fails', async () => {

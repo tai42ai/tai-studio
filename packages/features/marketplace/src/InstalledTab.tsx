@@ -1,16 +1,16 @@
 /**
- * The installed-plugins view: a table of what the running app has installed from
- * the marketplace, each row linking to its detail, with an update / up-to-date /
- * not-in-registry status badge, and the "Upgrade all" action moves every
- * installed plugin to its newest compatible version,
- * rendering the per-plugin outcome readout. A loud advisories banner sits above
- * the table when any non-withdrawn advisory matches an installed plugin.
+ * The installed-plugins view: what the running app has installed from the
+ * marketplace, as a table or a card grid by the shared list/card switch (the
+ * choice persists), each entry opening its detail and carrying an update /
+ * up-to-date / not-in-registry status badge. The "Upgrade all" action moves every
+ * installed plugin to its newest compatible version, rendering the per-plugin
+ * outcome readout. A loud advisories banner sits above the list when any
+ * non-withdrawn advisory matches an installed plugin.
  * Per-plugin install / update / uninstall actions live on the detail view.
  */
 import {
   apiRoutes,
   type MarketplaceAdvisory,
-  type MarketplaceInstalledPlugin,
   type MarketplaceUpgradeAllRow,
 } from '@tai42/api-client';
 import {
@@ -25,33 +25,19 @@ import {
   featureDisabledMessage,
   installedMarketplacePluginsKey,
   isFeatureDisabled,
-  ScrollRegion,
   Skeleton,
-  Table,
-  TBody,
-  TD,
-  TH,
-  THead,
-  TR,
   useApi,
   useCanWrite,
+  useViewMode,
+  ViewToggle,
 } from '@tai42/studio-sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import { severityVariant, WarningBlock } from './advisories';
-import { sourceLabel } from './badges';
 import { type MarketplaceSearch, mergeSearch } from './filters';
+import { INSTALLED_VIEW_SURFACE, InstalledPlugins } from './installed-views';
 import { marketplaceAdvisoriesKey } from './keys';
-
-/** The advisory status badge for one installed row. */
-function StatusBadge({ row }: { readonly row: MarketplaceInstalledPlugin }): ReactNode {
-  if (row.missing_upstream) return <Badge>Not in the registry</Badge>;
-  if (row.update_available && row.latest !== null) {
-    return <Badge variant="warning">Update available: v{row.latest}</Badge>;
-  }
-  return <Badge variant="success">Up to date</Badge>;
-}
 
 /** Badge tint per upgrade-all outcome. */
 const OUTCOME_VARIANT: Record<string, string> = {
@@ -120,6 +106,7 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
   const api = useApi();
   const canUpgradeAll = useCanWrite(apiRoutes.post_api_marketplace_upgrade_all.path);
   const queryClient = useQueryClient();
+  const [viewMode, setViewMode] = useViewMode(INSTALLED_VIEW_SURFACE);
   const installedQuery = useQuery({
     queryKey: installedMarketplacePluginsKey,
     queryFn: ({ signal }) => api.listInstalledMarketplacePlugins(signal),
@@ -205,6 +192,13 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
             {UPGRADE_ALL_NO_GRANT}
           </p>
         )}
+        <div style={{ marginLeft: 'auto' }}>
+          <ViewToggle
+            value={viewMode}
+            onValueChange={setViewMode}
+            aria-label="Installed plugins view"
+          />
+        </div>
       </div>
 
       {upgradeAllMutation.isError ? (
@@ -221,45 +215,7 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
         <UpgradeAllReadout results={upgradeAllMutation.data.results} />
       ) : null}
 
-      {installed.length > 0 ? (
-        <Card>
-          <ScrollRegion label="Installed plugins">
-            <Table>
-              <THead>
-                <TR>
-                  <TH>Plugin</TH>
-                  <TH>Installed version</TH>
-                  <TH>Source</TH>
-                  <TH>Delivery</TH>
-                  <TH>Installed at</TH>
-                  <TH>Status</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {installed.map((row) => (
-                  <TR key={row.ref}>
-                    <TD>
-                      <AppLink to="marketplace" search={mergeSearch(search, { plugin: row.ref })}>
-                        <span className="tai-mono">{row.ref}</span>
-                      </AppLink>
-                    </TD>
-                    <TD>{row.version}</TD>
-                    {/* `spec` (a descriptor plugin) reads as "descriptor". */}
-                    <TD>{sourceLabel(row.source)}</TD>
-                    {/* How it was delivered: a pip `package`, or a `descriptor`
-                        whose spec names no package. */}
-                    <TD>{row.delivery}</TD>
-                    <TD>{row.installed_at}</TD>
-                    <TD>
-                      <StatusBadge row={row} />
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          </ScrollRegion>
-        </Card>
-      ) : null}
+      <InstalledPlugins installed={installed} search={search} mode={viewMode} />
     </div>
   );
 }

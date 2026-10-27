@@ -117,14 +117,12 @@ export function rowDescription(row: DirectoryRow): string {
   }
 }
 
-/** The directory search: a case-insensitive match on display name, title and description. */
-export function rowMatches(row: DirectoryRow, query: string): boolean {
-  const needle = query.trim().toLowerCase();
-  if (needle === '') return true;
-  const hay = [rowName(row), rowDescription(row)];
-  if (row.kind === 'provider') hay.push(row.provider.id);
-  if (row.kind === 'listing') hay.push(row.listing.name);
-  return hay.some((text) => text.toLowerCase().includes(needle));
+/** The texts the directory search matches a row by: display name, title, description and id. */
+export function rowSearchTexts(row: DirectoryRow): readonly string[] {
+  const texts = [rowName(row), rowDescription(row)];
+  if (row.kind === 'provider') texts.push(row.provider.id);
+  if (row.kind === 'listing') texts.push(row.listing.name);
+  return texts;
 }
 
 /** The manifest entries the preserved manifest holds, in manifest order. */

@@ -9,7 +9,7 @@ function lastChange(onChange: ReturnType<typeof vi.fn>): SchemaEditorChange {
   const calls = onChange.mock.calls;
   return calls.length > 0
     ? (calls[calls.length - 1]?.[0] as SchemaEditorChange)
-    : { schema: null, valid: true };
+    : { schema: null, valid: true, text: '' };
 }
 
 function setText(value: string): void {
@@ -37,6 +37,7 @@ describe('SchemaEditor', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(lastChange(onChange).valid).toBe(false);
     expect(lastChange(onChange).schema).toBeNull();
+    expect(lastChange(onChange).text).toBe('{ not json');
   });
 
   it('honors requireTitle: a schema without a title blocks with a visible message', () => {
@@ -60,6 +61,7 @@ describe('SchemaEditor', () => {
     expect(lastChange(onChange)).toEqual({
       schema: { type: 'object', properties: {} },
       valid: true,
+      text: '{ "type": "object", "properties": {} }',
     });
   });
 
@@ -123,7 +125,7 @@ describe('SchemaEditor', () => {
       properties: { any: { anyOf: [{ $ref: '#/$defs/Item' }, { type: 'null' }] } },
     };
     setText(JSON.stringify(schema));
-    expect(lastChange(onChange)).toEqual({ schema, valid: true });
+    expect(lastChange(onChange)).toEqual({ schema, valid: true, text: JSON.stringify(schema) });
   });
 
   it('writes the schema in the mono textarea and frames the preview as a card', () => {

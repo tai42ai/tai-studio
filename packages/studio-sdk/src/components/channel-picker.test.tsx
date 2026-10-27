@@ -28,7 +28,7 @@ function renderPicker(query: StubQuery<Channels>, value = '', error?: string) {
 }
 
 describe('ChannelPicker', () => {
-  it('pending: a disabled Select reading "Loading channels…", with the description', () => {
+  it('pending: a disabled select reading "Loading channels…", with the description', () => {
     renderPicker(stubQuery(pendingRead));
     const combobox = screen.getByRole('combobox', { name: 'Channel' });
     expect(combobox).toBeDisabled();
@@ -47,7 +47,7 @@ describe('ChannelPicker', () => {
     expect(screen.queryByText(REQUIRED)).toBeNull();
   });
 
-  it('loaded: the names as options; the field error shows under the Select', async () => {
+  it('loaded: the names as options; the field error shows under the select', async () => {
     const { onValueChange } = renderPicker(
       stubQuery({ data: listing(['web', 'slack']), isSuccess: true }),
       '',
@@ -62,6 +62,17 @@ describe('ChannelPicker', () => {
     ]);
     await user.click(screen.getByRole('option', { name: 'slack' }));
     expect(onValueChange).toHaveBeenCalledWith('slack');
+  });
+
+  it('loaded: the search box narrows the channels', async () => {
+    renderPicker(stubQuery({ data: listing(['web', 'slack', 'webhook']), isSuccess: true }));
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('combobox', { name: 'Channel' }));
+    await user.type(screen.getByRole('combobox', { name: 'Search channels' }), 'web');
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'web',
+      'webhook',
+    ]);
   });
 
   it('empty: the note and the link to the channel plugins', () => {

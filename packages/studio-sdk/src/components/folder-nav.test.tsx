@@ -181,7 +181,7 @@ describe('FolderPicker', () => {
     expect(screen.queryByLabelText('New folder name')).not.toBeInTheDocument();
   });
 
-  it('keeps the draft in place when creation rejects, for a retry', async () => {
+  it('shows the error and keeps the draft in place when creation rejects, for a retry', async () => {
     const onCreateFolder = vi
       .fn<(name: string, parentId: string | null) => Promise<string>>()
       .mockRejectedValueOnce(new Error('conflict'))
@@ -203,8 +203,45 @@ describe('FolderPicker', () => {
     // Rejection leaves the draft open with its text so the operator can retry.
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.getByLabelText('New folder name')).toHaveValue('Nordics');
-    // The retry succeeds via Enter.
+    // The failure is shown, never swallowed.
+    expect(screen.getByRole('alert')).toHaveTextContent('conflict');
+    // The retry succeeds via Enter and clears the error.
     await userEvent.type(input, '{Enter}');
     expect(onChange).toHaveBeenCalledWith('ok-id');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('offers no create without a creator', () => {
+    render(
+      <FolderPicker value={null} onChange={vi.fn()} folders={FOLDERS} unfiledLabel="No folder" />,
+    );
+    expect(screen.queryByRole('button', { name: 'New folder' })).not.toBeInTheDocument();
+  });
+
+  it('shows a not-configured create refusal as the off note, not an error', async () => {
+    const onCreateFolder = vi.fn(() =>
+      Promise.reject(
+        Object.assign(new Error('Tool metadata needs a tool_meta store.'), {
+          status: 501,
+          code: 'tool-meta-not-configured',
+        }),
+      ),
+    );
+    render(
+      <FolderPicker
+        value={null}
+        onChange={vi.fn()}
+        folders={FOLDERS}
+        onCreateFolder={onCreateFolder}
+        unfiledLabel="No folder"
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'New folder' }));
+    await userEvent.type(screen.getByLabelText('New folder name'), 'Nordics');
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect(await screen.findByTestId('feature-disabled')).toHaveTextContent(
+      'Tool metadata needs a tool_meta store.',
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

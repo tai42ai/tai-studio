@@ -30,6 +30,76 @@ describe('McpServersSection — config editor', () => {
     expect(within(entry).getByLabelText('Command')).toHaveValue('run');
   });
 
+  it('shows why a server cannot be added when the entry schema admits no finite value', async () => {
+    const user = userEvent.setup();
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    // `config` requires a `Loop`, which requires itself with no null on the way.
+    const loopSchema = {
+      $defs: {
+        Loop: {
+          type: 'object',
+          properties: { next: { $ref: '#/$defs/Loop' } },
+          required: ['next'],
+        },
+      },
+      type: 'object',
+      required: ['title', 'config'],
+      properties: { title: { type: 'string', title: 'Title' }, config: { $ref: '#/$defs/Loop' } },
+    };
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(loopSchema),
+      listExtensions: vi.fn().mockResolvedValue([]),
+    };
+    renderWithProviders(<McpServersSection />, { client });
+    await screen.findByTestId('mcp-entry-0');
+
+    await user.click(screen.getByRole('button', { name: 'Add server' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'A server cannot be added: SchemaForm: the schema admits no finite value',
+    );
+    expect(screen.queryByTestId('mcp-entry-1')).toBeNull();
+    expect(logged).toHaveBeenCalledWith('A server cannot be added', expect.any(Error));
+    logged.mockRestore();
+  });
+
+  it('lets a seeding error other than no finite value propagate from Add server', async () => {
+    // The required `config` points at a definition the document lacks: seeding an
+    // entry resolves it and throws, while the empty list draws no entry form.
+    const brokenSchema = {
+      type: 'object',
+      required: ['title', 'config'],
+      properties: {
+        title: { type: 'string', title: 'Title' },
+        config: { $ref: '#/$defs/Missing' },
+      },
+    };
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifestPreserved: vi.fn().mockResolvedValue({ ...MANIFEST, mcp: [] }),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(brokenSchema),
+      listExtensions: vi.fn().mockResolvedValue([]),
+    };
+    renderWithProviders(<McpServersSection />, { client });
+    await screen.findByText('No MCP servers configured');
+    const uncaught: unknown[] = [];
+    const onError = (event: ErrorEvent): void => {
+      event.preventDefault();
+      uncaught.push(event.error);
+    };
+    window.addEventListener('error', onError);
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Add server' }));
+    } finally {
+      window.removeEventListener('error', onError);
+    }
+    expect(uncaught).toEqual([new Error('SchemaForm: unresolvable $ref "#/$defs/Missing"')]);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByTestId('mcp-entry-0')).toBeNull();
+  });
+
   it('round-trips add/edit/remove into the saved mcp array', async () => {
     const user = userEvent.setup();
     const setMcpConfig = vi.fn().mockResolvedValue({

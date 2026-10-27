@@ -5,12 +5,12 @@
  * read failure never takes down browsing — the merged view still renders from whatever
  * loaded, under a loud notice surfaced through `sideReadError`.
  */
-import { type CapabilityState, type Folder, useApi } from '@tai42/studio-sdk';
+import { type CapabilityState, type Folder, toFolders, useApi } from '@tai42/studio-sdk';
 import { useQuery } from '@tanstack/react-query';
 
 import { toolMetaKey, toolsListKey, toolTagsKey } from './keys';
 import { projectedTools } from './toolProjection';
-import { buildToolViews, toFolders, type ToolView } from './toolView';
+import { buildToolViews, type ToolView } from './toolView';
 
 export interface ToolCatalog {
   readonly toolsPending: boolean;
@@ -18,6 +18,9 @@ export interface ToolCatalog {
   readonly onRetryTools: () => void;
   readonly folders: Folder[];
   readonly allViews: ToolView[];
+  /** The overlay read has landed and is current. An overlay write is offered only then:
+   *  a merge-patch seeded from an unread overlay would overwrite its stored values. */
+  readonly overlayLoaded: boolean;
   /** A tags/overlay side-read failure, or `null` — browsing survives it. */
   readonly sideReadError: unknown;
   readonly onRetrySideRead: () => void;
@@ -47,6 +50,7 @@ export function useToolCatalog(state: CapabilityState): ToolCatalog {
     onRetryTools: () => void toolsQuery.refetch(),
     folders,
     allViews,
+    overlayLoaded: metaQuery.isSuccess,
     sideReadError,
     onRetrySideRead: () => {
       if (tagsQuery.isError) void tagsQuery.refetch();

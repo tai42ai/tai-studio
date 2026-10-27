@@ -29,7 +29,7 @@
  * (`useBreakpoint().isSinglePane`) exactly one pane shows, driven by `data-pane`.
  * Selecting a tool moves focus to the detail heading; Back returns focus to the list.
  */
-import { apiRoutes, type ToolMetaPatch } from '@tai42/api-client';
+import type { ToolMetaPatch } from '@tai42/api-client';
 import {
   ArrowLeftIcon,
   Button,
@@ -37,8 +37,8 @@ import {
   EmptyState,
   errorMessage,
   ErrorState,
-  type Folder,
-  isFeatureDisabled,
+  FolderActionsMenu,
+  type FoldersChanged,
   isFullProjection,
   PageHeader,
   type PageProps,
@@ -48,15 +48,16 @@ import {
   useApi,
   useAppNavigate,
   useBreakpoint,
-  useCanWrite,
   useCapabilities,
+  useCreateFolder,
   useReloadToolDisplayNames,
+  useReportToolMetaRefusal,
   useSearchCommit,
+  useToolMetaWriteAccess,
 } from '@tai42/studio-sdk';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 
-import { FolderActionsMenu } from './FolderActions';
 import { toolMetaKey } from './keys';
 import { RunPanel } from './RunPanel';
 import { ToolAdminCard } from './ToolAdminCard';
@@ -64,34 +65,33 @@ import { SEARCH_LABEL, ToolExplorer } from './ToolExplorer';
 import { ToolExtensionsCard } from './ToolExtensionsCard';
 import { ToolMetaEditDialog } from './ToolMetaEditDialog';
 import type { ToolView } from './toolView';
-import { useToolCatalog } from './useToolCatalog';
-
-/** The overlay-write door the edit affordance is gated on (merge-patch a tool's row). */
-const TOOL_META_WRITE_ROUTE = apiRoutes.patch_api_tool_meta_tools_tool_name;
+import { type ToolCatalog, useToolCatalog } from './useToolCatalog';
 
 function ToolList({
+  catalog,
+  onFoldersChanged,
   selected,
   selectedTags,
   committedQuery,
-  metaWriteDisabled,
   onEdit,
 }: {
+  readonly catalog: ToolCatalog;
+  /** Re-reads the overlay after a folder write. */
+  readonly onFoldersChanged: FoldersChanged;
   readonly selected: string | undefined;
   readonly selectedTags: readonly string[];
   /** The committed `?q=` value from the URL (`''` when the param is absent). */
   readonly committedQuery: string;
-  readonly metaWriteDisabled: boolean;
-  readonly onEdit: (view: ToolView, folders: readonly Folder[]) => void;
+  readonly onEdit: (view: ToolView) => void;
 }): ReactNode {
-  // The projection door AND the store must both be live: an unconfigured tool_meta
-  // store answers the overlay write with a 501 `tool-meta-not-configured`, so once a
-  // write has revealed the store off, the per-row edit affordance is withdrawn — a
-  // write it can only refuse is never offered.
-  const canWrite =
-    useCanWrite(TOOL_META_WRITE_ROUTE.path, TOOL_META_WRITE_ROUTE.method) && !metaWriteDisabled;
-  const { state } = useCapabilities();
+  // The per-tool edit needs its own route and a live tool_meta store: once the store is
+  // known off (the kind-status table, or any overlay write's 501 anywhere in the app)
+  // the edit is withdrawn — a write it can only refuse is never offered. It also waits
+  // for the overlay read: the dialog seeds from the tool's overlay row, so an edit
+  // opened before that row is read would save blanks over the stored values.
+  const { editTool } = useToolMetaWriteAccess();
+  const canWrite = editTool && catalog.overlayLoaded;
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  const catalog = useToolCatalog(state);
 
   // The live search box holds a local draft; the committed `?q=` is written only on an
   // explicit commit (Enter / an edited blur), never per keystroke. Re-seed the draft
@@ -155,11 +155,18 @@ function ToolList({
         query={query}
         onQueryChange={setQuery}
         onEdit={onEdit}
-        // Writers get per-folder Rename + Move (the overlay folder doors); a reader
-        // session never sees an action it can only be refused.
+        // Each folder carries Rename, Move and Delete once the overlay read has loaded,
+        // each shown only where the caller may make that write; a reader never sees an
+        // action it can only be refused.
         renderFolderActions={
-          canWrite
-            ? (folder) => <FolderActionsMenu folder={folder} folders={catalog.folders} />
+          catalog.overlayLoaded
+            ? (folder) => (
+                <FolderActionsMenu
+                  folder={folder}
+                  folders={catalog.folders}
+                  onFoldersChanged={onFoldersChanged}
+                />
+              )
             : undefined
         }
       />
@@ -241,11 +248,15 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
   const navigate = useAppNavigate();
   const { isSinglePane } = useBreakpoint();
   const reloadDisplayNames = useReloadToolDisplayNames();
+  // A not-configured refusal withdraws every overlay write app-wide; the open dialog
+  // stays to show the off note.
+  const reportRefusal = useReportToolMetaRefusal();
 
-  // The tool being edited, plus the folder tree snapshot the dialog opened with.
-  const [editing, setEditing] = useState<{ view: ToolView; folders: readonly Folder[] } | null>(
-    null,
-  );
+  // One catalog read for the page: the list and the edit dialog draw the same live tree,
+  // so a folder created from the dialog's own picker appears in it at once.
+  const catalog = useToolCatalog(state);
+  // The tool being edited; its form seeds from the view it opened with.
+  const [editing, setEditing] = useState<ToolView | null>(null);
 
   const upsert = useMutation({
     mutationFn: ({ name, patch }: { name: string; patch: ToolMetaPatch }) =>
@@ -257,17 +268,14 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
       reloadDisplayNames();
       setEditing(null);
     },
+    onError: reportRefusal,
   });
 
-  // The overlay write revealed the tool_meta store off (501 `tool-meta-not-configured`):
-  // withdraw the list edit affordances and show the muted OFF note in the dialog.
-  const metaWriteDisabled = isFeatureDisabled(upsert.error);
-
-  const createFolder = async (name: string, parentId: string | null): Promise<string> => {
-    const folder = await api.createFolder(name, parentId);
-    await queryClient.invalidateQueries({ queryKey: toolMetaKey });
-    return folder.id;
-  };
+  const onFoldersChanged = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: toolMetaKey }),
+    [queryClient],
+  );
+  const createFolder = useCreateFolder(onFoldersChanged);
 
   const listRef = useRef<HTMLDivElement>(null);
   const detailHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -310,13 +318,12 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
           <Stack>
             <h2 className="tai-card-title">All tools</h2>
             <ToolList
+              catalog={catalog}
+              onFoldersChanged={onFoldersChanged}
               selected={selected}
               selectedTags={selectedTags}
               committedQuery={search.q ?? ''}
-              metaWriteDisabled={metaWriteDisabled}
-              onEdit={(view, folders) => {
-                setEditing({ view, folders });
-              }}
+              onEdit={setEditing}
             />
           </Stack>
         </Card>
@@ -334,15 +341,19 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
 
       {editing !== null ? (
         <ToolMetaEditDialog
-          tool={editing.view}
-          folders={editing.folders}
+          tool={editing}
+          folders={catalog.folders}
           open
           onOpenChange={(open) => {
-            if (!open) setEditing(null);
+            if (!open) {
+              setEditing(null);
+              // A failed save belongs to the dialog that made it; the next one opens clean.
+              upsert.reset();
+            }
           }}
           onCreateFolder={createFolder}
           onSubmit={(patch) => {
-            upsert.mutate({ name: editing.view.name, patch });
+            upsert.mutate({ name: editing.name, patch });
           }}
           saving={upsert.isPending}
           writeError={upsert.error}

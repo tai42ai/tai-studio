@@ -21,7 +21,7 @@ import {
 import type { ReactNode } from 'react';
 
 import { ToolItem } from './ToolItem';
-import { toolMatches, type ToolView } from './toolView';
+import { toolSearchTexts, type ToolView } from './toolView';
 
 /** The search box's accessible name; the commit listener keys the search input on it. */
 export const SEARCH_LABEL = 'Filter tools';
@@ -66,7 +66,7 @@ export interface ToolExplorerProps {
   readonly onNavigateFolder: (id: string | null) => void;
   readonly query: string;
   readonly onQueryChange: (value: string) => void;
-  readonly onEdit: (view: ToolView, folders: readonly Folder[]) => void;
+  readonly onEdit: (view: ToolView) => void;
   readonly renderFolderActions: ((folder: Folder) => ReactNode) | undefined;
 }
 
@@ -110,9 +110,7 @@ export function ToolExplorer({
       preserveTags={selectedTags}
       preserveQuery={preserveQuery}
       canWrite={canWrite}
-      onEdit={(edited) => {
-        onEdit(edited, folders);
-      }}
+      onEdit={onEdit}
     />
   );
 
@@ -129,6 +127,7 @@ export function ToolExplorer({
         folders={folders}
         currentFolderId={currentFolderId}
         onNavigate={onNavigateFolder}
+        selectedItemKey={selected}
         rootLabel="All tools"
         viewSurface={TOOLS_VIEW_SURFACE}
         label="Tools"
@@ -146,7 +145,7 @@ export function ToolExplorer({
         search={{
           value: query,
           onChange: onQueryChange,
-          matches: toolMatches,
+          texts: toolSearchTexts,
           label: SEARCH_LABEL,
           placeholder: 'Filter by name',
         }}

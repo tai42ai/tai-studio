@@ -5,7 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiProvider } from './useApi';
 import { AuthProvider, useAuth } from './useAuth';
-import { SystemKindsProvider, useFeatureOff, useSystemKinds } from './useSystemKinds';
+import {
+  SystemKindsProvider,
+  useFeatureOff,
+  useFeatureOffMessage,
+  useReportFeatureOff,
+  useSystemKinds,
+} from './useSystemKinds';
 
 function kind(over: Partial<KindStatus> = {}): KindStatus {
   return { kind: 'tool_meta', state: 'off', plugin: null, detail: '', ...over };
@@ -54,6 +60,17 @@ describe('useFeatureOff (no provider)', () => {
   });
 });
 
+describe('useReportFeatureOff (no provider)', () => {
+  it('throws when a refusal is reported with no provider to hold it', () => {
+    const { result } = renderHook(() => useReportFeatureOff());
+    expect(() => {
+      result.current('tool_meta', 'off');
+    }).toThrow(
+      'A tool_meta refusal was reported with no <SystemKindsProvider> mounted to hold it.',
+    );
+  });
+});
+
 describe('SystemKindsProvider', () => {
   beforeEach(() => {
     globalThis.sessionStorage.clear();
@@ -68,6 +85,74 @@ describe('SystemKindsProvider', () => {
     expect(result.current.state).toEqual({ status: 'loading' });
     expect(result.current.toolMetaOff).toBe(false);
     expect(getSystemKinds).not.toHaveBeenCalled();
+  });
+
+  it('reads a kind OFF everywhere once a refusal reveals it, until sign-out', async () => {
+    const { result } = renderHook(
+      () => ({
+        auth: useAuth(),
+        off: useFeatureOff('tool_meta'),
+        message: useFeatureOffMessage('tool_meta'),
+        report: useReportFeatureOff(),
+      }),
+      { wrapper: makeWrapper(() => Promise.resolve([])) },
+    );
+    act(() => {
+      result.current.auth.login('k', false);
+    });
+    act(() => {
+      result.current.report('tool_meta', 'Configure a tool_meta store.');
+    });
+    expect(result.current.off).toBe(true);
+    expect(result.current.message).toBe('Configure a tool_meta store.');
+
+    act(() => {
+      result.current.auth.logout();
+    });
+    expect(result.current.off).toBe(false);
+    expect(result.current.message).toBeNull();
+
+    // The next sign-in starts from the table alone.
+    act(() => {
+      result.current.auth.login('k2', false);
+    });
+    await waitFor(() => {
+      expect(result.current.off).toBe(false);
+    });
+    expect(result.current.message).toBeNull();
+  });
+
+  it('keeps a refusal across re-renders and drops it when the API client changes', () => {
+    const clientFor = (): ApiClient =>
+      ({ getSystemKinds: () => Promise.resolve([]) }) as unknown as ApiClient;
+    let client = clientFor();
+    function Wrapper({ children }: { children: ReactNode }) {
+      return (
+        <ApiProvider value={client}>
+          <AuthProvider>
+            <SystemKindsProvider>{children}</SystemKindsProvider>
+          </AuthProvider>
+        </ApiProvider>
+      );
+    }
+    const { result, rerender } = renderHook(
+      () => ({ auth: useAuth(), off: useFeatureOff('tool_meta'), report: useReportFeatureOff() }),
+      { wrapper: Wrapper },
+    );
+    act(() => {
+      result.current.auth.login('k', false);
+    });
+    act(() => {
+      result.current.report('tool_meta', 'Configure a tool_meta store.');
+    });
+
+    rerender();
+    expect(result.current.off).toBe(true);
+
+    // A new client may talk to another server, whose store state is unknown.
+    client = clientFor();
+    rerender();
+    expect(result.current.off).toBe(false);
   });
 
   it('fetches on the auth flip and reports a kind OFF once ready', async () => {

@@ -190,17 +190,39 @@ export { effectiveHidden, hiddenToolNames } from './tool-visibility';
 // -- Tool declared-badge merge (native ∪ overlay) ----------------------------
 export { mergeToolBadges, toolBadgesByName } from './tool-badges';
 
+// -- Text search shared by pickers and filterable lists ----------------------
+export { isBlankSearch, matchesSearch } from './search-match';
+
 // -- Design system -----------------------------------------------------------
 export type { ActionMenuItem, ActionMenuProps } from './components/action-menu';
 export { ActionMenu } from './components/action-menu';
+export type { AgentListQuery, AgentPickerProps } from './components/agent-picker';
+export { AgentPicker } from './components/agent-picker';
 export type { BadgeProps } from './components/badge';
 export { Badge } from './components/badge';
+export type { ChannelListQuery, ChannelPickerProps } from './components/channel-picker';
+export { channelIdentityHint, ChannelPicker } from './components/channel-picker';
 export type { CheckboxProps } from './components/checkbox';
 export { Checkbox } from './components/checkbox';
 export type { ChipGroupProps, ChipOption } from './components/chip-group';
 export { ChipGroup } from './components/chip-group';
+export type { CodeBlockProps } from './components/code-block';
+export { CodeBlock } from './components/code-block';
 export type { ConfirmDialogProps } from './components/confirm-dialog';
 export { ConfirmDialog } from './components/confirm-dialog';
+export type { CopyFieldProps } from './components/copy-field';
+export { CopyField } from './components/copy-field';
+export type {
+  DateRangePickerProps,
+  DateRangePreset,
+  DateRangeValue,
+} from './components/date-range-picker';
+export {
+  DateRangePicker,
+  DEFAULT_DATE_RANGE_PRESETS,
+  formatRangeLabel,
+  normalizeCustomRange,
+} from './components/date-range-picker';
 export type { DialogProps } from './components/dialog';
 export { Dialog } from './components/dialog';
 export { DirtyGuardBoundary, GuardedTabs, useRegisterDirty } from './components/dirty-guard';
@@ -210,6 +232,12 @@ export type { EntityCardGridProps } from './components/entity-card-grid';
 export { EntityCardGrid } from './components/entity-card-grid';
 export type { ErrorBoundaryProps } from './components/error-boundary';
 export { ErrorBoundary } from './components/error-boundary';
+export type { ExecutionKeyPickerProps, ExecutionKeyQuery } from './components/execution-key-picker';
+export {
+  canHoldExecutionKey,
+  ExecutionKeyPicker,
+  isExecutionKeyListEmpty,
+} from './components/execution-key-picker';
 export type {
   ExplorerColumn,
   ExplorerEmptyState,
@@ -225,16 +253,37 @@ export {
   matchesSelectedTags,
   UNTAGGED_TOKEN,
 } from './components/explorer-view';
+export type { ExtensionComboBuilderProps } from './components/extension-combo-builder';
+export { ExtensionComboBuilder } from './components/extension-combo-builder';
+export type { ExtensionKindGroup } from './components/extension-grouping';
+export { groupByKind } from './components/extension-grouping';
+export type { ExtensionPickerProps } from './components/extension-picker';
+export { ExtensionPicker } from './components/extension-picker';
+export type { ExternalLinkButtonProps } from './components/external-link';
+export { ExternalLinkButton, isSafeHttpUrl } from './components/external-link';
 export type { FieldControlProps, FieldProps } from './components/field';
 export { Field, useFieldControl } from './components/field';
+export type { FleetReportProps } from './components/fleet-report';
+export { FleetReport } from './components/fleet-report';
 export type { FormDialogProps } from './components/form-dialog';
 export { FormDialog } from './components/form-dialog';
+export type {
+  HolderHref,
+  HolderListProps,
+  HolderPreviewProps,
+  HolderPreviewState,
+} from './components/holder-list';
+export { HolderList, HolderPreview, previewHolders, useHolderHref } from './components/holder-list';
 export type { NumberInputProps, TextareaProps, TextInputProps } from './components/inputs';
 export { NumberInput, Textarea, TextInput } from './components/inputs';
 export type { JsonDiffProps, JsonDiffRow } from './components/json-diff';
 export { diffJson, JsonDiff } from './components/json-diff';
 export type { JsonTreeProps } from './components/json-tree';
 export { JsonTree } from './components/json-tree';
+export type { HeadingLevel, MarkdownBlock, MarkdownProps } from './components/markdown';
+export { Markdown, parseMarkdown } from './components/markdown';
+export type { OpenTargetOptions, OpenTargetProps } from './components/open-target';
+export { openTargetProps } from './components/open-target';
 export type {
   OverlayDetails,
   OverlayDetailsFieldsProps,
@@ -254,8 +303,13 @@ export type {
   SpinnerProps,
 } from './components/primitives';
 export { Button, Card, EmptyState, ErrorState, Skeleton, Spinner } from './components/primitives';
+export { safeHttpUrl } from './components/primitives';
 export type { RadioGroupProps, RadioOption } from './components/radio-group';
 export { RadioGroup } from './components/radio-group';
+export type { RecycleRollSectionProps } from './components/recycle-roll';
+export { RecycleRollSection } from './components/recycle-roll';
+export type { RevealInputProps } from './components/reveal-input';
+export { RevealInput } from './components/reveal-input';
 export type {
   OverflowAxis,
   OverflowRegionAttributes,
@@ -264,12 +318,41 @@ export type {
 } from './components/scroll-region';
 export { ScrollRegion, useOverflowRegion, useProseScrollRegions } from './components/scroll-region';
 export type {
+  SearchableSelectGroupsProps,
+  SearchableSelectProps,
+} from './components/searchable-select';
+export { SearchableSelect } from './components/searchable-select';
+export type {
   SelectGroup,
   SelectGroupsProps,
   SelectOption,
   SelectProps,
 } from './components/select';
 export { Select } from './components/select';
+export type {
+  MediaDocumentProps,
+  MediaImageProps,
+  MediaPlayerProps,
+  ServedMediaGrammar,
+} from './components/served-media';
+export {
+  isRenderableMediaSrc,
+  isServedMediaUrl,
+  MediaDocument,
+  MediaImage,
+  MediaPlayer,
+  resolveMediaSrc,
+} from './components/served-media';
+export type { StepperProps, StepperStatus, StepperStep } from './components/stepper';
+export { Stepper } from './components/stepper';
+export type { SubjectSectionProps, SubjectTargetOption } from './components/subject-section';
+export {
+  buildSubject,
+  SUBJECT_INCOMPLETE_MESSAGE,
+  SubjectSection,
+  toSubjectTargetOptions,
+  useSubjectFields,
+} from './components/subject-section';
 export type {
   NumericColumnProps,
   TableProps,
@@ -289,114 +372,24 @@ export type {
   TemplatedTextTemplateOption,
 } from './components/templated-text-field';
 export { TemplatedTextField, templatedTextSummary } from './components/templated-text-field';
-export type { TooltipProps } from './components/tooltip';
-export { Tooltip } from './components/tooltip';
-export type { ViewMode, ViewToggleProps } from './components/view-toggle';
-export { useViewMode, ViewToggle } from './components/view-toggle';
-// The canonical whole-row/whole-card "open" affordance: one helper every
-// navigable list surface spreads onto its entry (see the module doc).
-export type { CodeBlockProps } from './components/code-block';
-export { CodeBlock } from './components/code-block';
-export type {
-  DateRangePickerProps,
-  DateRangePreset,
-  DateRangeValue,
-} from './components/date-range-picker';
-export {
-  DateRangePicker,
-  DEFAULT_DATE_RANGE_PRESETS,
-  formatRangeLabel,
-  normalizeCustomRange,
-} from './components/date-range-picker';
-export { ExternalLinkButton, isSafeHttpUrl } from './components/external-link';
-export type { FleetReportProps } from './components/fleet-report';
-export { FleetReport } from './components/fleet-report';
-export type {
-  Folder,
-  FolderBreadcrumbProps,
-  FolderPickerProps,
-  FolderRowProps,
-} from './components/folder-nav';
-export {
-  childFolders,
-  FolderBreadcrumb,
-  folderPathTo,
-  FolderPicker,
-  FolderRow,
-} from './components/folder-nav';
-export type {
-  HolderHref,
-  HolderListProps,
-  HolderPreviewProps,
-  HolderPreviewState,
-} from './components/holder-list';
-export { HolderList, HolderPreview, previewHolders, useHolderHref } from './components/holder-list';
-export type { HeadingLevel, MarkdownBlock, MarkdownProps } from './components/markdown';
-export { Markdown, parseMarkdown } from './components/markdown';
-export type { OpenTargetOptions, OpenTargetProps } from './components/open-target';
-export { openTargetProps } from './components/open-target';
-export type { RecycleRollSectionProps } from './components/recycle-roll';
-export { RecycleRollSection } from './components/recycle-roll';
-export type {
-  MediaDocumentProps,
-  MediaImageProps,
-  MediaPlayerProps,
-  ServedMediaGrammar,
-} from './components/served-media';
-export {
-  isRenderableMediaSrc,
-  isServedMediaUrl,
-  MediaDocument,
-  MediaImage,
-  MediaPlayer,
-  resolveMediaSrc,
-} from './components/served-media';
-export type { StepperProps, StepperStatus, StepperStep } from './components/stepper';
-export { Stepper } from './components/stepper';
-// The marketplace install UI; its directory index lists the published names.
-export * from './marketplace-install';
-// The URL half of the link-safety pair: `isSafeHttpUrl` answers yes/no, this one
-// hands back the parsed URL, so a caller that needs the URL does not re-parse it.
-export type { AgentListQuery, AgentPickerProps } from './components/agent-picker';
-export { AgentPicker } from './components/agent-picker';
-export type { ChannelListQuery, ChannelPickerProps } from './components/channel-picker';
-export { channelIdentityHint, ChannelPicker } from './components/channel-picker';
-export type { CopyFieldProps } from './components/copy-field';
-export { CopyField } from './components/copy-field';
-export type { ExecutionKeyPickerProps, ExecutionKeyQuery } from './components/execution-key-picker';
-export {
-  canHoldExecutionKey,
-  ExecutionKeyPicker,
-  isExecutionKeyListEmpty,
-} from './components/execution-key-picker';
-export type { ExtensionComboBuilderProps } from './components/extension-combo-builder';
-export { ExtensionComboBuilder } from './components/extension-combo-builder';
-export type { ExtensionKindGroup } from './components/extension-grouping';
-export { groupByKind } from './components/extension-grouping';
-export type { ExtensionPickerProps } from './components/extension-picker';
-export { ExtensionPicker } from './components/extension-picker';
-export type { ExternalLinkButtonProps } from './components/external-link';
-export { safeHttpUrl } from './components/primitives';
-export type { RevealInputProps } from './components/reveal-input';
-export { RevealInput } from './components/reveal-input';
-export type { SubjectSectionProps, SubjectTargetOption } from './components/subject-section';
-export {
-  buildSubject,
-  SUBJECT_INCOMPLETE_MESSAGE,
-  SubjectSection,
-  toSubjectTargetOptions,
-  useSubjectFields,
-} from './components/subject-section';
 export type { TokenName } from './components/tokens';
 export { TOKEN_NAMES } from './components/tokens';
 export type { ToolListQuery, ToolPickerProps } from './components/tool-picker';
 export { BADGES_NOTE, ToolPicker } from './components/tool-picker';
+export type { TooltipProps } from './components/tooltip';
+export { Tooltip } from './components/tooltip';
 export type {
   VersionHistoryEntry,
   VersionHistoryPanelProps,
 } from './components/version-history-panel';
 export { VersionHistoryPanel } from './components/version-history-panel';
+export type { ViewMode, ViewToggleProps } from './components/view-toggle';
+export { useViewMode, ViewToggle } from './components/view-toggle';
 
+// -- Whole-module re-exports (each module's own index lists its published names) --
+// The marketplace install UI and the tool-organization folder tree.
+export * from './marketplace-install';
+export * from './tool-organization';
 // -- Iconography (the only sanctioned marks; Unicode glyphs are banned) -------
 export type { IconComponent, IconProps } from './components/icons';
 export {
@@ -472,6 +465,7 @@ export type {
   SchemaFormProps,
   SecretRef,
   SecretRefFieldProps,
+  UseTemplatedTextCatalog,
 } from './schema-form';
 export {
   dateRangePairs,
@@ -485,15 +479,25 @@ export {
   ExpressionFieldContext,
   fieldDrawingOrder,
   isFieldVisible,
+  NoFiniteValueError,
   RecordEntryRendererContext,
   resolveRef,
   SchemaForm,
   SecretRefField,
+  // The stored-template source for schema-built templated-text fields: a host
+  // mounts a hook here that returns the template catalog, so those fields offer
+  // stored templates beside inline content.
+  TemplatedTextCatalogContext,
   validateAgainstSchema,
 } from './schema-form';
 
 // -- Schema-editor (validated JSON-Schema authoring control) -----------------
-export type { SchemaEditorChange, SchemaEditorProps, SchemaLintResult } from './schema-editor';
+export type {
+  SchemaEditorChange,
+  SchemaEditorDraft,
+  SchemaEditorProps,
+  SchemaLintResult,
+} from './schema-editor';
 export { lintSchemaText, SchemaEditor } from './schema-editor';
 
 // -- State-binding editor (the one binding shape every door authors, plugin doors included) --

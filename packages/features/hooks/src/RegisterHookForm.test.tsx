@@ -5,6 +5,7 @@
  * edit-dialog Cancel/close contract, and the honest "list unavailable" fallback.
  */
 import { ApiError } from '@tai42/api-client';
+import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -18,6 +19,7 @@ import {
   hook,
   keySessionProjection,
   openSelect,
+  pickTool,
   renderWithProviders,
   type StubApiClient,
 } from './test-utils';
@@ -68,7 +70,7 @@ describe('RegisterHookForm — overwrite notice (create)', () => {
 
     await user.type(screen.getByLabelText('Name'), 'greet');
     await user.type(screen.getByLabelText('Topic'), 'events.created');
-    await user.type(screen.getByLabelText('Tool'), 'notify');
+    await pickTool(user, 'notify');
     await pickExecutionKey(user);
     await user.click(screen.getByRole('button', { name: 'Register' }));
 
@@ -77,15 +79,18 @@ describe('RegisterHookForm — overwrite notice (create)', () => {
     });
   });
 
-  it('attaches a subject built from the optional Subject group', async () => {
+  it('attaches a subject built from the optional Subject group, its target searched', async () => {
     const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'greet' });
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       listConversationRoutes: vi.fn().mockResolvedValue({
-        items: [{ target_kind: 'agent', target_name: 'assistant' }],
-        total: 1,
+        items: [
+          { target_kind: 'agent', target_name: 'assistant' },
+          { target_kind: 'tool', target_name: 'relay' },
+        ],
+        total: 2,
       }),
       registerHook,
     };
@@ -93,13 +98,15 @@ describe('RegisterHookForm — overwrite notice (create)', () => {
 
     await user.type(await screen.findByLabelText('Name'), 'greet');
     await user.type(screen.getByLabelText('Topic'), 'events.created');
-    await user.type(screen.getByLabelText('Tool'), 'notify');
+    await pickTool(user, 'notify');
     await pickExecutionKey(user);
 
     // Expand the Subject group and fill it.
     await user.click(screen.getByText('Subject (optional)'));
     await user.click(await screen.findByLabelText('Target'));
-    await user.click(await screen.findByRole('option', { name: 'agent · assistant' }));
+    await user.type(screen.getByRole('combobox', { name: 'Search targets' }), 'ASSIST');
+    expect(screen.queryByRole('option', { name: 'tool · relay' })).toBeNull();
+    await user.click(screen.getByRole('option', { name: 'agent · assistant' }));
     await user.type(screen.getByLabelText('Subject kind'), 'person');
     await user.type(screen.getByLabelText('Key expression'), '.actor.id');
 
@@ -114,6 +121,53 @@ describe('RegisterHookForm — overwrite notice (create)', () => {
         kind: 'person',
         key_expr: { content: '.actor.id' },
       },
+    });
+  });
+});
+
+describe('RegisterHookForm — tool picker', () => {
+  it('offers the registered tools by display name and registers the raw name', async () => {
+    const user = userEvent.setup({ delay: null });
+    const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'greet' });
+    const client: StubApiClient = {
+      listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
+      listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      registerHook,
+    };
+    renderWithProviders(
+      <StaticToolDisplayNamesProvider names={{ notify: 'Send Notice' }}>
+        <RegisterHookForm />
+      </StaticToolDisplayNamesProvider>,
+      { client, projection: accountSessionProjection() },
+    );
+
+    await user.type(await screen.findByLabelText('Name'), 'greet');
+    await user.type(screen.getByLabelText('Topic'), 'events.created');
+    await user.click(await screen.findByRole('combobox', { name: 'Tool' }));
+    await user.type(screen.getByRole('combobox', { name: 'Search tools' }), 'notice');
+    await user.click(screen.getByRole('option', { name: 'Send Notice (notify)' }));
+    await pickExecutionKey(user);
+    await user.click(screen.getByRole('button', { name: 'Register' }));
+
+    await waitFor(() => {
+      expect(registerHook).toHaveBeenCalledWith(expect.objectContaining({ tool: 'notify' }));
+    });
+  });
+
+  it('flags a stored tool the deployment no longer lists', async () => {
+    const client: StubApiClient = {
+      listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
+      listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    };
+    renderWithProviders(
+      <RegisterHookForm initial={hook({ name: 'old', tool: 'gone.tool' })} onClose={vi.fn()} />,
+      { client, projection: accountSessionProjection() },
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Tool' })).toHaveTextContent(
+        'gone.tool (not registered)',
+      );
     });
   });
 });
@@ -145,7 +199,11 @@ describe('RegisterHookForm — edit mode', () => {
 
     expect(screen.getByLabelText('Name')).toHaveValue('notify-event');
     expect(screen.getByLabelText('Topic')).toHaveValue('events.created');
-    expect(screen.getByLabelText('Tool')).toHaveValue('slack.post_message');
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Tool' })).toHaveTextContent(
+        'slack.post_message',
+      );
+    });
     expect(screen.getByLabelText('Tool kwargs (JSON)')).toHaveValue('{\n  "channel": "ops"\n}');
 
     // Save stays gated until the execution-key list resolves (an empty list would
@@ -237,7 +295,7 @@ describe('RegisterHookForm — jq condition and door-contract expression fields'
 
       await user.type(screen.getByLabelText('Name'), 'greet');
       await user.type(screen.getByLabelText('Topic'), 'events.created');
-      await user.type(screen.getByLabelText('Tool'), 'notify');
+      await pickTool(user, 'notify');
       await openSelect(user, 'Execution key');
       await user.click(await screen.findByRole('option', { name: /svc-events/ }));
       await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.amount > 100');
@@ -299,7 +357,7 @@ describe('RegisterHookForm — charset rule', () => {
 
     await user.type(screen.getByLabelText('Name'), 'bad/name');
     await user.type(screen.getByLabelText('Topic'), 'events.created');
-    await user.type(screen.getByLabelText('Tool'), 'notify');
+    await pickTool(user, 'notify');
     await pickExecutionKey(user);
     await user.click(screen.getByRole('button', { name: 'Register' }));
 
@@ -326,7 +384,7 @@ describe('RegisterHookForm — state binding source resolution', () => {
       getToolSchema,
     };
     renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
-    await user.type(screen.getByLabelText('Tool'), 'notify');
+    await pickTool(user, 'notify');
     await waitFor(() => {
       expect(getToolSchema.mock.calls.some((call) => call[0] === 'notify')).toBe(true);
     });
@@ -443,7 +501,7 @@ describe('RegisterHookForm — execution-key binding', () => {
   ): Promise<void> {
     await user.type(await screen.findByLabelText('Name'), name);
     await user.type(screen.getByLabelText('Topic'), 'events.created');
-    await user.type(screen.getByLabelText('Tool'), 'notify');
+    await pickTool(user, 'notify');
   }
 
   function keyClient(listTokensPayload: StubApiClient['listTokensPayload']) {
@@ -470,6 +528,28 @@ describe('RegisterHookForm — execution-key binding', () => {
     });
     expect(registerHook.mock.calls[0]?.[0]).toMatchObject({ execution_key: '__no_auth__' });
     expect(client.listTokensPayload).not.toHaveBeenCalled();
+  });
+
+  it('registers with a typed tool name when the session may not list tools', async () => {
+    const user = userEvent.setup({ delay: null });
+    const { client, registerHook } = keyClient(vi.fn().mockResolvedValue([apiKey()]));
+    const refusedTools = vi.fn(() => Promise.reject(new ApiError('forbidden', 403)));
+    renderWithProviders(<RegisterHookForm />, {
+      client: { ...client, listTools: refusedTools },
+      projection: gateOffProjection(),
+    });
+
+    await user.type(await screen.findByLabelText('Name'), 'greet');
+    await user.type(screen.getByLabelText('Topic'), 'events.created');
+    const tool = await screen.findByRole('textbox', { name: 'Tool' });
+    expect(tool).toHaveAccessibleDescription(/cannot list tools, so type the tool's exact name/);
+    await user.type(tool, 'notify');
+    await clickWhenInteractable(user, screen.getByRole('button', { name: 'Register' }));
+
+    await waitFor(() => {
+      expect(registerHook).toHaveBeenCalledOnce();
+    });
+    expect(registerHook.mock.calls[0]?.[0]).toMatchObject({ tool: 'notify' });
   });
 
   it('access control off: an edit keeps the stored key; a taken name still warns', async () => {

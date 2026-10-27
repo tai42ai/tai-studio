@@ -1,16 +1,22 @@
 /**
  * Which variant of a union a given value currently inhabits. Discriminated
- * unions read the tag property directly; plain unions score each object variant
- * by how many of its required properties the value carries (a best-effort match
- * when Pydantic emitted no discriminator). Returns `-1` when no variant is
- * active (an unset/`null` value, or nothing matches).
+ * unions read the tag property directly; plain unions score each variant that can
+ * hold an object by how many of its required properties the value carries (a
+ * best-effort match when Pydantic emitted no discriminator). Returns `-1` when no
+ * variant is active (an unset/`null` value, or nothing matches).
  */
 import type { UnionVariant } from './field-model';
-import { resolveRef } from './resolve';
+import { resolveRef, typeList } from './resolve';
 import type { JsonSchema } from './types';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Whether a resolved schema can hold an object: it is typed `object`, or untyped. */
+function holdsObject(schema: JsonSchema): boolean {
+  const types = typeList(schema);
+  return types.length === 0 || types.includes('object');
 }
 
 /** Whether a resolved scalar schema accepts the runtime type of `value`. */
@@ -64,6 +70,7 @@ export function activeVariantIndex(
   let bestScore = -1;
   variants.forEach((variant, index) => {
     const resolved = resolveRef(variant.schema, root);
+    if (!holdsObject(resolved)) return;
     const required = resolved.required ?? [];
     let score = 0;
     for (const key of required) {

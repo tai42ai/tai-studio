@@ -145,15 +145,14 @@ export MONOREPO_DIR
 export EXTRA_PLUGINS="${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres ${PLUGINS_DIR}/channel-web"
 # Accounts world: order the identity resolution (accounts claims tai-sess- sessions,
 # redis claims sk- keys), pin the setup-door token to a known value so the runner can
-# initialize the owner deterministically through POST /api/setup, and tell boot.sh to
-# apply the accounts schema (the accounts tables live in the `default` named database
-# boot.sh configures via TAI_DATABASE_DEFAULT_PG_*, see boot.sh). Setup mints the owner's
+# initialize the owner deterministically through POST /api/setup. boot.sh migrates the
+# installed accounts plugin's chain with the rest (its tables live in the `default` named
+# database boot.sh configures via TAI_DATABASE_DEFAULT_PG_*). Setup mints the owner's
 # first key through the redis provider (an sk- key that authenticates every signed-in
 # shot) and attaches the owner's password login through the accounts provider, which also
 # powers the password-login + Members surfaces.
 export ACCESS_CONTROL_AUTH_PROVIDERS='["accounts-postgres", "redis"]'
 export TAI_SETUP_TOKEN="docs-demo-setup-token"
-export APPLY_ACCOUNTS_DDL=1
 # The accounts plugin's login throttle keeps its failure counters in Redis, and every
 # password login fails when no connection is configured. Point it at boot.sh's compose Redis
 # on its own db (8), apart from the stores boot.sh places on db 0-7.
