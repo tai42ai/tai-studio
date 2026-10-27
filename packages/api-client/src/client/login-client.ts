@@ -148,7 +148,8 @@ export function logoutClient(t: Transport) {
     // session server-side before the shell clears local state. A plain `sk-` key
     // has nothing to revoke and answers 404 (surfaced as an `ApiError`, quiet at
     // the call site); a 5xx/network failure is a real revoke failure the shell
-    // surfaces loudly.
+    // surfaces loudly. The result's `end_session_url` is where the shell sends the
+    // browser after clearing local auth.
     logout: () => req(apiRoutes.post_api_auth_logout.path, s.logoutResult, { method: 'POST' }),
   };
 }

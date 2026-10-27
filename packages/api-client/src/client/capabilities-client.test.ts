@@ -3,8 +3,8 @@
  * `getMe` (the `/api/auth/me` projection round-trip + loud drift), the mint-flow
  * `createClaimLink`, the public `claimLogin` claim-token exchange (its 404 →
  * inline `ApiLoginFailedError` mapping, and the pin that it shares the exact
- * `loginResult` wire shape), and `logout` (the `{ revoked }` result, and that a
- * successful logout body never throws `ApiSchemaError`). A fake `fetch` records
+ * `loginResult` wire shape), and `logout` (the `{ revoked, end_session_url }`
+ * result, and that a successful logout body never throws `ApiSchemaError`). A fake `fetch` records
  * each request and returns a canned `{ data }` envelope.
  */
 import { describe, expect, it, vi } from 'vitest';
@@ -197,19 +197,34 @@ describe('claimLogin client transport', () => {
 });
 
 describe('logout client transport', () => {
-  it('POSTs /api/auth/logout and parses { revoked: true }', async () => {
-    const { client, captured } = harness(() => jsonResponse({ data: { revoked: true } }));
+  it('POSTs /api/auth/logout and parses { revoked: true, end_session_url: null }', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { revoked: true, end_session_url: null } }),
+    );
     const out = await client.logout();
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/auth/logout');
-    expect(out).toEqual({ revoked: true });
+    expect(out).toEqual({ revoked: true, end_session_url: null });
+  });
+
+  it('parses the end-session URL of a session that came through an identity provider', async () => {
+    const url = 'https://issuer.example/logout?id_token_hint=abc&client_id=studio';
+    const { client } = harness(() =>
+      jsonResponse({ data: { revoked: true, end_session_url: url } }),
+    );
+    await expect(client.logout()).resolves.toEqual({ revoked: true, end_session_url: url });
+  });
+
+  it('reads an omitted end_session_url as null', async () => {
+    const { client } = harness(() => jsonResponse({ data: { revoked: true } }));
+    await expect(client.logout()).resolves.toEqual({ revoked: true, end_session_url: null });
   });
 
   it('does NOT throw on a successful logout carrying an additive field (non-strict)', async () => {
     const { client } = harness(() =>
-      jsonResponse({ data: { revoked: true, provider: 'accounts' } }),
+      jsonResponse({ data: { revoked: true, end_session_url: null, provider: 'accounts' } }),
     );
-    await expect(client.logout()).resolves.toEqual({ revoked: true });
+    await expect(client.logout()).resolves.toEqual({ revoked: true, end_session_url: null });
   });
 
   it('surfaces the expected 404 (no revocable session) as an ApiError', async () => {
@@ -221,6 +236,13 @@ describe('logout client transport', () => {
 
   it('THROWS ApiSchemaError on drift (revoked not a boolean)', async () => {
     const { client } = harness(() => jsonResponse({ data: { revoked: 'yes' } }));
+    await expect(client.logout()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('THROWS ApiSchemaError on drift (end_session_url not a string)', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: { revoked: true, end_session_url: 42 } }),
+    );
     await expect(client.logout()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 });

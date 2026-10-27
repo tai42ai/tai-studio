@@ -565,7 +565,7 @@ export type SetupLogin = z.infer<typeof setupLogin>;
 export const loginMethodsListing = z.object({ "claim_fragment_key": z.string(), "methods": z.array(z.discriminatedUnion("shape", [formMethod, buttonMethod])), "needs_setup": z.boolean(), "setup_login": setupLogin.nullable().default(null) });
 export type LoginMethodsListing = z.infer<typeof loginMethodsListing>;
 
-export const logoutResult = z.object({ "revoked": z.boolean() });
+export const logoutResult = z.object({ "end_session_url": z.string().nullable().default(null), "revoked": z.boolean() });
 export type LogoutResult = z.infer<typeof logoutResult>;
 
 export const mCPConfig = z.object({ "args": z.array(z.string()).default([]), "command": z.string().nullable().default(null), "env": z.record(z.string(), z.string()).default({}), "headers": z.record(z.string(), z.string()).default({}), "type": z.string().nullable().default(null), "uds": z.string().nullable().default(null), "url": z.string().nullable().default(null) }).strict();
