@@ -1221,6 +1221,7 @@ const ENV_SAVE_STORED = {
     TAI_TOOL_RUNS_SHUTDOWN_DRAIN_SECONDS: '90',
   },
   secret_keys: [],
+  deployment_keys: [],
 };
 
 /** The forced response of an Environment-tab save that rolled a worker recycle (the
