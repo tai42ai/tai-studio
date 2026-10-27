@@ -6,7 +6,7 @@
  */
 import type { ApiClient } from '@tai42/api-client';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
@@ -87,6 +87,33 @@ describe('sign-out', () => {
     expect(logout.calls()).toBe(1);
     // Local credential cleared: the remembered session key is gone.
     expect(globalThis.sessionStorage.getItem('tai-studio.apiKey')).toBeNull();
+  });
+
+  it('the landing sign-out escape (access failed to load) revokes server-side too', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const logout = logoutHandler(200, { data: { revoked: true } });
+    server.use(
+      http.get('*/api/auth/me', () => HttpResponse.json({ error: 'boom' }, { status: 500 })),
+      logout.handler,
+      okPlugins,
+      okChannels,
+    );
+    const user = userEvent.setup();
+    const { studio } = renderStudio({ initialPath: '/', sessionKey: 'k-cap' });
+
+    const message = await screen.findByText(
+      /Your access could not be loaded\. Retry to reload, or sign out/,
+    );
+    const landing = message.closest('.tai-stack');
+    if (!(landing instanceof HTMLElement)) throw new Error('landing error stack not found');
+    await user.click(within(landing).getByRole('button', { name: 'Sign out' }));
+
+    await waitFor(() => {
+      expect(studio.router.state.location.pathname).toBe('/login');
+    });
+    expect(logout.calls()).toBe(1);
+    expect(globalThis.sessionStorage.getItem('tai-studio.apiKey')).toBeNull();
+    spy.mockRestore();
   });
 
   it('stays QUIET on the expected 404 (a plain key has no session) and still clears', async () => {
