@@ -35,12 +35,13 @@ export type {
   ExpressionFieldProps,
   ExpressionInputKey,
   ExpressionInputShape,
+  UseTemplatedTextCatalog,
 } from './context';
 export { RecordEntryRendererContext } from './context';
-export { ExpressionFieldContext } from './context';
+export { ExpressionFieldContext, TemplatedTextCatalogContext } from './context';
 export type { DateRangePair } from './date-range-field';
 export { dateRangePairs, fieldDrawingOrder } from './date-range-field';
-export { defaultValueForSchema } from './default-value';
+export { defaultValueForSchema, NoFiniteValueError } from './default-value';
 export { resolveRef } from './resolve';
 export type { CompletionProvider, SchemaFormProps } from './SchemaForm';
 export { SchemaForm } from './SchemaForm';

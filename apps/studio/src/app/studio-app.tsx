@@ -19,6 +19,7 @@ import {
   type NavigationContextValue,
   NavigationProvider,
   SystemKindsProvider,
+  TemplatedTextCatalogContext,
   ThemeProvider,
   ToolDisplayNamesProvider,
   UnauthorizedProvider,
@@ -31,6 +32,7 @@ import { type ReactNode, useEffect } from 'react';
 import { AppErrorBoundary } from './error-boundary';
 import { JqPrimitivesProvider } from './jq-primitives';
 import type { AppRouter } from './router';
+import { useShellTemplatedTextCatalog } from './templated-text-catalog';
 
 /** The already-wired runtime pieces the App tree renders around. */
 export interface StudioAppConfig {
@@ -86,9 +88,14 @@ export function createStudioApp(config: StudioAppConfig): () => ReactNode {
               all (a bundled consumer would otherwise EMIT the editor, its worker,
               and its wasm whether or not it authors expressions), so a
               schema's `x-tai42-expression` field renders the visual editor here
-              because THIS host hands it the component. */}
+              because THIS host hands it the component. The stored-template
+              catalog rides beside it, so a schema's templated-text field offers
+              the deployment's stored templates; a form without such a field never
+              reads it. */}
           <ExpressionFieldContext.Provider value={JqField}>
-            <RouterProvider router={router} />
+            <TemplatedTextCatalogContext.Provider value={useShellTemplatedTextCatalog}>
+              <RouterProvider router={router} />
+            </TemplatedTextCatalogContext.Provider>
           </ExpressionFieldContext.Provider>
         </JqPrimitivesProvider>
       </NavigationProvider>

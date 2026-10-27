@@ -17866,6 +17866,11 @@ export function NavigationProvider(input: {
 }): ReactNode;
 
 // @public
+export class NoFiniteValueError extends Error {
+    constructor();
+}
+
+// @public
 export function normalizeCustomRange(fromInput: string, toInput: string, now: Date): {
     readonly from: string;
     readonly to: string;
@@ -29790,6 +29795,9 @@ export interface TemplatedTextCatalog {
 // @public (undocumented)
 export function templatedTextCatalog(storage: StoragePresenceQueryLike, templates: TemplateNamesQueryLike): TemplatedTextCatalog;
 
+// @public
+export const TemplatedTextCatalogContext: Context<UseTemplatedTextCatalog>;
+
 // @public (undocumented)
 export function TemplatedTextField(input: TemplatedTextFieldProps): ReactNode;
 
@@ -30785,6 +30793,9 @@ export function useSubjectFields(): {
 
 // @public
 export function useSystemKinds(): SystemKindsState;
+
+// @public
+export type UseTemplatedTextCatalog = () => TemplatedTextCatalog | undefined;
 
 // @public (undocumented)
 export function useTheme(): ThemeState;

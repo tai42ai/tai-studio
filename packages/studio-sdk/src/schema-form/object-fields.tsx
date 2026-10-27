@@ -1,12 +1,14 @@
 /**
  * Renders the property fields of an object schema, one {@link FieldNode} per
- * property. Each child's edits are folded back into an immutable copy of the
+ * property, and records the object's `shape` as expanded for every field below it
+ * (see {@link ExpandedShapesContext}). Each child's edits are folded back into an immutable copy of the
  * object value; an optional `skip` omits a property (used for a union's
  * discriminator tag, which the variant picker owns).
  */
-import type { ReactNode } from 'react';
+import { type ReactNode, useContext, useMemo } from 'react';
 
 import { ownValue } from '../guards';
+import { ExpandedShapesContext } from './context';
 import { DateRangeField, dateRangePairs, fieldDrawingOrder } from './date-range-field';
 import { FieldNode } from './field-node';
 import { useKeyedCallbacks } from './keyed-callbacks';
@@ -19,6 +21,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 export function ObjectFields({
   properties,
+  shape,
   requiredKeys,
   root,
   value,
@@ -31,6 +34,8 @@ export function ObjectFields({
   fieldWording,
 }: {
   properties: readonly (readonly [string, JsonSchema])[];
+  /** The object model's `shape`, recorded as expanded for the fields below. */
+  shape: object;
   requiredKeys: ReadonlySet<string>;
   root: JsonSchema;
   value: unknown;
@@ -50,6 +55,8 @@ export function ObjectFields({
   fieldWording?: Readonly<Record<string, FieldWords>>;
 }): ReactNode {
   const obj = isPlainObject(value) ? value : {};
+  const above = useContext(ExpandedShapesContext);
+  const expanded = useMemo(() => new Set(above).add(shape), [above, shape]);
   const changeFor = useKeyedCallbacks<string, unknown>(
     (name, next) => {
       onChange(setKey(obj, name, next));
@@ -96,7 +103,7 @@ export function ObjectFields({
   const timeOf = (name: string | undefined, propSchema: JsonSchema | undefined): ReactNode =>
     name === undefined || propSchema === undefined ? null : fieldOf(name, propSchema);
   return (
-    <>
+    <ExpandedShapesContext.Provider value={expanded}>
       {drawn.map((name) => {
         const propSchema = schemaByName.get(name);
         if (propSchema === undefined) return null;
@@ -127,7 +134,7 @@ export function ObjectFields({
         }
         return fieldOf(name, propSchema);
       })}
-    </>
+    </ExpandedShapesContext.Provider>
   );
 }
 

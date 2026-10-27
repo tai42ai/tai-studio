@@ -51,8 +51,10 @@ resolves it through the served import map) imports the three stylesheets itself.
 
 ## Expression fields
 
-A string field carrying the `x-tai42-expression` annotation authors through a
-visual expression editor — but **only when the host injects one**. The SDK owns
+A string field carrying the `x-tai42-expression` annotation, or a templated-text
+field (a property whose type carries `x-tai42-templated-text`) carrying it at the
+property site, authors through a visual expression editor — but **only when the
+host injects one**. The SDK owns
 the injection point and nothing else:
 
 - `ExpressionFieldContext` — the ambient door for a whole tree.
@@ -61,8 +63,46 @@ the injection point and nothing else:
   the door contract, which MIRRORS jq-studio's field props without importing
   them.
 
-With no door, an annotated field renders the plain string input, and the SDK's
-module graph reaches no jq at all — no editor, no Web Worker, no wasm.
+With no door, an annotated field renders the plain string input (a templated-text
+field, its plain inline text), and the SDK's module graph reaches no jq at all — no
+editor, no Web Worker, no wasm.
+
+## Templated-text fields
+
+A property typed as the platform's templated text (its schema carries
+`x-tai42-templated-text`) renders as the shared `TemplatedTextField`: inline content
+or a stored template id, plus the render parameters. The stored-template choices
+come from the host, which mounts a catalog hook once above its tree:
+
+- `TemplatedTextCatalogContext` — the ambient source; its value is a stable hook
+  (`UseTemplatedTextCatalog`) returning a `TemplatedTextCatalog`, called only when a
+  templated-text field renders.
+
+```tsx
+import { useQuery } from '@tanstack/react-query';
+import { TemplatedTextCatalogContext, templatedTextCatalog, useApi } from '@tai42/studio-sdk';
+
+function useCatalog() {
+  const api = useApi();
+  const storage = useQuery({
+    queryKey: ['storage', 'info'],
+    queryFn: ({ signal }) => api.getStorageInfo(signal),
+  });
+  const templates = useQuery({
+    queryKey: ['templates', 'names'],
+    queryFn: ({ signal }) => api.listTemplates(signal),
+    enabled: storage.data?.present === true,
+  });
+  return templatedTextCatalog(storage, templates);
+}
+
+<TemplatedTextCatalogContext.Provider value={useCatalog}>
+  {children}
+</TemplatedTextCatalogContext.Provider>;
+```
+
+With no catalog, the stored source offers no templates and inline content is
+authored as usual.
 
 The door itself is `JqField` from
 [`@tai42/jq-studio`](https://www.npmjs.com/package/@tai42/jq-studio), imported

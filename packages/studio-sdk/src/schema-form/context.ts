@@ -1,12 +1,14 @@
 /**
  * Ambient React contexts for the schema-form tree: the optional argument
  * completion provider, the default media-upload byte cap, the record-entry value
- * renderer, and the expression-field door. A field deep in the tree reads these
+ * renderer, the expression-field door, and the object shapes being drawn above a
+ * field. A field deep in the tree reads these
  * here rather than every intermediate node drilling the prop.
  */
 import type { ComponentType, ReactNode } from 'react';
 import { createContext } from 'react';
 
+import type { TemplatedTextCatalog } from '../state-binding/types';
 import { DEFAULT_MAX_UPLOAD_BYTES } from './media';
 import type { CompletionProvider } from './SchemaForm';
 import type { JsonSchema } from './types';
@@ -14,6 +16,14 @@ import type { JsonSchema } from './types';
 // Ambient completion provider for the whole form. A string field deep in the
 // tree reads it here rather than every intermediate node drilling the prop.
 export const CompletionProviderContext = createContext<CompletionProvider | undefined>(undefined);
+
+/**
+ * The object shapes (an object model's `shape`) being drawn by the fields above
+ * this one. An object field whose shape is already here is a definition nested
+ * inside itself; it draws its fields only when its value holds that level, so a
+ * self-referencing schema draws to the depth of its data rather than forever.
+ */
+export const ExpandedShapesContext = createContext<ReadonlySet<object>>(new Set());
 
 // Ambient default upload cap for the whole form; a media field reads it here so
 // intermediate object/array nodes never drill the prop.
@@ -147,3 +157,25 @@ export type ExpressionFieldComponent = ComponentType<ExpressionFieldProps>;
 export const ExpressionFieldContext = createContext<ExpressionFieldComponent | undefined>(
   undefined,
 );
+
+/**
+ * The hook a host supplies so a form's templated-text fields can offer stored
+ * templates: it returns the catalog (the template ids plus the storage-presence and
+ * fetch state) the field's stored-template picker reads. The form holds no data edge,
+ * so the host owns the fetch; a field calls the hook only when it renders, so a form
+ * without a templated-text field never fetches the catalog.
+ *
+ * It is a HOOK, called on every render of a templated-text field, so the injected
+ * reference must be stable (a module-level function).
+ */
+export type UseTemplatedTextCatalog = () => TemplatedTextCatalog | undefined;
+
+const useNoTemplatedTextCatalog: UseTemplatedTextCatalog = () => undefined;
+
+/**
+ * The ambient stored-template source for the whole form. Absent (the default), a
+ * templated-text field gets no catalog, as every `TemplatedTextField` given none:
+ * the stored source offers no templates and inline content is authored as usual.
+ */
+export const TemplatedTextCatalogContext =
+  createContext<UseTemplatedTextCatalog>(useNoTemplatedTextCatalog);

@@ -70,10 +70,11 @@ export interface ExpressionAnnotationVariable {
 }
 
 /**
- * The `x-tai42-expression` annotation on a string schema: the server declares
- * that the field's value is authored in a pipeline expression language (only jq
- * today) and optionally describes what `.` is for that expression. The renderer
- * uses it to open the visual-editor door instead of a plain text box. The shape
+ * The `x-tai42-expression` annotation on a string or templated-text property: the
+ * server declares that the field's value is authored in a pipeline expression
+ * language (only jq today) and optionally describes what `.` is for that expression.
+ * The renderer uses it to open the visual-editor door instead of a plain text box
+ * (on a templated-text field, as its inline editor). The shape
  * mirrors jq-studio's input-shape descriptor WITHOUT importing it — classification
  * stays a pure schema concern; the renderer maps this onto a jq field declaration.
  */
@@ -165,6 +166,13 @@ export type FieldModel =
       readonly kind: 'object';
       readonly properties: readonly (readonly [string, JsonSchema])[];
       readonly required: ReadonlySet<string>;
+      /**
+       * The schema's own `properties` map, by identity. Every classification of one
+       * definition — through a `$ref`, a null-union or single-`allOf` wrapper, or an
+       * annotated property site — carries this same map, so a walker recognises a
+       * definition nested inside itself (a self-referencing schema) by it.
+       */
+      readonly shape: Readonly<Record<string, JsonSchema>>;
     }
   | {
       // A string-keyed map typed by `additionalProperties` (no fixed
@@ -175,9 +183,24 @@ export type FieldModel =
       readonly values: JsonSchema;
     }
   | {
+      // A property typed as the platform's templated text (its schema carries
+      // `x-tai42-templated-text`): inline `content` or a stored template `id`, plus
+      // the render `kwargs`. The value is that object, authored as one field.
+      readonly kind: 'templated-text';
+      /** Present when the property's `x-tai42-expression` annotation declares its
+       *  inline content an expression: the inline editor is the expression door. */
+      readonly expression: ExpressionAnnotation | undefined;
+    }
+  | {
       readonly kind: 'union';
       readonly variants: readonly UnionVariant[];
       readonly discriminator: string | undefined;
+      /**
+       * The schema's own `anyOf`/`oneOf` member list, by identity: every
+       * classification of one union carries this same list, so a field can tell
+       * whether it still draws the union it drew before.
+       */
+      readonly members: readonly JsonSchema[];
     }
   | {
       // A shape with no structured editor to build — a property-less object, a

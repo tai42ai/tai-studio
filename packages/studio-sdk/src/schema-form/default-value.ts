@@ -12,8 +12,9 @@
  *    opted into.
  *
  * `skeletonValueForSchema` is the sibling entry for programmatic reseeds (a
- * union variant switch): same walk, but required scalars mint their type's
- * empty value so the committed seed validates against its own schema.
+ * union variant switch): same walk, but every required field with a known empty
+ * value is minted, so the committed seed has no missing required field. A minted
+ * empty value may still fail its own value check (see the sibling's docstring).
  */
 import { classifySchema } from './classify';
 import type { FieldModel } from './field-model';
@@ -37,22 +38,56 @@ function explicitDefault(
  * whole-tool-schema call).
  */
 export function defaultValueForSchema(schema: JsonSchema, root: JsonSchema = schema): unknown {
-  return seedValue(schema, root, false);
+  return finiteSeed(seedValue(schema, root, false, new Set()));
 }
 
 /**
  * A SELF-CONSISTENT skeleton for a schema — the seed a variant switch (or any
  * other programmatic reseed) commits as the field's new value. Where
  * {@link defaultValueForSchema} deliberately leaves a required scalar absent so
- * a fresh form flags it, a committed skeleton must validate against its own
- * schema, so here EVERY required field with a known empty value is minted:
- * required strings seed `''`, numbers `0`, booleans `false` — consistently with
- * the `[]` / `{}` / nested-object seeds the default path already mints. Kinds
- * with no empty value to name (enum, union, free-form JSON) stay absent either
- * way: inventing a choice would be a lie the user never made.
+ * a fresh form flags it, a committed skeleton carries no missing required field,
+ * so here EVERY required field with a known empty value is minted: required
+ * strings seed `''`, numbers `0`, booleans `false`, a templated text an empty
+ * inline source `{ content: '' }` — consistently with the `[]` / `{}` /
+ * nested-object seeds the default path already mints. A minted empty value is
+ * not promised to pass its own value check: an empty templated text fails it
+ * ("needs inline content or a stored template"), as does `''` under a
+ * `minLength` or a `pattern`, and validation reports that error like any
+ * other. Kinds with no empty value to name (enum,
+ * union, free-form JSON) stay absent either way: inventing a choice would be a
+ * lie the user never made.
  */
 export function skeletonValueForSchema(schema: JsonSchema, root: JsonSchema = schema): unknown {
-  return seedValue(schema, root, true);
+  return finiteSeed(seedValue(schema, root, true, new Set()));
+}
+
+/**
+ * The walk's answer when an object's required structure leads back into an object
+ * shape it is already inside with no `null` accepted anywhere on the way: that
+ * nesting never ends, so the object has no finite value.
+ */
+const NO_FINITE_VALUE: unique symbol = Symbol('no finite value');
+
+/**
+ * Thrown by {@link defaultValueForSchema} and {@link skeletonValueForSchema} when the
+ * schema admits no finite value: a chain of required properties refers back to its
+ * own definition with no `null` accepted on the way. A caller that seeds on a user
+ * action catches exactly this type to show the failure on its field; any other error
+ * is not a seeding outcome and propagates.
+ */
+export class NoFiniteValueError extends Error {
+  constructor() {
+    super(
+      'SchemaForm: the schema admits no finite value: its required properties refer back to their own definition with no null accepted on the way',
+    );
+    this.name = 'NoFiniteValueError';
+  }
+}
+
+/** The entry points' result: the seeded value, or {@link NoFiniteValueError} when none is finite. */
+function finiteSeed(seed: unknown): unknown {
+  if (seed === NO_FINITE_VALUE) throw new NoFiniteValueError();
+  return seed;
 }
 
 /**
@@ -60,16 +95,44 @@ export function skeletonValueForSchema(schema: JsonSchema, root: JsonSchema = sc
  * carries an explicit default. A required property recurses; an optional one is
  * materialized only when it declares a `default`, so its own required children
  * never raise errors on a field the user did not opt into.
+ *
+ * `expanding` holds the object shapes being seeded on the way down. Reaching one of
+ * them again (a self-referencing definition) answers {@link NO_FINITE_VALUE}, and
+ * so does an object with any required property that answers it. A `nullable` object
+ * turns that answer into `null`, the value that ends the nesting there. So the
+ * answer climbs to the nearest nullable object above the point where the cycle
+ * closes, and reaches the entry point only when no object on the way accepts
+ * `null`: then no finite value exists.
  */
 function seedObject(
   model: ModelOf<'object'>,
+  nullable: boolean,
   root: JsonSchema,
   mintScalars: boolean,
-): Record<string, unknown> {
+  expanding: ReadonlySet<object>,
+): unknown {
+  const seeded = seedProperties(model, root, mintScalars, expanding);
+  return seeded === NO_FINITE_VALUE && nullable ? null : seeded;
+}
+
+/**
+ * An object's own seed (see {@link seedObject}): its properties' seeds, or
+ * {@link NO_FINITE_VALUE} when its shape is already being seeded above or a required
+ * property has no finite value.
+ */
+function seedProperties(
+  model: ModelOf<'object'>,
+  root: JsonSchema,
+  mintScalars: boolean,
+  expanding: ReadonlySet<object>,
+): unknown {
+  if (expanding.has(model.shape)) return NO_FINITE_VALUE;
+  const inside = new Set(expanding).add(model.shape);
   const entries: [string, unknown][] = [];
   for (const [name, propSchema] of model.properties) {
     if (model.required.has(name)) {
-      const seeded = seedValue(propSchema, root, mintScalars);
+      const seeded = seedValue(propSchema, root, mintScalars, inside);
+      if (seeded === NO_FINITE_VALUE) return NO_FINITE_VALUE;
       if (seeded !== undefined) entries.push([name, seeded]);
       continue;
     }
@@ -101,9 +164,16 @@ function seedScalar(kind: 'string' | 'number' | 'boolean', mintScalars: boolean)
 /**
  * The shared seeding walk. `mintScalars` distinguishes the two entry points
  * above: `false` leaves value-less required scalars absent; `true` mints their
- * type's empty value.
+ * type's empty value. `expanding` holds the object shapes being seeded on the way
+ * down; a nullable object whose own seed has no finite value seeds `null` (see
+ * {@link seedObject}).
  */
-function seedValue(schema: JsonSchema, root: JsonSchema, mintScalars: boolean): unknown {
+function seedValue(
+  schema: JsonSchema,
+  root: JsonSchema,
+  mintScalars: boolean,
+  expanding: ReadonlySet<object>,
+): unknown {
   const classified = classifySchema(schema, root);
   const explicit = explicitDefault(schema, classified.schema);
   if (explicit.present) return explicit.value;
@@ -113,7 +183,7 @@ function seedValue(schema: JsonSchema, root: JsonSchema, mintScalars: boolean): 
     case 'const':
       return model.value;
     case 'object':
-      return seedObject(model, root, mintScalars);
+      return seedObject(model, classified.nullable, root, mintScalars, expanding);
     case 'array':
     case 'multiselect':
       return [];
@@ -123,6 +193,10 @@ function seedValue(schema: JsonSchema, root: JsonSchema, mintScalars: boolean): 
     case 'number':
     case 'boolean':
       return seedScalar(model.kind, mintScalars);
+    case 'templated-text':
+      // Inline is the templated text's own starting mode, so its empty value is an
+      // empty inline source; the default path leaves it absent like a scalar.
+      return mintScalars ? { content: '' } : undefined;
     case 'enum':
     case 'union':
     case 'json':

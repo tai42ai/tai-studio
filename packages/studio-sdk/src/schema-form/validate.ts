@@ -508,6 +508,31 @@ function validateRecord(
   }
 }
 
+/**
+ * A templated-text value: an object carrying exactly one non-empty source — inline
+ * `content` or a stored template `id` — and, when present, a `kwargs` object.
+ */
+function validateTemplatedText(value: unknown, path: string, ctx: ValidateCtx): void {
+  if (!isRecord(value)) {
+    shapeError(ctx, path, 'must be an object');
+    return;
+  }
+  const content = ownValue(value, 'content');
+  const id = ownValue(value, 'id');
+  const hasContent = typeof content === 'string';
+  const hasId = typeof id === 'string';
+  if (hasContent === hasId) {
+    shapeError(ctx, path, 'must set exactly one of inline content or a stored template id');
+    return;
+  }
+  if ((hasContent ? content : id) === '') {
+    shapeError(ctx, path, 'needs inline content or a stored template');
+    return;
+  }
+  const kwargs = ownValue(value, 'kwargs');
+  if (kwargs !== undefined && !isRecord(kwargs)) shapeError(ctx, path, 'kwargs must be an object');
+}
+
 function validateUnion(
   model: ModelOf<'union'>,
   value: unknown,
@@ -568,6 +593,9 @@ function dispatchKind(model: FieldModel, value: unknown, path: string, ctx: Vali
       return;
     case 'record':
       validateRecord(model, value, path, ctx);
+      return;
+    case 'templated-text':
+      validateTemplatedText(value, path, ctx);
       return;
     case 'union':
       validateUnion(model, value, path, ctx);

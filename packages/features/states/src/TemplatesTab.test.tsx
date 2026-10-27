@@ -132,6 +132,72 @@ describe('TemplatesTab', () => {
     });
   });
 
+  it('Attach template shows why a template whose parameters admit no finite value cannot be chosen', async () => {
+    const user = userEvent.setup({ delay: null });
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const loop = {
+      $defs: { R: { type: 'object', properties: { c: { $ref: '#/$defs/R' } }, required: ['c'] } },
+      type: 'object',
+      properties: { r: { $ref: '#/$defs/R' } },
+      required: ['r'],
+    };
+    renderWithProviders(<TemplatesTab state={detail()} />, {
+      client: client({
+        listStateTemplates: vi.fn().mockResolvedValue([templateDoc({ parameters: loop })]),
+      }),
+    });
+    const [attachBtn] = await screen.findAllByRole('button', { name: 'Attach template' });
+    if (attachBtn === undefined) throw new Error('no Attach template button');
+    await user.click(attachBtn);
+    const dialog = await screen.findByRole('dialog');
+    await clickWhenInteractable(user, within(dialog).getByLabelText('Template'));
+    await user.click(await screen.findByRole('option', { name: 'notes — A notes fragment' }));
+    expect(within(dialog).getByRole('alert')).toHaveTextContent(
+      "Template 'notes' cannot be attached: SchemaForm: the schema admits no finite value",
+    );
+    // The choice is refused, so nothing can be attached with it.
+    expect(within(dialog).getByRole('button', { name: 'Attach' })).toBeDisabled();
+    expect(logged).toHaveBeenCalledWith("Template 'notes' cannot be attached", expect.any(Error));
+    logged.mockRestore();
+  });
+
+  it('Attach template lets a seeding error other than no finite value propagate', async () => {
+    const user = userEvent.setup({ delay: null });
+    // The required `r` points at a definition the document lacks: seeding the
+    // parameters resolves it and throws.
+    const broken = {
+      type: 'object',
+      properties: { r: { $ref: '#/$defs/Missing' } },
+      required: ['r'],
+    };
+    renderWithProviders(<TemplatesTab state={detail()} />, {
+      client: client({
+        listStateTemplates: vi.fn().mockResolvedValue([templateDoc({ parameters: broken })]),
+      }),
+    });
+    const [attachBtn] = await screen.findAllByRole('button', { name: 'Attach template' });
+    if (attachBtn === undefined) throw new Error('no Attach template button');
+    await user.click(attachBtn);
+    const dialog = await screen.findByRole('dialog');
+    await clickWhenInteractable(user, within(dialog).getByLabelText('Template'));
+    const option = await screen.findByRole('option', { name: 'notes — A notes fragment' });
+    const uncaught: unknown[] = [];
+    const onError = (event: ErrorEvent): void => {
+      event.preventDefault();
+      uncaught.push(event.error);
+    };
+    window.addEventListener('error', onError);
+    try {
+      await user.click(option);
+    } finally {
+      window.removeEventListener('error', onError);
+    }
+    expect(uncaught).toEqual([new Error('SchemaForm: unresolvable $ref "#/$defs/Missing"')]);
+    // The throw leaves the option list open, so the dialog behind it is aria-hidden.
+    expect(within(dialog).queryByRole('alert', { hidden: true })).toBeNull();
+    expect(within(dialog).getByRole('button', { name: 'Attach', hidden: true })).toBeDisabled();
+  });
+
   it('Detach confirms and removes the attachment', async () => {
     const user = userEvent.setup({ delay: null });
     const detachStateTemplate = vi.fn().mockResolvedValue({ name: 'notes', deleted: true });

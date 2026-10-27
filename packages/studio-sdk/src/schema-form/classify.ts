@@ -18,7 +18,12 @@ import {
   variantLabel,
   variantTag,
 } from './resolve';
-import { expressionAnnotation, mediaUpload } from './string-annotations';
+import {
+  expressionAnnotation,
+  isTemplatedText,
+  mediaUpload,
+  withSiteExpression,
+} from './string-annotations';
 import type { FormControl, FormInputMode, JsonSchema } from './types';
 
 function firstString(...values: readonly unknown[]): string | undefined {
@@ -103,7 +108,8 @@ function classifyEnum(
   };
 }
 
-// anyOf/oneOf union normalization.
+// anyOf/oneOf union normalization. The wrapper is the property site, so its
+// expression annotation is carried onto every member before the members classify.
 function classifyUnion(
   resolved: JsonSchema,
   members: readonly JsonSchema[],
@@ -111,7 +117,9 @@ function classifyUnion(
   title: string | undefined,
   description: string | undefined,
 ): ClassifiedField {
-  const nonNull = members.filter((member) => !isNullSchema(resolveRef(member, root)));
+  const nonNull = members
+    .filter((member) => !isNullSchema(resolveRef(member, root)))
+    .map((member) => withSiteExpression(member, resolved));
   const nullable = nonNull.length !== members.length;
   const soleNonNull = nonNull[0];
   if (soleNonNull === undefined) {
@@ -135,7 +143,7 @@ function classifyUnion(
     return { label: variantLabel(member, index, tag, root), tag, schema: member };
   });
   return {
-    model: { kind: 'union', variants, discriminator },
+    model: { kind: 'union', variants, discriminator, members },
     nullable,
     schema: resolved,
     title,
@@ -157,16 +165,10 @@ function classifySoleUnionMember(
   // that land on the OUTER null-union wrapper of an OPTIONAL field would
   // otherwise be lost when delegating to the inner string member, silently
   // degrading an optional upload field to a plain text box. Re-detect them on
-  // the wrapper and attach to the inner string model. The expression
-  // annotation gets the same treatment for the same reason: an optional
-  // annotated field must keep its editor door.
+  // the wrapper and attach to the inner string model.
   const model =
     inner.model.kind === 'string'
-      ? {
-          ...inner.model,
-          media: inner.model.media ?? mediaUpload(resolved),
-          expression: inner.model.expression ?? expressionAnnotation(resolved),
-        }
+      ? { ...inner.model, media: inner.model.media ?? mediaUpload(resolved) }
       : inner.model;
   return {
     model,
@@ -373,7 +375,7 @@ function classifyObject(
   const properties: (readonly [string, JsonSchema])[] = Object.entries(resolved.properties);
   const required = new Set(resolved.required ?? []);
   return {
-    model: { kind: 'object', properties, required },
+    model: { kind: 'object', properties, required, shape: resolved.properties },
     nullable,
     schema: resolved,
     title,
@@ -463,12 +465,36 @@ function classifyByType(
 }
 
 /**
+ * A property typed as the platform's templated text. A node carrying the type's
+ * `x-tai42-templated-text` mark IS the type's schema, so its title and description
+ * name the TYPE, never the field: only a property site apart from it — the `$ref`
+ * pointing at the type, or a union wrapper (the union path keeps the wrapper's
+ * words) — labels the field. An inlined type node is therefore word-less here, and
+ * the field falls back to its property key. The expression annotation is read off the
+ * resolved node, which carries the property site's annotation (see {@link classifySchema}).
+ */
+function classifyTemplatedText(raw: JsonSchema, resolved: JsonSchema): ClassifiedField {
+  const site = isTemplatedText(raw) ? undefined : raw;
+  return {
+    model: { kind: 'templated-text', expression: expressionAnnotation(resolved) },
+    nullable: false,
+    schema: resolved,
+    title: firstString(site?.title),
+    description: firstString(site?.description),
+  };
+}
+
+/**
  * Classify a schema node (resolving `$ref` first). `wrapper` metadata (a
  * ref-site title/description) is threaded down so a `{ $ref, title }` or a
- * null-union wrapper keeps its property-level label.
+ * null-union wrapper keeps its property-level label. The `x-tai42-expression`
+ * annotation beside a `$ref` is a property-site key that `$ref` resolution would
+ * drop, so it is carried onto the resolved node; a referenced definition that
+ * carries its own annotation keeps it.
  */
 export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedField {
-  const resolved = resolveRef(raw, root);
+  const resolved = withSiteExpression(resolveRef(raw, root), raw);
+  if (isTemplatedText(resolved)) return classifyTemplatedText(raw, resolved);
   const title = firstString(raw.title, resolved.title);
   const description = firstString(raw.description, resolved.description);
 
