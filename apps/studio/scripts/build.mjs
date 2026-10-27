@@ -216,8 +216,10 @@ async function assertVendorHasOnlyExpectedFiles() {
 /** Local chunk specifiers reachable from a served vendor entry: the quoted argument of
  * a static `import`/`export … from` or a dynamic `import()`, kept to relative paths
  * ending in `.js` so bare externals (`react`) and incidental string literals in
- * minified code are never mistaken for a chunk. */
-const LOCAL_CHUNK_SPECIFIER = /(?:\bfrom|\bimport)\s*\(?\s*["'](\.{1,2}\/[^"']*\.js)["']/g;
+ * minified code are never mistaken for a chunk. The quote is any JS string delimiter,
+ * the backtick included: the minifier prints a dynamic `import()` argument as a
+ * template literal. */
+const LOCAL_CHUNK_SPECIFIER = /(?:\bfrom|\bimport)\s*\(?\s*(["'`])(\.{1,2}\/[^"'`]*\.js)\1/g;
 
 /**
  * Read a served vendor entry together with the transitive closure of the local chunks
@@ -246,7 +248,7 @@ async function readVendorImportClosure(entryFileName) {
       );
     }
     closure.set(fileName, bytes);
-    for (const [, specifier] of bytes.toString('utf8').matchAll(LOCAL_CHUNK_SPECIFIER)) {
+    for (const [, , specifier] of bytes.toString('utf8').matchAll(LOCAL_CHUNK_SPECIFIER)) {
       const target = relative(vendorDir, resolve(vendorDir, dirname(fileName), specifier));
       // A specifier escaping dist/vendor is not a chunk of this artifact.
       if (!target.startsWith('..')) queue.push(target);
@@ -266,7 +268,7 @@ const STUDIO_SDK_MAX_BYTES = 1_000_000;
  * Positive proof that the jq-studio vendor entry shipped the jq runtime as REAL
  * same-origin files — the exact regression this build stage exists to prevent.
  *
- * assertVendorHasOnlyJsAndWasm above only catches STRAY files, and it passes SILENTLY
+ * assertVendorHasOnlyExpectedFiles above only catches STRAY files, and it passes SILENTLY
  * on the regression: if jq-studio ever slips back into Vite lib mode, the worker and
  * jq.wasm get inlined as `data:` URLs INSIDE jq-studio.js, no jq.wasm and no worker
  * chunk are emitted, dist/vendor holds zero strays — the stray check stays green while
@@ -304,6 +306,8 @@ async function assertJqStudioShipsRealJqRuntime() {
   }
 
   // 3. jq-studio.js resolves the wasm as a real file and carries NO inlining signature.
+  //    The minifier prints the `jq.wasm` literal with any JS string delimiter (it
+  //    favours a template literal), so the reference matches every quote style.
   const editor = await readFile(resolve(vendorDir, 'jq-studio.js'), 'utf8');
   if (editor.includes('data:application/wasm') || editor.includes('data:text/javascript')) {
     throw new Error(
@@ -311,7 +315,7 @@ async function assertJqStudioShipsRealJqRuntime() {
         'back into Vite lib mode and inlined the jq wasm/worker. The studio CSP blocks data:, so the jq Test panel would break for every SPA user.',
     );
   }
-  if (!/new URL\(\s*["']jq\.wasm["']/.test(editor)) {
+  if (!/new URL\(\s*(["'`])jq\.wasm\1/.test(editor)) {
     throw new Error(
       "dist/vendor/jq-studio.js has no `new URL('jq.wasm', import.meta.url)` reference: jq-studio is not resolving jq.wasm " +
         'as a real same-origin file. Without it the worker and main-thread loader cannot find the wasm, and the jq Test panel would break for every SPA user.',
