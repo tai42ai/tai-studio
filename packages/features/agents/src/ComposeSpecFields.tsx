@@ -16,7 +16,7 @@ import {
   Field,
   type JsonSchema,
   SchemaEditor,
-  type SchemaEditorChange,
+  type SchemaEditorDraft,
   SchemaForm,
   Textarea,
 } from '@tai42/studio-sdk';
@@ -180,8 +180,8 @@ export const ComposeSpecFields = forwardRef<
     readonly baseName: string;
     readonly extraSchema: JsonSchema | null;
     readonly hasResponseFormat: boolean;
-    readonly responseFormat: SchemaEditorChange;
-    readonly onResponseFormatChange: (value: SchemaEditorChange) => void;
+    readonly responseFormat: SchemaEditorDraft;
+    readonly onResponseFormatChange: (value: SchemaEditorDraft) => void;
   }
 >(function ComposeSpecFields(
   {

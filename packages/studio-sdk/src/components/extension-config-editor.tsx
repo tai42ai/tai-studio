@@ -15,7 +15,7 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { collectEnvRefs } from '../env-markers';
-import { SchemaEditor, type SchemaEditorChange } from '../schema-editor';
+import { SchemaEditor, type SchemaEditorDraft } from '../schema-editor';
 import { defaultValueForSchema } from '../schema-form/default-value';
 import { JSON_SCHEMA_META_URI } from '../schema-form/json-schema-meta';
 import { SchemaForm } from '../schema-form/SchemaForm';
@@ -40,8 +40,7 @@ export interface ExtensionConfigEditorProps {
   readonly idPrefix: string;
 }
 
-type SchemaSetting = Pick<SchemaEditorChange, 'schema' | 'valid'>;
-type SchemaSettings = Readonly<Record<string, SchemaSetting>>;
+type SchemaSettings = Readonly<Record<string, SchemaEditorDraft>>;
 
 const isMetaRef = (node: JsonSchema): boolean => node.$ref === JSON_SCHEMA_META_URI;
 
@@ -241,7 +240,7 @@ function RenderableSettings({
     return seeded;
   });
   const [schemaSettings, setSchemaSettings] = useState<SchemaSettings>(() => {
-    const seeded: Record<string, SchemaSetting> = {};
+    const seeded: Record<string, SchemaEditorDraft> = {};
     for (const key of schemaKeys) {
       const stored = value?.[key];
       seeded[key] = { schema: isRecord(stored) ? stored : null, valid: true };

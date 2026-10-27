@@ -21561,9 +21561,13 @@ export const SchedulingIcon: IconComponent;
 export function SchemaEditor(input: SchemaEditorProps): ReactNode;
 
 // @public
-export interface SchemaEditorChange {
-    readonly schema: Record<string, unknown> | null;
+export interface SchemaEditorChange extends SchemaEditorDraft {
     readonly text: string;
+}
+
+// @public
+export interface SchemaEditorDraft {
+    readonly schema: Record<string, unknown> | null;
     readonly valid: boolean;
 }
 

@@ -492,7 +492,12 @@ export {
 } from './schema-form';
 
 // -- Schema-editor (validated JSON-Schema authoring control) -----------------
-export type { SchemaEditorChange, SchemaEditorProps, SchemaLintResult } from './schema-editor';
+export type {
+  SchemaEditorChange,
+  SchemaEditorDraft,
+  SchemaEditorProps,
+  SchemaLintResult,
+} from './schema-editor';
 export { lintSchemaText, SchemaEditor } from './schema-editor';
 
 // -- State-binding editor (the one binding shape every door authors, plugin doors included) --

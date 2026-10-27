@@ -24,7 +24,7 @@ import {
   ErrorState,
   Field,
   type JsonSchema,
-  type SchemaEditorChange,
+  type SchemaEditorDraft,
   SearchableSelect,
   Spinner,
 } from '@tai42/studio-sdk';
@@ -48,10 +48,9 @@ export function ComposeAgentDialog({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [baseName, setBaseName] = useState('');
-  const [responseFormat, setResponseFormat] = useState<SchemaEditorChange>({
+  const [responseFormat, setResponseFormat] = useState<SchemaEditorDraft>({
     schema: null,
     valid: true,
-    text: '',
   });
   const [tags, setTags] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -137,7 +136,7 @@ export function ComposeAgentDialog({
               setBaseName(next);
               // Reset the response-format editor in the SAME update as the base switch,
               // so its base-keyed remount seeds from the cleared value.
-              setResponseFormat({ schema: null, valid: true, text: '' });
+              setResponseFormat({ schema: null, valid: true });
             }}
             placeholder="Select a base agent…"
             searchLabel="Search agents"

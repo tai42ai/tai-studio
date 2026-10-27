@@ -15,7 +15,7 @@ import type {
   TemplatedText,
   ValidatePresetBody,
 } from '@tai42/api-client';
-import { type SchemaEditorChange, toolsListKey, useApi } from '@tai42/studio-sdk';
+import { type SchemaEditorDraft, toolsListKey, useApi } from '@tai42/studio-sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -31,12 +31,12 @@ function mapSeed(stored: TemplatedText | string | null): TemplatedText | null {
 function useIoDraftState(detail: PresetDetail) {
   const seedInputMap = useMemo(() => mapSeed(detail.input_map), [detail]);
   const seedOutputMap = useMemo(() => mapSeed(detail.output_map), [detail]);
-  const [inputSchema, setInputSchema] = useState<SchemaEditorChange>({
+  const [inputSchema, setInputSchema] = useState<SchemaEditorDraft>({
     schema: detail.input_schema,
     valid: true,
   });
   const [inputMap, setInputMap] = useState<TemplatedText | null>(seedInputMap);
-  const [outputSchema, setOutputSchema] = useState<SchemaEditorChange>({
+  const [outputSchema, setOutputSchema] = useState<SchemaEditorDraft>({
     schema: detail.output_schema,
     valid: true,
   });

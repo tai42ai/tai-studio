@@ -13,7 +13,7 @@ import type {
 } from '@tai42/api-client';
 import {
   isFeatureDisabled,
-  type SchemaEditorChange,
+  type SchemaEditorDraft,
   toolsListKey,
   useApi,
   useAppNavigate,
@@ -32,9 +32,9 @@ export interface CreateDraft {
   readonly base: string | null;
   readonly combos: PresetExtensionElement[][];
   readonly kwargsText: string;
-  readonly inputSchema: SchemaEditorChange;
+  readonly inputSchema: SchemaEditorDraft;
   readonly inputMap: TemplatedText | null;
-  readonly outputSchema: SchemaEditorChange;
+  readonly outputSchema: SchemaEditorDraft;
   readonly outputMap: TemplatedText | null;
   readonly stateBinding: StateBinding | null;
   readonly extensionsValid: boolean;
