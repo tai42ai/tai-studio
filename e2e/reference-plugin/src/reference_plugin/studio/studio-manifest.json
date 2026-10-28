@@ -1,7 +1,7 @@
 {
   "name": "reference_plugin",
   "version": "0.1.0",
-  "api_version": 2,
+  "api_version": 3,
   "entry": "reference-plugin-CXvVfvVW.js",
   "integrity": {
     "reference-plugin-CXvVfvVW.js": "sha384-ReFZuLDDA7PkuxEpsB5OAGxLzJx/7KrdJiAyX2Wjwc/26y8wtEBsnf2DHpKqpCt4",

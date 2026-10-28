@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { checkPluginApiVersion, STUDIO_PLUGIN_API_VERSION } from './version';
 
 describe('STUDIO_PLUGIN_API_VERSION', () => {
-  it('is 2', () => {
-    expect(STUDIO_PLUGIN_API_VERSION).toBe(2);
+  it('is 3', () => {
+    expect(STUDIO_PLUGIN_API_VERSION).toBe(3);
   });
 });
 
