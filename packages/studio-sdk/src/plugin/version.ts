@@ -26,7 +26,7 @@
  *    authoring docs state it: stylesheet injection is a host capability, so a
  *    deployment pairs the Studio host with plugins built for it.
  */
-export const STUDIO_PLUGIN_API_VERSION = 2;
+export const STUDIO_PLUGIN_API_VERSION = 3;
 
 export interface VersionGateResult {
   readonly ok: boolean;

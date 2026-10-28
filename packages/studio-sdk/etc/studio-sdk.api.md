@@ -29370,7 +29370,7 @@ export interface StructuredOutputProps {
 }
 
 // @public
-export const STUDIO_PLUGIN_API_VERSION = 2;
+export const STUDIO_PLUGIN_API_VERSION = 3;
 
 // @public (undocumented)
 type StudioPluginListingEntry = z.infer<typeof studioPluginListingEntry>;
