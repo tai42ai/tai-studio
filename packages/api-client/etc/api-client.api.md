@@ -17892,6 +17892,13 @@ export const servedDocumentsJson: {
                 readonly properties: {
                     readonly key_expr: {
                         readonly $ref: "#/$defs/TemplatedText";
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the parsed webhook delivery (structured bodies merged top-level with query params; arbitrary text under raw_body)";
+                            readonly caveats: readonly ["an empty, blank or non-string result fails the fire loudly"];
+                            readonly label: "subject key expression";
+                            readonly language: "jq";
+                            readonly returns: "a non-empty string: the subject key the fire's state reads and writes use";
+                        };
                     };
                     readonly kind: {
                         readonly title: "Kind";
@@ -18358,6 +18365,13 @@ export const servedDocumentsJson: {
                 readonly properties: {
                     readonly key_expr: {
                         readonly $ref: "#/$defs/TemplatedText";
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the parsed webhook delivery (structured bodies merged top-level with query params; arbitrary text under raw_body)";
+                            readonly caveats: readonly ["an empty, blank or non-string result fails the fire loudly"];
+                            readonly label: "subject key expression";
+                            readonly language: "jq";
+                            readonly returns: "a non-empty string: the subject key the fire's state reads and writes use";
+                        };
                     };
                     readonly kind: {
                         readonly title: "Kind";
@@ -18852,6 +18866,13 @@ export const servedDocumentsJson: {
         readonly properties: {
             readonly key_expr: {
                 readonly $ref: "#/$defs/TemplatedText";
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the parsed webhook delivery (structured bodies merged top-level with query params; arbitrary text under raw_body)";
+                    readonly caveats: readonly ["an empty, blank or non-string result fails the fire loudly"];
+                    readonly label: "subject key expression";
+                    readonly language: "jq";
+                    readonly returns: "a non-empty string: the subject key the fire's state reads and writes use";
+                };
             };
             readonly kind: {
                 readonly title: "Kind";
@@ -19177,6 +19198,23 @@ export const servedDocumentsJson: {
                 }];
                 readonly default: null;
                 readonly title: "Input Map";
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the caller's object, validated against the preset's input_schema";
+                    readonly caveats: readonly ["a key both the map result and fixed_kwargs set is refused, unless both values are objects, which merge key by key"];
+                    readonly label: "input map";
+                    readonly language: "jq";
+                    readonly returns: "an object of the base tool's arguments, merged with fixed_kwargs";
+                    readonly sample: {
+                        readonly query: "status";
+                    };
+                    readonly variables: readonly [{
+                        readonly blurb: "the preset's stored fixed_kwargs";
+                        readonly name: "fixed";
+                        readonly sample: {
+                            readonly limit: 10;
+                        };
+                    }];
+                };
             };
             readonly input_schema: {
                 readonly anyOf: readonly [{
@@ -19200,6 +19238,18 @@ export const servedDocumentsJson: {
                 }];
                 readonly default: null;
                 readonly title: "Output Map";
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the base tool's result";
+                    readonly caveats: readonly ["the map never runs over a result that carries a secret"];
+                    readonly label: "output map";
+                    readonly language: "jq";
+                    readonly returns: "the mapped result, then validated against the preset's output_schema when one is set";
+                    readonly sample: {
+                        readonly items: readonly [{
+                            readonly id: "a";
+                        }];
+                    };
+                };
             };
             readonly output_schema: {
                 readonly anyOf: readonly [{
@@ -19552,6 +19602,23 @@ export const servedDocumentsJson: {
                 }];
                 readonly default: null;
                 readonly title: "Input Map";
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the caller's object, validated against the preset's input_schema";
+                    readonly caveats: readonly ["a key both the map result and fixed_kwargs set is refused, unless both values are objects, which merge key by key"];
+                    readonly label: "input map";
+                    readonly language: "jq";
+                    readonly returns: "an object of the base tool's arguments, merged with fixed_kwargs";
+                    readonly sample: {
+                        readonly query: "status";
+                    };
+                    readonly variables: readonly [{
+                        readonly blurb: "the preset's stored fixed_kwargs";
+                        readonly name: "fixed";
+                        readonly sample: {
+                            readonly limit: 10;
+                        };
+                    }];
+                };
             };
             readonly input_schema: {
                 readonly anyOf: readonly [{
@@ -19579,6 +19646,18 @@ export const servedDocumentsJson: {
                 }];
                 readonly default: null;
                 readonly title: "Output Map";
+                readonly "x-tai42-expression": {
+                    readonly blurb: "the base tool's result";
+                    readonly caveats: readonly ["the map never runs over a result that carries a secret"];
+                    readonly label: "output map";
+                    readonly language: "jq";
+                    readonly returns: "the mapped result, then validated against the preset's output_schema when one is set";
+                    readonly sample: {
+                        readonly items: readonly [{
+                            readonly id: "a";
+                        }];
+                    };
+                };
             };
             readonly output_schema: {
                 readonly anyOf: readonly [{
@@ -21314,6 +21393,26 @@ export const servedDocumentsJson: {
                             readonly type: "null";
                         }];
                         readonly default: null;
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the declarations (static values) an attachment stores";
+                            readonly caveats: readonly ["any other result rejects the declarations"];
+                            readonly label: "declarations check";
+                            readonly language: "jq";
+                            readonly returns: "exactly boolean true accepts the declarations; a string result is the rejection message";
+                            readonly sample: {
+                                readonly items: readonly [{
+                                    readonly id: "a";
+                                    readonly label: "First item";
+                                }];
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the attachment's effective parameters";
+                                readonly name: "parameters";
+                                readonly sample: {
+                                    readonly limit: 3;
+                                };
+                            }];
+                        };
                     };
                     readonly schema: {
                         readonly additionalProperties: true;
@@ -21336,6 +21435,49 @@ export const servedDocumentsJson: {
                     };
                     readonly jq: {
                         readonly $ref: "#/$defs/TemplatedText";
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the record's attached subtree";
+                            readonly caveats: readonly ["the template's input programs are callable as prelude functions named tjq_<name>"];
+                            readonly label: "template jq program";
+                            readonly language: "jq";
+                            readonly returns: "for purpose input, the served value; for purpose update, a batch (list) of template-relative ops";
+                            readonly sample: {
+                                readonly items: {
+                                    readonly a: {
+                                        readonly done: false;
+                                    };
+                                };
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the attachment's effective parameters";
+                                readonly name: "parameters";
+                                readonly sample: {
+                                    readonly limit: 3;
+                                };
+                            }, {
+                                readonly blurb: "the attachment's declarations";
+                                readonly name: "declarations";
+                                readonly sample: {
+                                    readonly items: readonly [{
+                                        readonly id: "a";
+                                        readonly label: "First item";
+                                    }];
+                                };
+                            }, {
+                                readonly blurb: "an input program's declared params object (bound only for purpose input)";
+                                readonly name: "params";
+                                readonly sample: {
+                                    readonly id: "a";
+                                };
+                            }, {
+                                readonly blurb: "an update program's input (bound only for purpose update)";
+                                readonly name: "input";
+                                readonly sample: {
+                                    readonly done: true;
+                                    readonly id: "a";
+                                };
+                            }];
+                        };
                     };
                     readonly params: {
                         readonly default: readonly [];
@@ -21400,12 +21542,68 @@ export const servedDocumentsJson: {
                 readonly properties: {
                     readonly close: {
                         readonly $ref: "#/$defs/TemplatedText";
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the orphan's record subtree";
+                            readonly label: "close program";
+                            readonly language: "jq";
+                            readonly returns: "a batch (list) of template-relative ops that closes the orphan";
+                            readonly sample: {
+                                readonly done: false;
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the orphaned item's id";
+                                readonly name: "id";
+                                readonly sample: "a";
+                            }, {
+                                readonly blurb: "the not-done resolution the close names";
+                                readonly name: "resolution";
+                                readonly sample: "dropped";
+                            }];
+                        };
                     };
                     readonly orphans: {
                         readonly $ref: "#/$defs/TemplatedText";
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "an open record's attached subtree";
+                            readonly label: "orphans program";
+                            readonly language: "jq";
+                            readonly returns: "a list of {id, label} objects naming the items the subtree orphans against the new declarations";
+                            readonly sample: {
+                                readonly items: {
+                                    readonly a: {
+                                        readonly done: false;
+                                    };
+                                };
+                            };
+                            readonly variables: readonly [{
+                                readonly blurb: "the declarations before the edit";
+                                readonly name: "previous";
+                                readonly sample: {
+                                    readonly items: readonly [{
+                                        readonly id: "a";
+                                        readonly label: "First item";
+                                    }];
+                                };
+                            }, {
+                                readonly blurb: "the declarations after the edit";
+                                readonly name: "new";
+                                readonly sample: {
+                                    readonly items: readonly [];
+                                };
+                            }];
+                        };
                     };
                     readonly resolutions: {
                         readonly $ref: "#/$defs/TemplatedText";
+                        readonly "x-tai42-expression": {
+                            readonly blurb: "the new declarations";
+                            readonly label: "resolutions program";
+                            readonly language: "jq";
+                            readonly returns: "a list of the not-done resolution names a close may name";
+                            readonly sample: {
+                                readonly items: readonly [];
+                            };
+                        };
                     };
                 };
                 readonly required: readonly ["orphans", "close", "resolutions"];
