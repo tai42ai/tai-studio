@@ -34,15 +34,15 @@ import {
   START_ROUTE,
 } from './test-utils-directory';
 
-const R1 =
+const PROVIDERS_READ_REFUSED =
   'This session cannot list connector providers. Seeing them needs read access to GET /api/connectors/providers; ask an administrator to grant it.';
-const R3_STATUS_ONLY =
+const CONFIG_READ_REFUSED_STATUS_ONLY =
   'This session cannot read the MCP configuration, so servers are shown from their live status only. Seeing every configured server needs read access to GET /api/manifest/preserved; ask an administrator to grant it.';
-const R3_BOTH =
+const CONFIG_READ_REFUSED =
   'This session cannot read the MCP configuration. Seeing the configured servers needs read access to GET /api/manifest/preserved; ask an administrator to grant it.';
-const R4 =
+const STATUS_READ_REFUSED =
   'This session cannot read the live MCP status. Seeing which servers are mounted and which failed needs read access to GET /api/mcp-status; ask an administrator to grant it.';
-const R6 =
+const LISTINGS_READ_REFUSED =
   'This session cannot list marketplace listings. Seeing them needs read access to GET /api/marketplace/search; ask an administrator to grant it.';
 const NO_LISTINGS =
   'Marketplace listings are not shown, because connecting one needs read access to GET /api/connectors/providers or GET /api/mcp-status; ask an administrator to grant it.';
@@ -100,7 +100,11 @@ describe('ConnectorsPage — partial reads', () => {
     );
     await showCards(user);
     await findCard('provider:github');
-    expect(statusLines()).toEqual([R3_BOTH, R4, R6]);
+    expect(statusLines()).toEqual([
+      CONFIG_READ_REFUSED,
+      STATUS_READ_REFUSED,
+      LISTINGS_READ_REFUSED,
+    ]);
     expect(client.getMcpStatus).not.toHaveBeenCalled();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
@@ -124,7 +128,11 @@ describe('ConnectorsPage — partial reads', () => {
       within(await findCard('server:relay')).getByText('Connected · 1 tools mounted'),
     ).toBeVisible();
     expect(within(await findCard('server:alerts')).getByText('Failed: auth')).toBeVisible();
-    expect(statusLines()).toEqual([R1, R3_STATUS_ONLY, R6]);
+    expect(statusLines()).toEqual([
+      PROVIDERS_READ_REFUSED,
+      CONFIG_READ_REFUSED_STATUS_ONLY,
+      LISTINGS_READ_REFUSED,
+    ]);
     expect(screen.getByText('Your connections are not available')).toBeVisible();
     expect(listProviders).not.toHaveBeenCalled();
   });
@@ -133,7 +141,7 @@ describe('ConnectorsPage — partial reads', () => {
     const getMcpStatus = vi.fn().mockRejectedValue(new ApiError('forbidden', 403));
     renderPage({ getMcpStatus });
     await waitFor(() => {
-      expect(statusLines()).toEqual([R4]);
+      expect(statusLines()).toEqual([STATUS_READ_REFUSED]);
     });
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
     expect(getMcpStatus).toHaveBeenCalledTimes(1);
@@ -180,7 +188,12 @@ describe('ConnectorsPage — partial reads', () => {
     );
     const region = await screen.findByRole('region', { name: 'Your connections' });
     expect(await within(region).findByRole('link', { name: 'work' })).toBeVisible();
-    expect(statusLines()).toEqual([R1, R3_BOTH, R4, NO_LISTINGS]);
+    expect(statusLines()).toEqual([
+      PROVIDERS_READ_REFUSED,
+      CONFIG_READ_REFUSED,
+      STATUS_READ_REFUSED,
+      NO_LISTINGS,
+    ]);
     expect(screen.queryByRole('textbox', { name: 'Search servers and apps' })).toBeNull();
   });
 });

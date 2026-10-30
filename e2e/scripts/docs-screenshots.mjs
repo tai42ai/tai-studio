@@ -27,17 +27,6 @@
  *                  `studio_demo_echo`'s plugin panel because core routes do not
  *                  wait on plugin load — the custom panel races the route mount —
  *                  whereas the auto-form always renders, keeping this reproducible.
- *   - run-subject — the run panel's optional Subject section, expanded (nothing is run).
- *   - run-caller-asks — the run panel's caller-asks result for `parking_ask`, one row per
- *                  ask with its prompt and copyable id.
- *   - run-caller-asks-many — the same list with many long asks, each prompt on one line
- *                  inside the list's bounded, scrolling height.
- *   - run-answer-unreadable — the sync run panel's unreadable-answer panel (its Details
- *                  open), via a forced `POST /api/run-tool` body the live server never
- *                  answers (a bare value with no `kind`).
- *   - run-answer-parked-unreadable — the background card of a parked run whose stored
- *                  answer is in an older format (its Details open), via forced
- *                  `GET /api/tool-runs` / `GET /api/tool-runs/{id}` payloads.
  *   - settings   — the config workbench from `GET /api/config/*` (settings schema).
  *   - profiles   — the Settings page's Profiles tab: the seeded `production` profile
  *                  row (name + description) from `GET /api/config/profiles`. The action
@@ -129,13 +118,6 @@
  *                  invitations table, each row naming its provider in the Provider
  *                  column and its actions joined from the declared catalog, populated
  *                  by the runner's member-action seed.
- *   - member-action-input — the page-scoped "Invite a user" action's SchemaForm over its
- *                  declared input schema (filled, not submitted — no account is created).
- *   - member-action-confirm — a destructive row action ("Remove user") stopped at its
- *                  confirm step (never confirmed, so no account is removed).
- *   - member-action-result — a row action ("Send a new login link") run live against the
- *                  seeded pending invite, framing the one-time-secret result (the minted
- *                  invite link through CopyField).
  *   - marketplace — the Marketplace list with the seeded generic plugin
  *                  (acme/alerts-relay) from the minimal seeded registry.
  *   - marketplace-install — the Marketplace detail page's route-mounting install
@@ -146,12 +128,6 @@
  *   - connectors — the Connectors page: the directory (a provider with two stubbed
  *                  connections, a never-connected provider, the MCP entries, the
  *                  marketplace listings) above "Your connections".
- *   - connectors-pick-tools — the connect flow at Pick tools for a hand-added server, its
- *                  advertised tools answered by a route stub; nothing is saved.
- *   - connectors-add-server — the Connectors page with the "Add MCP server" dialog, opened
- *                  from the header's "Add a custom server", at its review step, the single
- *                  look-up answered by a route stub (the demo backend has no
- *                  OAuth-protected server to look up); nothing is added.
  *   - conversations — the conversation monitor at its deepest level: a seeded route's
  *                  thread list beside one thread's transcript, both populated by the
  *                  real turns the runner drives through the authed api door.
@@ -1103,27 +1079,10 @@ async function selectAllThreads(page) {
     .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
 }
 
-// The look-up answer the `connectors-add-server` frame stubs: a server that signs in at
-// one service and registers apps by itself.
-const ADD_SERVER_LOOKUP = {
-  url: 'https://mcp.example.com/mcp',
-  resource: 'https://mcp.example.com/mcp',
-  resource_name: 'Remote files',
-  issuer: 'https://login.example.com',
-  authorization_servers: ['https://login.example.com'],
-  client_issuer: null,
-  registration_supported: true,
-  automatic_client: true,
-  scopes_supported: ['files.read', 'files.write'],
-  suggested_id: 'remote_files',
-  suggested_display_name: 'Remote files',
-  redirect_uri: null,
-};
-
-// The scene the `connectors` and `connectors-pick-tools` frames stub: a provider with
-// two connections (aliases `work` and `personal`), one never-connected provider, and a
-// hand-added server beside the connections' entries; the marketplace listings come
-// from the registry the runner boots.
+// The scene the `connectors` frame stubs: a provider with two connections (aliases
+// `work` and `personal`), one never-connected provider, and a hand-added server beside
+// the connections' entries; the marketplace listings come from the registry the runner
+// boots.
 const CONNECTORS_SCENE_PROVIDERS = [
   {
     id: 'acme_files',
@@ -1376,130 +1335,6 @@ const AUTHED_PAGES = [
       await page.getByLabel('name', { exact: true }).fill('Ada');
       await page.getByRole('button', { name: 'Run', exact: true }).click();
       await page.locator('text=Result').first().waitFor({ state: 'visible', timeout: 8000 });
-    },
-  },
-  {
-    // The run panel's optional Subject section, expanded: the target select, the kind
-    // and key fields, and the caption. Collapsed by default, so the action opens it and
-    // waits on the Subject kind field as the populated signal. Nothing is run, so no
-    // backend state is touched and the frame is deterministic.
-    name: 'run-subject',
-    path: '/tools?tool=studio_demo_form',
-    wait: 'button:has-text("Run in background")',
-    action: async (page) => {
-      await page.getByRole('button', { name: 'Subject (optional)' }).click();
-      await page.getByLabel('Subject kind').waitFor({ state: 'visible', timeout: 8000 });
-    },
-  },
-  {
-    // The run panel's caller-asks result: `parking_ask` asks the caller and parks, so the
-    // synchronous run returns the caller-asks envelope the panel lists (one read-only row
-    // per ask — its prompt and copyable id). A caller ask is subject-indexed, so the
-    // Subject section is filled against the seeded `tool · studio_demo_echo` route first.
-    name: 'run-caller-asks',
-    path: '/tools?tool=parking_ask',
-    wait: 'button:has-text("Run in background")',
-    action: async (page) => {
-      await page.getByLabel(/^prompt$/i).fill('Approve this step before it continues?');
-      await page.getByRole('button', { name: 'Subject (optional)' }).click();
-      await page.getByRole('combobox', { name: 'Target' }).click();
-      await page.getByRole('option', { name: 'tool · studio_demo_echo' }).first().click();
-      await page.getByLabel('Subject kind').fill('thread');
-      await page.getByLabel('Subject key').fill('a-42');
-      await page.getByRole('button', { name: 'Run', exact: true }).click();
-      const list = page.getByTestId('asks-list');
-      await list.waitFor({ state: 'visible', timeout: 8000 });
-      await list.scrollIntoViewIfNeeded();
-    },
-  },
-  {
-    // Many long caller asks in one run: `parking_ask` parks `count` asks, so the panel's
-    // asks list truncates each prompt to one line and scrolls within its bounded height
-    // rather than growing the panel unbounded.
-    name: 'run-caller-asks-many',
-    path: '/tools?tool=parking_ask',
-    wait: 'button:has-text("Run in background")',
-    action: async (page) => {
-      await page
-        .getByLabel(/^prompt$/i)
-        .fill(
-          'Please review and confirm this step of the long-running multi-stage run before it proceeds onward to the next stage and continues',
-        );
-      await page.getByLabel(/^count$/i).fill('10');
-      await page.getByRole('button', { name: 'Subject (optional)' }).click();
-      await page.getByRole('combobox', { name: 'Target' }).click();
-      await page.getByRole('option', { name: 'tool · studio_demo_echo' }).first().click();
-      await page.getByLabel('Subject kind').fill('thread');
-      await page.getByLabel('Subject key').fill('a-43');
-      await page.getByRole('button', { name: 'Run', exact: true }).click();
-      const list = page.getByTestId('asks-list');
-      await list.waitFor({ state: 'visible', timeout: 8000 });
-      await list.scrollIntoViewIfNeeded();
-    },
-  },
-  {
-    // The sync run panel's unreadable-answer panel: the run-tool body is forced to a bare
-    // value with no `kind` (a body the live server never answers), so the api-client
-    // refuses it and the panel shows the fixed sentence; Details is opened to show the
-    // first issue. The error card appears only after the action runs the tool, past the
-    // pre-action error guard; the wait below is the panel's own test id.
-    name: 'run-answer-unreadable',
-    path: '/tools?tool=studio_demo_form',
-    wait: 'button:has-text("Run in background")',
-    setup: async (page) => {
-      await page.route(
-        (url) => url.pathname === '/api/run-tool',
-        (route) => route.fulfill({ json: { data: { greeting: 'Hello, Ada' } } }),
-      );
-    },
-    action: async (page) => {
-      await page.getByLabel('name', { exact: true }).fill('Ada');
-      await page.getByRole('button', { name: 'Run', exact: true }).click();
-      const panel = page.getByTestId('run-answer-unreadable');
-      await panel.waitFor({ state: 'visible', timeout: 8000 });
-      await panel.getByText('Details').click();
-      await panel.scrollIntoViewIfNeeded();
-    },
-  },
-  {
-    // The background card of a parked run whose stored answer is in an older format: the
-    // recent-runs list and the run's record are forced (the live store holds no such
-    // record), the record's `result` a park body without a run-answer `kind`, so the
-    // record read is refused and the card shows the fixed sentence; Details is opened.
-    name: 'run-answer-parked-unreadable',
-    path: '/tools?tool=studio_demo_form',
-    wait: 'button:has-text("Run in background")',
-    setup: async (page) => {
-      const run = {
-        run_id: 'run-parked-older',
-        tool_name: 'studio_demo_form',
-        status: 'parked',
-        started_at: '2026-01-01T09:00:00+00:00',
-        finished_at: '2026-01-01T09:00:02+00:00',
-      };
-      await page.route(
-        (url) => url.pathname === '/api/tool-runs',
-        (route) => route.fulfill({ json: { data: [run] } }),
-      );
-      await page.route(
-        (url) => url.pathname === `/api/tool-runs/${run.run_id}`,
-        (route) =>
-          route.fulfill({
-            json: {
-              data: {
-                ...run,
-                result: { interaction_id: 'ask-1', interaction_ids: ['ask-1'] },
-              },
-            },
-          }),
-      );
-    },
-    action: async (page) => {
-      await page.getByRole('button', { name: /run-parked-older/ }).click();
-      const panel = page.getByTestId('tool-run-answer-unreadable');
-      await panel.waitFor({ state: 'visible', timeout: 8000 });
-      await panel.getByText('Details').click();
-      await panel.scrollIntoViewIfNeeded();
     },
   },
   {
@@ -2427,66 +2262,6 @@ const AUTHED_PAGES = [
     },
   },
   {
-    // A member action's INPUT dialog: the page-scoped "Invite a user" action opens the
-    // platform `SchemaForm` over the action's declared input schema (Email + Role). Filled,
-    // never submitted, so no account is created and the frame is deterministic.
-    name: 'member-action-input',
-    path: '/members',
-    wait: 'text=ada.lovelace@demo.tai',
-    action: async (page) => {
-      await page
-        .getByRole('group', { name: 'Member actions' })
-        .getByRole('button', { name: 'Invite a user' })
-        .click();
-      const dialog = page.getByRole('dialog');
-      await dialog.getByLabel('Email', { exact: true }).fill('newcomer@demo.tai');
-      await dialog.getByLabel('Role', { exact: true }).fill('editor');
-      await dialog.getByLabel('Role', { exact: true }).waitFor({ state: 'visible', timeout: 8000 });
-    },
-  },
-  {
-    // A destructive member action's CONFIRM step: "Remove user" on a member row asks the
-    // operator to confirm before it runs (the loud destructive guard). Opened to the confirm
-    // step, never confirmed, so no account is removed and the frame is deterministic.
-    name: 'member-action-confirm',
-    path: '/members',
-    wait: 'text=alan.turing@demo.tai',
-    action: async (page) => {
-      await page
-        .getByRole('group', { name: 'Actions for alan.turing@demo.tai' })
-        .getByRole('button', { name: 'Remove user' })
-        .click();
-      await page.getByRole('dialog').getByRole('button', { name: 'Remove user' }).click();
-      await page
-        .locator('[data-testid="member-action-confirm"]')
-        .waitFor({ state: 'visible', timeout: 8000 });
-    },
-  },
-  {
-    // A member action's RESULT view carrying a one-time secret: "Send a new login link" on a
-    // pending invite row mints a fresh invite and shows the raw token + login path through
-    // `CopyField` (undismissable, shown-once). Driven live against the seeded pending invite;
-    // the mint replaces that invite's token, so it is re-runnable across the two theme passes.
-    //
-    // Nondeterministic: the minted invite token differs every run, so the automated pipeline
-    // skips it (SKIP_NONDETERMINISTIC_SHOTS); recaptured on a manual full run when the result
-    // view changes.
-    name: 'member-action-result',
-    nondeterministic: true,
-    path: '/members',
-    wait: 'text=katherine.johnson@demo.tai',
-    action: async (page) => {
-      await page
-        .getByRole('group', { name: 'Actions for katherine.johnson@demo.tai' })
-        .getByRole('button', { name: 'Send a new login link' })
-        .click();
-      await page.getByRole('dialog').getByRole('button', { name: 'Send a new login link' }).click();
-      await page
-        .locator('[data-testid="member-action-result"]')
-        .waitFor({ state: 'visible', timeout: 8000 });
-    },
-  },
-  {
     // The Marketplace list: the minimal seeded registry (MARKETPLACE_URL) answers with
     // one published plugin, so the card is the same on every run.
     name: 'marketplace',
@@ -2539,80 +2314,6 @@ const AUTHED_PAGES = [
         .getByRole('list', { name: 'Connections to Acme files' })
         .getByRole('button', { name: 'Pick tools for personal' })
         .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
-    },
-  },
-  {
-    // The connect flow at Pick tools for the hand-added server: the tools it advertises,
-    // each with its tick. The advertised read is a probe of the server, answered by a
-    // route stub; nothing is saved.
-    name: 'connectors-pick-tools',
-    path: '/connectors',
-    wait: 'text=Your connections',
-    setup: async (page) => {
-      await stubConnectorsScene(page);
-      await page.route(
-        (url) => url.pathname === `/api/mcp-status/${CONNECTORS_SCENE_SERVER}/advertised-tools`,
-        (route) =>
-          route.fulfill({
-            json: {
-              data: {
-                title: CONNECTORS_SCENE_SERVER,
-                include: [],
-                exclude: [],
-                unadvertised: [],
-                tools: CONNECTORS_SCENE_TOOLS.map((name) => ({
-                  name,
-                  title: null,
-                  description: null,
-                  bound: true,
-                  selected: true,
-                  unbound_reason: null,
-                })),
-              },
-            },
-          }),
-      );
-    },
-    action: async (page) => {
-      await page
-        .getByRole('row')
-        .filter({ has: page.locator(`[data-directory-row="server:${CONNECTORS_SCENE_SERVER}"]`) })
-        .getByRole('button', { name: 'Pick tools' })
-        .click();
-      const dialog = page.getByRole('dialog', { name: `Pick tools: ${CONNECTORS_SCENE_SERVER}` });
-      const all = dialog.getByRole('checkbox', {
-        name: 'Mount every tool, including tools the server adds later',
-      });
-      await all.waitFor({ state: 'visible', timeout: 8000 });
-      await all.click();
-      await dialog
-        .getByRole('checkbox', { name: 'list_sources' })
-        .waitFor({ state: 'visible', timeout: 8000 });
-    },
-  },
-  {
-    // The Connectors page with the "Add MCP server" dialog, opened from the header's "Add a
-    // custom server", at its review step: where the server signs in, its app registration,
-    // and the prefilled name, identifier and scopes. The single look-up call is answered by a route stub — the docs-demo backend has no
-    // OAuth-protected server to look up — and nothing is added, so the frame is
-    // deterministic.
-    name: 'connectors-add-server',
-    path: '/connectors',
-    wait: 'button:has-text("Add a custom server")',
-    setup: async (page) => {
-      await page.route(
-        (url) => url.pathname === '/api/connectors/providers/discover',
-        (route) => route.fulfill({ json: { data: ADD_SERVER_LOOKUP } }),
-      );
-    },
-    action: async (page) => {
-      await page.getByRole('button', { name: 'Add a custom server' }).click();
-      const dialog = page.getByRole('dialog', { name: 'Add MCP server' });
-      await dialog.getByLabel('Server address').fill(ADD_SERVER_LOOKUP.url);
-      await dialog.getByRole('button', { name: 'Look up' }).click();
-      await dialog
-        .getByRole('button', { name: 'Add server' })
-        .waitFor({ state: 'visible', timeout: 8000 });
     },
   },
   {
