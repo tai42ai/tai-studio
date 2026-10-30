@@ -25,8 +25,8 @@
 #      its own dedicated database, created in §3b and migrated by boot.sh);
 #   3. captures every screen in both themes with e2e/scripts/docs-screenshots.mjs
 #      (which FAILS the run rather than shipping an empty/broken shot); and
-#   4. copies the four shell screens the tai-studio README embeds into
-#      docs/screenshots/, from the same capture (one source of truth).
+#   4. copies the two shell shots the tai-studio README embeds (tools and tool-run,
+#      light theme) into docs/screenshots/, from the same capture (one source of truth).
 #
 # NOT A PRODUCTION TEMPLATE — it inherits boot.sh's test-only key + loopback
 # Redis/Postgres.
@@ -949,22 +949,20 @@ log "capturing screenshots into ${OUT_DIR}"
 STUDIO_URL="${BASE_URL}" OUT_DIR="${OUT_DIR}" node "${E2E_DIR}/scripts/docs-screenshots.mjs"
 
 # --- 9. Refresh the tai-studio README shell shots ---------------------------
-# The README shell set: four shell screens; refresh them from the SAME capture so
-# there is a single source of truth and no stale branding lingers. A run narrowed
-# with ONLY captures a subset, so it leaves the README set alone: refreshing part of
-# it from one build and the rest from an older one is exactly the mix this step exists
-# to prevent.
+# The README shell set: the two shots README.md embeds (tools and tool-run, light
+# theme); refresh them from the SAME capture so there is a single source of truth and
+# no stale branding lingers. A run narrowed with ONLY captures a subset, so it leaves
+# the README set alone: refreshing part of it from one build and the rest from an older
+# one is exactly the mix this step exists to prevent.
 README_SHOTS_DIR="${STUDIO_REPO}/docs/screenshots"
 if [[ -n "${ONLY:-}" ]]; then
   log "ONLY is set — README shell shots in ${README_SHOTS_DIR} left untouched"
 else
   mkdir -p "${README_SHOTS_DIR}"
-  for screen in login settings tool-run tools; do
-    for theme in light dark; do
-      cp "${OUT_DIR}/${screen}-${theme}.png" "${README_SHOTS_DIR}/${screen}-${theme}.png"
-    done
+  for shot in tools-light tool-run-light; do
+    cp "${OUT_DIR}/${shot}.png" "${README_SHOTS_DIR}/${shot}.png"
   done
-  log "refreshed ${README_SHOTS_DIR} (4 shell screens × 2 themes)"
+  log "refreshed ${README_SHOTS_DIR} (the README's 2 shell shots)"
 fi
 
 # Success: drop the boot log. On any failure path execution exits before this line

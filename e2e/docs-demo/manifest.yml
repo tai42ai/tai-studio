@@ -190,7 +190,3 @@ user_tools:
   - studio_demo_echo
   - studio_demo_form
   - ask
-  # The parking demo tool (its bound resume continuation alongside it): a run that
-  # asks and parks, so the run panel renders the caller-asks list its result carries.
-  - parking_ask
-  - parking_ask_resume

@@ -70,7 +70,7 @@ export interface ProviderRow {
   readonly kind: 'provider';
   readonly key: string;
   readonly provider: ProviderView;
-  /** R2's rows for this provider, or `null` while R2 loads, or `'unknown'` when R2 is refused or failed. */
+  /** The connections read's rows for this provider, or `null` while that read loads, or `'unknown'` when it is refused or failed. */
   readonly connections: readonly ConnectionView[] | null | 'unknown';
 }
 

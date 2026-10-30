@@ -1,7 +1,7 @@
 # docs-demo — the Studio docs-screenshot pipeline
 
-A permanent, reproducible pipeline that regenerates **all 18 Studio screens**
-(light + dark = 36 PNGs) for the documentation site and README, each fully
+A permanent, reproducible pipeline that regenerates **every Studio screen**
+(light + dark, two PNGs each) for the documentation site and README, each fully
 populated and showing the current Studio build — the full-admin screens plus the
 capability-scoped screens (the owned-key views and the mint→claim-link QR). Rerun
 it whenever the UI or branding changes.
@@ -16,7 +16,7 @@ bash e2e/scripts/docs-screenshots.sh
 Outputs:
 
 - `tai-docs/images/studio/*.png` — the documentation screens × 2 themes.
-- `tai-studio/docs/screenshots/*.png` — the 4 shell screens,
+- `tai-studio/docs/screenshots/*.png` — the two shell shots the README embeds,
   from the same capture.
 
 Assumes sibling checkouts of the `tai42` monorepo (skeleton at `core/skeleton`,
@@ -49,7 +49,7 @@ router plus the real plugins so no screen is empty:
 | storage-delete-held                           | the seeded hook `gate-watch`, whose condition names `jq/gate`                                            |
 | system                                        | the `health` + `metrics` routers (loaded before the SPA catch-all)                                       |
 | system-kinds                                  | the `system_kinds` router's `/api/system/kinds` (Plugin-kinds table)                                     |
-| members / member-action-\*                    | the generic Members directory + the accounts provider's declared member actions (seeded membership)      |
+| members                                       | the generic Members directory + the accounts provider's declared member actions (seeded membership)      |
 | login                                         | the signed-out credential screen                                                                         |
 | hooks-trigger-link / -execution-key           | the hooks page's mint→QR flow and its execution-key + trigger-auth controls                              |
 | scoped-tools / -interactions / -notifications | the runner-minted **owned key** + its audience-addressed inbox rows                                      |
