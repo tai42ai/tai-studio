@@ -97,25 +97,32 @@ describe('AgentPicker', () => {
     expect(screen.queryByText(REQUIRED)).toBeNull();
   });
 
-  it('refused: the no-grant note, no Retry and no ErrorState', () => {
-    renderPicker(stubQuery(forbiddenRead), '', REQUIRED);
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'This session cannot list agents. Picking one needs read access to GET /api/agents; ask an administrator to grant it.',
+  it('refused: a typed entry named by the field, described by the no-list note', () => {
+    renderPicker(stubQuery(forbiddenRead));
+    const input = screen.getByRole('textbox', { name: 'Agent' });
+    expect(input).toHaveValue('');
+    expect(input).toHaveAccessibleDescription(
+      "This session cannot list agents, so type the agent's exact name. Saving checks that the agent is registered.",
     );
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByRole('button', { name: /Retry/ })).toBeNull();
     expect(screen.queryByRole('combobox')).toBeNull();
-    expect(screen.queryByText(REQUIRED)).toBeNull();
   });
 
-  it('refused with a stored value: the value as the sole unflagged option, the note below, the error shown', async () => {
+  it('refused: hands the typed name, trimmed, to onValueChange on blur', async () => {
+    const user = userEvent.setup();
+    const { onValueChange } = renderPicker(stubQuery(forbiddenRead));
+    await user.type(screen.getByRole('textbox', { name: 'Agent' }), '  typed_agent ');
+    expect(onValueChange).not.toHaveBeenCalled();
+    await user.tab();
+    expect(onValueChange).toHaveBeenCalledExactlyOnceWith('typed_agent');
+  });
+
+  it('refused with a stored value: the typed entry holds it, unflagged', () => {
     renderPicker(stubQuery(forbiddenRead), 'alpha', REQUIRED);
-    const combobox = screen.getByRole('combobox', { name: 'Agent' });
-    expect(combobox).toHaveTextContent('alpha');
+    expect(screen.getByRole('textbox', { name: 'Agent' })).toHaveValue('alpha');
+    expect(screen.queryByText(/not registered|not installed/)).toBeNull();
     expect(screen.getByText(REQUIRED)).toBeInTheDocument();
-    expect(screen.queryByText(/not registered/)).toBeNull();
-    await userEvent.setup().click(combobox);
-    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['alpha']);
   });
 
   it('unlisted: the stored value flagged "not registered", described by the warning line', () => {

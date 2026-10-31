@@ -12,7 +12,7 @@
  * {@link matchesSelectedTags}, {@link UNTAGGED_TOKEN}) so every consuming screen
  * shares one vocabulary/untagged-sentinel/OR-match rule rather than copying it.
  */
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { matchesSearch } from '../search-match';
 import { ExplorerBody, type ExplorerEntry } from './explorer-body';
@@ -71,8 +71,8 @@ export interface ExplorerEmptyState {
 
 /** The folder-aware empty-state ladder — every label caller-supplied. */
 export interface ExplorerEmptyStates {
-  /** No item exists at all. Folders are places for items, so with no item there is
-   *  nothing to browse: this state shows whatever folders exist. */
+  /** No item exists at all. With no folder either, it is the whole view; with
+   *  folders, it shows above them, which keep their actions. */
   readonly empty: ExplorerEmptyState;
   /** The current folder holds nothing — no items, no subfolders — while items
    *  exist elsewhere. */
@@ -115,7 +115,9 @@ export interface ExplorerViewProps<T> {
   /** The key (as `getItemKey` gives it) of the item the screen has selected. Its
    *  row/card carries `data-selected="true"`, which the stylesheet draws as the one
    *  selected look every explorer shares. The screen still marks the item's name
-   *  link `aria-current`, which is what assistive tech reads. */
+   *  link `aria-current`, which is what assistive tech reads. When the selected item
+   *  is filed in a drawn folder, the explorer opens that folder (`onNavigate`) — once
+   *  per item and folder, so the reader can still browse away from it. */
   readonly selectedItemKey?: string;
 
   readonly tags?: ExplorerTags<T>;
@@ -223,6 +225,49 @@ function useShownFolderId(
   return currentDrawn ? currentFolderId : null;
 }
 
+/**
+ * Open the folder the selected item is filed in, so a link to an item lands on the
+ * item rather than the root. It reveals once per (item, folder) pair: browsing away
+ * from a selected item keeps the reader where they went, while the item being filed
+ * elsewhere, or its folder being drawn once the folder tree loads, reveals it again.
+ * Finding the selected item is one pass over `items`, no more than the filter's.
+ */
+function useRevealSelected<T>({
+  items,
+  selectedItemKey,
+  getItemKey,
+  getFolderId,
+  folders,
+  currentFolderId,
+  onNavigate,
+}: {
+  readonly items: readonly T[];
+  readonly selectedItemKey: string | undefined;
+  readonly getItemKey: (item: T) => string;
+  readonly getFolderId: (item: T) => string | null;
+  readonly folders: readonly Folder[];
+  readonly currentFolderId: string | null;
+  readonly onNavigate: (folderId: string | null) => void;
+}): void {
+  const selected =
+    selectedItemKey === undefined
+      ? undefined
+      : items.find((item) => getItemKey(item) === selectedItemKey);
+  const selectedFolderId = selected === undefined ? undefined : getFolderId(selected);
+  const drawn =
+    selectedFolderId === null ||
+    (selectedFolderId !== undefined && folders.some((folder) => folder.id === selectedFolderId));
+  const revealed = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (selectedItemKey === undefined || selectedFolderId === undefined || !drawn) return;
+    const pair = `${selectedItemKey}\0${selectedFolderId ?? ''}`;
+    if (revealed.current === pair) return;
+    revealed.current = pair;
+    if (selectedFolderId !== currentFolderId) onNavigate(selectedFolderId);
+  }, [selectedItemKey, selectedFolderId, drawn, currentFolderId, onNavigate]);
+}
+
 export function ExplorerView<T>({
   items,
   getItemKey,
@@ -251,6 +296,15 @@ export function ExplorerView<T>({
   const tagKey = tags !== undefined ? tags.selected.join('\0') : '';
 
   const folderId = useShownFolderId(currentFolderId, folders, onNavigate);
+  useRevealSelected({
+    items,
+    selectedItemKey,
+    getItemKey,
+    getFolderId,
+    folders,
+    currentFolderId: folderId,
+    onNavigate,
+  });
 
   // A new filter view starts on its first page; the clamp below then handles a
   // set that shrinks under the current page without a reset.
@@ -261,8 +315,8 @@ export function ExplorerView<T>({
   if (viewSurface === '') throw new Error('ExplorerView requires a non-empty viewSurface key.');
   if (columns.length === 0) throw new Error('ExplorerView requires at least one column.');
 
-  // No item anywhere: a bare empty state, no controls — whatever folders exist.
-  if (items.length === 0) {
+  // Nothing at all to browse — no item, no folder: a bare empty state, no controls.
+  if (items.length === 0 && folders.length === 0) {
     return <EmptyState {...emptyStates.empty} />;
   }
 
@@ -339,6 +393,7 @@ export function ExplorerView<T>({
 
       <ExplorerBody
         hasEntries={hasEntries}
+        noItems={items.length === 0}
         inFolderCount={inFolder.length}
         emptyStates={emptyStates}
         viewMode={viewMode}

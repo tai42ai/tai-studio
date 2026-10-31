@@ -8,7 +8,7 @@
  * `api` door's optional absolute-https `callback_url`; a `channel` door's `:`-free
  * `channel` and its non-blank `our_identity`), the reply-text bounds, the positive
  * turn rate and the overlap policy's bounds — are read from it, so the SDK validator
- * refuses what the server refuses, in-form. The two discriminated unions keep an invalid
+ * refuses what the server refuses, in-form (`route-form-errors` shows those errors). The two discriminated unions keep an invalid
  * target-kind/door combination unauthorable:
  *   - `target` is discriminated on `target_kind`: BOTH an `agent` and a `tool`
  *     target carry the same five door-contract jq fields (`start_expr`,
@@ -18,10 +18,14 @@
  *     `callback_url` (blank is a poll-only route); a `channel` door carries `channel` +
  *     `our_identity`.
  *
- * The jq fields carry `x-tai42-expression`, the SDK's opt-in expression seam: with
- * the host's ambient `ExpressionFieldContext` wired (it is, app-wide), the field
- * renders the visual jq editor with its input-shape descriptor and variable legend;
- * with none it degrades to a plain text box. The feature builds NO seam of its own.
+ * Each jq field is the document's own property: a templated text (inline jq, or the id
+ * of a stored template, plus its render kwargs) carrying the document's
+ * `x-tai42-expression` annotation. The SDK's `SchemaForm` draws a templated-text field
+ * for it, whose inline editor is the visual jq editor when the host's ambient
+ * `ExpressionFieldContext` is wired (it is, app-wide) and whose stored source lists the
+ * templates of the ambient `TemplatedTextCatalogContext`. The value is the templated
+ * text itself, carried from a stored route to the wire body unchanged. The feature
+ * builds NO seam of its own.
  */
 import type {
   ApiConversationRouteCreate,
@@ -29,33 +33,26 @@ import type {
   ConversationMode,
   ConversationRouteCreate,
   ConversationRouteView,
+  TemplatedText,
 } from '@tai42/api-client';
-import { type JsonSchema, type SchemaFormErrors, validateAgainstSchema } from '@tai42/studio-sdk';
+import type { JsonSchema } from '@tai42/studio-sdk';
 
 import {
   API_VARIANT,
   CHANNEL_VARIANT,
   documentConstraints,
   OVERLAP_POLICY,
+  TEMPLATED_TEXT,
 } from './route-document';
 import {
-  CANCEL_EXPR_ANNOTATION,
-  EXTRAS_EXPR_ANNOTATION,
-  REPLY_EXPR_ANNOTATION,
-  RESUME_EXPR_ANNOTATION,
-  START_EXPR_ANNOTATION,
-} from './route-jq-annotations';
-import {
-  REPLY_TEXT_MEMBERS,
-  replyTextPath,
   replyTextsBody,
   replyTextsProperty,
   type ReplyTextsValue,
   replyTextsValue,
 } from './route-reply-texts';
 
-/** Whether a required string field is unset or whitespace-only. */
-function blank(candidate: string | undefined): boolean {
+/** Whether a text field is unset or whitespace-only. */
+export function isBlank(candidate: string | undefined): boolean {
   return (candidate ?? '').trim() === '';
 }
 
@@ -79,49 +76,69 @@ function routeNameProperty(fixed: string | undefined): JsonSchema {
   };
 }
 
+/** The five door-contract jq fields, in the order the form draws them. */
+const DOOR_EXPR_KEYS = [
+  'start_expr',
+  'reply_expr',
+  'cancel_expr',
+  'resume_expr',
+  'extras_expr',
+] as const;
+
+type DoorExprKey = (typeof DOOR_EXPR_KEYS)[number];
+
+/** Each jq field's heading and helper text; the start text differs per target kind. */
+const DOOR_EXPR_TEXT: Readonly<
+  Record<Exclude<DoorExprKey, 'start_expr'>, readonly [string, string]>
+> = {
+  reply_expr: [
+    'Reply expression',
+    'Optional jq mapping the run result to the reply; blank passes a null / string / parts result straight through. Reads $turn, $asks and $parked.',
+  ],
+  cancel_expr: [
+    'Cancel expression',
+    'Optional jq over the inbound turn naming the parked interactions to cancel; reads $parked.',
+  ],
+  resume_expr: [
+    'Resume expression',
+    'Optional jq over the inbound turn naming the parked interactions to resume with an answer or to take; reads $parked.',
+  ],
+  extras_expr: [
+    'Extras expression',
+    'Optional jq over the inbound turn building the extras mapping handed to the started run; reads $parked.',
+  ],
+};
+
+/** The `$defs` a schema holding the jq fields carries, so their `$ref` resolves. */
+const DOOR_EXPR_DEFS = { TemplatedText: TEMPLATED_TEXT } as const;
+
+/**
+ * One jq field: the document's property (an optional templated text, with the document's
+ * `x-tai42-expression` annotation naming what `.` is and the variables it reads) under
+ * the form's heading and helper text. Both door variants carry the same property.
+ */
+function doorExprProperty(key: DoorExprKey, title: string, description: string): JsonSchema {
+  const property = API_VARIANT.properties[key];
+  return {
+    anyOf: property.anyOf,
+    title,
+    description,
+    'x-tai42-expression': property['x-tai42-expression'],
+  };
+}
+
 /**
  * The five door-contract jq fields BOTH target variants carry (either kind can
  * drive a parkable run). `startDescription` is the one field whose helper text
- * differs per kind — a tool dispatch's kwargs vs an agent run's kwargs. Each field
- * carries `x-tai42-expression`, so the schema-driven form renders the jq editor
- * with the `$parked` (and, for the reply, `$turn`/`$asks`) variable legend.
+ * differs per kind — a tool dispatch's kwargs vs an agent run's kwargs.
  */
-function doorContractJqProperties(startDescription: string): Record<string, JsonSchema> {
+function doorContractJqProperties(startDescription: string): Record<DoorExprKey, JsonSchema> {
   return {
-    start_expr: {
-      type: 'string',
-      title: 'Start expression',
-      description: startDescription,
-      'x-tai42-expression': START_EXPR_ANNOTATION,
-    },
-    reply_expr: {
-      type: 'string',
-      title: 'Reply expression',
-      description:
-        'Optional jq mapping the run result to the reply; blank passes a null / string / parts result straight through. Reads $turn, $asks and $parked.',
-      'x-tai42-expression': REPLY_EXPR_ANNOTATION,
-    },
-    cancel_expr: {
-      type: 'string',
-      title: 'Cancel expression',
-      description:
-        'Optional jq over the inbound turn naming the parked interactions to cancel; reads $parked.',
-      'x-tai42-expression': CANCEL_EXPR_ANNOTATION,
-    },
-    resume_expr: {
-      type: 'string',
-      title: 'Resume expression',
-      description:
-        'Optional jq over the inbound turn naming the parked interactions to resume with an answer or to take; reads $parked.',
-      'x-tai42-expression': RESUME_EXPR_ANNOTATION,
-    },
-    extras_expr: {
-      type: 'string',
-      title: 'Extras expression',
-      description:
-        'Optional jq over the inbound turn building the extras mapping handed to the started run; reads $parked.',
-      'x-tai42-expression': EXTRAS_EXPR_ANNOTATION,
-    },
+    start_expr: doorExprProperty('start_expr', 'Start expression', startDescription),
+    reply_expr: doorExprProperty('reply_expr', ...DOOR_EXPR_TEXT.reply_expr),
+    cancel_expr: doorExprProperty('cancel_expr', ...DOOR_EXPR_TEXT.cancel_expr),
+    resume_expr: doorExprProperty('resume_expr', ...DOOR_EXPR_TEXT.resume_expr),
+    extras_expr: doorExprProperty('extras_expr', ...DOOR_EXPR_TEXT.extras_expr),
   };
 }
 
@@ -311,6 +328,7 @@ function turnsPerHourProperty(): JsonSchema {
  */
 export function routeFormSchema(fixedRouteName?: string): JsonSchema {
   return {
+    $defs: DOOR_EXPR_DEFS,
     type: 'object',
     required: ['route_name', 'target', 'delivery', 'execution_key'],
     properties: {
@@ -336,6 +354,7 @@ export function routeFormSchema(fixedRouteName?: string): JsonSchema {
  */
 export function routeSettingsSchema(targetKind: 'agent' | 'tool' | undefined): JsonSchema {
   return {
+    $defs: DOOR_EXPR_DEFS,
     type: 'object',
     properties: {
       ...(targetKind === undefined
@@ -373,12 +392,13 @@ export interface RouteFormValue {
   target?: {
     target_kind?: 'agent' | 'tool';
     target_name?: string;
-    // The five door-contract jq fields, authored inline; both target kinds carry them.
-    start_expr?: string;
-    reply_expr?: string;
-    cancel_expr?: string;
-    resume_expr?: string;
-    extras_expr?: string;
+    // The five door-contract jq fields, each inline jq or a stored template; both target
+    // kinds carry them. An unset field is absent.
+    start_expr?: TemplatedText;
+    reply_expr?: TemplatedText;
+    cancel_expr?: TemplatedText;
+    resume_expr?: TemplatedText;
+    extras_expr?: TemplatedText;
   };
   delivery?: {
     door?: 'api' | 'channel';
@@ -394,18 +414,16 @@ export function blankRouteValue(): RouteFormValue {
   return { initial_mode: 'agent' };
 }
 
-/** The target sub-value prefilled from a stored route: its kind/name plus each door
- * jq's inline `content` (a stored-id expr has none, so it is dropped). */
+/** The target sub-value prefilled from a stored route: its kind/name plus each set door
+ * jq as the route stores it (inline or a stored template, with its kwargs). */
 function routeTargetValue(route: ConversationRouteView): NonNullable<RouteFormValue['target']> {
-  type JqKey = 'start_expr' | 'reply_expr' | 'cancel_expr' | 'resume_expr' | 'extras_expr';
   const target: NonNullable<RouteFormValue['target']> = {
     target_kind: route.target_kind,
     target_name: route.target_name,
   };
-  const keys: JqKey[] = ['start_expr', 'reply_expr', 'cancel_expr', 'resume_expr', 'extras_expr'];
-  for (const key of keys) {
-    const content = route[key]?.content;
-    if (content) target[key] = content;
+  for (const key of DOOR_EXPR_KEYS) {
+    const expr = route[key];
+    if (expr !== null) target[key] = expr;
   }
   return target;
 }
@@ -428,142 +446,12 @@ export function routeToFormValue(route: ConversationRouteView): RouteFormValue {
       ? { turns_per_hour_override: route.turns_per_hour_override }
       : {}),
     ...(route.reply_texts !== null ? { reply_texts: replyTextsValue(route.reply_texts) } : {}),
-    // Both target kinds carry the five door jqs (prefilled from their inline content).
+    // Both target kinds carry the five door jqs, prefilled as stored.
     target: routeTargetValue(route),
     delivery:
       route.door === 'api'
         ? { door: 'api', callback_url: route.callback_url ?? '' }
         : { door: 'channel', channel: route.channel, our_identity: route.our_identity },
-  };
-}
-
-/**
- * The display text a field shows when its value breaks the document's constraint, in
- * place of the SDK validator's generic message ("must match the required pattern").
- */
-const FIELD_TEXT: Readonly<Record<string, string>> = {
-  route_name: 'Use lowercase letters, digits and hyphens.',
-  'delivery.callback_url': 'Must be an absolute https URL with no user name or password.',
-  'delivery.channel': 'Use a ":"-free channel name.',
-  'delivery.our_identity': 'An identity is required.',
-  ...Object.fromEntries(
-    REPLY_TEXT_MEMBERS.map(({ name }) => [
-      replyTextPath(name),
-      'Enter the reply text (up to 2,000 characters).',
-    ]),
-  ),
-};
-
-/** The optional text fields, where a blank value is no value (a poll-only route, a built-in reply). */
-const OPTIONAL_TEXT_FIELDS: readonly string[] = [
-  'delivery.callback_url',
-  ...REPLY_TEXT_MEMBERS.map(({ name }) => replyTextPath(name)),
-];
-
-/** The form value at a dotted field path. */
-function valueAt(value: RouteFormValue, path: string): unknown {
-  let node: unknown = value;
-  for (const key of path.split('.')) {
-    node =
-      typeof node === 'object' && node !== null
-        ? (node as Record<string, unknown>)[key]
-        : undefined;
-  }
-  return node;
-}
-
-/**
- * The SDK validator's errors over the document-derived schema, each shown with its field's
- * display text; an optional text field left blank carries no error.
- */
-function constraintErrors(schema: JsonSchema, value: RouteFormValue): SchemaFormErrors {
-  const errors: Record<string, string> = {};
-  for (const [path, message] of Object.entries(validateAgainstSchema(schema, value))) {
-    const fieldValue = valueAt(value, path);
-    if (
-      OPTIONAL_TEXT_FIELDS.includes(path) &&
-      (typeof fieldValue !== 'string' || blank(fieldValue))
-    ) {
-      continue;
-    }
-    errors[path] = FIELD_TEXT[path] ?? message;
-  }
-  return errors;
-}
-
-/**
- * Every in-form error of a route value: the document's constraints, then the blank checks
- * of the required text fields and the overlap cross-field rule.
- */
-export function routeFormErrors(
-  schema: JsonSchema,
-  value: RouteFormValue,
-  editing: boolean,
-): SchemaFormErrors {
-  return { ...constraintErrors(schema, value), ...requiredFieldErrors(value, editing) };
-}
-
-/**
- * Blank checks for the required text fields, as path-keyed errors `SchemaForm` displays
- * inline — the house style (see the hooks `RegisterHookForm`). The SDK's
- * `validateAgainstSchema` catches a MISSING required field, but a required string kept as
- * `""` reads as "present" there; these fill that gap so a blank field is caught in-form,
- * not only by the server's 400. Scoped to the active variant (an unselected variant is the
- * schema's own required-union error, not a field error here).
- */
-/** The create-only route-name blank check (edit pins it read-only). */
-function routeNameError(value: RouteFormValue, editing: boolean): Record<string, string> {
-  if (editing) return {};
-  return blank(value.route_name) ? { route_name: 'A route name is required.' } : {};
-}
-
-/** The target-name blank check, scoped to the selected target variant. */
-function targetNameError(target: NonNullable<RouteFormValue['target']>): Record<string, string> {
-  if (target.target_kind === undefined || !blank(target.target_name)) return {};
-  return {
-    'target.target_name':
-      target.target_kind === 'tool' ? 'A tool name is required.' : 'An agent name is required.',
-  };
-}
-
-/** The execution-key blank check. */
-function executionKeyError(value: RouteFormValue): Record<string, string> {
-  return blank(value.execution_key) ? { execution_key: 'An execution key is required.' } : {};
-}
-
-/** The channel-door blank checks: a channel and an identity are required. */
-function deliveryErrors(delivery: NonNullable<RouteFormValue['delivery']>): Record<string, string> {
-  if (delivery.door !== 'channel') return {};
-  const errors: Record<string, string> = {};
-  if (blank(delivery.channel)) errors['delivery.channel'] = 'A channel is required.';
-  if (blank(delivery.our_identity)) errors['delivery.our_identity'] = 'An identity is required.';
-  return errors;
-}
-
-/**
- * The overlap cross-field rule, mirroring the contract's `OverlapPolicy` validator:
- * a positive settle window is only meaningful with `deliver: all` or `running:
- * cancel`; with `continue` + `one` it would delay every turn for nothing and the
- * server refuses it. Keyed under the settle field so the message shows inline there.
- * The 0..30 integer bounds stay the schema's (and the server's) authority.
- */
-function overlapError(overlap: NonNullable<RouteFormValue['overlap']>): Record<string, string> {
-  const settle = overlap.settle_seconds;
-  if (settle === undefined || settle <= 0) return {};
-  if (overlap.deliver === 'all' || overlap.running === 'cancel') return {};
-  return {
-    'overlap.settle_seconds':
-      'A settle window needs Deliver set to all or Running turn set to cancel.',
-  };
-}
-
-export function requiredFieldErrors(value: RouteFormValue, editing: boolean): SchemaFormErrors {
-  return {
-    ...routeNameError(value, editing),
-    ...targetNameError(value.target ?? {}),
-    ...executionKeyError(value),
-    ...deliveryErrors(value.delivery ?? {}),
-    ...overlapError(value.overlap ?? {}),
   };
 }
 
@@ -574,8 +462,8 @@ export function requiredFieldErrors(value: RouteFormValue, editing: boolean): Sc
  * route-create union: an `api` route carries its callback URL (blank is a poll-only
  * route, sent as `null`) and a `channel` route its channel and identity.
  */
-/** The target-kind/name fields plus the five door-contract inline jq expressions,
- * carried on BOTH target kinds. A blank field rides the wire as `null`. */
+/** The target-kind/name fields plus the five door-contract jq expressions, carried on
+ * BOTH target kinds. An unset field rides the wire as `null`. */
 function targetBodyFields(
   target: NonNullable<RouteFormValue['target']>,
 ): Pick<
@@ -588,16 +476,14 @@ function targetBodyFields(
   | 'resume_expr'
   | 'extras_expr'
 > {
-  // Each jq is authored as inline text and rides the wire as a templated text
-  // (inline `content`); a blank field is `null`.
   return {
     target_kind: target.target_kind ?? 'agent',
     target_name: target.target_name ?? '',
-    start_expr: target.start_expr ? { content: target.start_expr } : null,
-    reply_expr: target.reply_expr ? { content: target.reply_expr } : null,
-    cancel_expr: target.cancel_expr ? { content: target.cancel_expr } : null,
-    resume_expr: target.resume_expr ? { content: target.resume_expr } : null,
-    extras_expr: target.extras_expr ? { content: target.extras_expr } : null,
+    start_expr: target.start_expr ?? null,
+    reply_expr: target.reply_expr ?? null,
+    cancel_expr: target.cancel_expr ?? null,
+    resume_expr: target.resume_expr ?? null,
+    extras_expr: target.extras_expr ?? null,
   };
 }
 
@@ -661,7 +547,7 @@ export function formValueToBody(value: RouteFormValue): ConversationRouteCreate 
   const apiRoute: ApiConversationRouteCreate = {
     ...shared,
     door: 'api',
-    callback_url: blank(delivery.callback_url) ? null : (delivery.callback_url ?? null),
+    callback_url: isBlank(delivery.callback_url) ? null : (delivery.callback_url ?? null),
     channel: null,
     our_identity: null,
   };

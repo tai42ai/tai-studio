@@ -42,7 +42,7 @@ describe('capability gate', () => {
       listSpecRunnableAgents: listOf(),
       listAgents: listOf(agent({ name: 'writer', tool_name: 'writer' })),
     });
-    renderWithProviders(<AgentsPage />, client);
+    renderWithProviders(<AgentsPage search={{}} />, client);
 
     expect(await screen.findByText('No authorable agent installed')).toBeInTheDocument();
     // The plain run UI is unaffected: the registered agent is still listed.
@@ -56,7 +56,7 @@ describe('capability gate', () => {
       listSpecRunnableAgents: listOf(authorableAgent()),
       listAgents: listOf(authorableAgent()),
     });
-    renderWithProviders(<AgentsPage />, client);
+    renderWithProviders(<AgentsPage search={{}} />, client);
 
     // The agents still list, but the write action is gone.
     expect(await findAgentRow('authorable_agent', 'registered')).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('capability gate', () => {
       listSpecRunnableAgents: listOf(authorableAgent()),
       listAgents: listOf(authorableAgent()),
     });
-    renderWithProviders(<AgentsPage />, client, {
+    renderWithProviders(<AgentsPage search={{}} />, client, {
       projection: scopedProjection({
         routes: [{ path: '/api/agents', methods: ['GET'] }],
         agents: [authorableAgent().name],
@@ -91,7 +91,7 @@ describe('capability gate', () => {
       listSpecRunnableAgents: listOf(authorableAgent()),
       listAgents: listOf(authorableAgent()),
     });
-    renderWithProviders(<AgentsPage />, client, {
+    renderWithProviders(<AgentsPage search={{}} />, client, {
       projection: scopedProjection({
         routes: [{ path: '/api/presets', methods: ['GET'] }],
         agents: [authorableAgent().name],
@@ -107,7 +107,7 @@ describe('capability gate', () => {
       listSpecRunnableAgents: listOf(authorableAgent()),
       listAgents: listOf(authorableAgent()),
     });
-    renderWithProviders(<AgentsPage />, client, {
+    renderWithProviders(<AgentsPage search={{}} />, client, {
       projection: scopedProjection({
         routes: [
           { path: '/api/agents', methods: ['GET'] },
@@ -125,7 +125,7 @@ describe('capability gate', () => {
       listSpecRunnableAgents: listOf(authorableAgent()),
       listAgents: listOf(authorableAgent()),
     });
-    renderWithProviders(<AgentsPage />, client, { projection: fullProjection() });
+    renderWithProviders(<AgentsPage search={{}} />, client, { projection: fullProjection() });
 
     expect(await screen.findByRole('button', { name: 'Compose agent' })).toBeInTheDocument();
   });
@@ -145,7 +145,7 @@ describe('the authored agents as a group', () => {
       listSpecRunnableAgents: listOf(authorableAgent()),
       listAgents: listOf(authorableAgent()),
     });
-    renderWithProviders(<AgentsPage />, client, { projection: fullProjection() });
+    renderWithProviders(<AgentsPage search={{}} />, client, { projection: fullProjection() });
 
     expect(await screen.findByText('No authored agents yet')).toBeInTheDocument();
     expect(screen.getByText(COMPOSE_HINT)).toBeInTheDocument();
@@ -157,7 +157,7 @@ describe('the authored agents as a group', () => {
       listSpecRunnableAgents: listOf(authorableAgent()),
       listAgents: listOf(authorableAgent()),
     });
-    renderWithProviders(<AgentsPage />, client, {
+    renderWithProviders(<AgentsPage search={{}} />, client, {
       projection: scopedProjection({
         routes: [{ path: '/api/presets', methods: ['GET'] }],
         agents: [authorableAgent().name],
@@ -178,7 +178,7 @@ describe('the authored agents as a group', () => {
           resolvePresets = resolve;
         }),
     });
-    renderWithProviders(<AgentsPage />, client, { projection: fullProjection() });
+    renderWithProviders(<AgentsPage search={{}} />, client, { projection: fullProjection() });
 
     expect(await screen.findByTestId('authored-agents-loading')).toBeInTheDocument();
     // Loading never claims there are none.
@@ -198,7 +198,7 @@ describe('the authored agents as a group', () => {
       listAgents: listOf(authorableAgent()),
       listPresets: () => Promise.reject(new ApiError('presets store down', 500)),
     });
-    renderWithProviders(<AgentsPage />, client, { projection: fullProjection() });
+    renderWithProviders(<AgentsPage search={{}} />, client, { projection: fullProjection() });
 
     expect(await screen.findByText(/Authored agents could not be loaded/)).toBeInTheDocument();
     expect(screen.queryByText('No authored agents yet')).not.toBeInTheDocument();
@@ -212,7 +212,7 @@ describe('the authored agents as a group', () => {
       listPresets: () =>
         Promise.resolve([presetRecord({ name: 'assistant', base_tool: 'authorable_agent' })]),
     });
-    renderWithProviders(<AgentsPage />, client, { projection: fullProjection() });
+    renderWithProviders(<AgentsPage search={{}} />, client, { projection: fullProjection() });
 
     await findAgentRow('assistant', 'authored');
     await user.click(screen.getByRole('radio', { name: 'Card view' }));
@@ -241,7 +241,7 @@ describe('authored agents in the agents explorer', () => {
   }
 
   it('lists an authored agent with a Manage link to its presets-page detail', async () => {
-    renderWithProviders(<AgentsPage />, authoredClient());
+    renderWithProviders(<AgentsPage search={{}} />, authoredClient());
 
     const row = await findAgentRow('assistant', 'authored');
     // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
@@ -257,7 +257,7 @@ describe('authored agents in the agents explorer', () => {
   });
 
   it('opens Manage (its canonical destination) when the row body is clicked', async () => {
-    const { navigate } = renderWithProviders(<AgentsPage />, authoredClient());
+    const { navigate } = renderWithProviders(<AgentsPage search={{}} />, authoredClient());
 
     const row = await findAgentRow('assistant', 'authored');
     // The description cell is plain, non-interactive text — a body click, which
@@ -267,7 +267,7 @@ describe('authored agents in the agents explorer', () => {
   });
 
   it('leaves Run to run and Manage to manage — the row yields to both, no double-nav', async () => {
-    const { navigate } = renderWithProviders(<AgentsPage />, authoredClient());
+    const { navigate } = renderWithProviders(<AgentsPage search={{}} />, authoredClient());
 
     const row = await findAgentRow('assistant', 'authored');
     // The Manage link navigates exactly once (the row-open yields to it).
@@ -291,7 +291,7 @@ describe('authored agents in the agents explorer', () => {
     // the explorer lists the registered agents alone rather than walling this reachable
     // surface — the authorable content (driven by the specRunnable read) still renders.
     renderWithProviders(
-      <AgentsPage />,
+      <AgentsPage search={{}} />,
       authoredClient({ listPresets: () => Promise.reject(new ApiError('forbidden', 403)) }),
     );
 
@@ -314,7 +314,7 @@ describe('authored agents in the agents explorer', () => {
       // must SAY so — silently listing no authored agent tells the operator the
       // deployment has none when the read simply never landed.
       renderWithProviders(
-        <AgentsPage />,
+        <AgentsPage search={{}} />,
         authoredClient({ listPresets: () => Promise.reject(rejection) }),
       );
 
@@ -331,7 +331,7 @@ describe('authored agents in the agents explorer', () => {
     // tool_name — otherwise a divergent-name agent's authored rows vanish.
     const diverging = authorableAgent({ name: 'reg_name', tool_name: 'different_tool' });
     renderWithProviders(
-      <AgentsPage />,
+      <AgentsPage search={{}} />,
       authoredClient({
         listSpecRunnableAgents: listOf(diverging),
         listAgents: listOf(diverging),
@@ -356,9 +356,13 @@ describe('authored agents in the agents explorer', () => {
         }),
       ),
     );
-    renderWithProviders(<AgentsPage />, authoredClient({ streamAuthoredAgentRun, getPreset }), {
-      projection: fullProjection(),
-    });
+    renderWithProviders(
+      <AgentsPage search={{}} />,
+      authoredClient({ streamAuthoredAgentRun, getPreset }),
+      {
+        projection: fullProjection(),
+      },
+    );
 
     await userEvent.click(
       await screen.findByRole('button', { name: 'Run authored agent assistant' }),
@@ -381,7 +385,7 @@ describe('authored agents in the agents explorer', () => {
     // the run form cannot be rendered honestly — the read is walled and the operator
     // keeps a route back to the list.
     const getPreset = vi.fn(() => Promise.reject(new ApiError('preset read failed', 500)));
-    renderWithProviders(<AgentsPage />, authoredClient({ getPreset }), {
+    renderWithProviders(<AgentsPage search={{}} />, authoredClient({ getPreset }), {
       projection: fullProjection(),
     });
 
@@ -409,9 +413,13 @@ describe('authored agents in the agents explorer', () => {
     );
     // The authored agent is visible (its preset reads), but the projection lists no POST
     // on the authored-run route, so the run degrades to read-only.
-    renderWithProviders(<AgentsPage />, authoredClient({ streamAuthoredAgentRun, getPreset }), {
-      projection: scopedProjection({ routes: [{ path: '/api/agents', methods: ['GET'] }] }),
-    });
+    renderWithProviders(
+      <AgentsPage search={{}} />,
+      authoredClient({ streamAuthoredAgentRun, getPreset }),
+      {
+        projection: scopedProjection({ routes: [{ path: '/api/agents', methods: ['GET'] }] }),
+      },
+    );
 
     await userEvent.click(
       await screen.findByRole('button', { name: 'Run authored agent assistant' }),
@@ -440,9 +448,13 @@ describe('authored agents in the agents explorer', () => {
         }),
       ),
     );
-    renderWithProviders(<AgentsPage />, authoredClient({ streamAuthoredAgentRun, getPreset }), {
-      projection: fullProjection(),
-    });
+    renderWithProviders(
+      <AgentsPage search={{}} />,
+      authoredClient({ streamAuthoredAgentRun, getPreset }),
+      {
+        projection: fullProjection(),
+      },
+    );
 
     await userEvent.click(
       await screen.findByRole('button', { name: 'Run authored agent assistant' }),
@@ -455,7 +467,7 @@ describe('authored agents in the agents explorer', () => {
 
   it('excludes a preset whose base_tool is a plain tool (not an agent) from the list', async () => {
     renderWithProviders(
-      <AgentsPage />,
+      <AgentsPage search={{}} />,
       authoredClient({
         listPresets: () =>
           Promise.resolve([
@@ -497,7 +509,7 @@ describe('authored agents in the agents explorer', () => {
     );
     const streamAuthoredAgentRun = vi.fn(scriptedStream([]));
     renderWithProviders(
-      <AgentsPage />,
+      <AgentsPage search={{}} />,
       authoredClient({
         listSpecRunnableAgents: listOf(knobAgent),
         listAgents: listOf(knobAgent),
@@ -532,7 +544,7 @@ describe('authored agents in the agents explorer', () => {
   it('escapes an arbitrary authored-agent name (XSS-safe)', async () => {
     const evil = '<script>alert(1)</script>';
     renderWithProviders(
-      <AgentsPage />,
+      <AgentsPage search={{}} />,
       authoredClient({
         listPresets: () =>
           Promise.resolve([presetRecord({ name: evil, base_tool: 'authorable_agent' })]),

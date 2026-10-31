@@ -110,6 +110,15 @@ describe('SchemaForm — a self-referencing definition', () => {
     expect(within(next).getByRole('button', { name: 'Add' })).toBeInTheDocument();
   });
 
+  it('offers a whole-document self reference inside a union of a map', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      additionalProperties: { anyOf: [{ type: 'string' }, { $ref: '#' }] },
+    };
+    render(<Harness schema={schema} initial={{ a: 'x' }} />);
+    expect(screen.getByRole('button', { name: 'Add entry' })).toBeInTheDocument();
+  });
+
   it('collapses a nullable self reference whose value is null', () => {
     const schema: JsonSchema = {
       $defs: {
@@ -213,7 +222,7 @@ describe('SchemaForm — adding a level that admits no finite value', () => {
     };
     render(<Harness schema={schema} initial={undefined} />);
     await user.click(screen.getByRole('combobox', { name: 'Variant' }));
-    await user.click(await screen.findByRole('option', { name: 'Option 1' }));
+    await user.click(await screen.findByRole('option', { name: 'R' }));
     expect(screen.getByRole('alert')).toHaveTextContent(/admits no finite value/);
     expect(screen.getByTestId('value')).toHaveTextContent('');
   });

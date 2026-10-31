@@ -185,4 +185,26 @@ describe('SubjectSection', () => {
     await user.keyboard('{Enter}');
     expect(onTargetChange).toHaveBeenCalledWith('tool:relay');
   });
+
+  it('draws the host key field in place of the text key, with the rest unchanged', () => {
+    render(
+      <SubjectSection
+        open
+        onToggle={vi.fn()}
+        target=""
+        onTargetChange={vi.fn()}
+        kind=""
+        onKindChange={vi.fn()}
+        error={null}
+        targetOptions={[]}
+        keyField={<input aria-label="Key expression" />}
+        caption={SECTION_COPY.caption}
+        targetPlaceholder={SECTION_COPY.targetPlaceholder}
+      />,
+    );
+    expect(screen.getByRole('textbox', { name: 'Key expression' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Subject key')).toBeNull();
+    expect(screen.getByLabelText('Subject kind')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Target' })).toBeInTheDocument();
+  });
 });

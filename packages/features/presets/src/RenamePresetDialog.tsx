@@ -16,6 +16,7 @@ import {
   previewHolders,
   Spinner,
   TextInput,
+  toolMetaKey,
   toolsListKey,
   useApi,
 } from '@tai42/studio-sdk';
@@ -49,6 +50,8 @@ export function RenamePresetDialog({
       // list and the tool universe both go stale.
       void queryClient.invalidateQueries({ queryKey: presetsListKey });
       void queryClient.invalidateQueries({ queryKey: toolsListKey });
+      // The overlay rows (folder, tags, display name) move to the new name.
+      void queryClient.invalidateQueries({ queryKey: toolMetaKey });
       // The history now lives under the new key — refetch it there.
       void queryClient.invalidateQueries({ queryKey: presetVersionsKey(result.name) });
       // Drop the OLD name's caches: they are stale (the record + history moved) and

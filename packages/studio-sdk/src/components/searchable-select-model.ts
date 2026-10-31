@@ -4,14 +4,36 @@
  * so the component re-derives nothing per row and the filter is testable alone.
  */
 import { searchNeedle, textHasNeedle } from '../search-match';
-import type { SelectGroup, SelectOption } from './select';
+import type { SelectOption } from './select';
 
-/** One option, with its position in the full list and its label in search form. */
+/**
+ * One option of a `SearchableSelect`: a `SelectOption` that may carry a `description`,
+ * a line of text drawn under its label and searched alongside it.
+ */
+export interface SearchableSelectOption extends SelectOption {
+  readonly description?: string;
+}
+
+/** A labelled cluster of `SearchableSelectOption`s. */
+export interface SearchableSelectGroup {
+  readonly label: string;
+  readonly options: readonly SearchableSelectOption[];
+}
+
+/** One option, with its position in the full list and its texts in search form. */
 export interface SearchEntry {
-  readonly option: SelectOption;
+  readonly option: SearchableSelectOption;
   /** The option's position across every section; stable while the reader filters. */
   readonly position: number;
-  readonly loweredLabel: string;
+  /** The label, then the description when there is one, each lower-cased once. */
+  readonly loweredTexts: readonly string[];
+}
+
+function loweredTextsOf(option: SearchableSelectOption): readonly string[] {
+  const label = option.label.toLowerCase();
+  return option.description === undefined || option.description === ''
+    ? [label]
+    : [label, option.description.toLowerCase()];
 }
 
 /** A run of entries under one group label, or under none for a flat list. */
@@ -28,10 +50,10 @@ export interface VisibleOptions {
 
 /** Index the caller's options (a flat run, or labelled groups) for search. */
 export function indexSections(
-  options: readonly SelectOption[] | undefined,
-  groups: readonly SelectGroup[] | undefined,
+  options: readonly SearchableSelectOption[] | undefined,
+  groups: readonly SearchableSelectGroup[] | undefined,
 ): SearchSection[] {
-  const runs: { label: string | undefined; options: readonly SelectOption[] }[] =
+  const runs: { label: string | undefined; options: readonly SearchableSelectOption[] }[] =
     groups !== undefined
       ? groups.map((group) => ({ label: group.label, options: group.options }))
       : [{ label: undefined, options: options ?? [] }];
@@ -41,13 +63,14 @@ export function indexSections(
     entries: run.options.map((option) => ({
       option,
       position: position++,
-      loweredLabel: option.label.toLowerCase(),
+      loweredTexts: loweredTextsOf(option),
     })),
   }));
 }
 
 /**
- * The sections and entries whose label contains `query`. A blank query returns every
+ * The sections and entries whose label or description contains `query` (each text
+ * tested on its own, as `matchesSearch` does). A blank query returns every
  * section as indexed; either way each kept entry is the indexed object itself, so a
  * row memoised on its entry does not re-render because the reader typed.
  */
@@ -58,7 +81,9 @@ export function visibleOptions(sections: readonly SearchSection[], query: string
       ? sections
       : sections.map((section) => ({
           label: section.label,
-          entries: section.entries.filter((entry) => textHasNeedle(entry.loweredLabel, needle)),
+          entries: section.entries.filter((entry) =>
+            entry.loweredTexts.some((text) => textHasNeedle(text, needle)),
+          ),
         }));
   const nonEmpty = kept.filter((section) => section.entries.length > 0);
   return { sections: nonEmpty, entries: nonEmpty.flatMap((section) => section.entries) };
@@ -85,6 +110,14 @@ export function stepEntry(
     if (entry !== undefined && enabled(entry)) return entry;
   }
   return current;
+}
+
+/** The first (`'first'`) or last (`'last'`) choosable entry, for Home and End. */
+export function edgeEntry(
+  entries: readonly SearchEntry[],
+  edge: 'first' | 'last',
+): SearchEntry | undefined {
+  return edge === 'first' ? entries.find(enabled) : entries.findLast(enabled);
 }
 
 /**

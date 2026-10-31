@@ -9,6 +9,7 @@ import {
   useApi,
   useAppNavigate,
   useSearchCommit,
+  useSearchDraft,
 } from '@tai42/studio-sdk';
 import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
@@ -50,16 +51,9 @@ export function ResourceBrowser({
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [deleteDir, setDeleteDir] = useState<string | null>(null);
 
-  const [query, setQuery] = useState(committedQuery);
-  const [seed, setSeed] = useState(committedQuery);
-  // Re-seed the live filter from the committed `?q=` DURING RENDER (React's
-  // adjust-state-on-prop-change pattern): a filter arriving from the URL (deep-link,
-  // browser back/forward) overwrites the box so it never states a filter the list is
-  // not showing.
-  if (seed !== committedQuery) {
-    setSeed(committedQuery);
-    setQuery(committedQuery);
-  }
+  // The live filter draft; a filter arriving from the URL (deep-link, browser
+  // back/forward) re-seeds it, so the box never states a filter the list is not showing.
+  const [query, setQuery] = useSearchDraft(committedQuery);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const buildSearch = useCallback(

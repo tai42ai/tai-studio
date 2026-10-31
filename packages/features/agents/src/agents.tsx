@@ -14,7 +14,7 @@
  * composes them into the page.
  */
 import type { AgentSummary } from '@tai42/api-client';
-import { PageHeader, Stack } from '@tai42/studio-sdk';
+import { PageHeader, type PageProps, type RouteSearch, Stack } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
@@ -52,9 +52,11 @@ function RunView({
  * and the explorer's rows always agree.
  */
 function AgentsList({
+  search,
   onRun,
   onRunAuthored,
 }: {
+  readonly search: RouteSearch<'agents'>;
   readonly onRun: (agent: AgentSummary) => void;
   readonly onRunAuthored: (target: AuthoredRunTarget) => void;
 }): ReactNode {
@@ -62,7 +64,12 @@ function AgentsList({
   return (
     <>
       <AuthoringSection authored={catalog.authored} />
-      <AgentExplorer catalog={catalog} onRun={onRun} onRunAuthored={onRunAuthored} />
+      <AgentExplorer
+        catalog={catalog}
+        search={search}
+        onRun={onRun}
+        onRunAuthored={onRunAuthored}
+      />
     </>
   );
 }
@@ -70,12 +77,12 @@ function AgentsList({
 // -- page --------------------------------------------------------------------
 
 /**
- * The agents page. Shell-mounted; it takes no route search params (list ⇄ run is
- * local state), so it is a plain page component. It stacks the AUTHORING surface
+ * The agents page. Shell-mounted; its route search is the explorer's filter
+ * (`?q=`, `?tags=`), while list ⇄ run is local state. It stacks the AUTHORING surface
  * (Compose, gated on an authorable agent existing) atop the one agents explorer of
  * registered and authored agents.
  */
-export function AgentsPage(): ReactNode {
+export function AgentsPage({ search }: PageProps<'agents'>): ReactNode {
   const [selected, setSelected] = useState<AgentSummary | null>(null);
   const [authoredRun, setAuthoredRun] = useState<AuthoredRunTarget | null>(null);
 
@@ -104,7 +111,7 @@ export function AgentsPage(): ReactNode {
   return (
     <Stack gap={6}>
       <PageHeader eyebrow="Capabilities" title="Agents" />
-      <AgentsList onRun={setSelected} onRunAuthored={setAuthoredRun} />
+      <AgentsList search={search} onRun={setSelected} onRunAuthored={setAuthoredRun} />
     </Stack>
   );
 }

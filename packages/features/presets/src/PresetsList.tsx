@@ -6,7 +6,7 @@
  * each row carrying the server's `conflicted_reason` (a conflicted preset is
  * DELETE-ONLY; the detail pane offers only Delete for it, so the table never
  * presents a dead button). The name link sets `?preset=` to drive the detail pane
- * from either place.
+ * from either place, keeping the explorer's `?tags=` / `?q=` filter.
  *
  * The overlay read (`listToolMeta`) supplies the folders, each preset's folder, its
  * DISPLAY NAME sub-line and its OVERLAY tags; a failed overlay read is stated loudly
@@ -17,12 +17,12 @@ import {
   Badge,
   Button,
   Card,
-  EmptyState,
   errorMessage,
   ErrorState,
   FeatureDisabled,
   type FoldersChanged,
   openTargetProps,
+  type RouteSearch,
   ScrollRegion,
   Skeleton,
   Spinner,
@@ -30,6 +30,7 @@ import {
   TBody,
   TH,
   THead,
+  toolMetaKey,
   TR,
   useApi,
   useAppNavigate,
@@ -40,8 +41,14 @@ import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-q
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 
 import { CreatePresetForm } from './CreatePresetForm';
-import { presetsListKey, presetToolMetaKey } from './keys';
-import { type OverlayDetail, PRESET_COLUMNS, PresetCells } from './PresetEntry';
+import { presetsListKey } from './keys';
+import {
+  type OverlayDetail,
+  PRESET_COLUMNS,
+  PresetCells,
+  presetOpenSearch,
+  type PresetsFilter,
+} from './PresetEntry';
 import { PresetExplorer } from './PresetExplorer';
 import { StoredPresetFault } from './StoredPresetFault';
 
@@ -51,10 +58,12 @@ function ConflictedTable({
   presets,
   overlayByTool,
   selected,
+  filter,
 }: {
   readonly presets: readonly PresetRecord[];
   readonly overlayByTool: ReadonlyMap<string, OverlayDetail>;
   readonly selected: string | undefined;
+  readonly filter: PresetsFilter;
 }): ReactNode {
   const navigate = useAppNavigate();
   return (
@@ -73,7 +82,7 @@ function ConflictedTable({
             // which stays the accessible path; the helper yields to it.
             const openProps = openTargetProps({
               onOpen: () => {
-                navigate('presets', { preset: preset.name });
+                navigate('presets', presetOpenSearch(preset.name, filter));
               },
             });
             const isSelected = preset.name === selected;
@@ -92,6 +101,7 @@ function ConflictedTable({
                   preset={preset}
                   overlay={overlayByTool.get(preset.name)}
                   selected={isSelected}
+                  filter={filter}
                 />
               </TR>
             );
@@ -104,24 +114,25 @@ function ConflictedTable({
 
 /**
  * The list's body below its header: the versioning OFF note, the loading rows, the
- * stored-row fault or a read error, the empty state, or the active-preset explorer and
- * the conflicted table.
+ * stored-row fault or a read error, or the active-preset explorer (which states an
+ * empty list itself, above any folders) and the conflicted table.
  */
 function PresetsListBody({
   query,
   metaQuery,
   versioningOffMessage,
   overlayByTool,
-  selected,
+  search,
   onFoldersChanged,
 }: {
   readonly query: UseQueryResult<PresetRecord[]>;
   readonly metaQuery: UseQueryResult<ToolMetaOverlay>;
   readonly versioningOffMessage: string | null;
   readonly overlayByTool: ReadonlyMap<string, OverlayDetail>;
-  readonly selected: string | undefined;
+  readonly search: RouteSearch<'presets'>;
   readonly onFoldersChanged: FoldersChanged;
 }): ReactNode {
+  const selected = search.preset;
   const api = useApi();
   const faulted = query.isError ? api.storedPresetFaultFromError(query.error) : null;
   const active = useMemo(
@@ -152,13 +163,6 @@ function PresetsListBody({
     ) : (
       <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
     )
-  ) : query.data.length === 0 ? (
-    <Card>
-      <EmptyState
-        title="No presets yet"
-        description="Create a preset to bind a base tool with fixed kwargs into a new named tool."
-      />
-    </Card>
   ) : (
     <>
       <Card>
@@ -173,9 +177,11 @@ function PresetsListBody({
           ) : null}
           <PresetExplorer
             presets={active}
+            hasConflicted={conflicted.length > 0}
             overlay={metaQuery.data}
             overlayByTool={overlayByTool}
-            selected={selected}
+            search={search}
+            tagsAvailable={metaQuery.isSuccess}
             onFoldersChanged={onFoldersChanged}
             overlayLoaded={metaQuery.isSuccess}
           />
@@ -204,6 +210,7 @@ function PresetsListBody({
               presets={conflicted}
               overlayByTool={overlayByTool}
               selected={selected}
+              filter={search}
             />
           </div>
         </Card>
@@ -212,16 +219,16 @@ function PresetsListBody({
   );
 }
 
-export function PresetsList({ selected }: { readonly selected: string | undefined }): ReactNode {
+export function PresetsList({ search }: { readonly search: RouteSearch<'presets'> }): ReactNode {
   const api = useApi();
   const query = useQuery({ queryKey: presetsListKey, queryFn: () => api.listPresets() });
   // The overlay read (folders, display names, tags) is enrichment: a preset row renders
   // fully without it, so its failure never walls the list — the body states it loudly
   // with a retry and shows every preset at the root.
-  const metaQuery = useQuery({ queryKey: presetToolMetaKey, queryFn: () => api.listToolMeta() });
+  const metaQuery = useQuery({ queryKey: toolMetaKey, queryFn: () => api.listToolMeta() });
   const queryClient = useQueryClient();
   const onFoldersChanged = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: presetToolMetaKey }),
+    () => queryClient.invalidateQueries({ queryKey: toolMetaKey }),
     [queryClient],
   );
   const [createOpen, setCreateOpen] = useState(false);
@@ -296,7 +303,7 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
         metaQuery={metaQuery}
         versioningOffMessage={versioningOffMessage}
         overlayByTool={overlayByTool}
-        selected={selected}
+        search={search}
         onFoldersChanged={onFoldersChanged}
       />
 

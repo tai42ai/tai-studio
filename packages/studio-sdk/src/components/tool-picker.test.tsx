@@ -537,6 +537,27 @@ describe('ToolPicker', () => {
     expect(shown()).toEqual(['gamma']);
   });
 
+  it('finds a tool by its description and draws the description under its option', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToolPicker
+        query={loaded(TOOLS)}
+        emptyNote={EMPTY}
+        value={null}
+        onChange={vi.fn()}
+        tagsByTool={{ alpha: ['geo'], beta: ['geo'], gamma: ['scratch'] }}
+        toolDescriptions={{ gamma: 'Converts a temperature' }}
+      />,
+    );
+    await user.click(toolCombobox());
+    await user.type(screen.getByRole('combobox', { name: 'Search tools' }), 'TEMPERATURE');
+
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(1);
+    expect(options[0]).toHaveAccessibleName(/gamma/);
+    expect(options[0]).toHaveAccessibleDescription('Converts a temperature');
+  });
+
   it('searches within the tag groups, dropping a group the search empties', async () => {
     const user = userEvent.setup();
     render(

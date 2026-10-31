@@ -5,7 +5,7 @@
  */
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { PresetsList } from './PresetsList';
 import { fullProjection, renderWithProviders, type StubApiClient } from './test-utils';
@@ -71,13 +71,18 @@ async function findPresetRow(name: string): Promise<HTMLElement> {
 }
 
 describe('PresetsList', () => {
+  // The list/card choice persists per screen; each test starts on the list view.
+  afterEach(() => {
+    localStorage.clear();
+  });
+
   it('renders every column for a row, with OVERLAY tags + display name', async () => {
     // Tags and the display name are the tool_meta overlay's, not the record's.
     const client = listClient(
       [normal],
       [metaRow('paris_weather', { display_name: 'Paris Weather', tags: ['geo'] })],
     );
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client,
     });
@@ -100,7 +105,7 @@ describe('PresetsList', () => {
   });
 
   it('labels the extension-count column Extensions (not the internal word)', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client: listClient([normal]),
     });
@@ -110,25 +115,42 @@ describe('PresetsList', () => {
     expect(screen.queryByRole('columnheader', { name: 'Combos' })).toBeNull();
   });
 
+  it('shows the active version and the extension count on a card too', async () => {
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<PresetsList search={{}} />, {
+      projection: fullProjection(),
+      client: listClient([normal]),
+    });
+
+    await findPresetRow('paris_weather');
+    await user.click(screen.getByRole('radio', { name: 'Card view' }));
+    const card = screen
+      .getByRole('link', { name: 'Open preset paris_weather' })
+      .closest('.tai-card');
+    if (!(card instanceof HTMLElement)) throw new Error('no card holds preset paris_weather');
+    expect(within(card).getByText('Active version 3')).toBeInTheDocument();
+    expect(within(card).getByText('Extensions 1')).toBeInTheDocument();
+  });
+
   it('renders a tag as a static chip whose class the table keeps on one line', async () => {
     // The chip carries `tai-chip`, which the stylesheet pins to `white-space: nowrap`
     // inside a `.tai-table` so a hyphenated tag never splits across two lines; the
     // wrapping-between-chips is the cell's own `.tai-row`. jsdom loads no CSS, so the
     // class presence is what this asserts; narrow-viewport.test.ts guards the rule.
     const client = listClient([normal], [metaRow('paris_weather', { tags: ['palette-node'] })]);
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client,
     });
 
-    const chip = await screen.findByText('palette-node');
-    expect(chip).toHaveClass('tai-chip', 'tai-chip-static');
+    const row = await findPresetRow('paris_weather');
+    expect(within(row).getByText('palette-node')).toHaveClass('tai-chip', 'tai-chip-static');
   });
 
   it('omits the display-name sub-line and shows — for tags when the overlay row is absent', async () => {
     // No overlay entry for the tool → no display name, and the Tags cell falls back
     // to the em-dash rather than inventing tags.
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client: listClient([normal]),
     });
@@ -139,7 +161,7 @@ describe('PresetsList', () => {
   });
 
   it('shows the conflicted badge + the server reason only on a conflicted row', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client: listClient([normal, conflicted]),
     });
@@ -156,7 +178,7 @@ describe('PresetsList', () => {
   });
 
   it('falls back to the generic sentence when conflicted_reason is null', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client: listClient([{ ...conflicted, conflicted_reason: null }]),
     });
@@ -166,7 +188,7 @@ describe('PresetsList', () => {
   });
 
   it('splits conflicted rows into their own Conflicted section, apart from the active table', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client: listClient([normal, conflicted]),
     });
@@ -180,7 +202,7 @@ describe('PresetsList', () => {
   });
 
   it('renders no Conflicted section when every preset is active', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client: listClient([normal]),
     });
@@ -191,7 +213,7 @@ describe('PresetsList', () => {
 
   it('navigates ?preset= when a row is selected', async () => {
     const user = userEvent.setup({ delay: null });
-    const { navigate } = renderWithProviders(<PresetsList selected={undefined} />, {
+    const { navigate } = renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client: listClient([normal]),
     });
@@ -202,7 +224,7 @@ describe('PresetsList', () => {
 
   it('opens the preset when the row body (a non-link cell) is clicked', async () => {
     const user = userEvent.setup({ delay: null });
-    const { navigate } = renderWithProviders(<PresetsList selected={undefined} />, {
+    const { navigate } = renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client: listClient([normal]),
     });
@@ -215,7 +237,7 @@ describe('PresetsList', () => {
 
   it('navigates once — not twice — when the name link itself is clicked', async () => {
     const user = userEvent.setup({ delay: null });
-    const { navigate } = renderWithProviders(<PresetsList selected={undefined} />, {
+    const { navigate } = renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client: listClient([normal]),
     });
@@ -226,7 +248,7 @@ describe('PresetsList', () => {
   });
 
   it('marks the selected row link as the current page', async () => {
-    renderWithProviders(<PresetsList selected="paris_weather" />, {
+    renderWithProviders(<PresetsList search={{ preset: 'paris_weather' }} />, {
       projection: fullProjection(),
       client: listClient([normal]),
     });
@@ -241,7 +263,7 @@ describe('PresetsList', () => {
   });
 
   it('gives the selected preset the shared selected look, active or conflicted', async () => {
-    const view = renderWithProviders(<PresetsList selected="paris_weather" />, {
+    const view = renderWithProviders(<PresetsList search={{ preset: 'paris_weather' }} />, {
       projection: fullProjection(),
       client: listClient([normal, conflicted]),
     });
@@ -249,7 +271,7 @@ describe('PresetsList', () => {
     expect(screen.getByTestId('preset-row-stale_preset')).not.toHaveAttribute('data-selected');
     view.unmount();
 
-    renderWithProviders(<PresetsList selected="stale_preset" />, {
+    renderWithProviders(<PresetsList search={{ preset: 'stale_preset' }} />, {
       projection: fullProjection(),
       client: listClient([normal, conflicted]),
     });
@@ -265,7 +287,7 @@ describe('PresetsList', () => {
       listPresets: vi.fn().mockRejectedValue(new Error('boom: list failed')),
       listToolMeta: vi.fn().mockResolvedValue({ folders: [], meta: [] }),
     };
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client,
     });
@@ -274,7 +296,7 @@ describe('PresetsList', () => {
   });
 
   it('shows the empty state when there are no presets', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client: listClient([]),
     });
@@ -286,7 +308,7 @@ describe('PresetsList', () => {
     // A versioning-OFF deployment refuses preset create (501) and reads an empty
     // store: the create button is WITHDRAWN and the muted OFF note stands where the
     // create-oriented empty state would otherwise mislead.
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client: listClient([]),
       systemKinds: [
@@ -311,7 +333,7 @@ describe('PresetsList', () => {
   });
 
   it('KEEPS the create affordance when the versioning kind is active', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       projection: fullProjection(),
       client: listClient([normal]),
       systemKinds: [{ kind: 'versioning', state: 'active', plugin: 'pg', detail: '' }],
@@ -347,7 +369,7 @@ describe('PresetsList', () => {
     }
 
     it('draws the folders holding a preset or nothing, and not those holding only other tools', async () => {
-      renderWithProviders(<PresetsList selected={undefined} />, {
+      renderWithProviders(<PresetsList search={{}} />, {
         projection: fullProjection(),
         client: folderClient(),
       });
@@ -361,7 +383,7 @@ describe('PresetsList', () => {
 
     it('opens a folder to show the presets filed in it, with a breadcrumb back', async () => {
       const user = userEvent.setup({ delay: null });
-      renderWithProviders(<PresetsList selected={undefined} />, {
+      renderWithProviders(<PresetsList search={{}} />, {
         projection: fullProjection(),
         client: folderClient(),
       });
@@ -374,7 +396,7 @@ describe('PresetsList', () => {
     });
 
     it('offers the folder actions to a writer', async () => {
-      renderWithProviders(<PresetsList selected={undefined} />, {
+      renderWithProviders(<PresetsList search={{}} />, {
         projection: fullProjection(),
         client: folderClient(),
       });
@@ -387,7 +409,7 @@ describe('PresetsList', () => {
     });
 
     it('offers each folder action only on its own route', async () => {
-      renderWithProviders(<PresetsList selected={undefined} />, {
+      renderWithProviders(<PresetsList search={{}} />, {
         projection: fullProjection({
           admin: false,
           routes: [{ path: '/api/tool-meta/folders/{folder_id}/rename', methods: ['POST'] }],
@@ -403,7 +425,7 @@ describe('PresetsList', () => {
     });
 
     it('offers no folder action to a caller who may only file a tool', async () => {
-      renderWithProviders(<PresetsList selected={undefined} />, {
+      renderWithProviders(<PresetsList search={{}} />, {
         projection: fullProjection({
           admin: false,
           routes: [{ path: '/api/tool-meta/tools/{tool_name}', methods: ['PATCH'] }],
@@ -418,7 +440,7 @@ describe('PresetsList', () => {
     it('names the Edit dialog in an empty folder only to a caller who may file a preset', async () => {
       const user = userEvent.setup({ delay: null });
       const hint = 'File a preset here from its Edit dialog.';
-      const view = renderWithProviders(<PresetsList selected={undefined} />, {
+      const view = renderWithProviders(<PresetsList search={{}} />, {
         projection: fullProjection(),
         client: folderClient(),
       });
@@ -426,7 +448,7 @@ describe('PresetsList', () => {
       expect(await screen.findByText(hint)).toBeInTheDocument();
       view.unmount();
 
-      renderWithProviders(<PresetsList selected={undefined} />, {
+      renderWithProviders(<PresetsList search={{}} />, {
         projection: fullProjection({ admin: false }),
         client: folderClient(),
       });
@@ -435,8 +457,8 @@ describe('PresetsList', () => {
       expect(screen.queryByText(hint)).toBeNull();
     });
 
-    it('shows the no-active-presets state, not a folder tree, when no preset is active', async () => {
-      renderWithProviders(<PresetsList selected={undefined} />, {
+    it('shows the no-active-presets state above the folders when no preset is active', async () => {
+      renderWithProviders(<PresetsList search={{}} />, {
         projection: fullProjection(),
         client: {
           listPresets: vi.fn().mockResolvedValue([conflicted]),
@@ -448,11 +470,42 @@ describe('PresetsList', () => {
       });
 
       expect(await screen.findByText('No active presets')).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Fresh' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Fresh' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Delete folder Fresh' })).toBeInTheDocument();
+    });
+
+    it('shows the no-presets state above the folders, which keep their actions', async () => {
+      renderWithProviders(<PresetsList search={{}} />, {
+        projection: fullProjection(),
+        client: {
+          listPresets: vi.fn().mockResolvedValue([]),
+          listToolMeta: vi.fn().mockResolvedValue({
+            folders: [folderRow('f-empty', 'Fresh')],
+            meta: [],
+          }),
+        },
+      });
+
+      expect(await screen.findByText('No presets yet')).toBeInTheDocument();
+      expect(
+        await screen.findByRole('button', { name: 'Rename folder Fresh' }),
+      ).toBeInTheDocument();
+    });
+
+    it('opens the folder of a preset a link selects', async () => {
+      renderWithProviders(<PresetsList search={{ preset: 'paris_weather' }} />, {
+        projection: fullProjection(),
+        client: folderClient(),
+      });
+
+      const row = await findPresetRow('paris_weather');
+      expect(row).toHaveAttribute('data-selected', 'true');
+      const path = screen.getByRole('navigation', { name: 'Folder path' });
+      expect(path).toHaveTextContent('Forecasts');
     });
 
     it('states a failed overlay read loudly and still lists every preset at the root', async () => {
-      renderWithProviders(<PresetsList selected={undefined} />, {
+      renderWithProviders(<PresetsList search={{}} />, {
         projection: fullProjection(),
         client: {
           listPresets: vi.fn().mockResolvedValue([normal]),

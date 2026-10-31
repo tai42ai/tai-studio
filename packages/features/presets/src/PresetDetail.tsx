@@ -16,13 +16,14 @@ import {
   errorMessage,
   ErrorState,
   Skeleton,
+  toolMetaKey,
   useApi,
   useAppNavigate,
 } from '@tai42/studio-sdk';
 import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, type Ref, useState } from 'react';
 
-import { presetDetailKey, presetToolMetaKey } from './keys';
+import { presetDetailKey } from './keys';
 import { presetOverlay } from './preset-overlay';
 import { PresetBodyCards } from './PresetBodyCards';
 import { PresetDetailDialogs } from './PresetDetailDialogs';
@@ -53,7 +54,7 @@ export function PresetDetail({
   // The overlay row (display name, tags, folder) for this preset's live tool. Enrichment, not
   // load-bearing for the record — but the Edit affordance stays disabled until it
   // lands, since a merge-patch built on unread tags would clear them.
-  const metaQuery = useQuery({ queryKey: presetToolMetaKey, queryFn: () => api.listToolMeta() });
+  const metaQuery = useQuery({ queryKey: toolMetaKey, queryFn: () => api.listToolMeta() });
   const [saveOpen, setSaveOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);

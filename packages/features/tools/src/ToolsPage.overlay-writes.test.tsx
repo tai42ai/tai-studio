@@ -6,12 +6,12 @@
  * server's error in the open dialog, cleared when the dialog closes.
  */
 import { ApiError, type ToolMetaOverlay } from '@tai42/api-client';
+import { toolMetaKey } from '@tai42/studio-sdk';
 import { __resetContributions } from '@tai42/studio-sdk/testing';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { toolMetaKey } from './keys';
 import { fullProjection, renderWithProviders, type StubApiClient } from './test-utils';
 import { ToolsPage } from './ToolsPage';
 

@@ -1,10 +1,12 @@
 /**
  * The searchable single-select both `AgentPicker` and `ChannelPicker` render: one list
  * read of names, drawn in its own `Field` with the read's states (pending, error with Retry,
- * refused on a 403, loaded and empty) and a stored value the loaded list does not
- * hold flagged with the picker's unlisted label. Each picker hands in its own copy.
+ * loaded and empty) and a stored value the loaded list does not hold flagged with the
+ * picker's unlisted label. Each picker hands in its own copy. On a 403 the session may
+ * not list the names, and the server checks a named reference on save, so the picker
+ * draws a typed entry in place of the select, with the picker's no-list note under it.
  * The host's `error` shows, and the `Field` claims its control id, exactly while a
- * select renders.
+ * control (the select or the typed entry) renders.
  */
 import { type ReactNode, useId } from 'react';
 
@@ -14,6 +16,7 @@ import { Field } from './field';
 import { ErrorState } from './primitives';
 import { SearchableSelect } from './searchable-select';
 import type { SelectOption } from './select';
+import { TypedNameEntry } from './typed-name-entry';
 
 const MUTED_LINE = { margin: 0, color: 'var(--tai-color-text-muted)' } as const;
 
@@ -32,6 +35,7 @@ export interface NamedListCopy {
   readonly description?: string | undefined;
   readonly loadingPlaceholder: string;
   readonly placeholder: string;
+  /** The sentence under the typed entry on a 403: why there is no list, what saving checks. */
   readonly forbiddenNote: string;
   readonly emptyNote: string;
   readonly emptyAction: ReactNode;
@@ -69,16 +73,9 @@ interface NamedListView {
   readonly selectRenders: boolean;
 }
 
-/** The stored value's own option: flagged when the loaded list does not hold it, and kept
- * unflagged under a 403, where without the list the form claims nothing about it. */
-function storedOptions(
-  stored: string,
-  unlisted: boolean,
-  refused: boolean,
-  unlistedLabel: string,
-): SelectOption[] {
-  if (unlisted) return [{ value: stored, label: `${stored} (${unlistedLabel})` }];
-  return refused ? [{ value: stored, label: stored }] : [];
+/** The stored value's own option, flagged, when the loaded list does not hold it. */
+function storedOptions(stored: string, unlisted: boolean, unlistedLabel: string): SelectOption[] {
+  return unlisted ? [{ value: stored, label: `${stored} (${unlistedLabel})` }] : [];
 }
 
 function listedOptions(loaded: boolean, names: readonly string[]): SelectOption[] {
@@ -102,11 +99,8 @@ function namedListView(
   const options =
     stored === null
       ? listedOptions(loaded, names)
-      : [
-          ...storedOptions(stored, unlisted, refused, unlistedLabel),
-          ...listedOptions(loaded, names),
-        ];
-  const selectRenders = pending || (refused ? stored !== null : !failed && (!empty || unlisted));
+      : [...storedOptions(stored, unlisted, unlistedLabel), ...listedOptions(loaded, names)];
+  const selectRenders = pending || (!query.isError && (!empty || unlisted));
   return { refused, failed, pending, unlisted, empty, options, selectRenders };
 }
 
@@ -136,8 +130,7 @@ function NamedListBody({
           searchLabel={copy.searchLabel}
         />
       ) : null}
-      {view.refused ? <MutedLine text={copy.forbiddenNote} /> : null}
-      {view.empty && !view.refused ? (
+      {view.empty ? (
         <>
           <MutedLine text={copy.emptyNote} />
           {copy.emptyAction}
@@ -162,14 +155,15 @@ export function NamedListPicker({
   copy,
 }: NamedListPickerProps): ReactNode {
   const view = namedListView(query, names, value, copy.unlistedLabel);
+  const controlRenders = view.selectRenders || view.refused;
   return (
     <Field
       label={copy.label}
       description={copy.description}
-      error={view.selectRenders ? error : undefined}
-      // Only the select claims the field's control id; with nothing to hold no
+      error={controlRenders ? error : undefined}
+      // Only a control claims the field's control id; with nothing to hold no
       // labelable element renders, so `for` would dangle.
-      group={!view.selectRenders}
+      group={!controlRenders}
     >
       {view.failed ? (
         <ErrorState
@@ -177,6 +171,14 @@ export function NamedListPicker({
           onRetry={() => {
             query.refetch();
           }}
+        />
+      ) : view.refused ? (
+        <TypedNameEntry
+          value={value === '' ? null : value}
+          onChange={onValueChange}
+          disabled={false}
+          ariaLabel={undefined}
+          note={copy.forbiddenNote}
         />
       ) : (
         <NamedListBody view={view} value={value} onValueChange={onValueChange} copy={copy} />

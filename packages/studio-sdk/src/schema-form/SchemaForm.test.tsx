@@ -565,7 +565,7 @@ describe('SchemaForm — scalar unions', () => {
     render(<Harness schema={scalarUnion} initial={undefined} />);
 
     await user.click(screen.getByRole('combobox', { name: 'Variant' }));
-    await user.click(await screen.findByRole('option', { name: 'Option 2' }));
+    await user.click(await screen.findByRole('option', { name: 'Whole number' }));
 
     expect(emitted()).toBe('0');
     expect(screen.getByRole('spinbutton')).toHaveValue(0);

@@ -22,6 +22,7 @@ import {
   OverlayDetailsFields,
   overlayDetailsPatch,
   Spinner,
+  toolMetaKey,
   useApi,
   useCreateFolder,
   useReloadToolDisplayNames,
@@ -29,8 +30,6 @@ import {
 } from '@tai42/studio-sdk';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, useCallback, useState } from 'react';
-
-import { presetToolMetaKey } from './keys';
 
 export function EditOverlayDialog({
   toolName,
@@ -56,10 +55,7 @@ export function EditOverlayDialog({
   const [value, setValue] = useState<OverlayDetails>(initial);
   const [folderId, setFolderId] = useState<string | null>(initialFolderId);
   const createFolder = useCreateFolder(
-    useCallback(
-      () => queryClient.invalidateQueries({ queryKey: presetToolMetaKey }),
-      [queryClient],
-    ),
+    useCallback(() => queryClient.invalidateQueries({ queryKey: toolMetaKey }), [queryClient]),
   );
 
   const save = useMutation({
@@ -69,7 +65,7 @@ export function EditOverlayDialog({
       // The overlay row changed — refetch the tool_meta map behind the detail grid
       // and the list's display-name/tags cells, and refresh the SDK-level overlay so
       // every tool picker across the app re-labels alongside this surface.
-      void queryClient.invalidateQueries({ queryKey: presetToolMetaKey });
+      void queryClient.invalidateQueries({ queryKey: toolMetaKey });
       reloadDisplayNames();
       onClose();
     },

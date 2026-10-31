@@ -121,33 +121,6 @@ export {
 } from './hooks/useToolDisplayNames';
 export { UnauthorizedProvider, useOnUnauthorized } from './hooks/useUnauthorized';
 
-// -- Navigation (shell ⇄ feature route-token contract) -----------------------
-export type {
-  AppLinkProps,
-  NavigateOptions,
-  NavigationContextValue,
-  NavigationGuardHandler,
-  PageProps,
-  PluginHolderTarget,
-  PluginNavigateOptions,
-  PluginSearch,
-  RouteSearch,
-  RouteSearchByToken,
-  RouteToken,
-  SearchCommitParams,
-} from './navigation';
-export {
-  AppLink,
-  NavigationProvider,
-  useAppNavigate,
-  useNavigationGate,
-  useNavigationGuard,
-  usePluginEntryNavigation,
-  usePluginNavigation,
-  useResolvePath,
-  useSearchCommit,
-} from './navigation';
-
 // -- Utilities ---------------------------------------------------------------
 export { downloadBlob } from './download';
 export type { EnvRef } from './env-markers';
@@ -178,6 +151,7 @@ export {
   stateTemplatesKey,
   subMcpKey,
   tokensPayloadKey,
+  toolMetaKey,
   toolsListKey,
 } from './query-keys';
 
@@ -192,6 +166,9 @@ export { mergeToolBadges, toolBadgesByName } from './tool-badges';
 
 // -- Text search shared by pickers and filterable lists ----------------------
 export { isBlankSearch, matchesSearch } from './search-match';
+
+// -- Run results -------------------------------------------------------------
+export { isEmptyResult } from './empty-result';
 
 // -- Design system -----------------------------------------------------------
 export type { ActionMenuItem, ActionMenuProps } from './components/action-menu';
@@ -323,6 +300,10 @@ export type {
 } from './components/searchable-select';
 export { SearchableSelect } from './components/searchable-select';
 export type {
+  SearchableSelectGroup,
+  SearchableSelectOption,
+} from './components/searchable-select-model';
+export type {
   SelectGroup,
   SelectGroupsProps,
   SelectOption,
@@ -345,7 +326,13 @@ export {
 } from './components/served-media';
 export type { StepperProps, StepperStatus, StepperStep } from './components/stepper';
 export { Stepper } from './components/stepper';
-export type { SubjectSectionProps, SubjectTargetOption } from './components/subject-section';
+export type {
+  SubjectSectionKeyFieldProps,
+  SubjectSectionProps,
+  SubjectSectionSharedProps,
+  SubjectSectionTextKeyProps,
+  SubjectTargetOption,
+} from './components/subject-section';
 export {
   buildSubject,
   SUBJECT_INCOMPLETE_MESSAGE,
@@ -387,8 +374,14 @@ export type { ViewMode, ViewToggleProps } from './components/view-toggle';
 export { useViewMode, ViewToggle } from './components/view-toggle';
 
 // -- Whole-module re-exports (each module's own index lists its published names) --
-// The marketplace install UI and the tool-organization folder tree.
+// The marketplace install UI, the navigation contract (shell ⇄ feature route tokens),
+// the validated JSON-Schema editor, the schema-driven forms (whose expression door is
+// injected, never imported: see the module's own index) and the tool-organization
+// folder tree.
 export * from './marketplace-install';
+export * from './navigation';
+export * from './schema-editor';
+export * from './schema-form';
 export * from './tool-organization';
 // -- Iconography (the only sanctioned marks; Unicode glyphs are banned) -------
 export type { IconComponent, IconProps } from './components/icons';
@@ -444,61 +437,6 @@ export {
   UnplugIcon,
   XCircleIcon,
 } from './components/icons';
-
-// -- Schema-driven forms -----------------------------------------------------
-export type {
-  CompletionProvider,
-  DateRangePair,
-  Discriminator,
-  ExpressionFieldComponent,
-  ExpressionFieldProps,
-  ExpressionInputKey,
-  ExpressionInputShape,
-  FieldWords,
-  FormControl,
-  FormInputMode,
-  JsonSchema,
-  JsonSchemaType,
-  RecordEntryContext,
-  RecordEntryRenderer,
-  SchemaFormErrors,
-  SchemaFormProps,
-  SecretRef,
-  SecretRefFieldProps,
-  UseTemplatedTextCatalog,
-} from './schema-form';
-export {
-  dateRangePairs,
-  defaultValueForSchema,
-  // The expression-door injection point: a host that wants `x-tai42-expression`
-  // fields to author through the visual editor imports `JqField` from
-  // `@tai42/jq-studio` and hands it to a form (the `expressionField` prop) or
-  // mounts this context above its tree. A form with no door renders those fields
-  // as plain string inputs and stays free of the jq subgraph — the editor, its
-  // worker, and its wasm — entirely.
-  ExpressionFieldContext,
-  fieldDrawingOrder,
-  isFieldVisible,
-  NoFiniteValueError,
-  RecordEntryRendererContext,
-  resolveRef,
-  SchemaForm,
-  SecretRefField,
-  // The stored-template source for schema-built templated-text fields: a host
-  // mounts a hook here that returns the template catalog, so those fields offer
-  // stored templates beside inline content.
-  TemplatedTextCatalogContext,
-  validateAgainstSchema,
-} from './schema-form';
-
-// -- Schema-editor (validated JSON-Schema authoring control) -----------------
-export type {
-  SchemaEditorChange,
-  SchemaEditorDraft,
-  SchemaEditorProps,
-  SchemaLintResult,
-} from './schema-editor';
-export { lintSchemaText, SchemaEditor } from './schema-editor';
 
 // -- State-binding editor (the one binding shape every door authors, plugin doors included) --
 export type {

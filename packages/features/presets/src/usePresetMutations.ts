@@ -14,6 +14,7 @@ import type {
 import {
   isFeatureDisabled,
   type SchemaEditorDraft,
+  toolMetaKey,
   toolsListKey,
   useApi,
   useAppNavigate,
@@ -130,6 +131,8 @@ export function usePresetMutations({
     onSuccess: (record) => {
       void queryClient.invalidateQueries({ queryKey: presetsListKey });
       void queryClient.invalidateQueries({ queryKey: toolsListKey });
+      // A create clears any stale overlay row under the name and files the tags.
+      void queryClient.invalidateQueries({ queryKey: toolMetaKey });
       onClose();
       navigate('presets', { preset: record.name });
     },

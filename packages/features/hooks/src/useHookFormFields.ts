@@ -29,7 +29,7 @@ interface IdentitySeed {
 interface SubjectSeed {
   readonly subjectTarget: string;
   readonly subjectKind: string;
-  readonly subjectKeyExpr: string;
+  readonly subjectKeyExpr: TemplatedText | null;
   readonly subjectOpen: boolean;
 }
 
@@ -69,12 +69,12 @@ function identitySeed(initial?: HookParams): IdentitySeed {
 function subjectSeed(initial?: HookParams): SubjectSeed {
   const subject = initial?.subject ?? null;
   if (subject === null) {
-    return { subjectTarget: '', subjectKind: '', subjectKeyExpr: '', subjectOpen: false };
+    return { subjectTarget: '', subjectKind: '', subjectKeyExpr: null, subjectOpen: false };
   }
   return {
     subjectTarget: `${subject.target_kind}:${subject.target_name}`,
     subjectKind: subject.kind,
-    subjectKeyExpr: subject.key_expr.content ?? '',
+    subjectKeyExpr: subject.key_expr,
     subjectOpen: true,
   };
 }
@@ -104,8 +104,8 @@ export interface HookFormFields {
   readonly setSubjectTarget: (value: string) => void;
   readonly subjectKind: string;
   readonly setSubjectKind: (value: string) => void;
-  readonly subjectKeyExpr: string;
-  readonly setSubjectKeyExpr: (value: string) => void;
+  readonly subjectKeyExpr: TemplatedText | null;
+  readonly setSubjectKeyExpr: (value: TemplatedText | null) => void;
   readonly subjectOpen: boolean;
   readonly setSubjectOpen: (updater: (open: boolean) => boolean) => void;
   readonly stateBinding: StateBinding | null;
@@ -158,7 +158,9 @@ export function useHookFormFields(initial?: HookParams): HookFormFields {
   const [executionKey, setExecutionKey] = useState(identity.executionKey);
   const [subjectTarget, setSubjectTarget] = useState(subject.subjectTarget);
   const [subjectKind, setSubjectKind] = useState(subject.subjectKind);
-  const [subjectKeyExpr, setSubjectKeyExpr] = useState(subject.subjectKeyExpr);
+  const [subjectKeyExpr, setSubjectKeyExpr] = useState<TemplatedText | null>(
+    subject.subjectKeyExpr,
+  );
   const [subjectOpen, setSubjectOpen] = useState(subject.subjectOpen);
   const [stateBinding, setStateBinding] = useState<StateBinding | null>(identity.stateBinding);
   const [submitted, setSubmitted] = useState(false);
@@ -176,7 +178,7 @@ export function useHookFormFields(initial?: HookParams): HookFormFields {
     setExecutionKey('');
     setSubjectTarget('');
     setSubjectKind('');
-    setSubjectKeyExpr('');
+    setSubjectKeyExpr(null);
     setSubmitted(false);
     setKwargsError(null);
     setSubjectError(null);

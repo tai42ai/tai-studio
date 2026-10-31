@@ -1,17 +1,22 @@
 /**
  * `SearchableSelect` — a single-choice select whose popup opens with a search box:
  * typing narrows the options to those whose label contains the text (the SDK's one
- * search rule, `matchesSearch`). It takes the same option shapes as `Select` — a flat
- * `options` run or labelled `groups`, never both — and its trigger wears the same
+ * search rule, `matchesSearch`), or whose `description` does: an option may carry one,
+ * drawn as a quieter line under its label. It takes the same option shapes as `Select`
+ * — a flat `options` run or labelled `groups`, never both — and its trigger wears the same
  * class, auto-wires to an enclosing `Field` the same way, and has the same
  * `combobox` role, so the two read as one control with and without search.
  *
  * Keyboard: on the trigger, Enter, ArrowDown or ArrowUp opens the popup as the key goes
  * down (as on `Select`), Space opens it as a button press, and a printable key opens it
- * with that key already typed. In the search box ArrowDown
- * and ArrowUp move the highlight, Enter chooses it, and Escape closes the popup and
- * returns focus to the trigger. The highlight is exposed as the search box's
- * `aria-activedescendant`, so focus never leaves the box while the reader moves.
+ * with that key already typed. In the search box ArrowDown and ArrowUp move the
+ * highlight, Home and End move it to the first and last choosable option, Enter chooses
+ * it, and Escape closes the popup and returns focus to the trigger. Tab and Shift+Tab
+ * close the popup without choosing and move focus on from the trigger, to the control
+ * after or before it, as from a closed select. The highlight is exposed as the search
+ * box's `aria-activedescendant`, so focus never leaves the box while the reader moves.
+ * When the query changes, the highlight moves to the first choosable match and the list
+ * scrolls back to its top, so the first match is shown however far down the list was.
  *
  * Large lists: the options are indexed once per options change, a keystroke runs one
  * substring test per option against that index, and the list renders from a deferred
@@ -42,14 +47,16 @@ import { SELECT_TRIGGER_CLASS } from './control-styles';
 import { useFieldControl, useFieldLabelId } from './field';
 import { CheckIcon, ChevronDownIcon } from './icons';
 import {
+  edgeEntry,
   indexSections,
+  type SearchableSelectGroup,
+  type SearchableSelectOption,
   type SearchEntry,
   type SearchSection,
   shownEntry,
   stepEntry,
   visibleOptions,
 } from './searchable-select-model';
-import type { SelectGroup, SelectOption } from './select';
 
 /** Everything the two option shapes have in common. */
 interface SearchableSelectSharedProps {
@@ -74,12 +81,12 @@ interface SearchableSelectSharedProps {
 
 /** The FLAT shape: one ungrouped run of options. */
 export interface SearchableSelectProps extends SearchableSelectSharedProps {
-  readonly options: readonly SelectOption[];
+  readonly options: readonly SearchableSelectOption[];
 }
 
 /** The GROUPED shape: labelled clusters, each carrying its own options. */
 export interface SearchableSelectGroupsProps extends SearchableSelectSharedProps {
-  readonly groups: readonly SelectGroup[];
+  readonly groups: readonly SearchableSelectGroup[];
 }
 
 type SearchableSelectArgs =
@@ -96,18 +103,31 @@ interface OptionRowProps {
 /** One option. Pointer handling is delegated to the listbox, so a row is pure markup. */
 const OptionRow = memo(function OptionRow({ entry, id, highlighted, selected }: OptionRowProps) {
   const disabled = entry.option.disabled === true;
+  const { description } = entry.option;
+  const hasDescription = description !== undefined && description !== '';
+  const descriptionId = `${id}-description`;
   return (
     <div
       id={id}
       role="option"
       aria-selected={selected}
       aria-disabled={disabled ? true : undefined}
+      aria-describedby={hasDescription ? descriptionId : undefined}
       className="tai-select-item"
       data-position={entry.position}
       data-highlighted={highlighted ? '' : undefined}
       data-disabled={disabled ? '' : undefined}
     >
-      <span>{entry.option.label}</span>
+      {hasDescription ? (
+        <span className="tai-search-select-option-text">
+          <span>{entry.option.label}</span>
+          <span id={descriptionId} className="tai-search-select-option-description">
+            {description}
+          </span>
+        </span>
+      ) : (
+        <span>{entry.option.label}</span>
+      )}
       {selected ? (
         <span className="tai-select-item-indicator" aria-hidden="true">
           <CheckIcon />
@@ -137,7 +157,8 @@ function isPrintable(event: KeyboardEvent): boolean {
  * handlers that move it and choose.
  *
  * The highlight is held as an option VALUE, so a list that changes while open keeps
- * it on the same option. Choosing and the empty status read the live query; only the
+ * it on the same option; a new query lets it go, so it lands on the first match.
+ * Choosing and the empty status read the live query; only the
  * rendered rows trail it through `useDeferredValue`, so a fast type-and-Enter picks
  * from what was typed.
  */
@@ -152,11 +173,15 @@ function useSearchSelection(
     [listboxId],
   );
   const inputRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [wanted, setWanted] = useState<string | undefined>(undefined);
   // Only a keyboard move scrolls the highlight into view; a pointer already sees it.
   const scrollOnMove = useRef(false);
+  // Set when Tab leaves the popup, so closing it does not pull focus back to the trigger.
+  const leftByTab = useRef(false);
 
   const indexed = useMemo(() => sections.flatMap((section) => section.entries), [sections]);
   const selectedEntry = useMemo(
@@ -186,17 +211,42 @@ function useSearchSelection(
     scrollToHighlight(highlighted);
   }, [highlighted, scrollToHighlight]);
 
+  // Once the rows for a new query are drawn, the list starts again from its top with
+  // the highlight, the first match, in view. Keyed on the rendered query, so it runs after the deferred
+  // rows exist; the query a popup opens with is handled by `onOpened`.
+  const shownQuery = useRef(deferredQuery);
+  useEffect(() => {
+    if (shownQuery.current === deferredQuery) return;
+    shownQuery.current = deferredQuery;
+    if (listRef.current !== null) listRef.current.scrollTop = 0;
+    scrollToHighlight(highlighted);
+  }, [deferredQuery, highlighted, scrollToHighlight]);
+
   const onOpenChange = (next: boolean): void => {
     setOpen(next);
     if (!next) setQuery('');
     else setWanted(selectedEntry?.option.value);
   };
 
+  const changeQuery = (next: string): void => {
+    setQuery(next);
+    setWanted(undefined);
+  };
+
   /** Runs once the popup's rows are mounted: focus goes to the search box, and the
    *  highlight (the chosen option on open) is brought into view. */
   const onOpened = (): void => {
+    shownQuery.current = query;
     inputRef.current?.focus();
     scrollToHighlight(highlighted);
+  };
+
+  /** Runs as the popup closes: focus returns to the trigger, unless Tab already moved
+   *  it on from there. */
+  const onClosed = (event: Event): void => {
+    if (!leftByTab.current) return;
+    leftByTab.current = false;
+    event.preventDefault();
   };
 
   const choose = (entry: SearchEntry | undefined): void => {
@@ -214,6 +264,15 @@ function useSearchSelection(
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       move(stepEntry(live.entries, highlightedEntry, event.key === 'ArrowDown' ? 1 : -1));
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      move(edgeEntry(live.entries, event.key === 'Home' ? 'first' : 'last'));
+    } else if (event.key === 'Tab') {
+      // Focus goes back to the trigger and the key's own move then runs from there, so
+      // Tab lands on the control after the select and Shift+Tab on the one before it.
+      leftByTab.current = true;
+      triggerRef.current?.focus();
+      onOpenChange(false);
     } else if (event.key === 'Enter') {
       // Enter chooses; it must never submit the form the select sits in.
       event.preventDefault();
@@ -230,7 +289,7 @@ function useSearchSelection(
     } else if (isPrintable(event) && event.key !== ' ') {
       event.preventDefault();
       onOpenChange(true);
-      setQuery(event.key);
+      changeQuery(event.key);
     }
   };
 
@@ -250,11 +309,14 @@ function useSearchSelection(
     listboxId,
     optionId,
     inputRef,
+    triggerRef,
+    listRef,
     open,
     onOpenChange,
     onOpened,
+    onClosed,
     query,
-    setQuery,
+    changeQuery,
     empty: live.entries.length === 0,
     rendered,
     highlighted,
@@ -293,11 +355,14 @@ export function SearchableSelect(props: SearchableSelectArgs): ReactNode {
     listboxId,
     optionId,
     inputRef,
+    triggerRef,
+    listRef,
     open,
     onOpenChange,
     onOpened,
+    onClosed,
     query,
-    setQuery,
+    changeQuery,
     empty,
     rendered,
     highlighted,
@@ -330,6 +395,7 @@ export function SearchableSelect(props: SearchableSelectArgs): ReactNode {
   return (
     <RadixPopover.Root open={open} onOpenChange={onOpenChange}>
       <RadixPopover.Trigger
+        ref={triggerRef}
         type="button"
         role="combobox"
         id={field.id}
@@ -355,6 +421,7 @@ export function SearchableSelect(props: SearchableSelectArgs): ReactNode {
             event.preventDefault();
             onOpened();
           }}
+          onCloseAutoFocus={onClosed}
         >
           <div className="tai-search-select-search">
             <input
@@ -372,7 +439,7 @@ export function SearchableSelect(props: SearchableSelectArgs): ReactNode {
               placeholder={searchLabel}
               value={query}
               onChange={(event) => {
-                setQuery(event.target.value);
+                changeQuery(event.target.value);
               }}
               onKeyDown={onSearchKeyDown}
             />
@@ -381,6 +448,7 @@ export function SearchableSelect(props: SearchableSelectArgs): ReactNode {
               so a press on a row must not move focus out of the box first. */}
           {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- the search box owns the keyboard through aria-activedescendant; focus never reaches the list */}
           <div
+            ref={listRef}
             id={listboxId}
             role="listbox"
             {...popupName}

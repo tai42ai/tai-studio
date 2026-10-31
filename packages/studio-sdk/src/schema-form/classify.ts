@@ -15,7 +15,6 @@ import {
   scalarLabel,
   typeList,
   unionMembers,
-  variantLabel,
   variantTag,
 } from './resolve';
 import {
@@ -25,6 +24,7 @@ import {
   withSiteExpression,
 } from './string-annotations';
 import type { FormControl, FormInputMode, JsonSchema } from './types';
+import { variantLabels } from './variant-label';
 
 function firstString(...values: readonly unknown[]): string | undefined {
   for (const value of values) {
@@ -138,10 +138,15 @@ function classifyUnion(
     return classifySoleUnionMember(soleNonNull, resolved, root, nullable, title, description);
   }
   const discriminator = resolved.discriminator?.propertyName;
-  const variants: UnionVariant[] = nonNull.map((member, index) => {
-    const tag = discriminator === undefined ? undefined : variantTag(member, discriminator, root);
-    return { label: variantLabel(member, index, tag, root), tag, schema: member };
-  });
+  const tags = nonNull.map((member) =>
+    discriminator === undefined ? undefined : variantTag(member, discriminator, root),
+  );
+  const labels = variantLabels(nonNull, tags, root);
+  const variants: UnionVariant[] = nonNull.map((member, index) => ({
+    label: labels[index] ?? '',
+    tag: tags[index],
+    schema: member,
+  }));
   return {
     model: { kind: 'union', variants, discriminator, members },
     nullable,

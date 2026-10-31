@@ -27,6 +27,7 @@ import {
   foldersForView,
   isFullProjection,
   toFolders,
+  toolMetaKey,
   useApi,
   useCapabilities,
   useToolMetaWriteAccess,
@@ -35,12 +36,7 @@ import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-q
 import { useCallback, useMemo } from 'react';
 
 import { agentEntries, type AgentEntry } from './agent-entries';
-import {
-  agentsListKey,
-  agentsToolMetaKey,
-  authoredPresetsKey,
-  specRunnableAgentsKey,
-} from './keys';
+import { agentsListKey, authoredPresetsKey, specRunnableAgentsKey } from './keys';
 
 /**
  * The registered agents visible to the caller. A scoped session sees only the
@@ -78,6 +74,8 @@ export interface AgentCatalog {
   /** The tree as this screen draws it. */
   readonly folders: readonly Folder[];
   readonly folderIdByTool: ReadonlyMap<string, string | null>;
+  /** Each tool's overlay tags — what the explorer's tag chips filter on. */
+  readonly tagsByTool: ReadonlyMap<string, readonly string[]>;
   /** The overlay read succeeded, so the folders and each tool's folder are known. */
   readonly overlayLoaded: boolean;
   /** The caller may file an agent's tool into a folder (its write offered + overlay loaded). */
@@ -96,10 +94,10 @@ export function useAgentCatalog(): AgentCatalog {
     queryFn: () => api.listSpecRunnableAgents(),
   });
   const presetsQuery = useQuery({ queryKey: authoredPresetsKey, queryFn: () => api.listPresets() });
-  const metaQuery = useQuery({ queryKey: agentsToolMetaKey, queryFn: () => api.listToolMeta() });
+  const metaQuery = useQuery({ queryKey: toolMetaKey, queryFn: () => api.listToolMeta() });
 
   const onFoldersChanged = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: agentsToolMetaKey }),
+    () => queryClient.invalidateQueries({ queryKey: toolMetaKey }),
     [queryClient],
   );
   const access = useToolMetaWriteAccess();
@@ -143,6 +141,10 @@ export function useAgentCatalog(): AgentCatalog {
     () => new Map((metaQuery.data?.meta ?? []).map((row) => [row.tool_name, row.folder_id])),
     [metaQuery.data],
   );
+  const tagsByTool = useMemo(
+    () => new Map((metaQuery.data?.meta ?? []).map((row) => [row.tool_name, row.tags])),
+    [metaQuery.data],
+  );
 
   return {
     agentsQuery,
@@ -154,6 +156,7 @@ export function useAgentCatalog(): AgentCatalog {
     allFolders,
     folders,
     folderIdByTool,
+    tagsByTool,
     overlayLoaded: metaQuery.isSuccess,
     canFileTools: access.editTool && metaQuery.isSuccess,
     onFoldersChanged,

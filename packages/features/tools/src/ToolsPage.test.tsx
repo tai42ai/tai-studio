@@ -9,13 +9,13 @@
  * control and focus management on selection change.
  */
 import { ApiError, type MeProjection, type ToolTagEntry } from '@tai42/api-client';
+import { toolMetaKey } from '@tai42/studio-sdk';
 import { __resetContributions, StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { type ReactNode, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { toolMetaKey } from './keys';
 import {
   fullProjection,
   renderWithProviders,
@@ -1057,7 +1057,7 @@ describe('ToolsPage — folder actions and the tool_meta store', () => {
     expect(other.closest('tr')).not.toHaveAttribute('data-selected');
   });
 
-  it('shows the no-visible-tools state, not a folder tree, when every tool is hidden', async () => {
+  it('shows the no-visible-tools state above the folders, which keep their actions', async () => {
     renderWithProviders(<ToolsPage search={{}} />, {
       client: folderClient({
         listToolMeta: vi.fn().mockResolvedValue({
@@ -1067,10 +1067,31 @@ describe('ToolsPage — folder actions and the tool_meta store', () => {
           ],
         }),
       }),
+      projection: fullProjection(),
     });
 
     expect(await screen.findByText('No visible tools')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Weather' })).toBeNull();
+    expect(await screen.findByRole('button', { name: 'Weather' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rename folder Weather' })).toBeInTheDocument();
+  });
+
+  it('shows the no-tools prompt above the folders when no tool is installed', async () => {
+    renderWithProviders(<ToolsPage search={{}} />, {
+      client: folderClient({
+        listTools: vi.fn().mockResolvedValue([]),
+        listToolMeta: vi.fn().mockResolvedValue({
+          folders: [{ id: 'f1', name: 'Weather', parent_id: null }],
+          meta: [],
+        }),
+      }),
+      projection: fullProjection(),
+    });
+
+    expect(await screen.findByText('No tools available')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Browse marketplace' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Rename folder Weather' }),
+    ).toBeInTheDocument();
   });
 });
 

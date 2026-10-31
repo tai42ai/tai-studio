@@ -80,12 +80,16 @@ export function PresetsPage({ search }: PageProps<'presets'>): ReactNode {
 
       <div className="tai-split" data-pane={pane}>
         <div className="tai-split-list" ref={listRef}>
-          <PresetsList selected={selected} />
+          <PresetsList search={search} />
         </div>
 
         <div className="tai-split-detail">
           {isSinglePane && selected !== undefined ? (
-            <AppLink to="presets" search={{}} className="tai-btn tai-btn-ghost">
+            <AppLink
+              to="presets"
+              search={{ tags: search.tags, q: search.q }}
+              className="tai-btn tai-btn-ghost"
+            >
               <ArrowLeftIcon />
               Back
             </AppLink>

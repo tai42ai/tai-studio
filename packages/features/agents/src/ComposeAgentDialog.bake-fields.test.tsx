@@ -1,12 +1,12 @@
 /**
  * The compose dialog — the opt-in bake checklist for non-spec fields, the
- * response_format editor, the shared-tools-list invalidation, and the picker-read
- * failure resilience (a failed load walls the picker and blocks submit; a 403 on the
- * tools list takes typed names and composes; a tags failure is stated but degrades
- * gracefully).
+ * response_format editor, the shared tools-list and tool-overlay invalidations, and
+ * the picker-read failure resilience (a failed load walls the picker and blocks
+ * submit; a 403 on the tools list takes typed names and composes; a tags failure is
+ * stated but degrades gracefully).
  */
 import { ApiError, type CreatePresetBody } from '@tai42/api-client';
-import { toolsListKey } from '@tai42/studio-sdk';
+import { toolMetaKey, toolsListKey } from '@tai42/studio-sdk';
 import { QueryClient } from '@tanstack/react-query';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -238,6 +238,25 @@ describe('ComposeAgentDialog', () => {
 
     await waitFor(() => {
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: toolsListKey });
+    });
+    invalidateSpy.mockRestore();
+  });
+
+  it('invalidates the shared tool overlay on success (so every screen files the new tool)', async () => {
+    // The create files the composed agent's tags on the overlay every screen reads.
+    const invalidateSpy = vi.spyOn(QueryClient.prototype, 'invalidateQueries');
+    const createPreset = vi.fn(() => Promise.resolve(presetRecord()));
+    renderWithProviders(
+      <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+      composeClient({ createPreset }),
+    );
+
+    await fillNameAndDescription('assistant');
+    await pickBaseAgent();
+    await userEvent.click(screen.getByRole('button', { name: 'Compose agent' }));
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: toolMetaKey });
     });
     invalidateSpy.mockRestore();
   });

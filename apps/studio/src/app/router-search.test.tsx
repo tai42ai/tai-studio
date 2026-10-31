@@ -150,6 +150,20 @@ describe('deep-link search parsing', () => {
     });
   });
 
+  it('parses the presets filter: its tags and its query', async () => {
+    expect(await loadSearch('/presets?preset=paris&tags=geo,time&q=fore')).toEqual({
+      preset: 'paris',
+      version: undefined,
+      tags: ['geo', 'time'],
+      q: 'fore',
+    });
+  });
+
+  it('parses the agents filter: its tags and its query', async () => {
+    expect(await loadSearch('/agents?tags=text&q=writ')).toEqual({ tags: ['text'], q: 'writ' });
+    expect(await loadSearch('/agents?q=5')).toEqual({ tags: undefined, q: undefined });
+  });
+
   it('parses the named hook and schedule', async () => {
     expect(await loadSearch('/hooks?hook=notify-event')).toEqual({ hook: 'notify-event' });
     expect(await loadSearch('/scheduling?schedule=nightly')).toEqual({ schedule: 'nightly' });

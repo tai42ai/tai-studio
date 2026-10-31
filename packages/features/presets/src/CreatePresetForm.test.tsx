@@ -5,7 +5,7 @@
  * behaviour, and the Tags field shown only with the overlay write grant.
  */
 import { ApiError, apiRoutes } from '@tai42/api-client';
-import { toolsListKey } from '@tai42/studio-sdk';
+import { toolMetaKey, toolsListKey } from '@tai42/studio-sdk';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -69,6 +69,25 @@ describe('CreatePresetForm', () => {
     // live tool the tools page shows).
     expect(invalidate).toHaveBeenCalledWith({ queryKey: presetsListKey });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: toolsListKey });
+  });
+
+  it('refreshes the shared tool overlay after a create, so every screen refiles the name', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createPreset = vi.fn().mockResolvedValue(record);
+    const { navigate, queryClient } = renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      projection: fullProjection(),
+      client: baseClient({ createPreset }),
+    });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    await fillCreatable(user);
+    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
+    });
+    // A create clears any stale overlay row under the name, even with no tags entered.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: toolMetaKey });
   });
 
   it('completes the create even when the overlay tag write is refused as not-configured', async () => {

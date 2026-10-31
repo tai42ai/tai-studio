@@ -26,13 +26,14 @@ import {
   Spinner,
   Stack,
   TextInput,
+  toolMetaKey,
   useApi,
   useCanWrite,
 } from '@tai42/studio-sdk';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, useState } from 'react';
 
-import { toolMetaKey, toolsListKey } from './keys';
+import { toolsListKey } from './keys';
 
 /** The fenced live-registry doors — each gated on its OWN route. */
 const TOOL_RELOAD_ROUTE = apiRoutes.post_api_tools_reload.path;

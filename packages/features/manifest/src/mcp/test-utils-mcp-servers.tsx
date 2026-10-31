@@ -83,10 +83,14 @@ export function renderWithProviders(
   // The failed-servers section reads `listFailedMcps` on every mount, so default it to
   // an empty roster unless the test stubs it — existing tests that never touched the
   // failed section keep rendering without a spurious read failure. `getMe` resolves the
-  // capability projection; a test may still override it.
+  // capability projection; a test may still override it. Every mounted server
+  // advertises tools a and b unless the test stubs `listMcpAdvertisedTools`.
   const merged: Partial<ApiClient> = {
     ...refusalReaders,
     listFailedMcps: vi.fn().mockResolvedValue(emptyFailedReport),
+    listMcpAdvertisedTools: vi.fn((title: string) =>
+      Promise.resolve(advertisedTools(title, [{ name: 'a' }, { name: 'b' }])),
+    ),
     getMe: () => Promise.resolve(projection),
     ...client,
   };
@@ -219,6 +223,27 @@ export const withEnvMarker = {
 
 export function status() {
   return { bound: { srv: ['a', 'b'] }, failed: [{ title: 'bad', status: 'timeout' }] };
+}
+
+/** The advertised-tools read of server `title`: each tool by name, with its description. */
+export function advertisedTools(
+  title: string,
+  tools: readonly { readonly name: string; readonly description?: string }[],
+) {
+  return {
+    title,
+    include: [],
+    exclude: [],
+    tools: tools.map((tool) => ({
+      name: tool.name,
+      title: null,
+      description: tool.description ?? null,
+      selected: true,
+      bound: true,
+      unbound_reason: null,
+    })),
+    unadvertised: [],
+  };
 }
 
 /** A `list_failed_mcps` fleet report whose sole worker carries `entries` as its

@@ -6,8 +6,9 @@
  * owns the selected value; this component fetches nothing.
  *
  * Opening the picker opens a search box: typing narrows the options to the tools whose
- * label contains the text, ignoring case. The label carries the display name and the
- * raw name, so either finds the tool.
+ * label or description contains the text, ignoring case. The label carries the display
+ * name and the raw name, so either finds the tool; a host's `toolDescriptions` adds each
+ * tool's description, drawn under its label and searched with it.
  *
  * The picker owns its `Field` (with `label`) and draws the read's states in it: pending
  * (a disabled select reading "Loading tools…"), error (`ErrorState` with Retry, or the
@@ -39,6 +40,9 @@
  *    mapping equal to the raw name) reads the bare raw name. The value stays the raw
  *    name and grouping/tag filtering/exclusion key off raw names alone; the display
  *    name only labels the option, and so is what the search reads with the raw name.
+ *  - `toolDescriptions` (each tool's own description) draws a tool's description as
+ *    a quieter line under its option and lets the search find the tool by it, by the
+ *    same rule that matches its label.
  *  - `badgesByTool` (native ∪ overlay, from the tool-meta merge) surfaces the
  *    SELECTED tool's DECLARED capability badges as read-only chips beneath the
  *    select. Badges are INFORMATIONAL — the tooltip says so — never a gate, so they
@@ -56,12 +60,16 @@ import { ErrorState } from './primitives';
 import type { SelectOption } from './select';
 import { SelectedToolBadges } from './selected-tool-badges';
 import { ALL_TAGS, TagFilterField } from './tag-filter-field';
-import { ToolNameEntry } from './tool-name-entry';
 import { ToolSelect } from './tool-select';
+import { TypedNameEntry } from './typed-name-entry';
 
 export { BADGES_NOTE } from './selected-tool-badges';
 
 const MUTED_LINE = { margin: 0, color: 'var(--tai-color-text-muted)' } as const;
+
+/** The sentence under the typed entry, naming why there is no list and what saving does. */
+const TOOL_LIST_REFUSED_NOTE =
+  "This session cannot list tools, so type the tool's exact name. Saving checks that the deployment serves it.";
 
 /**
  * The subset of a tool list read this picker reads: `data` is the names the host
@@ -122,6 +130,11 @@ export interface ToolPickerProps {
    * emits stays the raw name in every case.
    */
   readonly displayNames?: Readonly<Record<string, string>>;
+  /**
+   * Each tool's description keyed by raw tool name. A described option draws it under
+   * its label, and the search matches it as it matches the label.
+   */
+  readonly toolDescriptions?: Readonly<Record<string, string>>;
   /**
    * Per-tool DECLARED capability badges (native ∪ overlay). When present, the
    * selected tool's badges render as read-only chips beneath the select — purely
@@ -257,6 +270,7 @@ export function ToolPicker({
   tagsByTool,
   agentToolNames,
   displayNames,
+  toolDescriptions,
   badgesByTool,
 }: ToolPickerProps) {
   const [tagFilter, setTagFilter] = useState<string>(ALL_TAGS);
@@ -291,6 +305,7 @@ export function ToolPicker({
       ariaDescribedBy={state.unlisted ? unlistedId : undefined}
       disabled={disabled === true || state.pending}
       displayNames={displayNames}
+      toolDescriptions={toolDescriptions}
       agentToolNames={agentToolNames}
       leading={leading}
     />
@@ -307,11 +322,12 @@ export function ToolPicker({
   const controlRenders = phase === 'unlisted' || phase === 'select' || phase === 'refused';
   const contentByPhase: Record<PickerPhase, () => ReactNode> = {
     refused: () => (
-      <ToolNameEntry
+      <TypedNameEntry
         value={stored}
         onChange={onChange}
         disabled={disabled === true}
         ariaLabel={ariaLabel}
+        note={TOOL_LIST_REFUSED_NOTE}
       />
     ),
     error: () =>

@@ -5,13 +5,13 @@
  * surfaces, and the basic rename affordance + a successful rename.
  */
 import { ApiError } from '@tai42/api-client';
-import { toolsListKey } from '@tai42/studio-sdk';
+import { toolMetaKey, toolsListKey } from '@tai42/studio-sdk';
 import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { presetDetailKey, presetsListKey, presetToolMetaKey, presetVersionsKey } from './keys';
+import { presetDetailKey, presetsListKey, presetVersionsKey } from './keys';
 import { PresetDetail } from './PresetDetail';
 import { PresetsList } from './PresetsList';
 import {
@@ -129,7 +129,7 @@ describe('PresetDetail', () => {
     });
     // The overlay map behind the detail grid + list is refetched on success.
     await waitFor(() => {
-      expect(invalidate).toHaveBeenCalledWith({ queryKey: presetToolMetaKey });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: toolMetaKey });
     });
   });
 
@@ -249,7 +249,7 @@ describe('PresetDetail', () => {
     };
     renderWithProviders(
       <>
-        <PresetsList selected="paris_weather" />
+        <PresetsList search={{ preset: 'paris_weather' }} />
         <PresetDetail name="paris_weather" />
       </>,
       { projection: fullProjection(), client },

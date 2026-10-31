@@ -14,7 +14,7 @@
 import { AppLink, Badge, Button, Card, type ExplorerColumn, TD } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
-import type { AgentEntry } from './agent-entries';
+import { type AgentEntry, entryDescription } from './agent-entries';
 
 /** The explorer's columns, in cell order. */
 export const AGENT_COLUMNS: readonly ExplorerColumn[] = [
@@ -31,10 +31,6 @@ export interface AgentEntryViewProps {
   readonly onRun: (entry: AgentEntry) => void;
   /** Open the move-to-folder dialog; absent for a caller who cannot file. */
   readonly onMove: ((entry: AgentEntry) => void) | undefined;
-}
-
-function entryDescription(entry: AgentEntry): string {
-  return entry.kind === 'registered' ? entry.agent.description : entry.preset.description;
 }
 
 function EntryName({ entry }: { readonly entry: AgentEntry }): ReactNode {

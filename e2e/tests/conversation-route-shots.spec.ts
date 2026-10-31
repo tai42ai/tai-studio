@@ -37,7 +37,8 @@
  *
  * The route dialog cases below the frames pick the target, the channel and the execution
  * key from served lists under a served session, and read the create body or the lines the
- * key picker draws.
+ * key picker draws. Where the session may not list agents or channels, the names are typed,
+ * and a typed name the deployment does not register is refused by the live create door.
  *
  * Every door the surface reads is served through `page.route`, deterministically; other
  * routes and non-GET methods fall through to the live skeleton. The write capability is
@@ -54,7 +55,8 @@ import { crc32, deflateSync } from 'node:zlib';
 import { expect, type Locator, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
-import { seedCredential } from './helpers';
+import { pickExecutionKey, seedCredential } from './helpers';
+import { deleteRoute, holdersApi } from './holders-fixtures';
 import {
   ACCOUNT_EMPTY_NOTE,
   accountSession,
@@ -813,10 +815,21 @@ test.beforeAll(async () => {
 // ---- The route dialog's pickers and execution-key binding ----------------------
 // The dialog picks each name from the deployment's own list. These cases serve the
 // lists, the session and the create write through `page.route`, so they read the same
-// on any boot.
+// on any boot; the one refusal case sends its create to the live door, which refuses
+// names no boot registers.
 
 /** The agent, channel and identity a picked route binds. */
 const PICKED = { agent: 'assistant', channel: 'web', identity: '+10000000000' } as const;
+
+/** The notes the agent and channel pickers show in place of a list the session may not read. */
+const AGENTS_UNLISTED_NOTE =
+  "This session cannot list agents, so type the agent's exact name. Saving checks that the agent is registered.";
+const CHANNELS_UNLISTED_NOTE =
+  "This session cannot list channels, so type the channel's exact name. Saving checks that the channel is installed.";
+
+/** Names no boot registers, so the live create door refuses a route that binds them. */
+const UNREGISTERED_AGENT = 'unregistered-agent';
+const UNREGISTERED_CHANNEL = 'unregistered-channel';
 
 /** The reach a scoped session needs to read the routes and create one through the pickers. */
 const ROUTE_DIALOG_REACH = [
@@ -980,21 +993,80 @@ test.describe('route dialog pickers', () => {
     await expect(channelTrigger).toContainText('chat-line');
   });
 
-  test('a session that cannot list agents reads the note in place of the agent list', async ({
+  test('a session that cannot list agents or channels types their names and creates the route', async ({
     page,
   }) => {
     await stubRead(page, '/api/agents', { status: 403, error: 'Forbidden' });
+    await stubRead(page, '/api/channels', { status: 403, error: 'Forbidden' });
+    await stubSession(page, scopedKeySession('alice', ROUTE_DIALOG_REACH));
+    await stubKeyList(page, { keys: [] });
+    await serveWrite(page, 'POST', isRouteWrite, written('typed-line', 'alice'));
     await page.goto('/conversations');
 
     await page.getByRole('button', { name: 'Create route' }).click();
     const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Route name').fill('typed-line');
     await pick(page, dialog, 'Target kind', 'Agent');
-    await expect(
-      dialog.getByText(
-        'This session cannot list agents. Picking one needs read access to GET /api/agents; ask an administrator to grant it.',
-        { exact: true },
-      ),
-    ).toBeVisible();
+    await expect(dialog.getByText(AGENTS_UNLISTED_NOTE, { exact: true })).toBeVisible();
+    await dialog.getByRole('textbox', { name: 'Agent', exact: true }).fill(PICKED.agent);
+    await pick(page, dialog, 'Door', 'Channel');
+    await expect(dialog.getByText(CHANNELS_UNLISTED_NOTE, { exact: true })).toBeVisible();
+    await dialog.getByRole('textbox', { name: 'Channel', exact: true }).fill(PICKED.channel);
+    await dialog.getByLabel('Our identity').fill(PICKED.identity);
+    await pick(page, dialog, 'Execution key', "alice — this session's identity");
+    const write = nextRequest(page, 'POST', isRouteWrite);
+    await dialog.getByRole('button', { name: 'Create route' }).click();
+
+    expect(bodyOf(await write)).toMatchObject({
+      target_kind: 'agent',
+      target_name: PICKED.agent,
+      door: 'channel',
+      channel: PICKED.channel,
+    });
+  });
+
+  test.describe('against the live create door', () => {
+    needs('mutable');
+
+    test('a typed name the deployment does not register is refused on save with the server reason', async ({
+      page,
+    }) => {
+      const route = `typed-unknown-${Date.now().toString(36)}`;
+      const api = await holdersApi();
+      try {
+        await stubRead(page, '/api/agents', { status: 403, error: 'Forbidden' });
+        await stubRead(page, '/api/channels', { status: 403, error: 'Forbidden' });
+        await page.goto('/conversations');
+
+        await page.getByRole('button', { name: 'Create route' }).click();
+        const dialog = page.getByRole('dialog');
+        await dialog.getByLabel('Route name').fill(route);
+        await pick(page, dialog, 'Target kind', 'Agent');
+        await dialog.getByRole('textbox', { name: 'Agent', exact: true }).fill(UNREGISTERED_AGENT);
+        await pick(page, dialog, 'Door', 'Channel');
+        await dialog
+          .getByRole('textbox', { name: 'Channel', exact: true })
+          .fill(UNREGISTERED_CHANNEL);
+        await dialog.getByLabel('Our identity').fill(PICKED.identity);
+        await pickExecutionKey(page, dialog);
+        await dialog.getByRole('button', { name: 'Create route' }).click();
+
+        // The live create door checks every named reference and refuses the route, and the
+        // dialog stays open on the server's own lines.
+        const refusal = dialog.getByRole('alert');
+        await expect(refusal).toContainText(
+          `route target agent '${UNREGISTERED_AGENT}' is not a registered agent`,
+        );
+        await expect(refusal).toContainText(
+          `route channel '${UNREGISTERED_CHANNEL}' is not a registered channel`,
+        );
+        await expect(dialog).toBeVisible();
+      } finally {
+        // A deployment that accepted the names would have stored the route; remove it.
+        await deleteRoute(api, route);
+        await api.dispose();
+      }
+    });
   });
 
   test("a stored key that is not the session's identity is flagged before save", async ({

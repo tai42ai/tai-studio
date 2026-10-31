@@ -6,11 +6,14 @@
  *   - a tool → Arguments / Result;
  *   - anything else → a scale-guarded JSON tree.
  * Input / output trees offer the resolved view when they hold references to other
- * steps; `metadata` renders as its own guarded tree. Every payload is escaped — this
+ * steps; an empty input is left out, and a span that ended without error and with an
+ * empty output (by the shared `isEmptyResult` rule) says so in a plain note under its
+ * label, so a tool that returned nothing reads as such rather than as a missing
+ * section. `metadata` renders as its own guarded tree. Every payload is escaped — this
  * pane is never an HTML sink.
  */
 import type { RunSpan } from '@tai42/api-client';
-import { Badge, JsonTree } from '@tai42/studio-sdk';
+import { Badge, isEmptyResult, JsonTree } from '@tai42/studio-sdk';
 import type { CSSProperties, ReactNode } from 'react';
 
 import { formatLatencyMs, formatTokenCount } from './format';
@@ -38,14 +41,6 @@ const panelStyle: CSSProperties = {
   overflow: 'auto',
 };
 
-/** Whether a JSON value carries anything worth rendering (skips `{}`/`[]`/null). */
-function hasContent(value: unknown): boolean {
-  if (value === null || value === undefined) return false;
-  if (typeof value === 'object') return Object.keys(value).length > 0;
-  if (typeof value === 'string') return value.trim() !== '';
-  return true;
-}
-
 function metadataIsMeaningful(metadata: unknown): boolean {
   return metadata !== null && typeof metadata === 'object' && Object.keys(metadata).length > 0;
 }
@@ -72,6 +67,24 @@ function DetailSection({
     <div className="tai-stack tai-stack-2">
       <span className="tai-label">{label}</span>
       <JsonTree data={data} defaultExpanded={false} label={`${spanName} ${label.toLowerCase()}`} />
+    </div>
+  );
+}
+
+/** The empty output of a span that ended without error: its label over a plain note. */
+function EmptyOutputNote({
+  label,
+  isTool,
+}: {
+  readonly label: string;
+  readonly isTool: boolean;
+}): ReactNode {
+  return (
+    <div className="tai-stack tai-stack-2">
+      <span className="tai-label">{label}</span>
+      <p className="tai-muted" style={{ margin: 0 }}>
+        {isTool ? 'The tool returned an empty result.' : 'The span recorded an empty output.'}
+      </p>
     </div>
   );
 }
@@ -155,7 +168,7 @@ function SpanBody({
     <>
       {inputMessages !== null ? (
         <SpanMessages messages={inputMessages} label="Messages" />
-      ) : hasContent(span.input) ? (
+      ) : !isEmptyResult(span.input) ? (
         <SpanValueSection
           traceId={traceId}
           spanId={span.id}
@@ -168,7 +181,7 @@ function SpanBody({
 
       {outputMessages !== null ? (
         <SpanMessages messages={outputMessages} label="Output" />
-      ) : hasContent(span.output) ? (
+      ) : !isEmptyResult(span.output) ? (
         <SpanValueSection
           traceId={traceId}
           spanId={span.id}
@@ -177,6 +190,8 @@ function SpanBody({
           value={span.output}
           treeLabel={`${spanName} ${outputLabel.toLowerCase()}`}
         />
+      ) : span.end !== null && !isErrorSpan(span) ? (
+        <EmptyOutputNote label={outputLabel} isTool={isTool} />
       ) : null}
 
       {metadataIsMeaningful(span.metadata) ? (

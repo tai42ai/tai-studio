@@ -5,7 +5,7 @@
  * preset-tool appears.
  */
 import type { CreatePresetBody } from '@tai42/api-client';
-import { isFeatureDisabled, toolsListKey, useApi } from '@tai42/studio-sdk';
+import { isFeatureDisabled, toolMetaKey, toolsListKey, useApi } from '@tai42/studio-sdk';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { authoredPresetsKey } from './keys';
@@ -37,6 +37,8 @@ export function useCreateComposedAgent(tags: string[], onClose: () => void) {
       // A composed agent binds a live preset-tool, so the shared registered-tool
       // master list must refetch for it to appear on the tools page without a refresh.
       void queryClient.invalidateQueries({ queryKey: toolsListKey });
+      // The create files the agent's tags on the overlay.
+      void queryClient.invalidateQueries({ queryKey: toolMetaKey });
       onClose();
     },
   });

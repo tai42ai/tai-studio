@@ -123,7 +123,11 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
         toolDisplayNames={data.toolDisplayNames}
         binding={data.binding}
       />
-      <HookSubjectSection fields={fields} targetOptions={data.targetOptions} />
+      <HookSubjectSection
+        fields={fields}
+        targetOptions={data.targetOptions}
+        templatedTextTemplates={data.templatedTextTemplates}
+      />
       <HookConditionExprFields
         fields={fields}
         templatedTextTemplates={data.templatedTextTemplates}

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { NavigationProvider } from './context';
 import type { NavigationContextValue, RouteSearch } from './types';
-import { useSearchCommit } from './use-search-commit';
+import { useSearchCommit, useSearchDraft } from './use-search-commit';
 
 const LABEL = 'Filter tools';
 
@@ -85,5 +85,36 @@ describe('useSearchCommit', () => {
     await userEvent.clear(box);
     await userEvent.keyboard('{Enter}');
     expect(navigate).toHaveBeenCalledWith('tools', { q: undefined }, { replace: true });
+  });
+});
+
+/** A box holding its draft through `useSearchDraft`. */
+function DraftBox({ committedValue }: { readonly committedValue: string }) {
+  const [draft, setDraft] = useSearchDraft(committedValue);
+  return (
+    <input
+      aria-label={LABEL}
+      value={draft}
+      onChange={(event) => {
+        setDraft(event.target.value);
+      }}
+    />
+  );
+}
+
+describe('useSearchDraft', () => {
+  it('seeds the draft from the committed value and lets the box edit it', async () => {
+    render(<DraftBox committedValue="alp" />);
+    const box = screen.getByRole('textbox', { name: LABEL });
+    expect(box).toHaveValue('alp');
+    await userEvent.type(box, 'ha');
+    expect(box).toHaveValue('alpha');
+  });
+
+  it('re-seeds the draft when a new committed value arrives', async () => {
+    const view = render(<DraftBox committedValue="alp" />);
+    await userEvent.type(screen.getByRole('textbox', { name: LABEL }), 'ha');
+    view.rerender(<DraftBox committedValue="beta" />);
+    expect(screen.getByRole('textbox', { name: LABEL })).toHaveValue('beta');
   });
 });

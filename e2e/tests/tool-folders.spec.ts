@@ -17,69 +17,27 @@
  * there; an empty folder shows on both screens, and a folder that holds only another tool
  * shows on the Tools screen and not on the Presets screen.
  */
-import {
-  type APIRequestContext,
-  expect,
-  type Locator,
-  type Page,
-  request as apiRequest,
-} from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
-import { BASE_URL } from '../playwright.config';
-import { API_KEY, seedCredential } from './helpers';
+import { seedCredential } from './helpers';
 import { onlyReachSession, serveWrite, stubSession } from './session-stubs';
+import {
+  awaitPreset,
+  bootApi,
+  createFolder,
+  createPreset,
+  deleteFolder,
+  deletePreset,
+  dropOverlayRow,
+  folderIdsNamed,
+  writeOverlayRow,
+} from './tool-meta-api';
 
 needs('kind:studio_plugins:reference_plugin', 'mutable');
 
 /** A tool the reference plugin registers on the boot. */
 const TOOL = 'studio_demo_echo';
-
-/** An API context that signs in with the boot key, for seeding and removing overlay data. */
-async function bootApi(): Promise<APIRequestContext> {
-  return apiRequest.newContext({
-    baseURL: BASE_URL,
-    extraHTTPHeaders: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
-  });
-}
-
-/** The JSON `data` of a successful API response. */
-async function dataOf<T>(response: Awaited<ReturnType<APIRequestContext['get']>>): Promise<T> {
-  expect(response.ok(), `${response.url()} answered ${String(response.status())}`).toBe(true);
-  return ((await response.json()) as { data: T }).data;
-}
-
-/** The ids of the stored folders named in `names`. */
-async function folderIdsNamed(api: APIRequestContext, names: readonly string[]): Promise<string[]> {
-  const overlay = await dataOf<{ folders: { id: string; name: string }[] }>(
-    await api.get('/api/tool-meta'),
-  );
-  return overlay.folders.filter((folder) => names.includes(folder.name)).map((f) => f.id);
-}
-
-/** Create the root-level folder `name` through the API and return its id. */
-async function createFolder(api: APIRequestContext, name: string): Promise<string> {
-  const record = await dataOf<{ id: string }>(
-    await api.post('/api/tool-meta/folders', { data: { name, parent_id: null } }),
-  );
-  return record.id;
-}
-
-/** Delete a stored folder. A failure is recorded softly, so it never hides the test's own. */
-async function deleteFolder(api: APIRequestContext, id: string): Promise<void> {
-  const response = await api.delete(`/api/tool-meta/folders/${id}`);
-  expect
-    .soft(response.ok(), `deleting folder ${id} answered ${String(response.status())}`)
-    .toBe(true);
-}
-
-/** Drop the overlay row of `tool` (idempotent). A failure is recorded softly, as above. */
-async function dropOverlayRow(api: APIRequestContext, tool: string): Promise<void> {
-  const response = await api.delete(`/api/tool-meta/tools/${tool}`);
-  expect
-    .soft(response.ok(), `dropping the ${tool} overlay row answered ${String(response.status())}`)
-    .toBe(true);
-}
 
 /** Show only `TOOL` in the tools explorer by committing the filter. */
 async function filterToTool(page: Page): Promise<void> {
@@ -276,13 +234,6 @@ test('a refused inline folder create shows the server error under the open draft
 test.describe('the Presets screen draws the folders that concern presets', () => {
   needs('kind:studio_plugins:reference_plugin', 'mutable', 'setting:presets');
 
-  /** Poll until the preset reads back (the store commits and reloads a beat after the create). */
-  async function awaitPreset(api: APIRequestContext, name: string): Promise<void> {
-    await expect
-      .poll(async () => (await api.get(`/api/presets/${name}`)).status(), { timeout: 10_000 })
-      .toBe(200);
-  }
-
   test('a preset filed from its Edit details dialog lists inside its folder', async ({ page }) => {
     const suffix = Date.now().toString(36);
     const preset = `e2e-preset-${suffix}`;
@@ -297,11 +248,7 @@ test.describe('the Presets screen draws the folders that concern presets', () =>
     const filed: string[] = [];
     let presetCreated = false;
     try {
-      await dataOf(
-        await api.post('/api/presets', {
-          data: { name: preset, base_tool: TOOL, description: 'Echoes a fixed greeting.' },
-        }),
-      );
+      await createPreset(api, preset, TOOL, 'Echoes a fixed greeting.');
       presetCreated = true;
       await awaitPreset(api, preset);
       const folderId: Record<string, string> = {};
@@ -311,11 +258,7 @@ test.describe('the Presets screen draws the folders that concern presets', () =>
         folderIds.push(id);
       }
       filed.push(otherTool);
-      await dataOf(
-        await api.patch(`/api/tool-meta/tools/${otherTool}`, {
-          data: { folder_id: folderId.othersOnly },
-        }),
-      );
+      await writeOverlayRow(api, otherTool, { folder_id: folderId.othersOnly });
 
       // Presets screen, before filing: the preset sits at the root; the empty folder shows,
       // the folder holding only another tool does not.
@@ -355,7 +298,7 @@ test.describe('the Presets screen draws the folders that concern presets', () =>
     } finally {
       for (const tool of filed) await dropOverlayRow(api, tool);
       for (const id of folderIds) await deleteFolder(api, id);
-      if (presetCreated) await api.delete(`/api/presets/${preset}`);
+      if (presetCreated) await deletePreset(api, preset);
       await api.dispose();
     }
   });

@@ -4,8 +4,8 @@ Reference [Studio](../../README.md) plugin for the tai-studio end-to-end suite.
 It has three parts:
 
 - **Tools** (`src/reference_plugin/tools.py`) — `studio_demo_echo`,
-  `studio_demo_form`, and `studio_demo_fail`, registered with the skeleton via
-  `@tai42_app.tools.tool`.
+  `studio_demo_form`, `studio_demo_fail`, `studio_demo_union` and
+  `studio_demo_empty`, registered with the skeleton via `@tai42_app.tools.tool`.
 - **Channel** (`src/reference_plugin/channels.py`) — the `synthetic` channel,
   loaded through a manifest's `channel_modules`. It reaches no medium (every send
   raises); it exists so a conversation route can sit on it and the front-end's

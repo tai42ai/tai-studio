@@ -16145,6 +16145,9 @@ const invokeMemberActionResult: z.ZodObject<{
 export function isBlankSearch(query: string): boolean;
 
 // @public
+export function isEmptyResult(value: unknown): boolean;
+
+// @public
 export function isExecutionKeyListEmpty(query: ExecutionKeyQuery): boolean;
 
 // @public
@@ -20291,7 +20294,10 @@ export type RouteSearch<T extends RouteToken> = RouteSearchByToken[T];
 // @public
 export interface RouteSearchByToken {
     // (undocumented)
-    agents: Record<string, never>;
+    agents: {
+        tags?: string[];
+        q?: string;
+    };
     // (undocumented)
     connectors: {
         connection?: string;
@@ -20350,6 +20356,8 @@ export interface RouteSearchByToken {
     presets: {
         preset?: string;
         version?: number;
+        tags?: string[];
+        q?: string;
     };
     // (undocumented)
     scheduling: {
@@ -21654,15 +21662,29 @@ type SearchableSelectArgs = (SearchableSelectProps & {
 });
 
 // @public
+export interface SearchableSelectGroup {
+    // (undocumented)
+    readonly label: string;
+    // (undocumented)
+    readonly options: readonly SearchableSelectOption[];
+}
+
+// @public
 export interface SearchableSelectGroupsProps extends SearchableSelectSharedProps {
     // (undocumented)
-    readonly groups: readonly SelectGroup[];
+    readonly groups: readonly SearchableSelectGroup[];
+}
+
+// @public
+export interface SearchableSelectOption extends SelectOption {
+    // (undocumented)
+    readonly description?: string;
 }
 
 // @public
 export interface SearchableSelectProps extends SearchableSelectSharedProps {
     // (undocumented)
-    readonly options: readonly SelectOption[];
+    readonly options: readonly SearchableSelectOption[];
 }
 
 // @public
@@ -29682,17 +29704,30 @@ export interface SubjectScopeFieldsProps {
 }
 
 // @public (undocumented)
-export function SubjectSection(input: SubjectSectionProps): ReactNode;
+export function SubjectSection(props: SubjectSectionProps): ReactNode;
 
-// @public (undocumented)
-export interface SubjectSectionProps {
+// @public
+export interface SubjectSectionKeyFieldProps extends SubjectSectionSharedProps {
+    // (undocumented)
+    readonly keyField: ReactNode;
+}
+
+// @public
+export type SubjectSectionProps = (SubjectSectionTextKeyProps & {
+    readonly keyField?: undefined;
+}) | (SubjectSectionKeyFieldProps & {
+    readonly subjectKey?: undefined;
+    readonly onKeyChange?: undefined;
+    readonly subjectKeyDescription?: undefined;
+});
+
+// @public
+export interface SubjectSectionSharedProps {
     readonly caption: string;
     // (undocumented)
     readonly error: string | null;
     // (undocumented)
     readonly kind: string;
-    // (undocumented)
-    readonly onKeyChange: (value: string) => void;
     // (undocumented)
     readonly onKindChange: (value: string) => void;
     // (undocumented)
@@ -29702,13 +29737,19 @@ export interface SubjectSectionProps {
     // (undocumented)
     readonly open: boolean;
     // (undocumented)
-    readonly subjectKey: string;
-    readonly subjectKeyDescription: string;
-    // (undocumented)
     readonly target: string;
     // (undocumented)
     readonly targetOptions: readonly SubjectTargetOption[];
     readonly targetPlaceholder: string;
+}
+
+// @public
+export interface SubjectSectionTextKeyProps extends SubjectSectionSharedProps {
+    // (undocumented)
+    readonly onKeyChange: (value: string) => void;
+    // (undocumented)
+    readonly subjectKey: string;
+    readonly subjectKeyDescription: string;
 }
 
 // @public
@@ -30534,6 +30575,9 @@ const toolMetaDeleted: z.ZodObject<{
     tool_name: z.ZodString;
 }, z.core.$strip>;
 
+// @public
+export const toolMetaKey: readonly ["tool-meta"];
+
 // @public (undocumented)
 type ToolMetaOverlay = z.infer<typeof toolMetaOverlay>;
 
@@ -30643,6 +30687,7 @@ export interface ToolPickerProps {
     readonly placeholder?: string;
     readonly query: ToolListQuery;
     readonly tagsByTool?: Readonly<Record<string, readonly string[]>>;
+    readonly toolDescriptions?: Readonly<Record<string, string>>;
     readonly unlistedLabel?: string;
     // (undocumented)
     readonly value: string | null;
@@ -31088,6 +31133,9 @@ export function useResolvePath(): NavigationContextValue['resolvePath'];
 
 // @public
 export function useSearchCommit<T extends RouteToken>(input: SearchCommitParams<T>): void;
+
+// @public
+export function useSearchDraft(committedValue: string): readonly [string, (value: string) => void];
 
 // @public
 export function useSubjectFields(): {

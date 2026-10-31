@@ -28,7 +28,7 @@ const COPY: NamedListCopy = {
   loadingPlaceholder: 'Loading agents…',
   placeholder: 'Select an agent',
   forbiddenNote:
-    'This session cannot list agents. Picking one needs read access to GET /api/agents; ask an administrator to grant it.',
+    "This session cannot list agents, so type the agent's exact name. Saving checks that the agent is registered.",
   emptyNote: 'No agents are registered on this deployment.',
   emptyAction: (
     <AppLink to="agents" className="tai-link">

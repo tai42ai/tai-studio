@@ -17,6 +17,7 @@ import {
   HolderPreview,
   previewHolders,
   Spinner,
+  toolMetaKey,
   toolsListKey,
   useApi,
 } from '@tai42/studio-sdk';
@@ -47,6 +48,8 @@ export function DeletePresetDialog({
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: presetsListKey });
       void queryClient.invalidateQueries({ queryKey: toolsListKey });
+      // A delete clears the removed tools' overlay rows (folder, tags, display name).
+      void queryClient.invalidateQueries({ queryKey: toolMetaKey });
       // Drop the deleted preset's own caches so a later same-name create/revisit
       // cannot flash the removed record's (credential-bearing) kwargs before the
       // fresh fetch lands.
