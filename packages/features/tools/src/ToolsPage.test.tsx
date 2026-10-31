@@ -234,10 +234,17 @@ describe('ToolsPage — responsive master/detail', () => {
 
 const toolNames = ['alpha', 'beta', 'gamma', 'solo'];
 const toolTags: ToolTagEntry[] = [
-  { name: 'alpha', tags: ['x', 'y'], badges: [], hidden: false, schedulable: false },
-  { name: 'beta', tags: ['x'], badges: [], hidden: false, schedulable: false },
-  { name: 'gamma', tags: ['y'], badges: [], hidden: false, schedulable: false },
-  { name: 'solo', tags: [], badges: [], hidden: false, schedulable: false },
+  {
+    name: 'alpha',
+    description: null,
+    tags: ['x', 'y'],
+    badges: [],
+    hidden: false,
+    schedulable: false,
+  },
+  { name: 'beta', description: null, tags: ['x'], badges: [], hidden: false, schedulable: false },
+  { name: 'gamma', description: null, tags: ['y'], badges: [], hidden: false, schedulable: false },
+  { name: 'solo', description: null, tags: [], badges: [], hidden: false, schedulable: false },
 ];
 
 function taggedClient(overrides: StubApiClient = {}): StubApiClient {
@@ -351,6 +358,7 @@ describe('ToolsPage — tag chip overflow', () => {
   const manyNames = Array.from({ length: 10 }, (_, i) => `tool${String(i)}`);
   const manyTags: ToolTagEntry[] = manyNames.map((name, i) => ({
     name,
+    description: null,
     tags: [`t${String(i)}`],
     badges: [],
     hidden: false,

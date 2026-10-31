@@ -67,7 +67,8 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
   // The execution key + the four door-contract jqs a parkable-driving schedule carries.
   const contract = useScheduleContract();
 
-  const { toolsQuery, excludeToolNames, badgesByTool, displayNames } = useScheduleTools();
+  const { toolsQuery, excludeToolNames, badgesByTool, toolDescriptions, displayNames } =
+    useScheduleTools();
   const { bindingProps, templatedTextTemplates } = useScheduleBinding(tool);
   const binding = useExecutionKeyBinding();
   const keysQuery = useScheduleExecutionKeys(binding.mode === 'checked');
@@ -148,6 +149,7 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
           toolsQuery={toolsQuery}
           excludeToolNames={excludeToolNames}
           displayNames={displayNames}
+          toolDescriptions={toolDescriptions}
           badgesByTool={badgesByTool}
         />
 

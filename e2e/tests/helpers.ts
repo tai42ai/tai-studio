@@ -63,6 +63,22 @@ export async function pickExecutionKey(
   await page.getByRole('option', { name: new RegExp(`^${escapeRegExp(keyId)}(?:\\s|$)`) }).click();
 }
 
+/**
+ * Choose `tool` in the Tool picker inside `scope`: type `search` (the raw name unless
+ * given) into the picker's search, then take the option that reads the raw name bare
+ * or as the `Display (raw)` suffix. The portalled listbox matches at page level.
+ */
+export async function pickTool(
+  page: Page,
+  scope: Locator,
+  tool: string,
+  search: string = tool,
+): Promise<void> {
+  await scope.getByRole('combobox', { name: 'Tool', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Search tools' }).fill(search);
+  await page.getByRole('option', { name: new RegExp(`(^|\\()${escapeRegExp(tool)}\\)?$`) }).click();
+}
+
 /** The loud plugin/registry error card is an `alert` role carrying this copy. */
 export async function expectPluginErrorCard(page: Page, contains: RegExp): Promise<void> {
   const alert = page.getByRole('alert').filter({ hasText: contains });

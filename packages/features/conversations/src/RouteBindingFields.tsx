@@ -11,13 +11,16 @@ import {
   AppLink,
   channelIdentityHint,
   ChannelPicker,
+  errorMessage,
   ExecutionKeyPicker,
   Field,
   isForbiddenError,
   type SchemaFormErrors,
   Select,
   TextInput,
+  TOOL_SEARCH_NAMES_ONLY_NOTE,
   ToolPicker,
+  toolSearchShown,
 } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
@@ -50,6 +53,20 @@ const EXECUTION_KEY_DESCRIPTION =
   "The api key each turn runs AS. Every tool call the turn makes is authorized against that key's live grants — prefer a least-privilege service key over a human's broad one.";
 
 const IDENTITY_FALLBACK = 'The address on this channel that clients message.';
+
+const TOOL_UNLISTED_LABEL = 'not registered';
+
+/**
+ * The tool field's description: a failed read of the tools' declarations, and, while
+ * the picker draws its search, that the search matches tool names only.
+ */
+function toolFieldDescription(pickers: RoutePickers, name: string): string | undefined {
+  if (!pickers.toolTags.isError) return undefined;
+  const failure = `Could not load tool descriptions: ${errorMessage(pickers.toolTags.error)}.`;
+  return toolSearchShown({ query: pickers.tools, value: name, unlistedLabel: TOOL_UNLISTED_LABEL })
+    ? `${failure} ${TOOL_SEARCH_NAMES_ONLY_NOTE}`
+    : failure;
+}
 
 /** The "Our identity" description: the picked channel's declared hint, or why there is none. */
 export function ourIdentityDescription(
@@ -138,8 +155,10 @@ function TargetFields({
           value={name}
           onChange={setName}
           label="Tool"
-          unlistedLabel="not registered"
+          unlistedLabel={TOOL_UNLISTED_LABEL}
           displayNames={pickers.toolDisplayNames}
+          toolDescriptions={pickers.toolDescriptions}
+          description={toolFieldDescription(pickers, name)}
           error={nameError}
           emptyNote="No tools are registered on this deployment."
           emptyAction={

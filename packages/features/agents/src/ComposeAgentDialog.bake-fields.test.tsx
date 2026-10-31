@@ -378,9 +378,98 @@ describe('ComposeAgentDialog', () => {
     // EVERY tag-grouped picking surface states it, not just the first one: a Field
     // that hands its picker the (empty) tag map without stating the failure drops
     // silently to flat mode, which reads as "this deployment has no tags".
-    for (const groupName of ['Tools', 'Sub-agents']) {
-      const group = screen.getByRole('group', { name: groupName });
-      expect(within(group).getByRole('alert')).toHaveTextContent('tags down');
+    // A sub-agent card draws its own Tools group, so the agent's own is read first.
+    const expected =
+      'Could not load tool tags and descriptions: tags down. The tool search matches tool names only.';
+    expect(
+      within(screen.getByRole('group', { name: 'Tools' })).getByRole('alert'),
+    ).toHaveTextContent(expected);
+    await userEvent.click(screen.getByRole('button', { name: /Add sub-agent/ }));
+    expect(
+      within(screen.getByRole('group', { name: 'Sub-agents' })).getByRole('alert'),
+    ).toHaveTextContent(expected);
+  });
+
+  it.each([
+    ['is pending', { listTools: () => new Promise<never>(() => undefined) }],
+    ['returns no tool', { listTools: () => Promise.resolve([]) }],
+  ])(
+    'states a failed TAG read without the tool-search sentence while the tools read %s',
+    async (_label, override) => {
+      // A pending tools read draws a disabled picker and an empty one draws the empty
+      // note: neither puts a tool search on screen.
+      renderWithProviders(
+        <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+        composeClient({ listToolTags: () => Promise.reject(new Error('tags down')), ...override }),
+      );
+
+      await pickBaseAgent();
+      const toolsAlert = await within(
+        await screen.findByRole('group', { name: 'Tools' }),
+      ).findByRole('alert');
+      await userEvent.click(screen.getByRole('button', { name: /Add sub-agent/ }));
+      const subAgentsAlert = within(screen.getByRole('group', { name: 'Sub-agents' })).getByRole(
+        'alert',
+      );
+
+      for (const alert of [toolsAlert, subAgentsAlert]) {
+        expect(alert).toHaveTextContent('Could not load tool tags and descriptions: tags down.');
+        expect(alert).not.toHaveTextContent('The tool search matches tool names only.');
+      }
+    },
+  );
+
+  it('states a failed TAG read without the tool-search sentence when the failed tools read replaces the pickers', async () => {
+    renderWithProviders(
+      <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+      composeClient({
+        listTools: () => Promise.reject(new Error('tools down')),
+        listToolTags: () => Promise.reject(new Error('tags down')),
+      }),
+    );
+
+    await pickBaseAgent();
+    for (const name of ['Tools', 'Sub-agents']) {
+      const group = await screen.findByRole('group', { name });
+      expect(
+        await within(group).findByText('Could not load tool tags and descriptions: tags down.'),
+      ).toBeVisible();
+      expect(within(group).getByText('tools down')).toBeVisible();
     }
+  });
+
+  it('states a failed TAG read without the tool-search sentence when the session may not list tools', async () => {
+    renderWithProviders(
+      <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+      composeClient({
+        listTools: refusedTools,
+        listToolTags: () => Promise.reject(new Error('tags down')),
+      }),
+    );
+
+    await pickBaseAgent();
+    const group = await screen.findByRole('group', { name: 'Tools' });
+    expect(
+      await within(group).findByText('Could not load tool tags and descriptions: tags down.'),
+    ).toBeVisible();
+    expect(within(group).getByRole('textbox', { name: 'Add a tool' })).toBeEnabled();
+  });
+
+  it('states a failed TAG read on the sub-agents without the tool-search sentence until a sub-agent draws a picker', async () => {
+    renderWithProviders(
+      <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+      composeClient({ listToolTags: () => Promise.reject(new Error('tags down')) }),
+    );
+
+    await pickBaseAgent();
+    const group = await screen.findByRole('group', { name: 'Sub-agents' });
+    const alert = await within(group).findByRole('alert');
+    expect(alert).toHaveTextContent('Could not load tool tags and descriptions: tags down.');
+    expect(alert).not.toHaveTextContent('The tool search matches tool names only.');
+
+    await userEvent.click(within(group).getByRole('button', { name: /Add sub-agent/ }));
+    expect(within(group).getByRole('alert')).toHaveTextContent(
+      'Could not load tool tags and descriptions: tags down. The tool search matches tool names only.',
+    );
   });
 });

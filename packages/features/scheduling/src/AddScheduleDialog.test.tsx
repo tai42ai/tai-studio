@@ -460,6 +460,35 @@ describe('AddScheduleDialog — display names', () => {
   });
 });
 
+describe('AddScheduleDialog — tool descriptions', () => {
+  it('finds a tool by a word of its declared description', async () => {
+    const user = userEvent.setup({ delay: null });
+    const client = makeClient({
+      listToolTags: vi.fn().mockResolvedValue([
+        ...schedulableTags('run_report'),
+        {
+          name: 'sync',
+          description: 'Mirrors the remote folder',
+          tags: [],
+          badges: [],
+          hidden: false,
+          schedulable: true,
+        },
+      ]),
+    });
+    renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
+
+    const dialog = await screen.findByRole('dialog');
+    await openToolPicker(user, dialog);
+    await user.type(screen.getByRole('combobox', { name: 'Search tools' }), 'mirrors');
+
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(1);
+    expect(options[0]).toHaveAccessibleName('sync');
+    expect(options[0]).toHaveAccessibleDescription('Mirrors the remote folder');
+  });
+});
+
 describe('AddScheduleDialog — declared badges', () => {
   it('shows the SELECTED tool declared badges (native ∪ overlay) as read-only chips', async () => {
     // `network` is plugin-declared; `audited` is an operator overlay badge. The picker

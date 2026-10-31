@@ -9524,6 +9524,7 @@ export function createApiClient(config: ApiConfig): {
     }[]>;
     readonly listToolTags: (signal?: AbortSignal) => Promise<{
         badges: string[];
+        description: string | null;
         hidden: boolean;
         name: string;
         schedulable: boolean;
@@ -24305,6 +24306,7 @@ export type ToolTagEntry = z.infer<typeof toolTagEntry>;
 // @public
 const toolTagEntry: z.ZodObject<{
     badges: z.ZodArray<z.ZodString>;
+    description: z.ZodNullable<z.ZodString>;
     hidden: z.ZodBoolean;
     name: z.ZodString;
     schedulable: z.ZodBoolean;
@@ -24314,6 +24316,7 @@ const toolTagEntry: z.ZodObject<{
 // @public (undocumented)
 const toolTags: z.ZodArray<z.ZodObject<{
     badges: z.ZodArray<z.ZodString>;
+    description: z.ZodNullable<z.ZodString>;
     hidden: z.ZodBoolean;
     name: z.ZodString;
     schedulable: z.ZodBoolean;

@@ -36,9 +36,14 @@ export interface HookIdentityFieldsProps {
   readonly toolsQuery: ToolListQuery;
   /** The raw-name → display-name map the tool picker labels its options with. */
   readonly toolDisplayNames: Readonly<Record<string, string>>;
+  /** The raw-name → declared-description map the tool picker draws and searches. */
+  readonly toolDescriptions: Readonly<Record<string, string>>;
   /** How the form binds its key (`useExecutionKeyBinding()`). */
   readonly binding: ExecutionKeyBinding;
 }
+
+/** The flag the Tool picker puts on a stored tool the deployment no longer lists. */
+export const TOOL_UNLISTED_LABEL = 'not registered';
 
 export function HookIdentityFields({
   fields,
@@ -48,6 +53,7 @@ export function HookIdentityFields({
   keysQuery,
   toolsQuery,
   toolDisplayNames,
+  toolDescriptions,
   binding,
 }: HookIdentityFieldsProps): ReactNode {
   const { submitted } = fields;
@@ -82,8 +88,9 @@ export function HookIdentityFields({
         value={fields.tool === '' ? null : fields.tool}
         onChange={fields.setTool}
         label="Tool"
-        unlistedLabel="not registered"
+        unlistedLabel={TOOL_UNLISTED_LABEL}
         displayNames={toolDisplayNames}
+        toolDescriptions={toolDescriptions}
         error={submitted && missing.tool ? 'A tool is required.' : undefined}
         emptyNote="No tools are registered on this deployment."
       />

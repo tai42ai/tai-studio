@@ -82,6 +82,50 @@ describe('ComposeAgentDialog', () => {
     expect(screen.queryByText('Echo (echo)', { selector: 'span' })).toBeNull();
   });
 
+  it('finds a tool by a word of its declared description, in the tools and sub-agent pickers', async () => {
+    renderWithProviders(
+      <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+      composeClient({
+        listToolTags: () =>
+          Promise.resolve([
+            {
+              name: 'echo',
+              description: 'Returns its input unchanged',
+              tags: [],
+              badges: [],
+              hidden: false,
+              schedulable: false,
+            },
+            {
+              name: 'weather',
+              description: null,
+              tags: [],
+              badges: [],
+              hidden: false,
+              schedulable: false,
+            },
+          ]),
+      }),
+    );
+
+    await pickBaseAgent();
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Add a tool' }));
+    await userEvent.type(screen.getByRole('combobox', { name: 'Search tools' }), 'unchanged');
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(1);
+    expect(options[0]).toHaveAccessibleName('echo');
+    expect(options[0]).toHaveAccessibleDescription('Returns its input unchanged');
+    await userEvent.keyboard('{Escape}');
+
+    await userEvent.click(await screen.findByRole('button', { name: /Add sub-agent/ }));
+    const card = within(screen.getByTestId('subagent-0'));
+    await userEvent.click(card.getByRole('combobox', { name: 'Add a tool' }));
+    await userEvent.type(screen.getByRole('combobox', { name: 'Search tools' }), 'unchanged');
+    const subOptions = screen.getAllByRole('option');
+    expect(subOptions).toHaveLength(1);
+    expect(subOptions[0]).toHaveAccessibleName('echo');
+  });
+
   it('HIDES the tags input when the tool_meta kind is OFF, and still composes', async () => {
     const createPreset = vi.fn(() => Promise.resolve(presetRecord()));
     const upsertToolMeta = vi.fn();

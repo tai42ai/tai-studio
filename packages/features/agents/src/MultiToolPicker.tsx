@@ -1,6 +1,18 @@
 import type { ToolListQuery } from '@tai42/studio-sdk';
-import { Button, CloseIcon, ToolPicker } from '@tai42/studio-sdk';
+import { Button, CloseIcon, ToolPicker, toolSearchShown } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
+
+/**
+ * Whether the add control over `query`, with `value` already chosen and the picker's
+ * `disabled` state, draws its tool search.
+ */
+export function addToolSearchShown(
+  query: ToolListQuery,
+  value: readonly string[],
+  disabled?: boolean,
+): boolean {
+  return toolSearchShown({ query, value: null, excludeNames: value, disabled });
+}
 
 /**
  * A multi-select over tool names, built by REUSING the shared single-select
@@ -13,6 +25,7 @@ export function MultiToolPicker({
   query,
   tagsByTool,
   displayNames,
+  toolDescriptions,
   value,
   onChange,
   disabled,
@@ -22,6 +35,7 @@ export function MultiToolPicker({
   readonly query: ToolListQuery;
   readonly tagsByTool?: Readonly<Record<string, readonly string[]>>;
   readonly displayNames?: Readonly<Record<string, string>>;
+  readonly toolDescriptions?: Readonly<Record<string, string>>;
   readonly value: readonly string[];
   readonly onChange: (next: string[]) => void;
   readonly disabled?: boolean;
@@ -66,6 +80,7 @@ export function MultiToolPicker({
         excludeNames={value}
         tagsByTool={tagsByTool}
         displayNames={displayNames}
+        toolDescriptions={toolDescriptions}
         idPrefix={`${idPrefix}-add`}
         label={addLabel}
         placeholder="Add a tool…"

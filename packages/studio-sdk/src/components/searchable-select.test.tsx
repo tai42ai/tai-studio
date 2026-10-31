@@ -601,4 +601,25 @@ describe('SearchableSelect', () => {
     expect(screen.getAllByRole('option')).toHaveLength(1);
     expect(screen.getByRole('option', { name: /Alpha/ })).toBeInTheDocument();
   });
+
+  it('names a described option by its label alone and reads the description once, as its description', () => {
+    render(
+      <SearchableSelect
+        aria-label="Letter"
+        searchLabel="Search letters"
+        options={[
+          { value: 'a', label: 'Alpha', description: 'Sends a greeting' },
+          { value: 'c', label: 'Gamma' },
+        ]}
+        value=""
+        onValueChange={vi.fn()}
+      />,
+    );
+    fireEvent.keyDown(trigger(), { key: 'ArrowDown' });
+
+    const described = screen.getByRole('option', { name: /^Alpha$/ });
+    expect(described).toHaveAccessibleName('Alpha');
+    expect(described).toHaveAccessibleDescription('Sends a greeting');
+    expect(screen.getByRole('option', { name: /^Gamma$/ })).toHaveAccessibleName('Gamma');
+  });
 });

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, type Mock, vi } from 'vitest';
 
-import { type ToolListQuery, ToolPicker } from './tool-picker';
+import { type ToolListQuery, ToolPicker, toolSearchShown } from './tool-picker';
 
 const TOOLS = ['alpha', 'beta', 'gamma'];
 const EMPTY = 'No tools are registered on this deployment.';
@@ -829,4 +829,64 @@ describe('ToolPicker', () => {
     expect(screen.getByTestId('tool-picker-badges')).toHaveTextContent(payload);
     expect(container.querySelector('script')).toBeNull();
   });
+});
+
+describe('toolSearchShown', () => {
+  const cases: readonly {
+    readonly state: string;
+    readonly query: ToolListQuery;
+    readonly value?: string | null;
+    readonly excludeNames?: readonly string[];
+    readonly unlistedLabel?: string;
+    readonly disabled?: boolean;
+    readonly shown: boolean;
+  }[] = [
+    { state: 'a pending read', query: PENDING, shown: false },
+    { state: 'a failed read', query: failed(new Error('boom')), shown: false },
+    { state: 'a refused read', query: failed({ status: 403 }), shown: false },
+    { state: 'an empty list', query: loaded([]), shown: false },
+    {
+      state: 'a list whose every tool is excluded',
+      query: loaded(TOOLS),
+      excludeNames: TOOLS,
+      shown: false,
+    },
+    { state: 'a listed tool to offer', query: loaded(TOOLS), shown: true },
+    {
+      state: 'a disabled picker over a listed tool',
+      query: loaded(['alpha']),
+      disabled: true,
+      shown: false,
+    },
+    {
+      state: 'an empty list holding a flagged stored value',
+      query: loaded([]),
+      value: 'retired',
+      unlistedLabel: 'not registered',
+      shown: true,
+    },
+  ];
+
+  it.each(cases)(
+    'is $shown for $state, as the picker draws its search box',
+    async ({ query, value = null, excludeNames, unlistedLabel, disabled, shown }) => {
+      const user = userEvent.setup({ delay: null });
+      render(
+        <ToolPicker
+          query={query}
+          value={value}
+          onChange={vi.fn()}
+          emptyNote={EMPTY}
+          excludeNames={excludeNames}
+          unlistedLabel={unlistedLabel}
+          disabled={disabled}
+        />,
+      );
+      const trigger = screen.queryByRole('combobox');
+      if (trigger !== null && !(trigger as HTMLButtonElement).disabled) await user.click(trigger);
+      expect(screen.queryByRole('combobox', { name: 'Search tools' }) !== null).toBe(shown);
+
+      expect(toolSearchShown({ query, value, excludeNames, unlistedLabel, disabled })).toBe(shown);
+    },
+  );
 });

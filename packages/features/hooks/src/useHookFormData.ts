@@ -1,13 +1,13 @@
 /**
  * The server data the register form reads: the session's execution-key binding and
  * the api-key list it runs as (read only under a checked binding), the full
- * hooks list (overwrite detection), the registered tools and their display names
- * (the Tool picker), the templated-text template catalog, the
+ * hooks list (overwrite detection), the registered tools with their display names and
+ * declared descriptions (the Tool picker), the templated-text template catalog, the
  * conversation targets a subject may point at, and the state-binding editor's
  * catalogs, inherited binding and tool-schema field sources. Every fetch is a
  * shared React Query so the page serves each once.
  */
-import type { HookList, TokensPayload } from '@tai42/api-client';
+import type { HookList, TokensPayload, ToolTagEntry } from '@tai42/api-client';
 import {
   errorMessage,
   type ExecutionKeyBinding,
@@ -18,7 +18,9 @@ import {
   stateTemplatesKey,
   templatedTextCatalog,
   templatesCatalogFromList,
+  toolDescriptionsByName,
   toolsListKey,
+  toolTagsKey,
   useApi,
   useExecutionKeyBinding,
   useToolDisplayNames,
@@ -38,6 +40,10 @@ export interface HookFormData {
   readonly toolsQuery: UseQueryResult<string[]>;
   /** The raw-name → display-name map the Tool picker labels its options with. */
   readonly toolDisplayNames: Readonly<Record<string, string>>;
+  /** The tools' declarations read; the form states its failure. */
+  readonly toolTagsQuery: UseQueryResult<ToolTagEntry[]>;
+  /** The raw-name → declared-description map the Tool picker draws and searches. */
+  readonly toolDescriptions: Readonly<Record<string, string>>;
   readonly binding: ExecutionKeyBinding;
   readonly existingNames: ReadonlySet<string>;
   readonly templatedTextTemplates: TemplatedTextTemplates;
@@ -165,6 +171,14 @@ export function useHookFormData({
     queryFn: ({ signal }) => api.listTools(signal),
   });
   const toolDisplayNames = useToolDisplayNames();
+  const toolTagsQuery = useQuery({
+    queryKey: toolTagsKey,
+    queryFn: ({ signal }) => api.listToolTags(signal),
+  });
+  const toolDescriptions = useMemo(
+    () => toolDescriptionsByName(toolTagsQuery.data ?? []),
+    [toolTagsQuery.data],
+  );
   const existingNames = useMemo(
     () => new Set((hooksQuery.data?.items ?? []).map((h) => h.name)),
     [hooksQuery.data],
@@ -175,6 +189,8 @@ export function useHookFormData({
     keysQuery,
     toolsQuery,
     toolDisplayNames,
+    toolTagsQuery,
+    toolDescriptions,
     binding,
     existingNames,
     templatedTextTemplates,

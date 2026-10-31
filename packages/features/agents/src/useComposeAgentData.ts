@@ -10,6 +10,7 @@ import {
   hiddenToolNames,
   isForbiddenError,
   type JsonSchema,
+  toolDescriptionsByName,
   toolMetaKey,
   useApi,
   useFeatureOff,
@@ -67,6 +68,13 @@ export function useComposeAgentData(baseAgent: AgentSummary | null, baseSchema: 
     return Object.keys(map).length > 0 ? map : undefined;
   }, [tagsQuery.data]);
 
+  // Each tool's declared description, drawn under its option and searched with its
+  // label. A failed tags read leaves the map empty and is stated beside the pickers.
+  const toolDescriptions = useMemo(
+    () => toolDescriptionsByName(tagsQuery.data ?? []),
+    [tagsQuery.data],
+  );
+
   // Effective-hidden tools (`overlay.hidden ?? plugin declaration`) are removed from
   // the population the compose pickers offer — the same tri-state rule the tools
   // screen applies. Best-effort: a failed tags/meta read leaves everything visible.
@@ -93,6 +101,7 @@ export function useComposeAgentData(baseAgent: AgentSummary | null, baseSchema: 
     presetsQuery,
     usablePresets,
     tagsByTool,
+    toolDescriptions,
     visibleToolsQuery,
     toolsReadFailed,
     needsTools,

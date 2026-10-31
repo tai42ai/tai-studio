@@ -100,11 +100,16 @@ interface OptionRowProps {
   readonly selected: boolean;
 }
 
-/** One option. Pointer handling is delegated to the listbox, so a row is pure markup. */
+/**
+ * One option. Pointer handling is delegated to the listbox, so a row is pure markup. The
+ * option is named by its label alone and a description is its accessible description,
+ * so the description is neither part of the name nor read twice.
+ */
 const OptionRow = memo(function OptionRow({ entry, id, highlighted, selected }: OptionRowProps) {
   const disabled = entry.option.disabled === true;
   const { description } = entry.option;
   const hasDescription = description !== undefined && description !== '';
+  const labelId = `${id}-label`;
   const descriptionId = `${id}-description`;
   return (
     <div
@@ -112,6 +117,7 @@ const OptionRow = memo(function OptionRow({ entry, id, highlighted, selected }: 
       role="option"
       aria-selected={selected}
       aria-disabled={disabled ? true : undefined}
+      aria-labelledby={labelId}
       aria-describedby={hasDescription ? descriptionId : undefined}
       className="tai-select-item"
       data-position={entry.position}
@@ -120,13 +126,13 @@ const OptionRow = memo(function OptionRow({ entry, id, highlighted, selected }: 
     >
       {hasDescription ? (
         <span className="tai-search-select-option-text">
-          <span>{entry.option.label}</span>
+          <span id={labelId}>{entry.option.label}</span>
           <span id={descriptionId} className="tai-search-select-option-description">
             {description}
           </span>
         </span>
       ) : (
-        <span>{entry.option.label}</span>
+        <span id={labelId}>{entry.option.label}</span>
       )}
       {selected ? (
         <span className="tai-select-item-indicator" aria-hidden="true">

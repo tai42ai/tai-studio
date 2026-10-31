@@ -1,13 +1,14 @@
 /**
  * The tool-picker data source for the add-schedule dialog: the tools the server serves as
- * `schedulable`, plus the tags/meta enrichment that drives the hidden-tool exclusion and the
- * badge map. The server marks a tool schedulable when its schedule vehicle is registered, so
- * the picker never offers a tool the create door cannot schedule.
+ * `schedulable`, plus the tags/meta enrichment that drives the hidden-tool exclusion, the
+ * badge map and the description map. The server marks a tool schedulable when its schedule
+ * vehicle is registered, so the picker never offers a tool the create door cannot schedule.
  */
 import type { ToolTagEntry } from '@tai42/api-client';
 import {
   hiddenToolNames,
   toolBadgesByName,
+  toolDescriptionsByName,
   toolMetaKey,
   useApi,
   useToolDisplayNames,
@@ -24,8 +25,8 @@ export function pickableToolNames(rows: readonly ToolTagEntry[]): string[] {
 
 /** Schedulable tools + the enrichment the picker renders. `toolsQuery` observes the tags
  *  read projected to the schedulable names (the picker's source); the unprojected tags read
- *  feeds the hidden names and badges, which stay empty on a failed meta read (the server is
- *  the authority over runs). */
+ *  feeds the hidden names, badges and descriptions. The hidden names and badges stay empty
+ *  on a failed meta read (the server is the authority over runs). */
 export function useScheduleTools() {
   const api = useApi();
   const displayNames = useToolDisplayNames();
@@ -50,5 +51,10 @@ export function useScheduleTools() {
     [tagsQuery.data, metaQuery.data],
   );
 
-  return { toolsQuery, excludeToolNames, badgesByTool, displayNames };
+  const toolDescriptions = useMemo(
+    () => toolDescriptionsByName(tagsQuery.data ?? []),
+    [tagsQuery.data],
+  );
+
+  return { toolsQuery, excludeToolNames, badgesByTool, toolDescriptions, displayNames };
 }

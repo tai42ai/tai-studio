@@ -154,6 +154,88 @@ describe('RegisterHookForm — tool picker', () => {
     });
   });
 
+  it('finds a tool by a word of its declared description', async () => {
+    const user = userEvent.setup({ delay: null });
+    const client: StubApiClient = {
+      listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
+      listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    };
+    renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
+
+    await user.click(await screen.findByRole('combobox', { name: 'Tool' }));
+    await user.type(screen.getByRole('combobox', { name: 'Search tools' }), 'webhook');
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(1);
+    expect(options[0]).toHaveAccessibleName('notify');
+    expect(options[0]).toHaveAccessibleDescription('Posts a short notice to a webhook');
+  });
+
+  it('states a failed tool-description read and still lists the tools', async () => {
+    const user = userEvent.setup({ delay: null });
+    const client: StubApiClient = {
+      listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
+      listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      listToolTags: vi.fn().mockRejectedValue(new ApiError('boom', 500)),
+    };
+    renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not load tool descriptions: boom. The tool search matches tool names only.',
+    );
+    await user.click(await screen.findByRole('combobox', { name: 'Tool' }));
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'notify',
+      'slack.post_message',
+    ]);
+  });
+
+  it('states a failed tool-description read without the tool search while the tools read is pending', async () => {
+    const client: StubApiClient = {
+      listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
+      listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      listTools: vi.fn().mockReturnValue(new Promise<never>(() => undefined)),
+      listToolTags: vi.fn().mockRejectedValue(new ApiError('boom', 500)),
+    };
+    renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
+
+    const alert = await screen.findByRole('alert');
+    await waitFor(() => {
+      expect(alert).toHaveTextContent(/^Could not load tool descriptions: boom\.$/);
+    });
+    expect(screen.getByRole('combobox', { name: 'Tool' })).toBeDisabled();
+  });
+
+  it('states a failed tool-description read without the tool search when no tool is registered', async () => {
+    const client: StubApiClient = {
+      listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
+      listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      listTools: vi.fn().mockResolvedValue([]),
+      listToolTags: vi.fn().mockRejectedValue(new ApiError('boom', 500)),
+    };
+    renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
+
+    expect(await screen.findByText('No tools are registered on this deployment.')).toBeVisible();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /^Could not load tool descriptions: boom\.$/,
+    );
+  });
+
+  it('states both failures, without the tool search, when the tool and tool-description reads both fail', async () => {
+    const client: StubApiClient = {
+      listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
+      listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      listTools: vi.fn().mockRejectedValue(new ApiError('tools down', 500)),
+      listToolTags: vi.fn().mockRejectedValue(new ApiError('tags down', 500)),
+    };
+    renderWithProviders(<RegisterHookForm />, { client, projection: accountSessionProjection() });
+
+    await waitFor(() => {
+      const texts = screen.getAllByRole('alert').map((alert) => alert.textContent);
+      expect(texts).toContain('Could not load tool descriptions: tags down.');
+      expect(texts.some((text) => text.includes('tools down'))).toBe(true);
+    });
+  });
+
   it('flags a stored tool the deployment no longer lists', async () => {
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
