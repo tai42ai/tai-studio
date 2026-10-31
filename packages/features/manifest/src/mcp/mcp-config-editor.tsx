@@ -27,6 +27,7 @@ import {
   Spinner,
   Textarea,
   useApi,
+  WriteFailure,
 } from '@tai42/studio-sdk';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -150,14 +151,15 @@ function SwitchViewConfirmDialog({
 }
 
 /**
- * A failed save. A refusal naming the holders of the tools the edit would unpick shows
- * the message's first line and the holders under it, so the draft can be edited and
- * saved again; any other failure shows its whole message.
+ * A failed save. A refusal that waits for a server still starting says so on the warn
+ * ground; a refusal naming the holders of the tools the edit would unpick shows the
+ * message's first line and the holders under it, so the draft can be edited and saved
+ * again; any other failure shows its whole message.
  */
 function SaveFailure({ error }: { readonly error: unknown }): ReactNode {
   const api = useApi();
   const holders = api.holdersFromError(error);
-  if (holders === null) return <ErrorState message={errorMessage(error)} />;
+  if (holders === null) return <WriteFailure error={error} />;
   return (
     <div>
       <ErrorState message={errorMessage(error).split('\n')[0] ?? ''} />
@@ -269,7 +271,7 @@ function McpConfigEditor(props: {
       {save.isError ? <SaveFailure error={save.error} /> : null}
       {/* The combined op is server-gated by the shared X-band + dangling-`!ENV`
           validator; a refusal (or any failure) surfaces loudly, never swallowed. */}
-      {draft.secretEnvError ? <ErrorState message={errorMessage(draft.secretEnvErrorObj)} /> : null}
+      {draft.secretEnvError ? <SaveFailure error={draft.secretEnvErrorObj} /> : null}
 
       <SwitchViewConfirmDialog
         target={draft.confirmTarget}

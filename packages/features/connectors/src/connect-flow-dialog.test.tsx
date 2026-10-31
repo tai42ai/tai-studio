@@ -6,10 +6,12 @@
  */
 import {
   type ApiClient,
+  ApiError,
   apiRoutes,
   type MarketplaceInstallPreview,
   type MeProjection,
 } from '@tai42/api-client';
+import { mcpStatusKey } from '@tai42/studio-sdk';
 import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -235,6 +237,65 @@ describe('ConnectFlowDialog — the server Connect step', () => {
     });
   });
 
+  it('shows a failed status read on the server step with its Retry, not a spinner', async () => {
+    const user = userEvent.setup();
+    const retry = vi.fn();
+    renderFlow(
+      { kind: 'server', title: 'acme' },
+      {
+        directory: {
+          ...reads(),
+          status: { status: 'failed', error: new Error('the worker did not answer'), retry },
+        },
+      },
+    );
+    expect(
+      await screen.findByText('Could not load the MCP server status: the worker did not answer'),
+    ).toBeVisible();
+    expect(screen.queryByRole('status', { name: 'Reading the server status' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('says on the server step that this session cannot read the status', async () => {
+    renderFlow(
+      { kind: 'server', title: 'acme' },
+      { directory: { ...reads(), status: { status: 'refused' } } },
+    );
+    expect(
+      await screen.findByText(
+        'This session cannot read the live MCP status. Seeing which servers are mounted and which failed needs read access to GET /api/mcp-status; ask an administrator to grant it.',
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole('status', { name: 'Reading the server status' })).toBeNull();
+  });
+
+  it('shows a server whose start is still in progress as starting, and Check again re-reads the status only', async () => {
+    const user = userEvent.setup();
+    const reloadMcp = vi.fn();
+    const message =
+      'MCP server acme start still in progress after 10s; it continues up to the start budget 60s; it binds once its start lists its tools';
+    const { queryClient } = renderFlow(
+      { kind: 'server', title: 'acme' },
+      {
+        client: baseClient({ reloadMcp }),
+        projection: scopedProjection({ routes: [{ path: RELOAD, methods: ['POST'] }] }),
+        directory: reads({
+          status: { bound: {}, failed: [{ title: 'acme', category: 'starting', message }] },
+        }),
+      },
+    );
+    const line = await screen.findByText('Starting');
+    expect(line).toHaveAttribute('role', 'status');
+    expect(line).toHaveClass('tai-status-pending');
+    expect(screen.getByText(message)).toBeInTheDocument();
+    expect(screen.queryByText(/Failed/)).toBeNull();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    await user.click(screen.getByRole('button', { name: 'Check again' }));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: mcpStatusKey, exact: true });
+    expect(reloadMcp).not.toHaveBeenCalled();
+  });
+
   it('says a configured server is not loaded and offers Load now', async () => {
     renderFlow(
       { kind: 'server', title: 'acme' },
@@ -291,6 +352,91 @@ describe('ConnectFlowDialog — Pick tools for a connection', () => {
 });
 
 describe('ConnectFlowDialog — the Pick tools rows', () => {
+  it('shows a save refused while the server is still starting as that start, not a failure', async () => {
+    const user = userEvent.setup();
+    const message =
+      "tool selection of 'acme' cannot be checked: the server did not list its tools: MCP server 'acme' start still in progress after 10s; it continues up to the start budget 60s";
+    const setMcpToolFilter = vi
+      .fn()
+      .mockRejectedValue(new ApiError(message, 503, 'mcp-server-starting'));
+    renderFlow(
+      { kind: 'pick', name: 'acme', titles: ['acme'], connectionId: null },
+      {
+        client: baseClient({ setMcpToolFilter }),
+        projection: editorProjection(),
+        directory: reads({ manifest: [entry('acme')], status: BOUND }),
+      },
+    );
+    await user.click(
+      await screen.findByRole('checkbox', {
+        name: 'Mount every tool, including tools the server adds later',
+      }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const refusal = (await screen.findByText(message)).closest('[role="alert"]');
+    expect(refusal).toHaveClass('tai-warn-state');
+    expect(refusal).toHaveTextContent('An MCP server is still starting');
+    expect(refusal).toHaveTextContent('Nothing was changed. Try again once it has started.');
+    expect(screen.queryByText(/Could not save/)).toBeNull();
+  });
+
+  it('says a picked tool of a server still starting mounts once the start binds its tools', async () => {
+    const read = advertised('acme', ['acme_send']);
+    const client = baseClient({
+      listMcpAdvertisedTools: vi.fn().mockResolvedValue({
+        ...read,
+        include: ['acme_send'],
+        tools: read.tools.map((tool) => ({
+          ...tool,
+          bound: false,
+          unbound_reason: 'server_starting' as const,
+        })),
+      }),
+    });
+    renderFlow(
+      { kind: 'pick', name: 'acme', titles: ['acme'], connectionId: null },
+      { client, directory: reads({ manifest: [entry('acme')], status: BOUND }) },
+    );
+    expect(
+      await screen.findByText(
+        "Not mounted yet: this server is still starting. This tool mounts once its start binds the server's tools.",
+      ),
+    ).toBeVisible();
+  });
+
+  it('shows a tools read the platform refuses because the server is starting as starting, and Check again reads the tools again', async () => {
+    const user = userEvent.setup();
+    const message =
+      "mcp server 'acme' did not list its tools: MCP server 'acme' start still in progress after 10s";
+    const listMcpAdvertisedTools = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError(message, 503, 'mcp-server-starting'))
+      .mockImplementation((title: string) => Promise.resolve(advertised(title)));
+    renderFlow(
+      { kind: 'pick', name: 'acme', titles: ['acme'], connectionId: null },
+      {
+        client: baseClient({ listMcpAdvertisedTools }),
+        directory: reads({ manifest: [entry('acme')], status: BOUND }),
+      },
+    );
+    const starting = await screen.findByText('Starting');
+    expect(starting).toHaveAttribute('role', 'status');
+    expect(starting).toHaveClass('tai-status-pending');
+    expect(screen.getByText(message)).toBeVisible();
+    expect(screen.getByText('The tools of acme can be picked once it has started.')).toBeVisible();
+    expect(screen.queryByRole('alert')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Check again' }));
+    await waitFor(() => {
+      expect(listMcpAdvertisedTools).toHaveBeenCalledTimes(2);
+    });
+    expect(
+      await screen.findByRole('checkbox', {
+        name: 'Mount every tool, including tools the server adds later',
+      }),
+    ).toBeVisible();
+    expect(screen.queryByText(message)).toBeNull();
+  });
+
   it('labels a mapped tool with its display name and the filter matches either name', async () => {
     const user = userEvent.setup();
     const client = baseClient({
@@ -408,6 +554,260 @@ describe('ConnectFlowDialog — a marketplace listing', () => {
     await waitFor(() => {
       expect(client.listMcpAdvertisedTools).toHaveBeenCalledWith('acme_mail', expect.anything());
     });
+  });
+
+  it('hands a title whose start is still in progress on to Pick tools, which shows the start', async () => {
+    const user = userEvent.setup();
+    const STARTING: McpStatusView = {
+      bound: {},
+      failed: [
+        {
+          title: 'acme_mail',
+          category: 'starting',
+          message: 'MCP server acme_mail start still in progress after 30s',
+        },
+      ],
+    };
+    const client = listingClient({
+      getMarketplacePlugin: vi.fn().mockResolvedValue(SERVER_DETAIL),
+      getMcpStatus: vi.fn().mockResolvedValue(STARTING),
+    });
+    renderFlow(LISTING, { client, directory: reads({ status: STARTING }) });
+    await install(user);
+    await waitFor(async () => {
+      expect(await currentStep()).toContain('Pick tools');
+    });
+    const starting = await screen.findByRole('status');
+    expect(starting).toHaveTextContent('Starting');
+    expect(starting).toHaveClass('tai-status-pending');
+    expect(
+      screen.getByText('MCP server acme_mail start still in progress after 30s'),
+    ).toBeVisible();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(client.listMcpAdvertisedTools).not.toHaveBeenCalled();
+  });
+
+  it('tells a session that cannot pick that the server is starting, not connected', async () => {
+    const user = userEvent.setup();
+    const message = 'MCP server acme_mail start still in progress after 30s';
+    const STARTING: McpStatusView = {
+      bound: {},
+      failed: [{ title: 'acme_mail', category: 'starting', message }],
+    };
+    const client = listingClient({
+      getMarketplacePlugin: vi.fn().mockResolvedValue(SERVER_DETAIL),
+      getMcpStatus: vi.fn().mockResolvedValue(STARTING),
+    });
+    renderFlow(LISTING, {
+      client,
+      projection: scopedProjection({
+        routes: [
+          { path: apiRoutes.post_api_marketplace_install_preview.path, methods: ['POST'] },
+          { path: apiRoutes.post_api_marketplace_install.path, methods: ['POST'] },
+        ],
+      }),
+      directory: reads({ status: STARTING }),
+    });
+    await install(user);
+    expect(
+      await screen.findByRole('heading', { name: 'Acme Mail is starting.' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /is connected/ })).toBeNull();
+    const starting = screen.getByText('Starting');
+    expect(starting).toHaveAttribute('role', 'status');
+    expect(screen.getByText(message)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Check again' })).toBeVisible();
+    expect(screen.getByText(/Choosing which ones mount needs write access to/).textContent).toMatch(
+      /^Every tool this server offers mounts once it has started\. Choosing which ones mount/,
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(client.listMcpAdvertisedTools).not.toHaveBeenCalled();
+  });
+
+  it('tells a session that cannot pick that the server failed, not connected', async () => {
+    const user = userEvent.setup();
+    const message = 'MCP server acme_mail failed: the token was refused';
+    const FAILED: McpStatusView = {
+      bound: {},
+      failed: [{ title: 'acme_mail', category: 'auth', message }],
+    };
+    const client = listingClient({
+      getMarketplacePlugin: vi.fn().mockResolvedValue(SERVER_DETAIL),
+      getMcpStatus: vi.fn().mockResolvedValue(FAILED),
+    });
+    renderFlow(LISTING, {
+      client,
+      projection: scopedProjection({
+        routes: [
+          { path: apiRoutes.post_api_marketplace_install_preview.path, methods: ['POST'] },
+          { path: apiRoutes.post_api_marketplace_install.path, methods: ['POST'] },
+        ],
+      }),
+      directory: reads({ status: FAILED }),
+    });
+    await install(user);
+    expect(
+      await screen.findByRole('heading', { name: 'Acme Mail did not connect.' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /is connected/ })).toBeNull();
+    expect(screen.getByText('Failed: auth')).toBeVisible();
+    expect(screen.getByText(message)).toBeVisible();
+    expect(screen.queryByText(/tools mounted/)).toBeNull();
+    expect(screen.queryByText(/is mounted|mounts once/)).toBeNull();
+    expect(
+      screen.getByText(
+        "Choosing which of this server's tools are mounted needs write access to POST /api/mcp-status/{title}/advertised-tools and PUT /api/mcp-config/entries/{title}/tool-filter; ask an administrator to grant it.",
+      ),
+    ).toBeVisible();
+    expect(client.listMcpAdvertisedTools).not.toHaveBeenCalled();
+  });
+
+  it('says the Done step cannot tell what is connected when the status read failed', async () => {
+    const user = userEvent.setup();
+    const retry = vi.fn();
+    const BOUND: McpStatusView = { bound: { acme_mail: ['send'] }, failed: [] };
+    renderFlow(LISTING, {
+      client: listingClient({
+        getMarketplacePlugin: vi.fn().mockResolvedValue(SERVER_DETAIL),
+        getMcpStatus: vi.fn().mockResolvedValue(BOUND),
+      }),
+      projection: scopedProjection({
+        routes: [
+          { path: apiRoutes.post_api_marketplace_install_preview.path, methods: ['POST'] },
+          { path: apiRoutes.post_api_marketplace_install.path, methods: ['POST'] },
+        ],
+      }),
+      directory: {
+        ...reads(),
+        status: { status: 'failed', error: new Error('the worker did not answer'), retry },
+      },
+    });
+    await install(user);
+    expect(
+      await screen.findByRole('heading', { name: 'The status of Acme Mail could not be read.' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /is connected/ })).toBeNull();
+    expect(
+      screen.getByText('Could not load the MCP server status: the worker did not answer'),
+    ).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/is mounted|tools mounted/)).toBeNull();
+  });
+
+  it('says a server the answering worker has not loaded is not loaded, not connected', async () => {
+    const user = userEvent.setup();
+    renderFlow(LISTING, {
+      client: listingClient({
+        getMarketplacePlugin: vi.fn().mockResolvedValue(SERVER_DETAIL),
+        getMcpStatus: vi.fn().mockResolvedValue({ bound: { acme_mail: ['send'] }, failed: [] }),
+      }),
+      projection: scopedProjection({
+        routes: [
+          { path: apiRoutes.post_api_marketplace_install_preview.path, methods: ['POST'] },
+          { path: apiRoutes.post_api_marketplace_install.path, methods: ['POST'] },
+        ],
+      }),
+      directory: reads({ status: { bound: {}, failed: [] } }),
+    });
+    await install(user);
+    expect(
+      await screen.findByRole('heading', { name: 'Acme Mail is configured, but not loaded.' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('acme_mail is configured, but the worker that answered has not loaded it.'),
+    ).toBeVisible();
+    expect(screen.queryByText(/is mounted|tools mounted/)).toBeNull();
+  });
+
+  it.each([
+    {
+      kind: 'failed',
+      other: { bound: {}, failed: [{ title: 'acme_files', category: 'auth', message: 'denied' }] },
+      line: 'Failed: auth',
+    },
+    {
+      kind: 'not loaded',
+      other: { bound: {}, failed: [] },
+      line: 'acme_files is configured, but the worker that answered has not loaded it.',
+    },
+  ])(
+    'gives no final verdict while one server is starting and another is $kind',
+    async ({ other, line }) => {
+      const user = userEvent.setup();
+      const message = 'MCP server acme_mail start still in progress after 30s';
+      const MIXED: McpStatusView = {
+        bound: other.bound,
+        failed: [...other.failed, { title: 'acme_mail', category: 'starting', message }],
+      };
+      renderFlow(LISTING, {
+        client: listingClient({
+          getMarketplacePlugin: vi.fn().mockResolvedValue(
+            listingDetail([
+              { kind: 'mcp-server', name: 'acme_mail' },
+              { kind: 'mcp-server', name: 'acme_files' },
+            ]),
+          ),
+          getMcpStatus: vi.fn().mockResolvedValue({
+            bound: { acme_files: ['list'] },
+            failed: [{ title: 'acme_mail', category: 'starting', message }],
+          }),
+        }),
+        projection: scopedProjection({
+          routes: [
+            { path: apiRoutes.post_api_marketplace_install_preview.path, methods: ['POST'] },
+            { path: apiRoutes.post_api_marketplace_install.path, methods: ['POST'] },
+          ],
+        }),
+        directory: reads({ status: MIXED }),
+      });
+      await install(user);
+      expect(
+        await screen.findByRole('heading', { name: 'Part of Acme Mail is still starting.' }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('heading', { name: /did not connect|not loaded|is connected/ }),
+      ).toBeNull();
+      expect(screen.getByText(line)).toBeVisible();
+      expect(screen.getByText('Starting')).toHaveAttribute('role', 'status');
+      expect(screen.getByText(message)).toBeVisible();
+      expect(screen.queryByText(/is mounted|mounts once/)).toBeNull();
+    },
+  );
+
+  it('says a listing with one failed server is partly connected, and shows each server', async () => {
+    const user = userEvent.setup();
+    const message = 'MCP server acme_files failed: the command exited';
+    const MIXED: McpStatusView = {
+      bound: { acme_mail: ['send', 'read'] },
+      failed: [{ title: 'acme_files', category: 'crashed', message }],
+    };
+    renderFlow(LISTING, {
+      client: listingClient({
+        getMarketplacePlugin: vi.fn().mockResolvedValue(
+          listingDetail([
+            { kind: 'mcp-server', name: 'acme_mail' },
+            { kind: 'mcp-server', name: 'acme_files' },
+          ]),
+        ),
+        getMcpStatus: vi.fn().mockResolvedValue(MIXED),
+      }),
+      projection: scopedProjection({
+        routes: [
+          { path: apiRoutes.post_api_marketplace_install_preview.path, methods: ['POST'] },
+          { path: apiRoutes.post_api_marketplace_install.path, methods: ['POST'] },
+        ],
+      }),
+      directory: reads({ status: MIXED }),
+    });
+    await install(user);
+    expect(
+      await screen.findByRole('heading', { name: 'Acme Mail is partly connected.' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('acme_mail: 2 tools mounted')).toBeVisible();
+    expect(screen.getByText('acme_files')).toBeVisible();
+    expect(screen.getByText('Failed: crashed')).toBeVisible();
+    expect(screen.getByText(message)).toBeVisible();
   });
 
   it('gives up at once when the reload converged and a check still misses the provider', async () => {

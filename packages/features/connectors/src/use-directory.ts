@@ -15,7 +15,7 @@ import type {
   MarketplaceSearchRow,
   ProviderView,
 } from '@tai42/api-client';
-import { apiRoutes } from '@tai42/api-client';
+import { apiRoutes, isMcpStarting } from '@tai42/api-client';
 import {
   coversAnyRoute,
   installedMarketplacePluginsKey,
@@ -26,7 +26,12 @@ import {
   useApi,
   useCapabilities,
 } from '@tai42/studio-sdk';
-import { type InfiniteData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import {
+  type InfiniteData,
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import { CONNECTIONS_KEY, PROVIDERS_KEY } from './keys';
 
@@ -39,8 +44,9 @@ export type ReadState<T> =
 /** The marketplace item kinds the directory lists. */
 export const DIRECTORY_KINDS = ['connector', 'mcp-server'] as const;
 
-/** A failed record of the live MCP status. */
-export interface FailedServer {
+/** A record of the live MCP status's failed list: a server whose tools are not bound, by a
+ *  failure or by a start still in progress. */
+export interface UnboundServer {
   readonly title: string;
   readonly category: string;
   readonly message: string;
@@ -48,7 +54,7 @@ export interface FailedServer {
 
 export interface McpStatusView {
   readonly bound: Readonly<Record<string, readonly string[]>>;
-  readonly failed: readonly FailedServer[];
+  readonly failed: readonly UnboundServer[];
 }
 
 /** A manifest MCP entry as the directory reads it. */
@@ -62,7 +68,8 @@ export interface ServerEntry {
 /** How one server title stands on the worker that answered the status read. */
 export type ServerLiveState =
   | { readonly kind: 'bound'; readonly tools: readonly string[] }
-  | { readonly kind: 'failed'; readonly failure: FailedServer }
+  | { readonly kind: 'starting'; readonly start: UnboundServer }
+  | { readonly kind: 'failed'; readonly failure: UnboundServer }
   | { readonly kind: 'not_loaded' }
   | { readonly kind: 'unknown' };
 
@@ -149,9 +156,25 @@ export function liveStateOf(title: string, status: McpStatusView | null): Server
   if (status === null) return { kind: 'unknown' };
   const tools = status.bound[title];
   if (tools !== undefined) return { kind: 'bound', tools };
-  const failure = status.failed.find((record) => record.title === title);
-  if (failure !== undefined) return { kind: 'failed', failure };
+  const record = status.failed.find((candidate) => candidate.title === title);
+  if (record !== undefined) {
+    return isMcpStarting(record)
+      ? { kind: 'starting', start: record }
+      : { kind: 'failed', failure: record };
+  }
   return { kind: 'not_loaded' };
+}
+
+/**
+ * Re-reads the live MCP status alone, the check of a server start still in progress: the
+ * start binds or fails on its own, so checking it again asks the platform for nothing else.
+ * A reload would join the start in progress and hold its request until that start ends.
+ */
+export function useRecheckMcpStatus(): () => void {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: mcpStatusKey, exact: true });
+  };
 }
 
 function useRouteReach(path: string): 'pending' | 'reached' | 'refused' {

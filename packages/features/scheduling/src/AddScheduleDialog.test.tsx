@@ -391,9 +391,30 @@ describe('AddScheduleDialog — hidden-tool exclusion', () => {
     const user = userEvent.setup({ delay: null });
     const client = makeClient({
       listToolTags: vi.fn().mockResolvedValue([
-        { name: 'run_report', tags: [], hidden: false, badges: [], schedulable: true },
-        { name: 'secret_task', tags: [], hidden: true, badges: [], schedulable: true },
-        { name: 'open_task', tags: [], hidden: true, badges: [], schedulable: true },
+        {
+          name: 'run_report',
+          description: null,
+          tags: [],
+          hidden: false,
+          badges: [],
+          schedulable: true,
+        },
+        {
+          name: 'secret_task',
+          description: null,
+          tags: [],
+          hidden: true,
+          badges: [],
+          schedulable: true,
+        },
+        {
+          name: 'open_task',
+          description: null,
+          tags: [],
+          hidden: true,
+          badges: [],
+          schedulable: true,
+        },
       ]),
       listToolMeta: vi.fn().mockResolvedValue({
         folders: [],
@@ -419,11 +440,16 @@ describe('AddScheduleDialog — hidden-tool exclusion', () => {
 describe('AddScheduleDialog — nothing schedulable', () => {
   it('states that no tool can be scheduled in place of the picker, with the schedulable explanation', async () => {
     const client = makeClient({
-      listToolTags: vi
-        .fn()
-        .mockResolvedValue([
-          { name: 'run_report', tags: [], hidden: false, badges: [], schedulable: false },
-        ]),
+      listToolTags: vi.fn().mockResolvedValue([
+        {
+          name: 'run_report',
+          description: null,
+          tags: [],
+          hidden: false,
+          badges: [],
+          schedulable: false,
+        },
+      ]),
     });
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
 
@@ -466,11 +492,16 @@ describe('AddScheduleDialog — declared badges', () => {
     // shows their merged, deduped, sorted union beneath the chosen tool.
     const user = userEvent.setup({ delay: null });
     const client = makeClient({
-      listToolTags: vi
-        .fn()
-        .mockResolvedValue([
-          { name: 'sync', tags: [], badges: ['network'], hidden: false, schedulable: true },
-        ]),
+      listToolTags: vi.fn().mockResolvedValue([
+        {
+          name: 'sync',
+          description: null,
+          tags: [],
+          badges: ['network'],
+          hidden: false,
+          schedulable: true,
+        },
+      ]),
       listToolMeta: vi.fn().mockResolvedValue({
         folders: [],
         meta: [

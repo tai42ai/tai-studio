@@ -51,8 +51,10 @@ export interface McpRenderResult extends RenderResult {
 }
 
 /** The real refusal readers of a client, carried by every stub client. */
-const { holdersFromError, storedPresetFaultFromError } = createApiClient({ getToken: () => null });
-const refusalReaders = { holdersFromError, storedPresetFaultFromError };
+const { holdersFromError, storedPresetFaultFromError, isMcpStartingError } = createApiClient({
+  getToken: () => null,
+});
+const refusalReaders = { holdersFromError, storedPresetFaultFromError, isMcpStartingError };
 
 export function renderWithProviders(
   ui: ReactNode,

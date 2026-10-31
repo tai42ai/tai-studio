@@ -1,6 +1,7 @@
 [
   {
     "name": "echo",
+    "description": null,
     "tags": [],
     "badges": [],
     "hidden": false,
@@ -8,6 +9,7 @@
   },
   {
     "name": "paris_weather",
+    "description": null,
     "tags": ["geo"],
     "badges": ["network"],
     "hidden": false,
@@ -15,6 +17,7 @@
   },
   {
     "name": "quick",
+    "description": null,
     "tags": ["scratch"],
     "badges": [],
     "hidden": false,
@@ -22,6 +25,7 @@
   },
   {
     "name": "weather",
+    "description": null,
     "tags": [],
     "badges": ["network"],
     "hidden": false,

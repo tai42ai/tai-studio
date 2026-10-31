@@ -85,6 +85,9 @@ function ServerAction({
   ) : (
     <NoGrantLine>{reloadNoGrant(row.title)}</NoGrantLine>
   );
+  // A failed server has no listing to pick from. A server whose start is still in progress
+  // keeps Pick tools, as its connection row does: the step shows the start and lists the
+  // tools once the server binds.
   const pick =
     live.kind !== 'failed' && grants.canPickTools && row.entry !== null ? (
       <Button
@@ -135,7 +138,10 @@ function EntryMenu({ row, grants, actions }: Omit<EntryProps, 'reads'>): ReactNo
     }
   }
   if (row.kind === 'server') {
-    if ((row.live.kind === 'failed' || row.live.kind === 'not_loaded') && grants.canReload) {
+    // A server start still in progress keeps Reload (it checks the start again) and
+    // Deregister (it drops the start), without the Fix a problem asks for.
+    const { kind } = row.live;
+    if ((kind === 'failed' || kind === 'starting' || kind === 'not_loaded') && grants.canReload) {
       items.push({
         id: 'reload',
         label: 'Reload',
@@ -144,7 +150,7 @@ function EntryMenu({ row, grants, actions }: Omit<EntryProps, 'reads'>): ReactNo
         },
       });
     }
-    if (row.live.kind === 'failed' && grants.canDeregister) {
+    if ((kind === 'failed' || kind === 'starting') && grants.canDeregister) {
       items.push({
         id: 'deregister',
         label: 'Deregister',

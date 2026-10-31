@@ -173,8 +173,15 @@ describe('presetVersion — immutable version row', () => {
 describe('toolTags — additive per-tool native surface', () => {
   it('parses an array of {name, tags, badges, hidden} entries', () => {
     const parsed = schemas.toolTags.parse([
-      { name: 'echo', tags: [], badges: [], hidden: false, schedulable: false },
-      { name: 'acme_probe', tags: ['acme'], badges: ['network'], hidden: true, schedulable: false },
+      { name: 'echo', description: null, tags: [], badges: [], hidden: false, schedulable: false },
+      {
+        name: 'acme_probe',
+        description: null,
+        tags: ['acme'],
+        badges: ['network'],
+        hidden: true,
+        schedulable: false,
+      },
     ]);
     expect(parsed[1]?.tags).toEqual(['acme']);
     expect(parsed[1]?.badges).toEqual(['network']);

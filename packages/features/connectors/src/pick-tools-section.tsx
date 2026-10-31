@@ -1,6 +1,7 @@
 /**
  * One section of the Pick tools step: the server's advertised tools with a tick per
- * tool, the state of its read while it has not answered, and the outcome of its save.
+ * tool, the state of its read while it has not answered, the start of a server still
+ * starting, and the outcome of its save.
  */
 import type { FleetReportSummary, McpAdvertisedTools } from '@tai42/api-client';
 import {
@@ -16,6 +17,7 @@ import {
   HolderList,
   isForbiddenError,
   matchesSearch,
+  McpStartingRefusal,
   Skeleton,
   TextInput,
   toolDisplayLabel,
@@ -33,8 +35,11 @@ import {
   sameBody,
   type ToolFilterBody,
 } from './pick-tools-model';
+import { ServerStarting } from './server-live-state';
 
 const UNBOUND_REASON: Record<string, (name: string) => string> = {
+  server_starting: () =>
+    "Not mounted yet: this server is still starting. This tool mounts once its start binds the server's tools.",
   server_failed: () =>
     'Not mounted: this server failed when its tools were last loaded. Fix it from its card to mount this tool.',
   not_loaded: () =>
@@ -218,6 +223,7 @@ export function SectionRead({
   readonly justAdded: boolean;
   readonly addFleet: FleetReportSummary | null;
 }): ReactNode {
+  const api = useApi();
   if (query === undefined || query.isPending) {
     return (
       <div
@@ -241,6 +247,15 @@ export function SectionRead({
       </p>
     );
   }
+  if (api.isMcpStartingError(query.error)) {
+    return (
+      <SectionStarting
+        title={title}
+        message={errorMessage(query.error)}
+        onCheckAgain={() => void query.refetch()}
+      />
+    );
+  }
   if (statusOf(query.error) === 404) {
     return (
       <>
@@ -259,7 +274,33 @@ export function SectionRead({
   return <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />;
 }
 
-/** A section's save outcome: Saved with its fleet report, or the failure with its holders. */
+/**
+ * A section whose server start is still in progress: the start's message, what waits for it,
+ * and Check again, which re-reads whichever answer said the server is starting (the live
+ * status, or the section's own read of the tools).
+ */
+export function SectionStarting({
+  title,
+  message,
+  onCheckAgain,
+}: {
+  readonly title: string;
+  readonly message: string;
+  readonly onCheckAgain: () => void;
+}): ReactNode {
+  return (
+    <ServerStarting
+      message={message}
+      note={`The tools of ${title} can be picked once it has started.`}
+      onCheckAgain={onCheckAgain}
+    />
+  );
+}
+
+/**
+ * A section's save outcome: Saved with its fleet report, the refusal of a save that waits
+ * for a server still starting, or the failure with its holders.
+ */
 export function SectionOutcome({
   title,
   read,
@@ -276,6 +317,9 @@ export function SectionOutcome({
   const api = useApi();
   if (result === undefined) return null;
   if (result.error !== undefined) {
+    if (api.isMcpStartingError(result.error)) {
+      return <McpStartingRefusal message={errorMessage(result.error)} />;
+    }
     const holders = api.holdersFromError(result.error);
     const message = errorMessage(result.error);
     const failureText = holders !== null ? (message.split('\n')[0] ?? '') : message;

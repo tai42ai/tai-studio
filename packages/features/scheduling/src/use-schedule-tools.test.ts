@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { pickableToolNames } from './use-schedule-tools';
 
 function row(name: string, schedulable: boolean): ToolTagEntry {
-  return { name, schedulable, tags: [], hidden: false, badges: [] };
+  return { name, description: null, schedulable, tags: [], hidden: false, badges: [] };
 }
 
 describe('pickableToolNames', () => {

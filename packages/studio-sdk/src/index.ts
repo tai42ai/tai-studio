@@ -259,6 +259,8 @@ export type { JsonTreeProps } from './components/json-tree';
 export { JsonTree } from './components/json-tree';
 export type { HeadingLevel, MarkdownBlock, MarkdownProps } from './components/markdown';
 export { Markdown, parseMarkdown } from './components/markdown';
+export type { McpStartingRefusalProps } from './components/mcp-starting-refusal';
+export { McpStartingRefusal } from './components/mcp-starting-refusal';
 export type { OpenTargetOptions, OpenTargetProps } from './components/open-target';
 export { openTargetProps } from './components/open-target';
 export type {
@@ -372,6 +374,8 @@ export type {
 export { VersionHistoryPanel } from './components/version-history-panel';
 export type { ViewMode, ViewToggleProps } from './components/view-toggle';
 export { useViewMode, ViewToggle } from './components/view-toggle';
+export type { WriteFailureProps } from './components/write-failure';
+export { WriteFailure } from './components/write-failure';
 
 // -- Whole-module re-exports (each module's own index lists its published names) --
 // The marketplace install UI, the navigation contract (shell ⇄ feature route tokens),

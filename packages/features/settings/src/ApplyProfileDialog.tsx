@@ -16,6 +16,7 @@ import {
   RecycleRollSection,
   Spinner,
   useApi,
+  WriteFailure,
 } from '@tai42/studio-sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CSSProperties, ReactNode } from 'react';
@@ -237,7 +238,7 @@ export function ApplyProfileDialog({
               </p>
             ) : null}
 
-            {apply.isError ? <ErrorState message={errorMessage(apply.error)} /> : null}
+            {apply.isError ? <WriteFailure error={apply.error} /> : null}
           </>
         )}
 

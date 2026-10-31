@@ -234,10 +234,17 @@ describe('ToolsPage — responsive master/detail', () => {
 
 const toolNames = ['alpha', 'beta', 'gamma', 'solo'];
 const toolTags: ToolTagEntry[] = [
-  { name: 'alpha', tags: ['x', 'y'], badges: [], hidden: false, schedulable: false },
-  { name: 'beta', tags: ['x'], badges: [], hidden: false, schedulable: false },
-  { name: 'gamma', tags: ['y'], badges: [], hidden: false, schedulable: false },
-  { name: 'solo', tags: [], badges: [], hidden: false, schedulable: false },
+  {
+    name: 'alpha',
+    description: null,
+    tags: ['x', 'y'],
+    badges: [],
+    hidden: false,
+    schedulable: false,
+  },
+  { name: 'beta', description: null, tags: ['x'], badges: [], hidden: false, schedulable: false },
+  { name: 'gamma', description: null, tags: ['y'], badges: [], hidden: false, schedulable: false },
+  { name: 'solo', description: null, tags: [], badges: [], hidden: false, schedulable: false },
 ];
 
 function taggedClient(overrides: StubApiClient = {}): StubApiClient {
@@ -351,6 +358,7 @@ describe('ToolsPage — tag chip overflow', () => {
   const manyNames = Array.from({ length: 10 }, (_, i) => `tool${String(i)}`);
   const manyTags: ToolTagEntry[] = manyNames.map((name, i) => ({
     name,
+    description: null,
     tags: [`t${String(i)}`],
     badges: [],
     hidden: false,
@@ -493,7 +501,9 @@ describe('ToolsPage — tool_meta overlay merge', () => {
   it('merges a tool native + overlay tags into one vocabulary (listed once)', async () => {
     const client: StubApiClient = {
       listTools: vi.fn().mockResolvedValue(['echo']),
-      listToolTags: vi.fn().mockResolvedValue([{ name: 'echo', tags: ['native'], hidden: false }]),
+      listToolTags: vi
+        .fn()
+        .mockResolvedValue([{ name: 'echo', description: null, tags: ['native'], hidden: false }]),
       listToolMeta: vi.fn().mockResolvedValue({
         folders: [],
         meta: [
@@ -519,11 +529,16 @@ describe('ToolsPage — tool_meta overlay merge', () => {
   it('renders a tool row with its merged declared badges as chips', async () => {
     const client: StubApiClient = {
       listTools: vi.fn().mockResolvedValue(['echo']),
-      listToolTags: vi
-        .fn()
-        .mockResolvedValue([
-          { name: 'echo', tags: [], badges: ['network'], hidden: false, schedulable: false },
-        ]),
+      listToolTags: vi.fn().mockResolvedValue([
+        {
+          name: 'echo',
+          description: null,
+          tags: [],
+          badges: ['network'],
+          hidden: false,
+          schedulable: false,
+        },
+      ]),
       listToolMeta: vi.fn().mockResolvedValue({
         folders: [],
         meta: [
@@ -565,8 +580,8 @@ describe('ToolsPage — effective visibility', () => {
     const client: StubApiClient = {
       listTools: vi.fn().mockResolvedValue(['visible', 'secret']),
       listToolTags: vi.fn().mockResolvedValue([
-        { name: 'visible', tags: [], hidden: false },
-        { name: 'secret', tags: [], hidden: false },
+        { name: 'visible', description: null, tags: [], hidden: false },
+        { name: 'secret', description: null, tags: [], hidden: false },
       ]),
       listToolMeta: vi.fn().mockResolvedValue({
         folders: [],
@@ -588,8 +603,8 @@ describe('ToolsPage — effective visibility', () => {
     const client: StubApiClient = {
       listTools: vi.fn().mockResolvedValue(['unhidden', 'stillhidden']),
       listToolTags: vi.fn().mockResolvedValue([
-        { name: 'unhidden', tags: [], hidden: true },
-        { name: 'stillhidden', tags: [], hidden: true },
+        { name: 'unhidden', description: null, tags: [], hidden: true },
+        { name: 'stillhidden', description: null, tags: [], hidden: true },
       ]),
       listToolMeta: vi.fn().mockResolvedValue({
         folders: [],
@@ -609,7 +624,9 @@ describe('ToolsPage — effective visibility', () => {
   it('shows the all-hidden empty state — not the install prompt — when every tool is hidden', async () => {
     const client: StubApiClient = {
       listTools: vi.fn().mockResolvedValue(['secret']),
-      listToolTags: vi.fn().mockResolvedValue([{ name: 'secret', tags: [], hidden: false }]),
+      listToolTags: vi
+        .fn()
+        .mockResolvedValue([{ name: 'secret', description: null, tags: [], hidden: false }]),
       listToolMeta: vi.fn().mockResolvedValue({
         folders: [],
         meta: [
@@ -735,7 +752,9 @@ describe('ToolsPage — row/card open selects the tool', () => {
     const user = userEvent.setup();
     const client: StubApiClient = {
       listTools: vi.fn().mockResolvedValue(['echo']),
-      listToolTags: vi.fn().mockResolvedValue([{ name: 'echo', tags: ['x'], hidden: false }]),
+      listToolTags: vi
+        .fn()
+        .mockResolvedValue([{ name: 'echo', description: null, tags: ['x'], hidden: false }]),
       ...emptyOverlay,
       getToolSchema: vi.fn().mockResolvedValue({
         input: { type: 'object', properties: {}, required: [] },

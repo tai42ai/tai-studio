@@ -44,6 +44,13 @@ const COLUMNS = [
 const CANNOT_CONNECT =
   'This session cannot connect apps. Connecting needs write access to POST /api/connectors/connections/start; ask an administrator to grant it.';
 
+/** The line for a session that cannot read the live MCP status. */
+export const STATUS_REFUSED =
+  'This session cannot read the live MCP status. Seeing which servers are mounted and which failed needs read access to GET /api/mcp-status; ask an administrator to grant it.';
+
+/** The lead of a failed live MCP status read. */
+export const STATUS_READ_FAILED = 'Could not load the MCP server status';
+
 export const refused = (state: { readonly status: string }): boolean => state.status === 'refused';
 
 /** Which of the directory's reads the session reaches. */
@@ -73,11 +80,7 @@ function statusLines(reads: DirectoryReads, grants: DirectoryGrants, noCards: bo
         : 'This session cannot read the MCP configuration, so servers are shown from their live status only. Seeing every configured server needs read access to GET /api/manifest/preserved; ask an administrator to grant it.',
     );
   }
-  if (refused(reads.status)) {
-    lines.push(
-      'This session cannot read the live MCP status. Seeing which servers are mounted and which failed needs read access to GET /api/mcp-status; ask an administrator to grant it.',
-    );
-  }
+  if (refused(reads.status)) lines.push(STATUS_REFUSED);
   if (noCards) {
     lines.push(
       'Marketplace listings are not shown, because connecting one needs read access to GET /api/connectors/providers or GET /api/mcp-status; ask an administrator to grant it.',
@@ -118,26 +121,33 @@ export function StatusLines({
   );
 }
 
+/** A failed read, with the fixed lead of its message and its own Retry; nothing otherwise. */
+export function ReadFailure({
+  lead,
+  state,
+}: {
+  readonly lead: string;
+  readonly state: ReadState<unknown>;
+}): ReactNode {
+  return state.status === 'failed' ? (
+    <ErrorState message={`${lead}: ${errorMessage(state.error)}`} onRetry={state.retry} />
+  ) : null;
+}
+
 /** The failed directory reads, each with the fixed lead of its message and its own Retry. */
 export function ReadFailures({ reads }: { reads: DirectoryReads }): ReactNode {
   const failures: [string, ReadState<unknown>][] = [
     ['Could not load connector providers', reads.providers],
     ['Could not load the MCP configuration', reads.manifest],
-    ['Could not load the MCP server status', reads.status],
+    [STATUS_READ_FAILED, reads.status],
     ['Could not load the installed marketplace plugins', reads.installed],
     ['Could not load marketplace listings', reads.marketplace.state],
   ];
   return (
     <>
-      {failures.map(([lead, state]) =>
-        state.status === 'failed' ? (
-          <ErrorState
-            key={lead}
-            message={`${lead}: ${errorMessage(state.error)}`}
-            onRetry={state.retry}
-          />
-        ) : null,
-      )}
+      {failures.map(([lead, state]) => (
+        <ReadFailure key={lead} lead={lead} state={state} />
+      ))}
     </>
   );
 }

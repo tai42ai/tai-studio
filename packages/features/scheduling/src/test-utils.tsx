@@ -118,7 +118,14 @@ export function schedule(overrides: Partial<ScheduleListRow> = {}): ScheduleList
 
 /** Tool-tag rows the server serves as `schedulable`, one per name. */
 export function schedulableTags(...names: string[]): ToolTagEntry[] {
-  return names.map((name) => ({ name, tags: [], hidden: false, badges: [], schedulable: true }));
+  return names.map((name) => ({
+    name,
+    description: null,
+    tags: [],
+    hidden: false,
+    badges: [],
+    schedulable: true,
+  }));
 }
 
 /**

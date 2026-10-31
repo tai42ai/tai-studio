@@ -1,6 +1,6 @@
 /**
  * The STATUS surfaces over the mounted MCP servers: the bound-server table (with a
- * per-server reload) and the dedicated failed-server health section (reload one,
+ * per-server reload) and the dedicated unbound-server health section (reload one,
  * reload all, or deregister behind the house confirm).
  */
 import type { FailedMcpEntry, FleetReportSummary } from '@tai42/api-client';
@@ -8,6 +8,7 @@ import {
   apiRoutes,
   failedMcpsFromReport,
   isFleetReportFailure,
+  isMcpStarting,
   summarizeFleetResult,
 } from '@tai42/api-client';
 import {
@@ -37,9 +38,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
+/** One bound server's row: its title and its tool count. */
 interface ServerRow {
   readonly title: string;
-  readonly healthy: boolean;
   readonly detail: string;
 }
 
@@ -75,9 +76,7 @@ function ServerStatusTable({ rows }: { rows: readonly ServerRow[] }): ReactNode 
                 <TR key={row.title}>
                   <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{row.title}</TD>
                   <TD>
-                    <Badge variant={row.healthy ? 'success' : 'danger'}>
-                      {row.healthy ? 'bound' : 'failed'}
-                    </Badge>
+                    <Badge variant="success">bound</Badge>
                   </TD>
                   <TD>{row.detail}</TD>
                   <TD>
@@ -129,11 +128,10 @@ export function McpStatusSection(): ReactNode {
   }
 
   // The MOUNTED table lists the servers that BOUND successfully; the ones the
-  // viability check skipped live in the dedicated failed-servers health section
+  // viability check skipped live in the dedicated unbound-servers health section
   // below (with their own remediation), so a failure is never buried in a status row.
   const rows: ServerRow[] = Object.entries(query.data.bound).map(([title, tools]) => ({
     title,
-    healthy: true,
     detail: `${String(tools.length)} tool${tools.length === 1 ? '' : 's'}`,
   }));
 
@@ -141,7 +139,7 @@ export function McpStatusSection(): ReactNode {
     return (
       <EmptyState
         title="No MCP servers are bound"
-        description="Add a server in the config below, then save. Servers that fail to bind appear under Failed servers."
+        description="Add a server in the config below, then save. Servers still starting or that fail to bind appear under Unbound servers."
       />
     );
   }
@@ -149,10 +147,10 @@ export function McpStatusSection(): ReactNode {
   return <ServerStatusTable rows={rows} />;
 }
 
-/** The failed-mount row's secondary message line: the existing muted style (via
+/** The unbound row's secondary message line: the existing muted style (via
  *  `tai-muted`), held to a single ellipsised line — the full redacted message rides the
  *  element's `title` tooltip. */
-const failedMessageStyle = {
+const unboundMessageStyle = {
   marginTop: 'var(--tai-space-1)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -165,16 +163,19 @@ const failedMessageStyle = {
  *  stops the single-line message from widening the column past that fill — it ellipsises
  *  at the Status edge instead of at a fraction of the row. Applied to the header cell
  *  and the body cell together so the `Server | Status` column boundary stays aligned. */
-const failedServerHeaderStyle = { width: '100%' } as const;
-const failedServerCellStyle = { width: '100%', maxWidth: 0 } as const;
+const unboundServerHeaderStyle = { width: '100%' } as const;
+const unboundServerCellStyle = { width: '100%', maxWidth: 0 } as const;
 
-/** One failed-server row: its title, coarse status, and the per-server remediation
+/** One unbound-server row: its title, coarse status, and the per-server remediation
  *  (Reload re-probes it; Deregister — a destructive detach — asks the house confirm).
+ *  A server start still in progress ({@link isMcpStarting}) is not a failure: its
+ *  category and status draw in the neutral tint, a failure's in the danger tint. Both
+ *  keep Reload and Deregister — a reload re-checks a start, a deregister drops it.
  *  Each affordance is gated on its OWN door: a caller whose projection cannot reach
  *  `<verb> path` is never shown a control that can only 403 on submit (projection ⊆
  *  gate). The per-server routes are templated (`/api/mcp-status/{title}/…`) and gate on
  *  their template paths with their methods. */
-function FailedServerRow({
+function UnboundServerRow({
   entry,
   onReload,
   reloadPending,
@@ -187,26 +188,28 @@ function FailedServerRow({
 }): ReactNode {
   const canReload = useCanWrite(apiRoutes.post_api_mcp_status_title_reload.path, 'POST');
   const canDeregister = useCanWrite(apiRoutes.post_api_mcp_status_title_deregister.path, 'POST');
+  const tint = isMcpStarting(entry) ? 'neutral' : 'danger';
   return (
     <TR>
-      <TD style={failedServerCellStyle}>
+      <TD style={unboundServerCellStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}>
           <span style={{ fontFamily: 'var(--tai-font-mono)' }}>{entry.title}</span>
-          {/* The coarse, credential-free failure category (`auth` / `unreachable` /
-              `error`), in the failed-status badge style; absent on a server that omits
-              it, which leaves the row unchanged. */}
-          {entry.category !== undefined ? <Badge variant="danger">{entry.category}</Badge> : null}
+          {/* The coarse, credential-free category (`preset_store` / `auth` /
+              `unreachable` / `starting` / `error`) in the row's tint; absent on a server
+              that omits it, which leaves the row unchanged. */}
+          {entry.category !== undefined ? <Badge variant={tint}>{entry.category}</Badge> : null}
         </div>
-        {/* The redacted failure message as a single muted, ellipsised secondary line
-            (full text in the `title` tooltip); no line when the server omits it. */}
+        {/* The record's redacted message (a failure's cause, or a start's progress) as a
+            single muted, ellipsised secondary line (full text in the `title` tooltip); no
+            line when the server omits it. */}
         {entry.message !== undefined ? (
-          <div className="tai-muted" style={failedMessageStyle} title={entry.message}>
+          <div className="tai-muted" style={unboundMessageStyle} title={entry.message}>
             {entry.message}
           </div>
         ) : null}
       </TD>
       <TD>
-        <Badge variant="danger">{entry.status}</Badge>
+        <Badge variant={tint}>{entry.status}</Badge>
       </TD>
       <TD>
         <div style={{ display: 'flex', gap: 'var(--tai-space-2)' }}>
@@ -240,25 +243,25 @@ function FailedServerRow({
   );
 }
 
-/** The failed-server table: one gated row per skipped server, driving Reload and
+/** The unbound-server table: one gated row per skipped server, driving Reload and
  *  Deregister back to the section that owns the mutations. */
-function FailedServersTable({
-  failed,
+function UnboundServersTable({
+  unbound,
   reloadingTitle,
   onReload,
   onDeregister,
 }: {
-  readonly failed: readonly FailedMcpEntry[];
+  readonly unbound: readonly FailedMcpEntry[];
   readonly reloadingTitle: string | undefined;
   readonly onReload: (title: string) => void;
   readonly onDeregister: (title: string) => void;
 }): ReactNode {
   return (
-    <ScrollRegion label="Failed MCP servers">
+    <ScrollRegion label="Unbound MCP servers">
       <Table>
         <THead>
           <TR>
-            <TH style={failedServerHeaderStyle}>Server</TH>
+            <TH style={unboundServerHeaderStyle}>Server</TH>
             <TH>Status</TH>
             <TH>
               <span className="tai-visually-hidden">Actions</span>
@@ -266,8 +269,8 @@ function FailedServersTable({
           </TR>
         </THead>
         <TBody>
-          {failed.map((entry) => (
-            <FailedServerRow
+          {unbound.map((entry) => (
+            <UnboundServerRow
               key={entry.title}
               entry={entry}
               onReload={onReload}
@@ -324,15 +327,16 @@ function DeregisterConfirmDialog({
 }
 
 /**
- * The failed-MCP health section: the servers the viability check skipped, read from
- * the fleet-wide `GET /api/mcp-status/failed` door (a server failed on ANY worker is
- * listed). Each row carries Reload (re-probe one) and Deregister (detach one's tools,
- * a destructive op behind the house confirm); a Reload-all-failed button re-probes the
- * whole roster. Every remediation invalidates both the failed roster and the mounted
- * status, since a re-attached server moves between the two views. An empty roster is a
- * quiet healthy state — the section renders nothing.
+ * The unbound-MCP health section: the servers the viability check skipped — failed, or
+ * with a start still in progress — read from the fleet-wide `GET /api/mcp-status/failed`
+ * door (a server unbound on ANY worker is listed). Each row carries Reload (re-probe one)
+ * and Deregister (detach one's tools, a destructive op behind the house confirm); a
+ * Reload-all-unbound button re-probes the whole roster. Every remediation invalidates
+ * both the unbound roster and the mounted status, since a re-attached server moves
+ * between the two views. An empty roster is a quiet healthy state — the section renders
+ * nothing.
  */
-export function FailedServersSection(): ReactNode {
+export function UnboundServersSection(): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
   const [deregisterTarget, setDeregisterTarget] = useState<string | null>(null);
@@ -343,7 +347,7 @@ export function FailedServersSection(): ReactNode {
   const [deregisterReport, setDeregisterReport] = useState<FleetReportSummary | null>(null);
   // Reload-all rides a CONCRETE, method-expressible route, so it gates exactly on
   // `POST /api/mcp-status/reload-failed` (projection ⊆ gate); the per-row Reload and
-  // Deregister gates live in `FailedServerRow` on their own dynamic doors.
+  // Deregister gates live in `UnboundServerRow` on their own dynamic doors.
   const canReloadAll = useCanWrite(apiRoutes.post_api_mcp_status_reload_failed.path, 'POST');
 
   const query = useQuery({
@@ -385,8 +389,8 @@ export function FailedServersSection(): ReactNode {
     return <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />;
   }
 
-  const failed = failedMcpsFromReport(query.data);
-  if (failed.length === 0) return null;
+  const unbound = failedMcpsFromReport(query.data);
+  if (unbound.length === 0) return null;
 
   const openDeregister = (title: string): void => {
     // A shared mutation drives every row's confirm, so clear any stale error and any
@@ -407,7 +411,7 @@ export function FailedServersSection(): ReactNode {
           marginBottom: 'var(--tai-space-3)',
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 'var(--tai-text-md)' }}>Failed servers</h2>
+        <h3 style={{ margin: 0, fontSize: 'var(--tai-text-md)' }}>Unbound servers</h3>
         {canReloadAll ? (
           <Button
             type="button"
@@ -416,13 +420,13 @@ export function FailedServersSection(): ReactNode {
             }}
             disabled={reloadAll.isPending}
           >
-            {reloadAll.isPending ? <Spinner label="Reloading all failed servers" /> : null}
-            Reload all failed
+            {reloadAll.isPending ? <Spinner label="Reloading all unbound servers" /> : null}
+            Reload all unbound
           </Button>
         ) : null}
       </div>
-      <FailedServersTable
-        failed={failed}
+      <UnboundServersTable
+        unbound={unbound}
         reloadingTitle={reload.isPending ? reload.variables : undefined}
         onReload={(title) => {
           reload.mutate(title);

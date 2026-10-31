@@ -1,6 +1,7 @@
 /**
- * The single-server MCP actions the directory offers: reload one server (a failed or
- * not-loaded one) and deregister a failed one. Both refresh the live status read.
+ * The single-server MCP actions the directory offers: reload one server (a failed, a
+ * starting or a not-loaded one) and deregister a failed or a starting one. Both refresh
+ * the live status read.
  */
 import { summarizeFleetResult } from '@tai42/api-client';
 import { mcpFailedKey, mcpStatusKey, useApi } from '@tai42/studio-sdk';

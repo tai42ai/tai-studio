@@ -5584,7 +5584,7 @@
         "type": "object"
       },
       "FailedMcp": {
-        "description": "An MCP server skipped by the viability check — title, coarse status, and credential-free failure detail.\n\n``category`` is the coarse, credential-free cause (``preset_store`` when the preset\nstore could not be read while the server's tools were being bound, ``auth`` for a\n401/403, ``unreachable`` for a transport error or timeout, ``error`` otherwise); ``message``\nis the redacted exception message (URL-embedded credentials stripped); ``http_status``\nis the HTTP status the failure carried, or ``null`` for a pure transport failure.",
+        "description": "An MCP server skipped by the viability check — title, coarse status, and credential-free failure detail.\n\n``category`` is the coarse, credential-free cause (``preset_store`` when the preset\nstore could not be read while the server's tools were being bound, ``auth`` for a\n401/403, ``unreachable`` for a transport error or a start that outran the start budget,\n``starting`` for a start still in progress when the caller stopped waiting (it binds on\ncompletion), ``error`` otherwise); ``message``\nis the redacted exception message (URL-embedded credentials stripped); ``http_status``\nis the HTTP status the failure carried, or ``null`` for a pure transport failure.",
         "properties": {
           "category": {
             "title": "Category",
@@ -8867,6 +8867,7 @@
             "anyOf": [
               {
                 "enum": [
+                  "server_starting",
                   "server_failed",
                   "not_loaded",
                   "preset_conflict",
@@ -20969,7 +20970,7 @@
         "type": "array"
       },
       "ToolTagRow": {
-        "description": "One tool's declared tags, visibility, and capability badges.\n\n``hidden`` and ``badges`` are the tool's OWN declaration (before the tool_meta overlay's override).\n``schedulable`` is whether the tool's schedule vehicle is registered (the scheduling backend's\n``schedule_task`` extension is attached to it).",
+        "description": "One tool's declared description, tags, visibility, and capability badges.\n\n``description`` is the tool's own declaration, null when the tool declares none.\n``hidden`` and ``badges`` are the tool's OWN declaration (before the tool_meta overlay's override).\n``schedulable`` is whether the tool's schedule vehicle is registered (the scheduling backend's\n``schedule_task`` extension is attached to it).",
         "properties": {
           "badges": {
             "items": {
@@ -20977,6 +20978,17 @@
             },
             "title": "Badges",
             "type": "array"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           },
           "hidden": {
             "title": "Hidden",
@@ -21000,6 +21012,7 @@
         },
         "required": [
           "name",
+          "description",
           "tags",
           "hidden",
           "badges",
@@ -21879,7 +21892,7 @@
   "info": {
     "description": "The operator HTTP surface served under /api/*. The platform's core routes. Plugin routes are published by each plugin.",
     "title": "tai42-skeleton API",
-    "version": "34.1.0"
+    "version": "34.1.1"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -25486,7 +25499,7 @@
         ]
       },
       "post": {
-        "description": "Merge env changes into the stored env and reload this worker and the fleet.\n\nA hot-class key is re-read in place. A recycle-class key rolls a worker recycle across the\nfleet: the response's ``recycle`` carries the roll's rows (``null`` when the change carried no\nrecycle-class key), and when the roll converged this worker recycles itself after replying —\non the HTTP edge and on every projected tool door alike (a post-reply graceful self-exit its\nsupervisor respawns).\nA change that cannot take effect is refused with a 400 before anything is written, naming\nthe key, under any spelling of its name: a key that locates the worker bus (a bus URL or the\nbus namespace), a deployment / boot-identity (X-band) key no editor may set, and a key the\ndeployment sets (set it in the deployment's environment and restart; removing its stored\ncopy is allowed).\n\n``secret_keys`` (when not ``None``) replaces the operator's secret marks in the same write;\nthe marks variable itself is never accepted as an ``env`` key.\nAn ``mcp`` selection list whose ``!ENV`` marker would resolve so that a tool something still\nuses stops being picked is refused with a 409 naming the holders, or a 502 when the server\ncannot list its tools for that check, before anything is written.\n\nCalled over MCP, the reload answers on the session that called it and then retires that session with\nthe generation it ran on: a later call on the same session fails (streamable HTTP answers it 404,\nand an SSE session's stream closes), so the client starts a new session to go on.",
+        "description": "Merge env changes into the stored env and reload this worker and the fleet.\n\nA hot-class key is re-read in place. A recycle-class key rolls a worker recycle across the\nfleet: the response's ``recycle`` carries the roll's rows (``null`` when the change carried no\nrecycle-class key), and when the roll converged this worker recycles itself after replying —\non the HTTP edge and on every projected tool door alike (a post-reply graceful self-exit its\nsupervisor respawns).\nA change that cannot take effect is refused with a 400 before anything is written, naming\nthe key, under any spelling of its name: a key that locates the worker bus (a bus URL or the\nbus namespace), a deployment / boot-identity (X-band) key no editor may set, and a key the\ndeployment sets (set it in the deployment's environment and restart; removing its stored\ncopy is allowed).\n\n``secret_keys`` (when not ``None``) replaces the operator's secret marks in the same write;\nthe marks variable itself is never accepted as an ``env`` key.\nAn ``mcp`` selection list whose ``!ENV`` marker would resolve so that a tool something still\nuses stops being picked is refused with a 409 naming the holders, a 503 with ``code``\n``mcp-server-starting`` while the server's start is in progress, or a 502 when the server\ncannot list its tools for that check, before anything is written.\n\nCalled over MCP, the reload answers on the session that called it and then retires that session with\nthe generation it ran on: a later call on the same session fails (streamable HTTP answers it 404,\nand an SSE session's stream closes), so the client starts a new session to go on.",
         "operationId": "post_api_config_env",
         "requestBody": {
           "content": {
@@ -25561,14 +25574,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReloadingError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReloadingError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
                 }
               }
             },
-            "description": "The server is applying a config reload; retry shortly.",
+            "description": "The server is applying a config reload, or a dependency this route needs is temporarily unavailable; retry shortly.",
             "headers": {
               "Retry-After": {
-                "description": "Seconds to wait before retrying.",
+                "description": "Seconds to wait before retrying; carried by the reloading answer.",
                 "schema": {
                   "type": "integer"
                 }
@@ -25912,7 +25932,7 @@
     },
     "/api/config/profiles/{name}/apply": {
       "post": {
-        "description": "Apply the profile's active env as the WHOLE stored env band and reload the fleet.\n\nThe profile's ``secret_keys`` are written as the stored secret marks in the same replace.\n\nA key the profile omits is deleted, save the carried deployment X band; build+swap a fresh serving\nepoch under it, persist env-write-LAST, broadcast the reload, and recycle the fleet for recycle-class\ndiffs. NO request body.\n\nThe response is the dedicated ``profileApplyResponse`` ``{hot, recycle:[{name, kind, status,\ngeneration_before, detail}], fresh:[{name, kind, generation}], refused:[],\nrecycle_stopped:{kind, name, detail} | null, awaiting_respawn:[{name, keys}], span_release_error, fanout}``\n— key names + worker identities only,\nnever env values. ``recycle`` is one line per sibling the roll reached (plus the applier's\nown deferred self-exit line when it is armed). A ``recycled`` line is confirmed on reality;\nthe roll stops at the first line that is not: ``timed-out`` (its old life did not go, fresh\ncapacity did not boot, or it never returned to ready, within the step budget) or ``failed``\n(the worker refused the op, or the bus could not be reached while it was in hand), its\n``detail`` naming why — or when the bus could not be read before a target was reached.\n``recycle_stopped`` names where the roll stopped and why (``null`` when it ran to its end; a\n``null`` name when no target was in hand). Later siblings and the applier's own recycle are\nthen not attempted, and the call still answers with the report: the env is persisted and the\nfleet reloaded. ``fresh`` is the per-kind new ready lives observed since the pre-apply\nsnapshot, capacity evidence never claimed as any target's successor. ``refused`` is ``[]``:\na refusal (X-band key, a key the deployment sets, dangling ``!ENV``, a bus-reaching key no\nrecycle can carry) aborts upfront with a loud 400 naming the key, before anything is snapshotted, built,\nor persisted. ``awaiting_respawn`` names the workers (name + keys) still awaiting a respawn\nafter the roll — empty when it converged. ``span_release_error`` is ``null`` when the config\nstore released its exclusive write span after the env persisted, otherwise the store's error:\nthe env is persisted and the broadcast and roll reported here still ran, but the store may still\nhold its write span until this worker exits. When the diff carries serve-affecting recycle keys\nand the roll converged, the applier's OWN recycle is armed as a post-reply graceful self-exit\n— after the HTTP body flushes, or once a projected tool call (MCP, ``tai tools run``, an\nagent, a preset, a schedule, a hook) returned — and its supervisor respawns it on the new\nenv. 404 for an absent name.\nAn ``mcp`` selection list whose ``!ENV`` marker would resolve so that a tool something still\nuses stops being picked is refused with a 409 naming the holders, or a 502 when the server\ncannot list its tools for that check, before anything is snapshotted.\n\nCalled over MCP, the reload answers on the session that called it and then retires that session with\nthe generation it ran on: a later call on the same session fails (streamable HTTP answers it 404,\nand an SSE session's stream closes), so the client starts a new session to go on.",
+        "description": "Apply the profile's active env as the WHOLE stored env band and reload the fleet.\n\nThe profile's ``secret_keys`` are written as the stored secret marks in the same replace.\n\nA key the profile omits is deleted, save the carried deployment X band; build+swap a fresh serving\nepoch under it, persist env-write-LAST, broadcast the reload, and recycle the fleet for recycle-class\ndiffs. NO request body.\n\nThe response is the dedicated ``profileApplyResponse`` ``{hot, recycle:[{name, kind, status,\ngeneration_before, detail}], fresh:[{name, kind, generation}], refused:[],\nrecycle_stopped:{kind, name, detail} | null, awaiting_respawn:[{name, keys}], span_release_error, fanout}``\n— key names + worker identities only,\nnever env values. ``recycle`` is one line per sibling the roll reached (plus the applier's\nown deferred self-exit line when it is armed). A ``recycled`` line is confirmed on reality;\nthe roll stops at the first line that is not: ``timed-out`` (its old life did not go, fresh\ncapacity did not boot, or it never returned to ready, within the step budget) or ``failed``\n(the worker refused the op, or the bus could not be reached while it was in hand), its\n``detail`` naming why — or when the bus could not be read before a target was reached.\n``recycle_stopped`` names where the roll stopped and why (``null`` when it ran to its end; a\n``null`` name when no target was in hand). Later siblings and the applier's own recycle are\nthen not attempted, and the call still answers with the report: the env is persisted and the\nfleet reloaded. ``fresh`` is the per-kind new ready lives observed since the pre-apply\nsnapshot, capacity evidence never claimed as any target's successor. ``refused`` is ``[]``:\na refusal (X-band key, a key the deployment sets, dangling ``!ENV``, a bus-reaching key no\nrecycle can carry) aborts upfront with a loud 400 naming the key, before anything is snapshotted, built,\nor persisted. ``awaiting_respawn`` names the workers (name + keys) still awaiting a respawn\nafter the roll — empty when it converged. ``span_release_error`` is ``null`` when the config\nstore released its exclusive write span after the env persisted, otherwise the store's error:\nthe env is persisted and the broadcast and roll reported here still ran, but the store may still\nhold its write span until this worker exits. When the diff carries serve-affecting recycle keys\nand the roll converged, the applier's OWN recycle is armed as a post-reply graceful self-exit\n— after the HTTP body flushes, or once a projected tool call (MCP, ``tai tools run``, an\nagent, a preset, a schedule, a hook) returned — and its supervisor respawns it on the new\nenv. 404 for an absent name.\nAn ``mcp`` selection list whose ``!ENV`` marker would resolve so that a tool something still\nuses stops being picked is refused with a 409 naming the holders, a 503 with ``code``\n``mcp-server-starting`` while the server's start is in progress, or a 502 when the server\ncannot list its tools for that check, before anything is snapshotted.\n\nCalled over MCP, the reload answers on the session that called it and then retires that session with\nthe generation it ran on: a later call on the same session fails (streamable HTTP answers it 404,\nand an SSE session's stream closes), so the client starts a new session to go on.",
         "operationId": "post_api_config_profiles_name_apply",
         "parameters": [
           {
@@ -26007,14 +26027,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReloadingError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReloadingError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
                 }
               }
             },
-            "description": "The server is applying a config reload; retry shortly.",
+            "description": "The server is applying a config reload, or a dependency this route needs is temporarily unavailable; retry shortly.",
             "headers": {
               "Retry-After": {
-                "description": "Seconds to wait before retrying.",
+                "description": "Seconds to wait before retrying; carried by the reloading answer.",
                 "schema": {
                   "type": "integer"
                 }
@@ -32215,14 +32242,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReloadingError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReloadingError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
                 }
               }
             },
-            "description": "The server is applying a config reload; retry shortly.",
+            "description": "The server is applying a config reload, or a dependency this route needs is temporarily unavailable; retry shortly.",
             "headers": {
               "Retry-After": {
-                "description": "Seconds to wait before retrying.",
+                "description": "Seconds to wait before retrying; carried by the reloading answer.",
                 "schema": {
                   "type": "integer"
                 }
@@ -33381,14 +33415,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReloadingError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReloadingError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
                 }
               }
             },
-            "description": "The server is applying a config reload; retry shortly.",
+            "description": "The server is applying a config reload, or a dependency this route needs is temporarily unavailable; retry shortly.",
             "headers": {
               "Retry-After": {
-                "description": "Seconds to wait before retrying.",
+                "description": "Seconds to wait before retrying; carried by the reloading answer.",
                 "schema": {
                   "type": "integer"
                 }
@@ -33485,14 +33526,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReloadingError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReloadingError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
                 }
               }
             },
-            "description": "The server is applying a config reload; retry shortly.",
+            "description": "The server is applying a config reload, or a dependency this route needs is temporarily unavailable; retry shortly.",
             "headers": {
               "Retry-After": {
-                "description": "Seconds to wait before retrying.",
+                "description": "Seconds to wait before retrying; carried by the reloading answer.",
                 "schema": {
                   "type": "integer"
                 }
@@ -33608,7 +33656,7 @@
     },
     "/api/mcp-config/entries/{title}/tool-filter": {
       "put": {
-        "description": "Set the ``include`` and ``exclude`` of the ``mcp`` entry named ``title`` and hot-reload the fleet.\n\nEvery other key of the entry is kept as stored. An unknown title is a 404; unpicking a tool\nsomething still uses is a 409, and a server that cannot be listed for that check a 502.",
+        "description": "Set the ``include`` and ``exclude`` of the ``mcp`` entry named ``title`` and hot-reload the fleet.\n\nEvery other key of the entry is kept as stored. An unknown title is a 404; unpicking a tool\nsomething still uses is a 409; a server whose start is in progress for that check is a 503 with\n``code`` ``mcp-server-starting``, and one that cannot be listed a 502.",
         "operationId": "put_api_mcp_config_entries_title_tool_filter",
         "parameters": [
           {
@@ -33703,14 +33751,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReloadingError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReloadingError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
                 }
               }
             },
-            "description": "The server is applying a config reload; retry shortly.",
+            "description": "The server is applying a config reload, or a dependency this route needs is temporarily unavailable; retry shortly.",
             "headers": {
               "Retry-After": {
-                "description": "Seconds to wait before retrying.",
+                "description": "Seconds to wait before retrying; carried by the reloading answer.",
                 "schema": {
                   "type": "integer"
                 }
@@ -33777,7 +33832,7 @@
     },
     "/api/mcp-config/secret-env": {
       "post": {
-        "description": "Store a pasted secret as an env value and reference it from the manifest by a marker.\n\nThe env KEY is EITHER an explicit ``key`` OR generated from ``key_hint`` — exactly one\n(``key | key_hint``). Writes the secret ``value`` to the env store under that key AND\nmarks the key secret (adding it to ``TAI_ENV_SECRET_KEYS``), and writes an ``!ENV ${KEY}``\nMARKER at ``manifest_pointer`` — all through the combined\n``ConfigService.apply_env_and_change`` pipeline so the env write and the manifest mutate\nstay consistent. Partial-failure: a manifest-persist failure after the env write does\nNO rollback — the env write stands as an inert, re-runnable orphan and the op raises\nloudly. An explicit ``key`` colliding with an existing stored key holding a DIFFERENT value\nis a loud 400 naming the key; a generated key never shadows a registered settings\n``env_var``. The pointer's HEAD segment MUST be ``mcp`` (loud 400 otherwise). The response\nis the ``reloadConfigResult`` shape; the resolved key is NEVER returned. A dangling\n``!ENV`` / X-band refusal surfaces as a loud 400 naming the key (the shared boundary\nvalidator, same as ``POST /api/mcp-config``). An explicit ``key`` that is a recycle-class\nsetting rolls a worker recycle as every env write does (the response's ``recycle``; this\nworker recycles itself after replying when the roll converged).\nAn ``mcp`` selection list whose ``!ENV`` marker would resolve so that a tool something still\nuses stops being picked is refused with a 409 naming the holders, or a 502 when the server\ncannot list its tools for that check, before anything is written.",
+        "description": "Store a pasted secret as an env value and reference it from the manifest by a marker.\n\nThe env KEY is EITHER an explicit ``key`` OR generated from ``key_hint`` — exactly one\n(``key | key_hint``). Writes the secret ``value`` to the env store under that key AND\nmarks the key secret (adding it to ``TAI_ENV_SECRET_KEYS``), and writes an ``!ENV ${KEY}``\nMARKER at ``manifest_pointer`` — all through the combined\n``ConfigService.apply_env_and_change`` pipeline so the env write and the manifest mutate\nstay consistent. Partial-failure: a manifest-persist failure after the env write does\nNO rollback — the env write stands as an inert, re-runnable orphan and the op raises\nloudly. An explicit ``key`` colliding with an existing stored key holding a DIFFERENT value\nis a loud 400 naming the key; a generated key never shadows a registered settings\n``env_var``. The pointer's HEAD segment MUST be ``mcp`` (loud 400 otherwise). The response\nis the ``reloadConfigResult`` shape; the resolved key is NEVER returned. A dangling\n``!ENV`` / X-band refusal surfaces as a loud 400 naming the key (the shared boundary\nvalidator, same as ``POST /api/mcp-config``). An explicit ``key`` that is a recycle-class\nsetting rolls a worker recycle as every env write does (the response's ``recycle``; this\nworker recycles itself after replying when the roll converged).\nAn ``mcp`` selection list whose ``!ENV`` marker would resolve so that a tool something still\nuses stops being picked is refused with a 409 naming the holders, a 503 with ``code``\n``mcp-server-starting`` while the server's start is in progress, or a 502 when the server\ncannot list its tools for that check, before anything is written.",
         "operationId": "post_api_mcp_config_secret_env",
         "requestBody": {
           "content": {
@@ -33852,14 +33907,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReloadingError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ReloadingError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
                 }
               }
             },
-            "description": "The server is applying a config reload; retry shortly.",
+            "description": "The server is applying a config reload, or a dependency this route needs is temporarily unavailable; retry shortly.",
             "headers": {
               "Retry-After": {
-                "description": "Seconds to wait before retrying.",
+                "description": "Seconds to wait before retrying; carried by the reloading answer.",
                 "schema": {
                   "type": "integer"
                 }
@@ -33926,7 +33988,7 @@
     },
     "/api/mcp-status/failed": {
       "get": {
-        "description": "List MCP servers skipped due to a failed viability check (server down or slow).\n\nSkipped at boot or last reload. Use ``reload_mcp`` to re-attach one once healthy.\n\nEach entry is ``{\"title\", \"status\", \"category\", \"message\", \"http_status\"}`` — the\ntitle plus the coarse status and a credential-free failure detail (``category`` one\nof ``preset_store`` / ``auth`` / ``unreachable`` / ``error``, the redacted ``message``, and the\n``http_status`` when the failure carried one). A query op rides the same fan-out primitive as a mutation:\nevery worker's list arrives as its per-worker ``payload`` in the fleet report\n(this worker's list on its own self entry); ``targets`` optionally restricts the\nquery to specific workers.",
+        "description": "List MCP servers skipped due to a failed viability check (server down or slow).\n\nSkipped at boot or last reload. Use ``reload_mcp`` to re-attach one once healthy.\n\nEach entry is ``{\"title\", \"status\", \"category\", \"message\", \"http_status\"}`` — the\ntitle plus the coarse status and a credential-free failure detail (``category`` one\nof ``preset_store`` / ``auth`` / ``unreachable`` / ``starting`` / ``error``, the redacted ``message``, and the\n``http_status`` when the failure carried one). A query op rides the same fan-out primitive as a mutation:\nevery worker's list arrives as its per-worker ``payload`` in the fleet report\n(this worker's list on its own self entry); ``targets`` optionally restricts the\nquery to specific workers.",
         "operationId": "get_api_mcp_status_failed",
         "parameters": [
           {
@@ -34060,7 +34122,7 @@
     },
     "/api/mcp-status/{title}/advertised-tools": {
       "post": {
-        "description": "Every tool the live MCP server ``title`` advertises, before the selection, with the entry's lists.\n\n``unadvertised`` names the entries of the set list (``include`` when non-empty, else ``exclude``)\nthat no advertised tool carries, in stored order. Unknown title → 404; a server that cannot be\nlisted → 502.",
+        "description": "Every tool the live MCP server ``title`` advertises, before the selection, with the entry's lists.\n\n``unadvertised`` names the entries of the set list (``include`` when non-empty, else ``exclude``)\nthat no advertised tool carries, in stored order. Unknown title → 404; a server whose start is\nstill in progress → 503 with ``code`` ``mcp-server-starting``; a server that cannot be listed → 502.",
         "operationId": "post_api_mcp_status_title_advertised_tools",
         "parameters": [
           {
@@ -34120,6 +34182,16 @@
               }
             },
             "description": "Error."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "A dependency this route needs is temporarily unavailable; retry shortly."
           }
         },
         "security": [
@@ -43383,7 +43455,7 @@
     },
     "/api/tools/tags": {
       "get": {
-        "description": "The per-tool native-``tags`` map plus the plugin-declared visibility and capability badges.\n\nOne ``{name, tags, hidden, badges, schedulable}`` entry per registered tool, ``tags`` and ``badges`` each\nsorted for a stable wire order. ``hidden`` is the tool's OWN declaration, read from the\nFastMCP ``meta`` under ``TOOL_META_HIDDEN`` (a tool that never declared it is\nnot hidden); ``badges`` is likewise the tool's OWN declared INFORMATIONAL capability badges,\nread from ``meta`` under ``TOOL_META_BADGES`` (a tool that declared none carries an empty list).\nThe tool_meta overlay's tri-state override and its own badge set are merged on top\nclient-side; this read exposes only the declaration. ``schedulable`` is whether the tool's\n``<name>_schedule_task`` vehicle is registered, so a client never spells the suffix. Additive to\nthe flat names contract; a tool with no tags carries an empty list.",
+        "description": "The per-tool description and native ``tags`` plus the plugin-declared visibility and capability badges.\n\nOne ``{name, description, tags, hidden, badges, schedulable}`` entry per registered tool, ``tags`` and\n``badges`` each sorted for a stable wire order. ``description`` is the tool's own declared description\n(null when it declares none). ``hidden`` is the tool's OWN declaration, read from the\nFastMCP ``meta`` under ``TOOL_META_HIDDEN`` (a tool that never declared it is\nnot hidden); ``badges`` is likewise the tool's OWN declared INFORMATIONAL capability badges,\nread from ``meta`` under ``TOOL_META_BADGES`` (a tool that declared none carries an empty list).\nThe tool_meta overlay's tri-state override and its own badge set are merged on top\nclient-side; this read exposes only the declaration. ``schedulable`` is whether the tool's\n``<name>_schedule_task`` vehicle is registered, so a client never spells the suffix. Additive to\nthe flat names contract; a tool with no tags carries an empty list.",
         "operationId": "get_api_tools_tags",
         "responses": {
           "200": {
@@ -43420,7 +43492,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "summary": "List each tool's native tags, declared visibility, and badges",
+        "summary": "List each tool's description, native tags, declared visibility, and badges",
         "tags": [
           "tools"
         ]

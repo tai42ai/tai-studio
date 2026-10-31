@@ -23,6 +23,7 @@ import type {
   ProviderCatalogResponse,
   ProviderView,
 } from '@tai42/api-client';
+import { createApiClient } from '@tai42/api-client';
 import type { NavigationContextValue } from '@tai42/studio-sdk';
 import {
   ApiProvider,
@@ -89,16 +90,22 @@ export function renderWithProviders(
   return { ...utils, nav, queryClient };
 }
 
+/** The real refusal readers of a client, carried by every stub client. */
+const { holdersFromError, isMcpStartingError } = createApiClient({ getToken: () => null });
+const refusalReaders = { holdersFromError, isMcpStartingError };
+
 /**
  * Build a mock `ApiClient` from a partial set of methods; unused ones throw if hit.
  *
  * The Connectors directory also reads the preserved manifest, the live MCP status
  * and the marketplace on mount. Those reads default to QUIET empty answers here (no
  * mounted servers, an empty manifest, nothing installed); a caller overrides any of
- * them to drive the directory's server and listing rows.
+ * them to drive the directory's server and listing rows. Every stub carries the real
+ * refusal readers the Pick tools step reads a refused call with.
  */
 export function makeClient(overrides: Partial<ApiClient>): ApiClient {
   const mcpQuietDefaults: Partial<ApiClient> = {
+    ...refusalReaders,
     getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
     getManifestPreserved: vi.fn().mockResolvedValue({
       mcp: [],

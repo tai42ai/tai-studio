@@ -30,10 +30,11 @@ export const toolExtensionsApplyResult = reloadConfigResult;
 export type ToolExtensionsApplyResult = z.infer<typeof toolExtensionsApplyResult>;
 // `GET /api/mcp-status` — the bound-server map, the servers the viability check
 // skipped, and each server's health record. Each failed entry carries the coarse,
-// credential-free failure detail the platform records: `category` (`auth` for a 401/403,
-// `unreachable` for a transport error or timeout, `error` otherwise), the redacted
-// `message`, and the `http_status` the failure carried (`null` for a pure transport
-// failure).
+// credential-free detail the platform records: `category` (`preset_store` when the preset
+// store could not be read, `auth` for a 401/403, `unreachable` for a transport error or a
+// start that outran the start budget, `starting` for a start still in progress — not a
+// failure, read through `isMcpStarting` — and `error` otherwise), the redacted `message`,
+// and the `http_status` the failure carried (`null` for a pure transport failure).
 export const mcpStatus = openapi.mcpStatusSnapshot;
 
 /**
