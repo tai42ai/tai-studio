@@ -43,7 +43,7 @@
     "@tai42/feature-storage": "workspace:*",
     "@tai42/feature-system": "workspace:*",
     "@tai42/feature-tools": "workspace:*",
-    "@tai42/jq-studio": "^0.1.6",
+    "@tai42/jq-studio": "^0.1.8",
     "@tai42/studio-sdk": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "^1.170.42",
