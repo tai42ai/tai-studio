@@ -1356,9 +1356,10 @@ const AUTHED_PAGES = [
       await pickFirstExecutionKey(page, dialog);
       // The door-contract jq fields are the shot's subject: wait on the Reply-expression
       // field and scroll the execution key to the top so the section is framed.
-      await dialog
-        .getByText('Reply expression', { exact: true })
-        .waitFor({ state: 'visible', timeout: 8000 });
+      await routeDialogField(page, 'Reply expression', { group: true }).waitFor({
+        state: 'visible',
+        timeout: 8000,
+      });
       await routeDialogField(page, 'Execution key').evaluate((el) => {
         el.scrollIntoView({ block: 'start' });
       });
