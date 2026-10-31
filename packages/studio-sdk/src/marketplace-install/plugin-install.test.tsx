@@ -3,13 +3,15 @@
  * previews once and shows the plain confirm (wording by delivery) or collects the
  * env the preview names; the submit stays blocked while the preview loads or after
  * it failed; a failed install renders in the frame, a store-off refusal as the muted
- * note; a plugin with routes installs through the mount form.
+ * note, and an install refused because an MCP server holds no tool listing on the
+ * answering worker as that refusal; a plugin with routes installs through the mount form.
  */
 import type { MarketplaceInstallPreview, MarketplacePluginDetail } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { listingRefusal } from '../test-listing-refusals';
 import { PluginInstallDialog, PluginInstallPanel } from './plugin-install';
 import {
   installReceipt,
@@ -19,6 +21,35 @@ import {
   renderWithApi,
   storeOffError,
 } from './test-install-fixtures';
+
+/** The install refusals of an MCP server that holds no tool listing on the answering worker. */
+const LISTING_REFUSALS = [
+  {
+    code: 'mcp-server-starting',
+    message: "MCP server 'relay' start still in progress after 10s",
+    headline: 'An MCP server is still starting',
+    next: 'Nothing was changed. Try again once it has started.',
+  },
+  {
+    code: 'mcp-server-not-loaded',
+    message: "MCP server 'relay' is not loaded on this worker; a reload binds it",
+    headline: 'An MCP server is not loaded on the worker that answered',
+    next: 'Nothing was changed. Reload the server, then try again.',
+  },
+] as const;
+
+/** The refusal in the install frame: the warn ground, its headline, message and next step. */
+async function expectListingRefusal(
+  frame: HTMLElement,
+  refusal: (typeof LISTING_REFUSALS)[number],
+): Promise<void> {
+  const alert = await within(frame).findByRole('alert');
+  expect(alert).toHaveClass('tai-warn-state');
+  expect(alert).toHaveTextContent(refusal.headline);
+  expect(alert).toHaveTextContent(refusal.message);
+  expect(alert).toHaveTextContent(refusal.next);
+  expect(within(frame).queryByText('Something went wrong')).toBeNull();
+}
 
 function detail(overrides: Partial<MarketplacePluginDetail> = {}): MarketplacePluginDetail {
   return {
@@ -49,6 +80,31 @@ function detail(overrides: Partial<MarketplacePluginDetail> = {}): MarketplacePl
     versions: [],
     ...overrides,
   };
+}
+
+/** A plugin with one route-carrying channel item, so it installs through the mount form. */
+function routedDetail(): MarketplacePluginDetail {
+  return detail({
+    latest: {
+      version: '1.0.0',
+      contract_range: '>=1.0',
+      status: 'published',
+      published_at: '2026-07-01T00:00:00Z',
+      items: [
+        {
+          kind: 'channel',
+          name: 'web',
+          description: '',
+          tags: [],
+          group: null,
+          routes: {
+            base: 'channels/web',
+            paths: [{ path: '/status', methods: ['GET'], public: false }],
+          },
+        },
+      ],
+    },
+  });
 }
 
 /** A non-route preview: no items, only the env picture. */
@@ -286,27 +342,7 @@ describe('PluginInstallDialog', () => {
   it('installs a plugin with routes through the mount form', async () => {
     const user = userEvent.setup();
     const installMarketplacePlugin = vi.fn().mockResolvedValue(installReceipt());
-    const withRoutes = detail({
-      latest: {
-        version: '1.0.0',
-        contract_range: '>=1.0',
-        status: 'published',
-        published_at: '2026-07-01T00:00:00Z',
-        items: [
-          {
-            kind: 'channel',
-            name: 'web',
-            description: '',
-            tags: [],
-            group: null,
-            routes: {
-              base: 'channels/web',
-              paths: [{ path: '/status', methods: ['GET'], public: false }],
-            },
-          },
-        ],
-      },
-    });
+    const withRoutes = routedDetail();
     renderWithApi(
       <PluginInstallDialog
         refValue="acme/relay"
@@ -332,4 +368,79 @@ describe('PluginInstallDialog', () => {
       });
     });
   });
+});
+
+describe('An install refused because an MCP server holds no tool listing', () => {
+  it.each(LISTING_REFUSALS)('shows $code in the panel as that refusal', async (refusal) => {
+    const user = userEvent.setup();
+    renderWithApi(
+      <PluginInstallPanel
+        refValue="acme/relay"
+        version="1.0.0"
+        detail={detail()}
+        onInstalled={noop}
+        onDismiss={noop}
+      />,
+      {
+        previewMarketplaceInstall: vi.fn().mockResolvedValue(envPreview([])),
+        installMarketplacePlugin: vi
+          .fn()
+          .mockRejectedValue(listingRefusal(refusal.code, refusal.message)),
+      },
+    );
+    await screen.findByText(/pip-install/);
+    await user.click(screen.getByRole('button', { name: 'Install' }));
+    await expectListingRefusal(screen.getByRole('form', { name: 'Install plugin' }), refusal);
+    expect(screen.getByRole('button', { name: 'Install' })).toBeEnabled();
+  });
+
+  it.each(LISTING_REFUSALS)('shows $code in the dialog as that refusal', async (refusal) => {
+    const user = userEvent.setup();
+    renderWithApi(
+      <PluginInstallDialog
+        refValue="acme/relay"
+        version="1.0.0"
+        detail={detail()}
+        onInstalled={noop}
+        onDismiss={noop}
+      />,
+      {
+        previewMarketplaceInstall: vi.fn().mockResolvedValue(envPreview([])),
+        installMarketplacePlugin: vi
+          .fn()
+          .mockRejectedValue(listingRefusal(refusal.code, refusal.message)),
+      },
+    );
+    const dialog = await screen.findByRole('dialog', { name: 'Install plugin' });
+    await within(dialog).findByText(/pip-install/);
+    await user.click(within(dialog).getByRole('button', { name: 'Install' }));
+    await expectListingRefusal(dialog, refusal);
+    expect(within(dialog).getByRole('button', { name: 'Install' })).toBeEnabled();
+  });
+
+  it.each(LISTING_REFUSALS)(
+    'shows $code in the mount form dialog as that refusal',
+    async (refusal) => {
+      const user = userEvent.setup();
+      renderWithApi(
+        <PluginInstallDialog
+          refValue="acme/relay"
+          version="1.0.0"
+          detail={routedDetail()}
+          onInstalled={noop}
+          onDismiss={noop}
+        />,
+        {
+          previewMarketplaceInstall: vi.fn().mockResolvedValue(previewFixture()),
+          installMarketplacePlugin: vi
+            .fn()
+            .mockRejectedValue(listingRefusal(refusal.code, refusal.message)),
+        },
+      );
+      const dialog = await screen.findByRole('dialog', { name: 'Install plugin' });
+      await within(dialog).findByText('/api/channels/web/status');
+      await user.click(within(dialog).getByRole('button', { name: 'Install' }));
+      await expectListingRefusal(dialog, refusal);
+    },
+  );
 });

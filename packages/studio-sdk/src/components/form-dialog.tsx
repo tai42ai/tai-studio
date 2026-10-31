@@ -6,7 +6,7 @@
  *
  * The contract: `onSubmit` may return a promise; the dialog closes (via `onClose`)
  * only when it RESOLVES. A rejection or synchronous throw keeps the dialog open and
- * renders the failure through `ErrorState`, so the operator can retry the filled fields.
+ * renders the failure through `WriteFailure`, so the operator can retry the filled fields.
  *
  * The caller owns mount/unmount: mount only while active, and any close gesture
  * (Cancel, Escape, overlay) calls `onClose`. `submitDisabled` blocks submission by
@@ -14,9 +14,9 @@
  */
 import { type ReactNode, type SyntheticEvent, useEffect, useRef, useState } from 'react';
 
-import { errorMessage } from '../errors';
 import { Dialog } from './dialog';
-import { Button, ErrorState, Spinner } from './primitives';
+import { Button, Spinner } from './primitives';
+import { WriteFailure } from './write-failure';
 
 export interface FormDialogProps {
   readonly title: string;
@@ -117,7 +117,7 @@ export function FormDialog({
     >
       <form onSubmit={handleSubmit}>
         {children}
-        {submitError != null ? <ErrorState message={errorMessage(submitError)} /> : null}
+        {submitError != null ? <WriteFailure error={submitError} /> : null}
         <div className="tai-dialog-actions">
           <Button type="button" onClick={close}>
             {cancelLabel}

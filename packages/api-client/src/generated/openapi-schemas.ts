@@ -592,7 +592,7 @@ export type MarketplaceUninstall = z.infer<typeof marketplaceUninstall>;
 export const marketplaceUpdate = z.object({ "accept_public_routes": z.boolean().default(false), "env": z.record(z.string(), z.string()).nullable().default(null), "ref": z.string(), "route_mounts": z.record(z.string(), z.string()).nullable().default(null), "secret_keys": z.array(z.string()).nullable().default(null), "version": z.string().nullable().default(null) });
 export type MarketplaceUpdate = z.infer<typeof marketplaceUpdate>;
 
-export const mcpAdvertisedTool = z.object({ "bound": z.boolean(), "description": z.string().nullable(), "name": z.string(), "selected": z.boolean(), "title": z.string().nullable(), "unbound_reason": z.enum(["server_failed","not_loaded","preset_conflict","unusable_schema","not_listed_at_bind"]).nullable() });
+export const mcpAdvertisedTool = z.object({ "bound": z.boolean(), "description": z.string().nullable(), "name": z.string(), "selected": z.boolean(), "title": z.string().nullable(), "unbound_reason": z.enum(["preset_conflict","unusable_schema","pending_bind"]).nullable() });
 export type McpAdvertisedTool = z.infer<typeof mcpAdvertisedTool>;
 
 export const mcpAdvertisedTools = z.object({ "exclude": z.array(z.string()), "include": z.array(z.string()), "title": z.string(), "tools": z.array(mcpAdvertisedTool), "unadvertised": z.array(z.string()) });
@@ -1480,6 +1480,7 @@ export const responseSchemas = {
   get_api_mcp_config_schema: opaqueJson,
   get_api_mcp_status: mcpStatusSnapshot,
   get_api_mcp_status_failed: fleetResult,
+  get_api_mcp_status_title_advertised_tools: mcpAdvertisedTools,
   get_api_notifications: notificationListing,
   get_api_observability_capabilities: observabilityCapabilities,
   get_api_observability_metrics: metricsResult,
@@ -1587,7 +1588,6 @@ export const responseSchemas = {
   post_api_mcp_config_entries: applyResponse,
   post_api_mcp_config_secret_env: applyResponse,
   post_api_mcp_status_reload_failed: fleetResult,
-  post_api_mcp_status_title_advertised_tools: mcpAdvertisedTools,
   post_api_mcp_status_title_deregister: fleetResult,
   post_api_mcp_status_title_reload: fleetResult,
   post_api_notifications: notifyResult,

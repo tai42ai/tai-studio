@@ -1,6 +1,7 @@
 /** Composition root: assembles the per-resource sub-clients into the client. */
 import { holdersFromError, storedPresetFaultFromError } from '../errors';
 import type { ApiConfig } from '../http';
+import { isMcpNotLoadedError, isMcpStartingError } from '../mcp-failure';
 import { servedConstants } from '../schemas';
 import { agentsClient } from './agents-client';
 import { authClient } from './auth-client';
@@ -98,6 +99,8 @@ export function createApiClient(config: ApiConfig) {
      *  the client that raised it. */
     holdersFromError,
     storedPresetFaultFromError,
+    isMcpStartingError,
+    isMcpNotLoadedError,
     ...toolsClient(t),
     ...presetsClient(t),
     ...statesClient(t),

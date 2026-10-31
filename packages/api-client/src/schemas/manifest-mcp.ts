@@ -80,9 +80,10 @@ export const reloadConfigResult = openapi.applyResponse.extend({ fanout: fleetRe
 export type ReloadConfigResult = z.infer<typeof reloadConfigResult>;
 
 /**
- * `POST /api/mcp-status/{title}/advertised-tools` — every tool the server advertises
- * (before the entry's include/exclude filter), each with whether it is selected and
- * bound, and why not (`unbound_reason`, or `null` when bound or unselected).
+ * `GET /api/mcp-status/{title}/advertised-tools` — every tool the server advertised at its
+ * bind on the answering worker (before the entry's include/exclude filter), each with
+ * whether it is selected and bound, and why not (`unbound_reason`, or `null` when bound or
+ * unselected).
  */
 export const mcpAdvertisedTools = openapi.mcpAdvertisedTools;
 export type McpAdvertisedTools = z.infer<typeof mcpAdvertisedTools>;

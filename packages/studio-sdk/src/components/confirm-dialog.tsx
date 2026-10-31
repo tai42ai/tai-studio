@@ -2,7 +2,9 @@
  * `ConfirmDialog` — a modal that asks the operator to confirm an action and then
  * runs it. It owns the scaffolding every confirm shares: a Cancel button, the
  * confirm button (showing a pending Spinner while the action runs and disabled
- * meanwhile), and a loud `ErrorState` when the action fails. The caller supplies
+ * meanwhile), and the action's failure read as a `WriteFailure` (a refusal because an
+ * MCP server holds no tool listing on the answering worker shows as that refusal, any
+ * other failure in the loud `ErrorState`). The caller supplies
  * the prompt as `children` and drives the action through `onConfirm` /
  * `isPending` / `error`. When the failure is an OFF (disabled-feature) state
  * rather than a real error, the caller passes `disabledNote` — a muted note that
@@ -18,9 +20,9 @@
  */
 import type { ReactNode } from 'react';
 
-import { errorMessage } from '../errors';
 import { Dialog } from './dialog';
-import { Button, ErrorState, Spinner } from './primitives';
+import { Button, Spinner } from './primitives';
+import { WriteFailure } from './write-failure';
 
 export interface ConfirmDialogProps {
   readonly title: string;
@@ -32,16 +34,13 @@ export interface ConfirmDialogProps {
   readonly onClose: () => void;
   readonly isPending: boolean;
   /**
-   * The failed action's error, rendered loudly; omit/`null` while there is none.
-   *
-   * A thrown `Error` or the message on its own — `Field`'s `error` is a plain
-   * string, and the two props sit side by side on a form, so this one accepts
-   * that spelling too rather than making one surface's `error` unassignable to
-   * the other's.
+   * The failed action's rejection, shown through `WriteFailure`; omit/`null` while there
+   * is none. Any rejected value is accepted as it was thrown (a message string shows as
+   * it is), so the client's refusal codes stay readable.
    */
-  readonly error?: Error | string | null;
+  readonly error?: unknown;
   /**
-   * A muted node shown in the error slot INSTEAD of the loud `ErrorState`, for the
+   * A muted node shown in the error slot INSTEAD of the failure, for the
    * OFF (disabled-feature) case: the action's store is not configured, so the
    * failure is a state, not an error. When set it takes the error slot AND disables
    * the confirm button — the action can only refuse, so there is nothing to retry.
@@ -80,7 +79,7 @@ export function ConfirmDialog({
       }}
     >
       {children}
-      {disabledNote ?? (error != null ? <ErrorState message={errorMessage(error)} /> : null)}
+      {disabledNote ?? (error != null ? <WriteFailure error={error} /> : null)}
       <div className="tai-dialog-actions">
         <Button type="button" onClick={onClose}>
           {cancelLabel}

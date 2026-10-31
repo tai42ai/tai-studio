@@ -22,7 +22,9 @@ import tseslint from 'typescript-eslint';
  *   - the shell app (`apps/studio`) composes the features, the SDK, and the API
  *     client;
  *   - the SDK (`packages/studio-sdk`) imports only the API client internally;
- *   - the API client (`packages/api-client`) imports nothing internal.
+ *   - the API client (`packages/api-client`) imports nothing internal;
+ *   - the test support (`packages/test-support`, helpers shared by tests) imports
+ *     only the API client, and a feature reaches it from TEST code alone.
  *
  * The SDK's dependency on the API client must be TYPE-ONLY at runtime.
  * eslint-plugin-boundaries cannot express the value-vs-type distinction, so the
@@ -46,6 +48,7 @@ export const boundariesElements = [
   { type: 'app', pattern: 'apps/studio', mode: 'folder' },
   { type: 'sdk', pattern: 'packages/studio-sdk', mode: 'folder' },
   { type: 'api-client', pattern: 'packages/api-client', mode: 'folder' },
+  { type: 'test-support', pattern: 'packages/test-support', mode: 'folder' },
   {
     type: 'feature',
     pattern: 'packages/features/*',
@@ -73,6 +76,9 @@ const FEATURE_INTERNAL = ['@tai42/studio-sdk', '@tai42/api-client'];
 const APP_INTERNAL = ['@tai42/studio-sdk', '@tai42/api-client', '@tai42/feature-*'];
 const SDK_INTERNAL = ['@tai42/api-client'];
 const API_CLIENT_INTERNAL = [];
+const TEST_SUPPORT_INTERNAL = ['@tai42/api-client'];
+// The internal packages a feature may import in its test code alone.
+const FEATURE_TEST_INTERNAL = ['@tai42/test-support'];
 
 // Third-party packages each layer may import in production code. Kept in sync
 // with the packages actually imported by each layer's source.
@@ -143,6 +149,14 @@ export function boundariesDependenciesRule(includeTestExternals) {
   const coreInTests = includeTestExternals
     ? [{ from: { type: ['sdk', 'app', 'api-client'] }, allow: { to: { origin: 'core' } } }]
     : [];
+  // The test support, a feature's in its TEST code alone: production feature source that
+  // imports it is rejected, so a test helper never reaches a built feature.
+  const featureTestSupport = includeTestExternals
+    ? [
+        { from: { type: 'feature' }, allow: { to: { type: ['test-support'] } } },
+        { from: { type: 'feature' }, allow: external(FEATURE_TEST_INTERNAL, [], []) },
+      ]
+    : [];
   return [
     'error',
     {
@@ -161,6 +175,7 @@ export function boundariesDependenciesRule(includeTestExternals) {
           from: { type: 'feature' },
           allow: external(FEATURE_INTERNAL, FEATURE_EXTERNAL, FEATURE_TEST_EXTERNAL),
         },
+        ...featureTestSupport,
         // The visual jq editor, granted only to the features that render it — the
         // element's captured `feature` name selects them, so the rest of the feature
         // layer still cannot import it.
@@ -189,6 +204,12 @@ export function boundariesDependenciesRule(includeTestExternals) {
         {
           from: { type: 'api-client' },
           allow: external(API_CLIENT_INTERNAL, API_CLIENT_EXTERNAL, API_CLIENT_TEST_EXTERNAL),
+        },
+        // The test support imports only the API client, the source of the readers it hands out.
+        { from: { type: 'test-support' }, allow: { to: { type: ['api-client'] } } },
+        {
+          from: { type: 'test-support' },
+          allow: external(TEST_SUPPORT_INTERNAL, [], []),
         },
         ...coreInTests,
       ],

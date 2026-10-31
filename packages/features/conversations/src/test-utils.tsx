@@ -38,6 +38,7 @@ import {
   NavigationProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
+import { refusalReaders } from '@tai42/test-support';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderResult, screen, waitFor } from '@testing-library/react';
 import type userEvent from '@testing-library/user-event';
@@ -88,11 +89,12 @@ const baseProjection: MeProjection = {
 function withCapabilities(client: StubApiClient, projection: MeProjection | undefined): ApiClient {
   if (projection === undefined) {
     globalThis.sessionStorage.removeItem(SESSION_KEY);
-    return { constants: servedConstants, ...client } as ApiClient;
+    return { constants: servedConstants, ...refusalReaders, ...client } as ApiClient;
   }
   globalThis.sessionStorage.setItem(SESSION_KEY, 'sk-test');
   return {
     constants: servedConstants,
+    ...refusalReaders,
     getMe: () => Promise.resolve(projection),
     ...client,
   } as ApiClient;

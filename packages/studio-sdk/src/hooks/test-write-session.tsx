@@ -1,11 +1,13 @@
 /**
  * Test harness: the signed-in provider stack a write affordance reads its gates from
  * (API client, auth, capability projection, kind-status table), with the projection
- * and the kind table supplied by the test.
+ * and the kind table supplied by the test. The client carries the readers of the listing
+ * refusals, so a refused write reads as it does in the app.
  */
 import type { ApiClient, KindStatus, MeProjection } from '@tai42/api-client';
 import type { ReactNode } from 'react';
 
+import { listingRefusalReaders } from '../test-listing-refusals';
 import { ApiProvider } from './useApi';
 import { AuthProvider } from './useAuth';
 import { CapabilityProvider } from './useCapabilities';
@@ -53,6 +55,7 @@ export function writeSession(
 ): (props: { children: ReactNode }) => ReactNode {
   globalThis.sessionStorage.setItem(SESSION_KEY, 'sk-test');
   const api = {
+    ...listingRefusalReaders,
     ...client,
     getMe: () => Promise.resolve(projection),
     getSystemKinds: () => Promise.resolve([...kinds]),

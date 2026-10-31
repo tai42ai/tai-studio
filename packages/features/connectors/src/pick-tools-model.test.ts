@@ -22,7 +22,7 @@ function tool(name: string, selected: boolean): McpAdvertisedTool {
     bound: selected,
     title: null,
     description: null,
-    unbound_reason: selected ? null : 'not_listed_at_bind',
+    unbound_reason: null,
   };
 }
 

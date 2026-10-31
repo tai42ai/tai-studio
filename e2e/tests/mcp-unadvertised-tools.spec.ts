@@ -14,7 +14,7 @@ import { expect, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
 import { seedCredential } from './helpers';
-import { serveWrite, stubRead } from './session-stubs';
+import { stubRead } from './session-stubs';
 
 needs();
 
@@ -37,8 +37,8 @@ const INCLUDE_WARNING =
 const EXCLUDE_WARNING =
   'This server does not advertise gone. Saving keeps it, but it hides nothing.';
 
-const isAdvertisedRead = (pathname: string): boolean =>
-  pathname === `/api/mcp-status/${SERVER}/advertised-tools`;
+/** The path of the read of {@link SERVER}'s advertised tools. */
+const ADVERTISED_PATH = `/api/mcp-status/${SERVER}/advertised-tools`;
 
 /** The advertised-tools read's answer for {@link ENTRY}. */
 const ADVERTISED_READ = {
@@ -94,7 +94,7 @@ test('the form view flags an unadvertised name on each list and offers the adver
   page,
 }) => {
   await stubMcpEditor(page);
-  await serveWrite(page, 'POST', isAdvertisedRead, ADVERTISED_READ);
+  await stubRead(page, ADVERTISED_PATH, ADVERTISED_READ);
   await page.goto('/manifest');
 
   const included = page.getByRole('group', { name: 'Included tools' });
@@ -113,7 +113,7 @@ test('the form view flags an unadvertised name on each list and offers the adver
 
 test('the JSON view warns about the unadvertised names with the server named', async ({ page }) => {
   await stubMcpEditor(page);
-  await serveWrite(page, 'POST', isAdvertisedRead, ADVERTISED_READ);
+  await stubRead(page, ADVERTISED_PATH, ADVERTISED_READ);
   await page.goto('/manifest');
   await openJsonView(page);
 
@@ -135,7 +135,7 @@ test('a failed read of the server tools in the JSON view shows its reason, and R
   page,
 }) => {
   await stubMcpEditor(page);
-  await serveWrite(page, 'POST', isAdvertisedRead, { status: 502, error: 'server unreachable' });
+  await stubRead(page, ADVERTISED_PATH, { status: 502, error: 'server unreachable' });
   await page.goto('/manifest');
   await openJsonView(page);
 
@@ -145,7 +145,7 @@ test('a failed read of the server tools in the JSON view shows its reason, and R
   await expect(failure).toBeVisible();
 
   // The server answers from here on; the later route takes precedence over the failing one.
-  await serveWrite(page, 'POST', isAdvertisedRead, ADVERTISED_READ);
+  await stubRead(page, ADVERTISED_PATH, ADVERTISED_READ);
   await page.getByRole('button', { name: 'Retry' }).click();
 
   await expect(failure).toHaveCount(0);

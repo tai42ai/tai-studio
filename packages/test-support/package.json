@@ -1,0 +1,30 @@
+{
+  "name": "@tai42/test-support",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Helpers shared by the workspace's tests. Never built and never published: its entry is the TypeScript source, read by the test runner.",
+  "license": "Apache-2.0",
+  "author": "tai42 <oss@tai42.ai>",
+  "homepage": "https://tai42.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tai42ai/tai-studio",
+    "directory": "packages/test-support"
+  },
+  "bugs": {
+    "url": "https://github.com/tai42ai/tai-studio/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint src --max-warnings 0",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "@tai42/api-client": "workspace:*"
+  }
+}

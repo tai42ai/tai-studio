@@ -1,14 +1,15 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { listingRefusal, renderWithRefusalReaders } from '../test-listing-refusals';
 import { ConfirmDialog } from './confirm-dialog';
 
 /** The required props, so each test states only what it is exercising. */
 function renderConfirm(overrides: Partial<Parameters<typeof ConfirmDialog>[0]> = {}) {
   const onConfirm = vi.fn();
   const onClose = vi.fn();
-  render(
+  renderWithRefusalReaders(
     <ConfirmDialog
       title="Delete scope"
       confirmLabel="Delete scope"
@@ -70,11 +71,16 @@ describe('ConfirmDialog', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('scope is referenced by 3 agents');
   });
 
+  it('shows a failure refused because an MCP server is still starting as that refusal', () => {
+    const message = "MCP server 'relay' start still in progress after 10s";
+    renderConfirm({ error: listingRefusal('mcp-server-starting', message) });
+    const refusal = screen.getByRole('alert');
+    expect(refusal).toHaveClass('tai-warn-state');
+    expect(refusal).toHaveTextContent('An MCP server is still starting');
+    expect(refusal).toHaveTextContent(message);
+  });
+
   it('renders a bare message string as loudly as a thrown Error', () => {
-    // `Field`'s `error` is a plain string and the two props sit side by side on
-    // a form, so this one takes that spelling too. A narrower type would leave
-    // one surface's `error` unassignable to the other's for no reason a caller
-    // could see.
     renderConfirm({ error: 'scope is referenced by 3 agents' });
     expect(screen.getByRole('alert')).toHaveTextContent('scope is referenced by 3 agents');
   });

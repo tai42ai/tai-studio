@@ -14,7 +14,7 @@
  * key so `CapabilityProvider` fetches it. A gating test overrides `projection` (a scoped
  * or read-only one) to assert an affordance is withdrawn.
  */
-import { createApiClient, type MeProjection } from '@tai42/api-client';
+import type { MeProjection } from '@tai42/api-client';
 import type { ApiClient } from '@tai42/studio-sdk';
 import type { NavigationContextValue } from '@tai42/studio-sdk';
 import {
@@ -24,6 +24,7 @@ import {
   NavigationProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
+import { refusalReaders } from '@tai42/test-support';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { RenderResult } from '@testing-library/react';
 import { render } from '@testing-library/react';
@@ -49,10 +50,6 @@ const emptyFailedReport = {
 export interface McpRenderResult extends RenderResult {
   readonly navigate: ReturnType<typeof vi.fn>;
 }
-
-/** The real refusal readers of a client, carried by every stub client. */
-const { holdersFromError, storedPresetFaultFromError } = createApiClient({ getToken: () => null });
-const refusalReaders = { holdersFromError, storedPresetFaultFromError };
 
 export function renderWithProviders(
   ui: ReactNode,

@@ -31,6 +31,7 @@ import {
   NavigationProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
+import { refusalReaders } from '@tai42/test-support';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { RenderResult } from '@testing-library/react';
 import { render } from '@testing-library/react';
@@ -95,10 +96,12 @@ export function renderWithProviders(
  * The Connectors directory also reads the preserved manifest, the live MCP status
  * and the marketplace on mount. Those reads default to QUIET empty answers here (no
  * mounted servers, an empty manifest, nothing installed); a caller overrides any of
- * them to drive the directory's server and listing rows.
+ * them to drive the directory's server and listing rows. Every stub carries the real
+ * refusal readers the Pick tools step reads a refused call with.
  */
 export function makeClient(overrides: Partial<ApiClient>): ApiClient {
   const mcpQuietDefaults: Partial<ApiClient> = {
+    ...refusalReaders,
     getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
     getManifestPreserved: vi.fn().mockResolvedValue({
       mcp: [],

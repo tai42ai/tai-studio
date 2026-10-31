@@ -32,6 +32,7 @@ import {
   ThemeProvider,
 } from '@tai42/studio-sdk';
 import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
+import { refusalReaders } from '@tai42/test-support';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, type RenderResult, screen } from '@testing-library/react';
 import { type ReactElement, type ReactNode, useMemo, useState } from 'react';
@@ -78,7 +79,11 @@ function withProjection(client: StubApiClient, projection: MeProjection): ApiCli
   globalThis.sessionStorage.setItem(SESSION_KEY, 'sk-test');
   // The stub only implements the methods exercised by a given test; the cast
   // asserts the shape the SDK context expects.
-  return { ...client, getMe: () => Promise.resolve(projection) } as ApiClient;
+  return {
+    ...refusalReaders,
+    ...client,
+    getMe: () => Promise.resolve(projection),
+  } as ApiClient;
 }
 
 export function renderWithProviders(

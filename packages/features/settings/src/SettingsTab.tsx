@@ -20,6 +20,7 @@ import {
   ErrorState,
   Spinner,
   useApi,
+  WriteFailure,
 } from '@tai42/studio-sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type CSSProperties, type ReactNode, useState } from 'react';
@@ -145,7 +146,7 @@ export function SettingsTab({ readOnly }: SettingsTabProps): ReactNode {
 
       {mutation.isError ? (
         <div>
-          <ErrorState message={errorMessage(mutation.error)} />
+          <WriteFailure error={mutation.error} />
         </div>
       ) : null}
 

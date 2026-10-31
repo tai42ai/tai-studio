@@ -1,10 +1,13 @@
 /**
  * The connect flow's Pick tools step: one section per server title, each listing the
- * tools the server advertises (a probe with the stored credential, so it runs when
- * the step opens and on Retry only) with a tick per tool. One Save writes the
- * sections whose pick differs from their stored lists, one at a time in section
- * order: every write reloads the fleet behind the reload gate, which refuses a write
- * that arrives during another reload.
+ * tools the server advertised at its bind on the worker that answered (read when the
+ * step opens, and again on Retry or Check again) with a tick per tool. That read alone
+ * says whether the server's tools can be picked: a server still starting, one that worker
+ * has not loaded, or one whose start or bind failed answers so, and its section shows
+ * that answer. Every door into Pick tools renders this step, so each one shows those
+ * answers the same way. One Save writes the sections whose pick differs from their stored
+ * lists, one at a time in section order: every write reloads the fleet behind the reload
+ * gate, which refuses a write that arrives during another reload.
  */
 import {
   type FleetReportSummary,
@@ -37,6 +40,19 @@ function storedBody(read: McpAdvertisedTools): ToolFilterBody {
   return { include: read.include, exclude: read.exclude };
 }
 
+/** Each title's advertised-tools read. */
+function useSectionReads(titles: readonly string[]): readonly AdvertisedRead[] {
+  const api = useApi();
+  return useQueries({
+    queries: titles.map((title) => ({
+      queryKey: mcpAdvertisedToolsKey(title),
+      queryFn: ({ signal }: { signal: AbortSignal }) => api.listMcpAdvertisedTools(title, signal),
+      staleTime: Infinity,
+      refetchOnWindowFocus: false,
+    })),
+  });
+}
+
 /** The sections' drafts, each seeded once its read answers, and the edit that sets one. */
 function usePickDrafts(
   titles: readonly string[],
@@ -63,7 +79,8 @@ function usePickDrafts(
 
 /**
  * Each section's write: its drafted body when it differs from the last saved or the
- * stored lists, else null; and whether its draft cannot be saved.
+ * stored lists, else null; and whether its draft cannot be saved. A section whose read
+ * has not answered with tools shows no pick, so it has no write.
  */
 function pickSections(
   titles: readonly string[],
@@ -74,7 +91,9 @@ function pickSections(
   return titles.map((title, index) => {
     const read = reads[index]?.data;
     const draft = drafts[title];
-    if (read === undefined || draft === undefined) return { title, body: null, blocked: false };
+    if (read === undefined || draft === undefined) {
+      return { title, body: null, blocked: false };
+    }
     const body = draftBody(read, draft);
     const baseline = results[title]?.saved ?? storedBody(read);
     return {
@@ -104,14 +123,7 @@ export function PickToolsStep({
   readonly onLeave: () => void;
 }): ReactNode {
   const api = useApi();
-  const reads = useQueries({
-    queries: titles.map((title) => ({
-      queryKey: mcpAdvertisedToolsKey(title),
-      queryFn: ({ signal }: { signal: AbortSignal }) => api.listMcpAdvertisedTools(title, signal),
-      staleTime: Infinity,
-      refetchOnWindowFocus: false,
-    })),
-  });
+  const reads = useSectionReads(titles);
   const [drafts, editDraft] = usePickDrafts(titles, reads);
   const [results, setResults] = useState<Record<string, SectionResult>>({});
   const [progress, setProgress] = useState<{ i: number; n: number; title: string } | null>(null);

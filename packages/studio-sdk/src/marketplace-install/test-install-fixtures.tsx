@@ -1,17 +1,18 @@
 /**
  * Shared fixtures for the install-UI tests: a one-channel route item, its preview, an
  * install receipt, a store-off refusal and a render helper that mounts the tree under
- * an `ApiProvider` with a fake client carrying only the calls a test stubs.
+ * an `ApiProvider` with a fake client carrying the calls a test stubs and the readers of
+ * the listing refusals.
  */
 import type {
   ApiClient,
   MarketplaceInstallPreview,
   MarketplaceInstallResult,
 } from '@tai42/api-client';
-import { render, type RenderResult } from '@testing-library/react';
+import type { RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
 
-import { ApiProvider } from '../hooks/useApi';
+import { renderWithRefusalReaders } from '../test-listing-refusals';
 import type { RouteItem } from './route-items';
 
 export type FakeApiClient = Partial<ApiClient>;
@@ -20,7 +21,7 @@ export const noop = (): void => undefined;
 
 /** Render `ui` with `client` as the `useApi()` client. */
 export function renderWithApi(ui: ReactElement, client: FakeApiClient): RenderResult {
-  return render(<ApiProvider value={client as unknown as ApiClient}>{ui}</ApiProvider>);
+  return renderWithRefusalReaders(ui, client);
 }
 
 /** A pending promise, for exercising a still-loading branch. */

@@ -2,13 +2,13 @@
  * The two frames an install form renders in: a dialog (the confirm shell) or a panel
  * in place (its own `<form>` with Cancel and the submit button), so a step can embed
  * the form without a dialog inside a dialog. The failure of the last call renders
- * inside the frame and the frame stays open.
+ * inside the frame, read as a `WriteFailure`, and the frame stays open.
  */
 import type { ReactNode, SyntheticEvent } from 'react';
 
 import { ConfirmDialog } from '../components/confirm-dialog';
-import { Button, ErrorState, Spinner } from '../components/primitives';
-import { errorMessage } from '../errors';
+import { Button, Spinner } from '../components/primitives';
+import { WriteFailure } from '../components/write-failure';
 import { FeatureDisabled, featureDisabledMessage, isFeatureDisabled } from '../feature-disabled';
 
 export type InstallLayout = 'panel' | 'dialog';
@@ -22,9 +22,9 @@ export function storeOffNote(error: unknown): ReactNode {
   return <FeatureDisabled feature="Marketplace installs" message={featureDisabledMessage(error)} />;
 }
 
-/** A failed call's surface: the store-off note, else the server message as an alert. */
+/** A failed call's surface: the store-off note, else the failure read as a `WriteFailure`. */
 export function InstallFailure({ error }: { readonly error: unknown }): ReactNode {
-  return storeOffNote(error) ?? <ErrorState message={errorMessage(error)} />;
+  return storeOffNote(error) ?? <WriteFailure error={error} />;
 }
 
 export interface InstallShellProps {
@@ -56,7 +56,6 @@ export function InstallShell({
   onDismiss,
   children,
 }: InstallShellProps): ReactNode {
-  const errorText = error === null || error === undefined ? null : errorMessage(error);
   if (layout === 'dialog') {
     return (
       <ConfirmDialog
@@ -65,7 +64,7 @@ export function InstallShell({
         pendingLabel={pendingLabel}
         confirmVariant="primary"
         isPending={isPending}
-        error={errorText}
+        error={error}
         disabledNote={disabledNote}
         confirmDisabled={submitDisabled}
         onConfirm={onSubmit}
@@ -84,7 +83,7 @@ export function InstallShell({
   return (
     <form aria-label={title} className="tai-stack tai-stack-3" onSubmit={handleSubmit}>
       {children}
-      {disabledNote ?? (errorText !== null ? <ErrorState message={errorText} /> : null)}
+      {disabledNote ?? (error != null ? <WriteFailure error={error} /> : null)}
       <div className="tai-dialog-actions">
         <Button type="button" onClick={onDismiss}>
           Cancel

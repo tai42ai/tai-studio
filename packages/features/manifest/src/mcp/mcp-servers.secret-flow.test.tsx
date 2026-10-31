@@ -330,6 +330,67 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
     expect(await screen.findByText('refused: dangling !ENV reference')).toBeInTheDocument();
   });
 
+  it('shows a combined op refused while an MCP server is still starting as that start, not an error', async () => {
+    const user = userEvent.setup({ delay: null });
+    const message =
+      "tool selection of 'srv' cannot be checked: the server did not list its tools: MCP server 'srv' start still in progress after 10s; it continues up to the start budget 60s";
+    const setMcpSecretEnv = vi
+      .fn()
+      .mockRejectedValue(new ApiError(message, 503, 'mcp-server-starting'));
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifestPreserved: vi.fn().mockResolvedValue(withEnvBlank),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
+      setMcpSecretEnv,
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByTestId('mcp-entry-0');
+    await user.type(screen.getByLabelText('API_KEY'), 'plaintext');
+    await user.click(screen.getByRole('button', { name: 'Use secret' }));
+
+    const refusal = (await screen.findByText(message)).closest('[role="alert"]');
+    expect(refusal).toHaveClass('tai-warn-state');
+    expect(refusal).toHaveTextContent('An MCP server is still starting');
+    expect(refusal).toHaveTextContent('Nothing was changed. Try again once it has started.');
+    expect(screen.queryByText('Something went wrong')).toBeNull();
+  });
+
+  it('shows the first line and the holders of a combined op refused for a held unpick', async () => {
+    const user = userEvent.setup({ delay: null });
+    const message = "tool selection of 'srv' cannot unpick 'srv_search' — held by:\n  hook 'h1'";
+    const setMcpSecretEnv = vi.fn().mockRejectedValue(
+      new ApiError(message, 409, undefined, undefined, {
+        detail: message,
+        holders: [{ kind: 'hook', tag: 'hooks', name: 'h1', locator: {}, summary: "hook 'h1'" }],
+      }),
+    );
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifestPreserved: vi.fn().mockResolvedValue(withEnvBlank),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
+      setMcpSecretEnv,
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByTestId('mcp-entry-0');
+    await user.type(screen.getByLabelText('API_KEY'), 'plaintext');
+    await user.click(screen.getByRole('button', { name: 'Use secret' }));
+
+    const firstLine = await screen.findByText(
+      "tool selection of 'srv' cannot unpick 'srv_search' — held by:",
+    );
+    expect(firstLine.closest('[role="alert"]')).not.toHaveTextContent("hook 'h1'");
+    const holders = screen.getByRole('list', {
+      name: 'Holders of the tools this change would unpick',
+    });
+    expect(within(holders).getByText(/h1/)).toBeInTheDocument();
+  });
+
   it('surfaces a server dangling-!ENV refusal of the manifest save loudly', async () => {
     const user = userEvent.setup({ delay: null });
     const setMcpConfig = vi

@@ -1,0 +1,10 @@
+{
+  // Tooling config only: this package is never built. The test runner reads its source
+  // through the package entry, and this non-emitting program types it for `tsc` and ESLint.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true
+  },
+  "include": ["src"]
+}

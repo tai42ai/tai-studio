@@ -12,6 +12,7 @@ import {
   NavigationProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
+import { refusalReaders } from '@tai42/test-support';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -49,8 +50,11 @@ function renderWithProviders(
   } else {
     globalThis.sessionStorage.removeItem(SESSION_KEY);
   }
+  const readingClient = { ...refusalReaders, ...client };
   const apiClient =
-    projection !== null ? { ...client, getMe: () => Promise.resolve(projection) } : client;
+    projection !== null
+      ? { ...readingClient, getMe: () => Promise.resolve(projection) }
+      : readingClient;
   const wrapper = ({ children }: { children: ReactNode }): ReactElement => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

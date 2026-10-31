@@ -41,6 +41,7 @@ import {
   Spinner,
   useApi,
   useRegisterDirty,
+  WriteFailure,
 } from '@tai42/studio-sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type CSSProperties, type ReactNode, useId, useState } from 'react';
@@ -312,7 +313,7 @@ function EnvironmentEditor({
 
       {mutation.isError ? (
         <div style={{ marginTop: 'var(--tai-space-4)' }}>
-          <ErrorState message={errorMessage(mutation.error)} />
+          <WriteFailure error={mutation.error} />
         </div>
       ) : null}
 

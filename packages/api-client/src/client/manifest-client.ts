@@ -97,13 +97,13 @@ export function mcpServersClient(t: Transport) {
   return {
     getMcpStatus: (signal?: AbortSignal) =>
       req(apiRoutes.get_api_mcp_status.path, s.mcpStatus, { signal }),
-    // Every tool the server advertises, before the entry's tool filter. A POST: the
-    // read opens a session to the server.
+    // Every tool the server advertised at its bind on the answering worker, before the
+    // entry's tool filter. Read from the listing the worker holds; never starts the server.
     listMcpAdvertisedTools: (title: string, signal?: AbortSignal) =>
       req(
-        buildPath(apiRoutes.post_api_mcp_status_title_advertised_tools.path, { title }),
+        buildPath(apiRoutes.get_api_mcp_status_title_advertised_tools.path, { title }),
         s.mcpAdvertisedTools,
-        { method: 'POST', signal },
+        { signal },
       ),
     // Replace the entry's include/exclude tool filter; crosses the config pipeline.
     setMcpToolFilter: (title: string, filter: McpToolFilter) =>

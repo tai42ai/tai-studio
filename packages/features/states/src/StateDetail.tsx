@@ -196,7 +196,7 @@ function DeleteStateButton({
           pendingLabel="Deleting"
           confirmVariant="danger"
           isPending={pending}
-          error={error as Error | string | null}
+          error={error}
           onConfirm={onConfirm}
           onClose={() => {
             if (!pending) setOpen(false);

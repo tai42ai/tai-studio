@@ -162,6 +162,70 @@ describe('A provider card by its connections', () => {
     expect(listMcpAdvertisedTools).toHaveBeenCalledWith('acme_mail_personal', expect.anything());
   });
 
+  it('opens Pick tools on a connection whose title is starting, and reads its tools once it binds', async () => {
+    const user = userEvent.setup();
+    const message =
+      "mcp server 'acme_mail_work' did not list its tools: MCP server 'acme_mail_work' start still in progress after 30s";
+    const listMcpAdvertisedTools = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError(message, 503, 'mcp-server-starting'))
+      .mockImplementation((title: string) =>
+        Promise.resolve({
+          title,
+          include: [],
+          exclude: [],
+          tools: [
+            {
+              name: 'send',
+              selected: true,
+              bound: true,
+              title: null,
+              description: null,
+              unbound_reason: null,
+            },
+          ],
+          unadvertised: [],
+        }),
+      );
+    const getMcpStatus = vi
+      .fn()
+      .mockResolvedValueOnce({
+        bound: {},
+        failed: [
+          {
+            title: 'acme_mail_work',
+            status: 'unavailable',
+            category: 'starting',
+            message: 'MCP server acme_mail_work start still in progress after 30s',
+          },
+        ],
+      })
+      .mockResolvedValue({ bound: { acme_mail_work: ['send'] }, failed: [] });
+    renderAcme([acmeConnection('work')], { extra: { getMcpStatus, listMcpAdvertisedTools } });
+    const card = await acmeCard(user);
+    await within(card).findByText('Starting: acme_mail_work');
+    await user.click(within(card).getByRole('button', { name: 'Pick tools for work' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Pick tools: Acme (work)' });
+    const starting = await within(dialog).findByRole('status');
+    expect(starting).toHaveTextContent('Starting');
+    expect(starting).toHaveClass('tai-status-pending');
+    expect(within(dialog).getByText(message)).toBeVisible();
+    expect(
+      within(dialog).getByText('The tools of acme_mail_work can be picked once it has started.'),
+    ).toBeVisible();
+    expect(within(dialog).queryByRole('alert')).toBeNull();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Check again' }));
+    expect(
+      await within(dialog).findByRole('checkbox', {
+        name: 'Mount every tool, including tools the server adds later',
+      }),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText('Starting')).toBeNull();
+    expect(listMcpAdvertisedTools).toHaveBeenCalledTimes(2);
+    expect(listMcpAdvertisedTools).toHaveBeenCalledWith('acme_mail_work', expect.anything());
+  });
+
   it('opens the flow at Connect from Add another account', async () => {
     const user = userEvent.setup();
     renderAcme([acmeConnection('work')], { bound: { acme_mail_work: ['send'] } });
@@ -195,6 +259,19 @@ describe('A provider card by its connections', () => {
     await user.click(within(card).getByRole('button', { name: 'Fix work' }));
     const dialog = await screen.findByRole('dialog', { name: 'Connect acme_mail_work' });
     expect(within(dialog).getByText('Failed: auth')).toBeVisible();
+  });
+
+  it('shows a title whose start is still in progress as starting on its connection, with no Fix', async () => {
+    const user = userEvent.setup();
+    renderAcme([acmeConnection('work')], {
+      failed: [{ title: 'acme_mail_work', category: 'starting', message: 'still starting' }],
+      projection: editorProjection([START_ROUTE, RELOAD_ROUTE]),
+    });
+    const card = await acmeCard(user);
+    const line = await within(card).findByText('Starting: acme_mail_work');
+    expect(line).toHaveClass('tai-status-pending');
+    expect(within(card).queryByText(/Failed/)).toBeNull();
+    expect(within(card).queryByRole('button', { name: 'Fix work' })).toBeNull();
   });
 
   it('draws no Fix on a failed title for a session that cannot reload', async () => {
@@ -307,6 +384,74 @@ describe('A configured server by the grants', () => {
   it('offers Reload and Deregister in the overflow of an administrator', async () => {
     const user = userEvent.setup();
     renderFailedServer(fullProjection());
+    const row = await findRow('server:relay');
+    await user.click(await within(row).findByRole('button', { name: 'Actions for relay' }));
+    const menu = await screen.findByRole('menu', { name: 'Actions for relay' });
+    expect(within(menu).getByRole('menuitem', { name: 'Reload' })).toBeVisible();
+    expect(within(menu).getByRole('menuitem', { name: 'Deregister' })).toBeVisible();
+  });
+});
+
+describe('A configured server whose start is still in progress', () => {
+  function renderStartingServer() {
+    return renderPage(
+      {
+        getManifestPreserved: vi.fn().mockResolvedValue(preservedManifest([mcpEntry('relay')])),
+        getMcpStatus: vi.fn().mockResolvedValue({
+          bound: {},
+          failed: [{ title: 'relay', category: 'starting', message: 'still starting' }],
+        }),
+      },
+      fullProjection(),
+    );
+  }
+
+  it('reads as starting, with no Fix and with Pick tools, in the card and the list', async () => {
+    const user = userEvent.setup();
+    renderStartingServer();
+    const row = await findRow('server:relay');
+    const line = await within(row).findByText('Starting');
+    expect(line).toHaveClass('tai-status-pending');
+    expect(within(row).queryByText(/Failed/)).toBeNull();
+    expect(within(row).queryByRole('button', { name: 'Fix' })).toBeNull();
+    expect(within(row).getByRole('button', { name: 'Pick tools' })).toBeVisible();
+    await showCards(user);
+    const card = await findCard('server:relay');
+    expect(within(card).getByText('Starting')).toBeVisible();
+    expect(within(card).queryByRole('button', { name: 'Fix' })).toBeNull();
+    expect(within(card).getByRole('button', { name: 'Pick tools' })).toBeVisible();
+  });
+
+  it('opens Pick tools on the start its read of the tools answers', async () => {
+    const user = userEvent.setup();
+    const message =
+      "mcp server 'relay' did not list its tools: MCP server 'relay' start still in progress after 30s";
+    const listMcpAdvertisedTools = vi
+      .fn()
+      .mockRejectedValue(new ApiError(message, 503, 'mcp-server-starting'));
+    renderPage(
+      {
+        getManifestPreserved: vi.fn().mockResolvedValue(preservedManifest([mcpEntry('relay')])),
+        getMcpStatus: vi.fn().mockResolvedValue({
+          bound: {},
+          failed: [{ title: 'relay', category: 'starting', message: 'still starting' }],
+        }),
+        listMcpAdvertisedTools,
+      },
+      fullProjection(),
+    );
+    const row = await findRow('server:relay');
+    await user.click(await within(row).findByRole('button', { name: 'Pick tools' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Pick tools: relay' });
+    expect(await within(dialog).findByText(message)).toBeVisible();
+    expect(within(dialog).getByText('Starting')).toHaveClass('tai-status-pending');
+    expect(within(dialog).queryByRole('alert')).toBeNull();
+    expect(listMcpAdvertisedTools).toHaveBeenCalledWith('relay', expect.anything());
+  });
+
+  it('keeps Reload and Deregister in the overflow', async () => {
+    const user = userEvent.setup();
+    renderStartingServer();
     const row = await findRow('server:relay');
     await user.click(await within(row).findByRole('button', { name: 'Actions for relay' }));
     const menu = await screen.findByRole('menu', { name: 'Actions for relay' });

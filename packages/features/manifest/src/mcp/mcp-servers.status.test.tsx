@@ -34,7 +34,7 @@ describe('McpServersSection — mounted + failed status', () => {
     // The mounted table shows the BOUND server's tool count; failed servers live in
     // their own health section (this test leaves it empty via the harness default).
     expect(screen.getByText('2 tools')).toBeInTheDocument();
-    expect(screen.queryByText('Failed servers')).not.toBeInTheDocument();
+    expect(screen.queryByText('Unbound servers')).not.toBeInTheDocument();
   });
 
   it('surfaces failed servers in a dedicated health section with reload + deregister', async () => {
@@ -49,11 +49,14 @@ describe('McpServersSection — mounted + failed status', () => {
     };
     renderWithProviders(<McpServersSection />, { client });
 
-    expect(await screen.findByText('Failed servers')).toBeInTheDocument();
+    expect(await screen.findByText('Unbound servers')).toBeInTheDocument();
+    // The section sits under the "MCP servers" section heading, a level below it.
+    expect(screen.getByRole('heading', { level: 2, name: 'MCP servers' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Unbound servers' })).toBeInTheDocument();
     expect(screen.getByText('bad')).toBeInTheDocument();
     expect(screen.getByText('timeout')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Deregister bad' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Reload all failed' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reload all unbound' })).toBeInTheDocument();
   });
 
   it('reloads one failed server and re-reads both the failed roster and the status', async () => {
@@ -72,8 +75,8 @@ describe('McpServersSection — mounted + failed status', () => {
     };
     renderWithProviders(<McpServersSection />, { client });
 
-    await screen.findByText('Failed servers');
-    // The failed row's Reload (not the "Reload all failed" button).
+    await screen.findByText('Unbound servers');
+    // The failed row's Reload (not the "Reload all unbound" button).
     const rowReload = within(screen.getByText('bad').closest('tr') as HTMLElement).getByRole(
       'button',
       { name: /Reload/ },
@@ -87,7 +90,7 @@ describe('McpServersSection — mounted + failed status', () => {
     expect(client.getMcpStatus.mock.calls.length).toBeGreaterThan(1);
   });
 
-  it('reloads the whole failed roster via Reload all failed', async () => {
+  it('reloads the whole failed roster via Reload all unbound', async () => {
     const user = userEvent.setup();
     const reloadFailedMcps = vi.fn().mockResolvedValue(fleetOk('reload_failed_mcps'));
     const client = {
@@ -102,8 +105,8 @@ describe('McpServersSection — mounted + failed status', () => {
     };
     renderWithProviders(<McpServersSection />, { client });
 
-    await screen.findByText('Failed servers');
-    await user.click(screen.getByRole('button', { name: 'Reload all failed' }));
+    await screen.findByText('Unbound servers');
+    await user.click(screen.getByRole('button', { name: 'Reload all unbound' }));
     expect(reloadFailedMcps).toHaveBeenCalledTimes(1);
   });
 
@@ -122,7 +125,7 @@ describe('McpServersSection — mounted + failed status', () => {
     };
     renderWithProviders(<McpServersSection />, { client });
 
-    await screen.findByText('Failed servers');
+    await screen.findByText('Unbound servers');
     await user.click(screen.getByRole('button', { name: 'Deregister bad' }));
     // The confirm is open but nothing has fired yet — a destructive detach never runs
     // on the row click alone.
@@ -159,7 +162,7 @@ describe('McpServersSection — mounted + failed status', () => {
     };
     renderWithProviders(<McpServersSection />, { client });
 
-    await screen.findByText('Failed servers');
+    await screen.findByText('Unbound servers');
     await user.click(screen.getByRole('button', { name: 'Deregister bad' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Deregister' }));
@@ -203,7 +206,7 @@ describe('McpServersSection — mounted + failed status', () => {
     };
     renderWithProviders(<McpServersSection />, { client });
 
-    await screen.findByText('Failed servers');
+    await screen.findByText('Unbound servers');
     await user.click(screen.getByRole('button', { name: 'Deregister bad' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Deregister' }));
@@ -239,7 +242,7 @@ describe('McpServersSection — mounted + failed status', () => {
     expect(within(mounted).getByText('srv')).toBeInTheDocument();
     expect(within(mounted).queryByText('bad')).not.toBeInTheDocument();
     // The failed server shows up under its own health section instead.
-    expect(screen.getByText('Failed servers')).toBeInTheDocument();
+    expect(screen.getByText('Unbound servers')).toBeInTheDocument();
     expect(screen.getByText('bad')).toBeInTheDocument();
   });
 
@@ -343,8 +346,8 @@ describe('McpServersSection — mounted + failed status', () => {
 });
 
 describe('McpServersSection — failed-mount detail', () => {
-  it.each(['auth', 'unreachable', 'error'])(
-    'shows the %s category as a badge beside the failed title',
+  it.each(['preset_store', 'auth', 'unreachable', 'error'])(
+    'shows the %s category and the status as danger badges beside the failed title',
     async (category) => {
       const client = {
         getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
@@ -357,11 +360,38 @@ describe('McpServersSection — failed-mount detail', () => {
       };
       renderWithProviders(<McpServersSection />, { client });
 
-      await screen.findByText('Failed servers');
+      await screen.findByText('Unbound servers');
       const row = screen.getByText('bad').closest('tr') as HTMLElement;
-      expect(within(row).getByText(category)).toBeInTheDocument();
+      expect(within(row).getByText(category)).toHaveAttribute('data-variant', 'danger');
+      expect(within(row).getByText('unavailable')).toHaveAttribute('data-variant', 'danger');
     },
   );
+
+  it('reads a server start still in progress as starting, in the neutral tint, keeping its remediation', async () => {
+    const message =
+      'MCP server slow start still in progress after 10s; it continues up to the start budget 60s; it binds once its start lists its tools';
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      listFailedMcps: vi
+        .fn()
+        .mockResolvedValue(
+          failedReport([{ title: 'slow', status: 'unavailable', category: 'starting', message }]),
+        ),
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByText('Unbound servers');
+    const row = screen.getByText('slow').closest('tr') as HTMLElement;
+    expect(within(row).getByText('starting')).toHaveAttribute('data-variant', 'neutral');
+    expect(within(row).getByText('unavailable')).toHaveAttribute('data-variant', 'neutral');
+    expect(row.querySelector('[data-variant="danger"]')).toBeNull();
+    expect(within(row).getByText(message)).toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: 'Reload' })).toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: 'Deregister slow' })).toBeInTheDocument();
+  });
 
   it('renders the redacted message as a muted secondary line carrying the full text in its title', async () => {
     const message = 'auth failed for the upstream host: the token the server returned was rejected';
@@ -378,7 +408,7 @@ describe('McpServersSection — failed-mount detail', () => {
     };
     renderWithProviders(<McpServersSection />, { client });
 
-    await screen.findByText('Failed servers');
+    await screen.findByText('Unbound servers');
     const line = screen.getByText(message);
     expect(line).toHaveClass('tai-muted');
     expect(line).toHaveAttribute('title', message);
@@ -403,7 +433,7 @@ describe('McpServersSection — failed-mount detail', () => {
     };
     renderWithProviders(<McpServersSection />, { client });
 
-    await screen.findByText('Failed servers');
+    await screen.findByText('Unbound servers');
     const row = screen.getByText('bad').closest('tr') as HTMLElement;
     for (const word of ['auth', 'unreachable', 'error']) {
       expect(within(row).queryByText(word)).not.toBeInTheDocument();
@@ -425,7 +455,7 @@ describe('McpServersSection — failed-mount detail', () => {
     };
     renderWithProviders(<McpServersSection />, { client });
 
-    await screen.findByText('Failed servers');
+    await screen.findByText('Unbound servers');
     const row = screen.getByText('bad').closest('tr') as HTMLElement;
     expect(within(row).getByText('error')).toBeInTheDocument();
     expect(row.querySelector('.tai-muted')).toBeNull();

@@ -33,7 +33,7 @@ export function ReplaceConfirmDialog({
       cancelLabel="Keep existing"
       confirmVariant="danger"
       isPending={busy}
-      error={error as Error | string | null}
+      error={error}
       onConfirm={() => {
         setBusy(true);
         setError(null);

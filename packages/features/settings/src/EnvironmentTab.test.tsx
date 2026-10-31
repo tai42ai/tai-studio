@@ -1,4 +1,4 @@
-import type { ApiClient, SettingsSchema } from '@tai42/api-client';
+import { type ApiClient, ApiError, type SettingsSchema } from '@tai42/api-client';
 import { GuardedTabs } from '@tai42/studio-sdk';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -230,6 +230,30 @@ describe('EnvironmentTab', () => {
     await waitFor(() => {
       expect(setEnvConfig).toHaveBeenCalledWith({ env: { A: '1', B: '' }, secret_keys: [] });
     });
+  });
+
+  it('shows a save refused while an MCP server is still starting as that start, not an error', async () => {
+    const user = userEvent.setup();
+    const message =
+      "tool selection of 'relay' cannot be checked: the server did not list its tools: MCP server 'relay' start still in progress after 10s; it continues up to the start budget 60s";
+    const setEnvConfig = vi.fn(() =>
+      Promise.reject(new ApiError(message, 503, 'mcp-server-starting')),
+    );
+    renderWithProviders(<EnvironmentTab readOnly={false} />, { client: baseStub(setEnvConfig) });
+
+    const row = (await screen.findByLabelText('Name of variable FOO')).closest('li');
+    expect(row).not.toBeNull();
+    await user.click(
+      within(row as HTMLElement).getByRole('button', { name: 'Remove variable FOO' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    const refusal = await screen.findByRole('alert');
+    expect(refusal).toHaveClass('tai-warn-state');
+    expect(refusal).toHaveTextContent('An MCP server is still starting');
+    expect(refusal).toHaveTextContent(message);
+    expect(refusal).toHaveTextContent('Nothing was changed. Try again once it has started.');
+    expect(screen.queryByText('Something went wrong')).toBeNull();
   });
 
   it('renames a key by deleting the old name and adding the new one', async () => {

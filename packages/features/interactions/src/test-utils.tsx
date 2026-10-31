@@ -21,6 +21,7 @@ import {
   NavigationProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
+import { refusalReaders } from '@tai42/test-support';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, type RenderOptions, type RenderResult } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
@@ -66,7 +67,9 @@ export function renderWithProviders(ui: ReactNode, options: ProviderOptions): Re
   }
   const resolveMe =
     getMe ?? (projection !== undefined ? () => Promise.resolve(projection) : undefined);
-  const apiClient = resolveMe !== undefined ? { ...client, getMe: resolveMe } : client;
+  const readingClient = { ...refusalReaders, ...client };
+  const apiClient =
+    resolveMe !== undefined ? { ...readingClient, getMe: resolveMe } : readingClient;
 
   function Wrapper({ children }: { children: ReactNode }): ReactNode {
     return (

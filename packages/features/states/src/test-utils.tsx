@@ -9,12 +9,7 @@
  * A `projection` seeds the capability context to `ready` (a session key is set and
  * `getMe` answers it); with none `getMe` never settles, so the context stays `loading`.
  */
-import {
-  type ApiClient,
-  createApiClient,
-  type KindStatus,
-  type MeProjection,
-} from '@tai42/api-client';
+import type { ApiClient, KindStatus, MeProjection } from '@tai42/api-client';
 import {
   ApiProvider,
   AuthProvider,
@@ -23,16 +18,12 @@ import {
   SystemKindsProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
+import { refusalReaders } from '@tai42/test-support';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderResult, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { expect, type Mock, vi } from 'vitest';
-
-/** The real refusal readers of a client: a stub client carries them so a refused write
- * reads its holders exactly as the served client does. */
-const { holdersFromError, storedPresetFaultFromError } = createApiClient({ getToken: () => null });
-const refusalReaders = { holdersFromError, storedPresetFaultFromError };
 
 /** A stub client: only the methods the unit under test calls need to be present. */
 export type StubApiClient = Partial<ApiClient>;

@@ -1,8 +1,9 @@
 /**
  * One section of the Pick tools step: the server's advertised tools with a tick per
- * tool, the state of its read while it has not answered, and the outcome of its save.
+ * tool, the state of its read while it has not answered (a server still starting or not
+ * loaded on the worker that answered among them), and the outcome of its save.
  */
-import type { FleetReportSummary, McpAdvertisedTools } from '@tai42/api-client';
+import type { FleetReportSummary, McpAdvertisedTool, McpAdvertisedTools } from '@tai42/api-client';
 import {
   AlertTriangleIcon,
   Badge,
@@ -16,6 +17,8 @@ import {
   HolderList,
   isForbiddenError,
   matchesSearch,
+  McpListingRefusal,
+  mcpListingRefusalOf,
   Skeleton,
   TextInput,
   toolDisplayLabel,
@@ -33,18 +36,18 @@ import {
   sameBody,
   type ToolFilterBody,
 } from './pick-tools-model';
+import { AwaitedServer, NotLoadedLine, StartingLine } from './server-live-state';
 
-const UNBOUND_REASON: Record<string, (name: string) => string> = {
-  server_failed: () =>
-    'Not mounted: this server failed when its tools were last loaded. Fix it from its card to mount this tool.',
-  not_loaded: () =>
-    "Not mounted: the worker that answered has not loaded this server's tools (it was deregistered there, or that worker has not loaded a recent change yet). Fix it from its card to mount this tool.",
+/** Why a selected tool is not mounted, in the words the section shows under it. */
+const UNBOUND_REASON: Readonly<
+  Record<NonNullable<McpAdvertisedTool['unbound_reason']>, (name: string) => string>
+> = {
   preset_conflict: (name) =>
     `Not mounted: a preset already uses the name ${name}, so this tool is not bound under it. Rename or delete that preset, then reload the server from the Manifest screen to mount it.`,
   unusable_schema: () =>
     "Not mounted: the server describes this tool's input in a form that cannot be used (an empty anyOf or oneOf, or nesting past the depth limit). The server log names the cause.",
-  not_listed_at_bind: () =>
-    'Not mounted: the server did not list this tool when its tools were last loaded. Reload the server from the Manifest screen to mount it.',
+  pending_bind: () =>
+    'Not mounted yet: the server has not been bound with this selection. This tool mounts when the bind in progress ends, or at the next reload of the server.',
 };
 
 function statusOf(error: unknown): number | null {
@@ -176,7 +179,7 @@ export function SectionBody({
                   {tool.selected && !tool.bound && tool.unbound_reason !== null ? (
                     <p className="tai-status tai-status-warn" style={{ margin: 0 }}>
                       <AlertTriangleIcon />
-                      {UNBOUND_REASON[tool.unbound_reason]?.(tool.name)}
+                      {UNBOUND_REASON[tool.unbound_reason](tool.name)}
                     </p>
                   ) : null}
                 </li>
@@ -206,7 +209,11 @@ export function SectionBody({
   );
 }
 
-/** A section's read while it has not answered with data: loading, refused or failed. */
+/**
+ * A section's read while it has not answered with data: loading, refused to this session,
+ * a server still starting or not loaded on the worker that answered, an unknown title, or
+ * failed (a failed start or bind answers its recorded cause).
+ */
 export function SectionRead({
   title,
   query,
@@ -218,6 +225,7 @@ export function SectionRead({
   readonly justAdded: boolean;
   readonly addFleet: FleetReportSummary | null;
 }): ReactNode {
+  const api = useApi();
   if (query === undefined || query.isPending) {
     return (
       <div
@@ -237,8 +245,24 @@ export function SectionRead({
   if (isForbiddenError(query.error)) {
     return (
       <p role="status" className="tai-status">
-        {`This session cannot list the tools of ${title}. Listing them needs write access to POST /api/mcp-status/${title}/advertised-tools; ask an administrator to grant it.`}
+        {`This session cannot list the tools of ${title}. Listing them needs read access to GET /api/mcp-status/${title}/advertised-tools; ask an administrator to grant it.`}
       </p>
+    );
+  }
+  const refusal = mcpListingRefusalOf(api, query.error);
+  if (refusal !== null) {
+    const starting = refusal === 'starting';
+    return (
+      <AwaitedServer
+        line={starting ? <StartingLine /> : <NotLoadedLine title={title} />}
+        message={errorMessage(query.error)}
+        note={
+          starting
+            ? `The tools of ${title} can be picked once it has started.`
+            : `The tools of ${title} can be picked once a reload has loaded it.`
+        }
+        onCheckAgain={() => void query.refetch()}
+      />
     );
   }
   if (statusOf(query.error) === 404) {
@@ -259,7 +283,11 @@ export function SectionRead({
   return <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />;
 }
 
-/** A section's save outcome: Saved with its fleet report, or the failure with its holders. */
+/**
+ * A section's save outcome: Saved with its fleet report, the refusal of a save whose
+ * server is still starting or not loaded on the worker that answered, or the failure with
+ * its holders.
+ */
 export function SectionOutcome({
   title,
   read,
@@ -276,6 +304,10 @@ export function SectionOutcome({
   const api = useApi();
   if (result === undefined) return null;
   if (result.error !== undefined) {
+    const refusal = mcpListingRefusalOf(api, result.error);
+    if (refusal !== null) {
+      return <McpListingRefusal reason={refusal} message={errorMessage(result.error)} />;
+    }
     const holders = api.holdersFromError(result.error);
     const message = errorMessage(result.error);
     const failureText = holders !== null ? (message.split('\n')[0] ?? '') : message;

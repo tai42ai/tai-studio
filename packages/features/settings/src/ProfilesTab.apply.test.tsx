@@ -1,4 +1,4 @@
-import type { ApiClient, SettingsSchema } from '@tai42/api-client';
+import { type ApiClient, ApiError, type SettingsSchema } from '@tai42/api-client';
 import { QueryClient } from '@tanstack/react-query';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -186,6 +186,35 @@ describe('ProfilesTab — apply', () => {
     // Scope to serve-2's OWN row so the assertion can't pass on another row's text.
     const serve2Row = within(recycle).getByText('serve-2').closest('li') as HTMLElement;
     expect(within(serve2Row).getByText('life 2')).toBeInTheDocument();
+  });
+
+  it('shows an apply refused while an MCP server is still starting as that start, not an error', async () => {
+    const user = userEvent.setup();
+    const message =
+      "tool selection of 'relay' cannot be checked: the server did not list its tools: MCP server 'relay' start still in progress after 10s; it continues up to the start budget 60s";
+    renderWithProviders(<ProfilesTab readOnly={false} />, {
+      client: stubClient({
+        diffSettingsProfile: vi.fn(() => Promise.resolve(cleanDiff())),
+        applySettingsProfile: vi.fn(() =>
+          Promise.reject(new ApiError(message, 503, 'mcp-server-starting')),
+        ),
+      }),
+      projection: fullProjection(),
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Apply profile prod' }));
+    const apply = await screen.findByRole('button', { name: 'Apply profile' });
+    await waitFor(() => {
+      expect(apply).toBeEnabled();
+    });
+    await user.click(apply);
+
+    const refusal = await screen.findByText('An MCP server is still starting');
+    const block = refusal.closest('[role="alert"]');
+    expect(block).toHaveClass('tai-warn-state');
+    expect(block).toHaveTextContent(message);
+    expect(block).toHaveTextContent('Nothing was changed. Try again once it has started.');
+    expect(screen.queryByText('Something went wrong')).toBeNull();
   });
 
   it('renders a fresh life on a DIFFERENT name un-joined, on its own row (no successor claim)', async () => {

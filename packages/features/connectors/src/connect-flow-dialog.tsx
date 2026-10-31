@@ -167,9 +167,7 @@ export function ConnectFlowDialog({
   readonly onSetClientCredentials: (provider: ProviderView) => void;
 }): ReactNode {
   const queryClient = useQueryClient();
-  const canListTools = useCanWrite(apiRoutes.post_api_mcp_status_title_advertised_tools.path);
-  const canPick = useCanWrite(apiRoutes.put_api_mcp_config_entries_title_tool_filter.path, 'PUT');
-  const pickable = canListTools && canPick;
+  const pickable = useCanWrite(apiRoutes.put_api_mcp_config_entries_title_tool_filter.path, 'PUT');
 
   const opensAtPick = target.kind === 'pick' || target.kind === 'resumed';
   const [step, setStep] = useState<Step>(opensAtPick ? 'pick' : 'connect');

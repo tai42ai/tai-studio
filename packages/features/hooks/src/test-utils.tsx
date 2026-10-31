@@ -26,6 +26,7 @@ import {
   NavigationProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
+import { refusalReaders } from '@tai42/test-support';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderResult, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -80,6 +81,7 @@ export function renderWithProviders(
   // asserts the shape the SDK context expects. A seeded projection stubs `getMe`
   // so `CapabilityProvider` resolves to `ready`.
   const withTools: StubApiClient = {
+    ...refusalReaders,
     listTools: () => Promise.resolve([...HOOK_TOOLS]),
     listToolTags: () => Promise.resolve([...HOOK_TOOL_TAGS]),
     ...client,

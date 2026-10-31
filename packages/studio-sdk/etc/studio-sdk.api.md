@@ -3511,7 +3511,7 @@ description: string | null;
 name: string;
 selected: boolean;
 title: string | null;
-unbound_reason: "server_failed" | "not_loaded" | "preset_conflict" | "unusable_schema" | "not_listed_at_bind" | null;
+unbound_reason: "preset_conflict" | "unusable_schema" | "pending_bind" | null;
 }[];
 unadvertised: string[];
 }>;
@@ -5509,6 +5509,8 @@ readonly PERSON_KIND: "person";
 readonly request: <S extends Parameters<apiRequest>[2]>(path: string, schema: S, options?: Parameters<apiRequest>[3]) => Promise<output<S>>;
 readonly holdersFromError: (error: unknown) => ReferenceHolder[] | null;
 readonly storedPresetFaultFromError: (error: unknown) => string | null;
+readonly isMcpStartingError: (error: unknown) => boolean;
+readonly isMcpNotLoadedError: (error: unknown) => boolean;
 } | null>;
 
 // @public (undocumented)
@@ -6432,7 +6434,7 @@ export interface ConfirmDialogProps {
     // (undocumented)
     readonly confirmVariant?: 'primary' | 'danger';
     readonly disabledNote?: ReactNode;
-    readonly error?: Error | string | null;
+    readonly error?: unknown;
     // (undocumented)
     readonly isPending: boolean;
     // (undocumented)
@@ -12093,7 +12095,7 @@ function createApiClient(config: ApiConfig): {
             name: string;
             selected: boolean;
             title: string | null;
-            unbound_reason: "server_failed" | "not_loaded" | "preset_conflict" | "unusable_schema" | "not_listed_at_bind" | null;
+            unbound_reason: "preset_conflict" | "unusable_schema" | "pending_bind" | null;
         }[];
         unadvertised: string[];
     }>;
@@ -14091,6 +14093,8 @@ function createApiClient(config: ApiConfig): {
     readonly request: <S extends Parameters<apiRequest>[2]>(path: string, schema: S, options?: Parameters<apiRequest>[3]) => Promise<output<S>>;
     readonly holdersFromError: (error: unknown) => ReferenceHolder[] | null;
     readonly storedPresetFaultFromError: (error: unknown) => string | null;
+    readonly isMcpStartingError: (error: unknown) => boolean;
+    readonly isMcpNotLoadedError: (error: unknown) => boolean;
 };
 
 // @public
@@ -17468,11 +17472,9 @@ const mcpAdvertisedTool: z.ZodObject<{
     selected: z.ZodBoolean;
     title: z.ZodNullable<z.ZodString>;
     unbound_reason: z.ZodNullable<z.ZodEnum<{
-        server_failed: "server_failed";
-        not_loaded: "not_loaded";
         preset_conflict: "preset_conflict";
         unusable_schema: "unusable_schema";
-        not_listed_at_bind: "not_listed_at_bind";
+        pending_bind: "pending_bind";
     }>>;
 }, z.core.$strip>;
 
@@ -17491,11 +17493,9 @@ const mcpAdvertisedTools: z.ZodObject<{
         selected: z.ZodBoolean;
         title: z.ZodNullable<z.ZodString>;
         unbound_reason: z.ZodNullable<z.ZodEnum<{
-            server_failed: "server_failed";
-            not_loaded: "not_loaded";
             preset_conflict: "preset_conflict";
             unusable_schema: "unusable_schema";
-            not_listed_at_bind: "not_listed_at_bind";
+            pending_bind: "pending_bind";
         }>>;
     }, z.core.$strip>>;
     unadvertised: z.ZodArray<z.ZodString>;
@@ -17537,6 +17537,21 @@ export const mcpExtensionsKey: readonly ["mcp-extensions"];
 
 // @public
 export const mcpFailedKey: readonly ["mcp-status", "failed"];
+
+// @public (undocumented)
+export function McpListingRefusal(input: McpListingRefusalProps): ReactNode;
+
+// @public
+export function mcpListingRefusalOf(api: Pick<ApiClient, 'isMcpStartingError' | 'isMcpNotLoadedError'>, error: unknown): McpListingRefusalReason | null;
+
+// @public (undocumented)
+export interface McpListingRefusalProps {
+    readonly message: string;
+    readonly reason: McpListingRefusalReason;
+}
+
+// @public
+export type McpListingRefusalReason = 'starting' | 'not_loaded';
 
 // @public (undocumented)
 type McpReloadResult = z.infer<typeof mcpReloadResult>;
@@ -31508,6 +31523,14 @@ const writeEntry: z.ZodObject<{
     paths: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>>>;
     seq: z.ZodNumber;
 }, z.core.$strict>;
+
+// @public (undocumented)
+export function WriteFailure(input: WriteFailureProps): ReactNode;
+
+// @public (undocumented)
+export interface WriteFailureProps {
+    readonly error: unknown;
+}
 
 // @public (undocumented)
 type WritesPage = z.infer<typeof writesPage>;

@@ -274,6 +274,45 @@ describe('@tai42/jq-studio confinement', () => {
 });
 
 /**
+ * The test support (`@tai42/test-support`): helpers shared by the features' tests, never
+ * built. A feature reaches it from test code alone, so a test helper never lands in a built
+ * feature; the package itself reaches only the API client.
+ */
+describe('@tai42/test-support confinement', () => {
+  const strictRule = boundariesDependenciesRule(false);
+  const testRule = boundariesDependenciesRule(true);
+  const importTestSupport = "import '@tai42/test-support';\n";
+  const testSupportFile = `${repoRoot}/packages/test-support/src/__boundary_fixture__.ts`;
+
+  it('permits the test support in a feature test', async () => {
+    const errors = await boundaryErrorsAt(featureHooksTestFile, importTestSupport, testRule);
+    expect(errors).toEqual([]);
+  });
+
+  it('withholds the test support from feature production source', async () => {
+    const errors = await boundaryErrorsAt(featureHooksFile, importTestSupport, strictRule);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain('@tai42/test-support');
+  });
+
+  it('lets the test support import the API client and nothing else internal', async () => {
+    const allowed = await boundaryErrorsAt(
+      testSupportFile,
+      "import '@tai42/api-client';\n",
+      strictRule,
+    );
+    expect(allowed).toEqual([]);
+    const refused = await boundaryErrorsAt(
+      testSupportFile,
+      "import '@tai42/studio-sdk';\n",
+      strictRule,
+    );
+    expect(refused).toHaveLength(1);
+    expect(refused[0]?.message).toContain('@tai42/studio-sdk');
+  });
+});
+
+/**
  * Structural pins for the `no-restricted-imports` overrides. eslint-plugin-boundaries
  * matches external modules by package BASE name only, so it cannot confine a subpath
  * like `@tai42/studio-sdk/testing`; that confinement is done with `no-restricted-imports`

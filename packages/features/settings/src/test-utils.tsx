@@ -1,8 +1,8 @@
 /**
  * Shared test harness: render a feature tree inside the exact provider stack the
  * shell supplies at runtime — a fresh QueryClient (retries off so a rejected query
- * surfaces the error state immediately), the typed API client, the theme, and a
- * stub navigation context.
+ * surfaces the error state immediately), the typed API client carrying the served
+ * client's refusal readers, the theme, and a stub navigation context.
  */
 import type { ApiClient, MeProjection } from '@tai42/api-client';
 import {
@@ -12,6 +12,7 @@ import {
   NavigationProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
+import { refusalReaders } from '@tai42/test-support';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderOptions, type RenderResult, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -53,8 +54,11 @@ export function renderWithProviders(ui: ReactNode, options: ProviderOptions): Re
   } else {
     globalThis.sessionStorage.removeItem(SESSION_KEY);
   }
+  const readingClient = { ...refusalReaders, ...client };
   const apiClient =
-    projection !== undefined ? { ...client, getMe: () => Promise.resolve(projection) } : client;
+    projection !== undefined
+      ? { ...readingClient, getMe: () => Promise.resolve(projection) }
+      : readingClient;
 
   function Wrapper({ children }: { children: ReactNode }): ReactNode {
     return (

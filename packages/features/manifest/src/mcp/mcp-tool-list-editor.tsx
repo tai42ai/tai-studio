@@ -17,7 +17,7 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 
 import { baseToolOf } from './mcp-config-parse';
-import type { ServerTools } from './mcp-server-tools';
+import { type ServerTools, unlistedNote } from './mcp-server-tools';
 import {
   type McpToolList,
   unadvertisedTokens,
@@ -101,6 +101,14 @@ function ToolAddRow({
     setExts([]);
   };
 
+  // A server still starting, or not loaded on the worker that answered, has no tools to read yet.
+  if (serverTools.unlisted !== null) {
+    return (
+      <p
+        style={MUTED_TEXT}
+      >{`${unlistedNote(serverTools.unlisted)} Existing entries above stay editable.`}</p>
+    );
+  }
   // A server the status does not carry has no tools to read until it is saved.
   if (!serverTools.mounted) {
     return (

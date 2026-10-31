@@ -716,6 +716,10 @@ export const apiRoutes: {
         readonly method: "GET";
         readonly path: "/api/mcp-status/failed";
     };
+    readonly get_api_mcp_status_title_advertised_tools: {
+        readonly method: "GET";
+        readonly path: "/api/mcp-status/{title}/advertised-tools";
+    };
     readonly get_api_notifications: {
         readonly method: "GET";
         readonly path: "/api/notifications";
@@ -1175,10 +1179,6 @@ export const apiRoutes: {
     readonly post_api_mcp_status_reload_failed: {
         readonly method: "POST";
         readonly path: "/api/mcp-status/reload-failed";
-    };
-    readonly post_api_mcp_status_title_advertised_tools: {
-        readonly method: "POST";
-        readonly path: "/api/mcp-status/{title}/advertised-tools";
     };
     readonly post_api_mcp_status_title_deregister: {
         readonly method: "POST";
@@ -7541,7 +7541,7 @@ export function createApiClient(config: ApiConfig): {
             name: string;
             selected: boolean;
             title: string | null;
-            unbound_reason: "server_failed" | "not_loaded" | "preset_conflict" | "unusable_schema" | "not_listed_at_bind" | null;
+            unbound_reason: "preset_conflict" | "unusable_schema" | "pending_bind" | null;
         }[];
         unadvertised: string[];
     }>;
@@ -9539,6 +9539,8 @@ export function createApiClient(config: ApiConfig): {
     readonly request: <S extends Parameters<apiRequest>[2]>(path: string, schema: S, options?: Parameters<apiRequest>[3]) => Promise<output<S>>;
     readonly holdersFromError: (error: unknown) => ReferenceHolder[] | null;
     readonly storedPresetFaultFromError: (error: unknown) => string | null;
+    readonly isMcpStartingError: (error: unknown) => boolean;
+    readonly isMcpNotLoadedError: (error: unknown) => boolean;
 };
 
 // @public
@@ -10748,6 +10750,11 @@ const invokeMemberActionResult: z.ZodObject<{
 export function isFleetReportFailure(summary: FleetReportSummary | null): boolean;
 
 // @public
+export function isMcpStarting(record: {
+    readonly category?: string | undefined;
+}): boolean;
+
+// @public
 export function isSafeApiPath(path: string): boolean;
 
 // @public
@@ -11827,11 +11834,9 @@ const mcpAdvertisedTool: z.ZodObject<{
     selected: z.ZodBoolean;
     title: z.ZodNullable<z.ZodString>;
     unbound_reason: z.ZodNullable<z.ZodEnum<{
-        server_failed: "server_failed";
-        not_loaded: "not_loaded";
         preset_conflict: "preset_conflict";
         unusable_schema: "unusable_schema";
-        not_listed_at_bind: "not_listed_at_bind";
+        pending_bind: "pending_bind";
     }>>;
 }, z.core.$strip>;
 
@@ -11850,11 +11855,9 @@ const mcpAdvertisedTools: z.ZodObject<{
         selected: z.ZodBoolean;
         title: z.ZodNullable<z.ZodString>;
         unbound_reason: z.ZodNullable<z.ZodEnum<{
-            server_failed: "server_failed";
-            not_loaded: "not_loaded";
             preset_conflict: "preset_conflict";
             unusable_schema: "unusable_schema";
-            not_listed_at_bind: "not_listed_at_bind";
+            pending_bind: "pending_bind";
         }>>;
     }, z.core.$strip>>;
     unadvertised: z.ZodArray<z.ZodString>;

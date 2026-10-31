@@ -260,6 +260,55 @@ describe('failedMcpsFromReport', () => {
     expect(out.find((entry) => entry.title === 'db')?.status).toBe('unavailable');
   });
 
+  it.each([
+    ['the starting record first', ['serve-a', 'serve-b']],
+    ['the failure record first', ['serve-b', 'serve-a']],
+  ])(
+    "lets one worker's failure win over another worker's start in progress (%s)",
+    (_order, names) => {
+      const payloads: Record<string, unknown[]> = {
+        'serve-a': [
+          {
+            title: 'relay',
+            status: 'unavailable',
+            category: 'starting',
+            message: 'still starting',
+          },
+        ],
+        'serve-b': [
+          {
+            title: 'relay',
+            status: 'unavailable',
+            category: 'unreachable',
+            message: 'connection refused',
+            http_status: null,
+          },
+        ],
+      };
+      const out = failedMcpsFromReport(
+        result({
+          op: 'list_failed_mcps',
+          results: names.map((name) => ({
+            name,
+            outcome: 'applied' as const,
+            payload: payloads[name],
+            error: null,
+            detail: null,
+          })),
+        }),
+      );
+      expect(out).toEqual([
+        {
+          title: 'relay',
+          status: 'unavailable',
+          category: 'unreachable',
+          message: 'connection refused',
+          http_status: null,
+        },
+      ]);
+    },
+  );
+
   it('tolerates an absent or malformed worker payload without throwing', () => {
     const out = failedMcpsFromReport(
       result({

@@ -102,7 +102,7 @@ export const mcpStatusKey = ['mcp-status'] as const;
  */
 export const mcpFailedKey = ['mcp-status', 'failed'] as const;
 
-/** One server's advertised tools (`POST /api/mcp-status/{title}/advertised-tools`). */
+/** One server's advertised tools (`GET /api/mcp-status/{title}/advertised-tools`). */
 export function mcpAdvertisedToolsKey(
   title: string,
 ): readonly ['mcp-status', 'advertised-tools', string] {

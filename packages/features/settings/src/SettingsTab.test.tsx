@@ -1,4 +1,4 @@
-import type { ApiClient, SettingsSchema } from '@tai42/api-client';
+import { type ApiClient, ApiError, type SettingsSchema } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -156,6 +156,29 @@ describe('SettingsTab', () => {
     await waitFor(() => {
       expect(setEnvConfig).toHaveBeenCalledWith({ env: { TAI_PORT: '123', TAI_DEBUG: 'true' } });
     });
+  });
+
+  it('shows a save refused while an MCP server is still starting as that start, not an error', async () => {
+    const user = userEvent.setup();
+    const message =
+      "tool selection of 'relay' cannot be checked: the server did not list its tools: MCP server 'relay' start still in progress after 10s; it continues up to the start budget 60s";
+    const client = stubClient({
+      getSettingsSchema: vi.fn(() => Promise.resolve(schemaFixture())),
+      setEnvConfig: vi.fn(() => Promise.reject(new ApiError(message, 503, 'mcp-server-starting'))),
+    });
+    renderWithProviders(<SettingsTab readOnly={false} />, { client });
+
+    const port = await screen.findByLabelText('port');
+    await user.clear(port);
+    await user.type(port, '123');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    const refusal = await screen.findByRole('alert');
+    expect(refusal).toHaveClass('tai-warn-state');
+    expect(refusal).toHaveTextContent('An MCP server is still starting');
+    expect(refusal).toHaveTextContent(message);
+    expect(refusal).toHaveTextContent('Nothing was changed. Try again once it has started.');
+    expect(screen.queryByText('Something went wrong')).toBeNull();
   });
 
   it('disables every input and offers no Save in read-only mode', async () => {

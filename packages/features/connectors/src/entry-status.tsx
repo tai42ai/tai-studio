@@ -5,7 +5,6 @@
  */
 import { apiRoutes, type ConnectionView, type ProviderView } from '@tai42/api-client';
 import {
-  AlertTriangleIcon,
   AppLink,
   Button,
   Skeleton,
@@ -18,6 +17,8 @@ import { type ReactNode, useState } from 'react';
 
 import type { FlowTarget } from './connect-flow-dialog';
 import { HEALTH_LABEL } from './connection-detail-cards';
+import { FailedLine, StartingLine } from './server-live-state';
+import { StatusLine, type StatusTone } from './status-line';
 import { useConnectorAdmin } from './use-add-server-dialog';
 import {
   connectionEntries,
@@ -52,12 +53,10 @@ export interface DirectoryGrants {
 }
 
 export function useDirectoryGrants(): DirectoryGrants {
-  const canListTools = useCanWrite(apiRoutes.post_api_mcp_status_title_advertised_tools.path);
-  const canPick = useCanWrite(apiRoutes.put_api_mcp_config_entries_title_tool_filter.path, 'PUT');
   return {
     canConnect: useCanWrite(apiRoutes.post_api_connectors_connections_start.path),
     canInstall: useCanWrite(apiRoutes.post_api_marketplace_install.path),
-    canPickTools: canListTools && canPick,
+    canPickTools: useCanWrite(apiRoutes.put_api_mcp_config_entries_title_tool_filter.path, 'PUT'),
     canReload: useCanWrite(apiRoutes.post_api_mcp_status_title_reload.path),
     canDeregister: useCanWrite(apiRoutes.post_api_mcp_status_title_deregister.path),
     isAdmin: useConnectorAdmin(),
@@ -69,27 +68,6 @@ export interface EntryProps {
   readonly reads: DirectoryReads;
   readonly grants: DirectoryGrants;
   readonly actions: DirectoryActions;
-}
-
-export function StatusLine({
-  tone,
-  children,
-}: {
-  tone?: 'warn' | 'err';
-  children: ReactNode;
-}): ReactNode {
-  const className =
-    tone === 'warn'
-      ? 'tai-status tai-status-warn'
-      : tone === 'err'
-        ? 'tai-status tai-status-err'
-        : 'tai-status';
-  return (
-    <p className={className} style={{ margin: 0, overflowWrap: 'anywhere' }}>
-      {tone !== undefined ? <AlertTriangleIcon /> : null}
-      {children}
-    </p>
-  );
 }
 
 export function NoGrantLine({ children }: { children: string }): ReactNode {
@@ -104,7 +82,7 @@ export function NoGrantLine({ children }: { children: string }): ReactNode {
 function connectionState(
   connection: ConnectionView,
   reads: DirectoryReads,
-): { text: string; tone?: 'warn' | 'err'; fixable: 'detail' | { title: string } | null } {
+): { text: string; tone?: StatusTone; fixable: 'detail' | { title: string } | null } {
   if (connection.auth_health_state !== 'healthy') {
     return { text: HEALTH_LABEL[connection.auth_health_state], tone: 'warn', fixable: 'detail' };
   }
@@ -125,6 +103,11 @@ function connectionState(
   for (const entry of mine) {
     if (liveStateOf(entry.title, status).kind === 'not_loaded') {
       return { text: `Not loaded: ${entry.title}`, tone: 'warn', fixable: { title: entry.title } };
+    }
+  }
+  for (const entry of mine) {
+    if (liveStateOf(entry.title, status).kind === 'starting') {
+      return { text: `Starting: ${entry.title}`, tone: 'pending', fixable: null };
     }
   }
   if (entries === null || status === null) return { text: 'Connected', fixable: null };
@@ -285,8 +268,10 @@ function ServerStatus({ row }: { row: ServerRow }): ReactNode {
         </>
       );
     }
+    case 'starting':
+      return <StartingLine />;
     case 'failed':
-      return <StatusLine tone="err">{`Failed: ${live.failure.category}`}</StatusLine>;
+      return <FailedLine failure={live.failure} />;
     case 'not_loaded':
       return (
         <>

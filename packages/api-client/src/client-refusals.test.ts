@@ -58,5 +58,38 @@ describe('client refusal readers', () => {
     const client = createApiClient({ getToken: () => null });
     expect(client.holdersFromError(new Error('boom'))).toBeNull();
     expect(client.storedPresetFaultFromError(new Error('boom'))).toBeNull();
+    expect(client.isMcpStartingError(new Error('boom'))).toBe(false);
+    expect(client.isMcpNotLoadedError(new Error('boom'))).toBe(false);
+  });
+
+  it('reads a 503 mcp-server-starting this client raised as a server start in progress', async () => {
+    const client = clientAnswering(503, {
+      error:
+        "mcp server 'relay' did not list its tools: MCP server 'relay' start still in progress",
+      code: 'mcp-server-starting',
+    });
+    const error = await rejectionOf(client.listMcpAdvertisedTools('relay'));
+    expect(client.isMcpStartingError(error)).toBe(true);
+    expect(client.holdersFromError(error)).toBeNull();
+  });
+
+  it('reads a 503 mcp-server-not-loaded this client raised as a server the worker has not loaded', async () => {
+    const client = clientAnswering(503, {
+      error:
+        "mcp server 'relay' did not list its tools: MCP server 'relay' is not loaded on this worker; a reload binds it",
+      code: 'mcp-server-not-loaded',
+    });
+    const error = await rejectionOf(client.listMcpAdvertisedTools('relay'));
+    expect(client.isMcpNotLoadedError(error)).toBe(true);
+    expect(client.isMcpStartingError(error)).toBe(false);
+  });
+
+  it('reads a 502 listing failure this client raised as no start in progress', async () => {
+    const client = clientAnswering(502, {
+      error: "mcp server 'relay' did not list its tools: connection refused",
+    });
+    const error = await rejectionOf(client.listMcpAdvertisedTools('relay'));
+    expect(client.isMcpStartingError(error)).toBe(false);
+    expect(client.isMcpNotLoadedError(error)).toBe(false);
   });
 });

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { type ReactNode, StrictMode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { listingRefusal, renderWithRefusalReaders } from '../test-listing-refusals';
 import { FormDialog } from './form-dialog';
 
 interface Deferred {
@@ -36,7 +37,7 @@ function settle(): Promise<void> {
 function renderFormDialog(overrides: Partial<Parameters<typeof FormDialog>[0]> = {}) {
   const onSubmit = vi.fn<() => void | Promise<void>>();
   const onClose = vi.fn();
-  render(
+  renderWithRefusalReaders(
     <FormDialog
       title="Create scope"
       submitLabel="Create scope"
@@ -164,6 +165,19 @@ describe('FormDialog', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
+  it('shows a rejection because the answering worker has not loaded an MCP server as that refusal', async () => {
+    const user = userEvent.setup();
+    const message = "MCP server 'relay' is not loaded on this worker; a reload binds it";
+    renderFormDialog({
+      onSubmit: () => Promise.reject(listingRefusal('mcp-server-not-loaded', message)),
+    });
+    await user.click(screen.getByRole('button', { name: 'Create scope' }));
+    const refusal = await screen.findByRole('alert');
+    expect(refusal).toHaveClass('tai-warn-state');
+    expect(refusal).toHaveTextContent('An MCP server is not loaded on the worker that answered');
+    expect(refusal).toHaveTextContent(message);
+  });
+
   it('surfaces a synchronous throw the same way, keeping the dialog open', async () => {
     const user = userEvent.setup();
     const { onClose } = renderFormDialog({
@@ -183,7 +197,7 @@ describe('FormDialog', () => {
       .mockRejectedValueOnce(new Error('transient failure'))
       .mockResolvedValueOnce();
     const onClose = vi.fn();
-    render(
+    renderWithRefusalReaders(
       <FormDialog
         title="Create scope"
         submitLabel="Create scope"

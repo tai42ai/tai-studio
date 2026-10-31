@@ -4,7 +4,10 @@
  * what the install added. A listing with a `connector` item waits for its provider
  * (a connector item's name is its provider id) and then shows the connect form for
  * it; a listing of `mcp-server` items waits until the status read lists each item
- * name (an entry title) as bound or failed, and then hands the titles on.
+ * name (an entry title) as bound or in its failed list, and then hands the titles on:
+ * to the Pick tools step, or to the Done step for a session that cannot pick. A title
+ * in the failed list is a failure or a server start still in progress: the wait counts
+ * it as listed, and either step shows that failure or that start in the title's place.
  *
  * The wait checks every 2 s and on "Check again". It gives up loudly at once when
  * the reload converged and a check made after it still misses, and otherwise after
@@ -225,7 +228,8 @@ function ProviderWait({
   );
 }
 
-/** The titles the status read lists neither as bound nor as failed. */
+/** The titles the status read lists neither as bound nor in its failed list (a failure or
+ *  a start still in progress). */
 function missingTitles(titles: readonly string[], status: McpStatusView): string[] {
   const listed = new Set([
     ...Object.keys(status.bound),
