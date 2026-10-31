@@ -108,7 +108,7 @@ describe('RegisterHookForm — overwrite notice (create)', () => {
     expect(screen.queryByRole('option', { name: 'tool · relay' })).toBeNull();
     await user.click(screen.getByRole('option', { name: 'agent · assistant' }));
     await user.type(screen.getByLabelText('Subject kind'), 'person');
-    await user.type(screen.getByLabelText('Key expression'), '.actor.id');
+    await user.type(screen.getByRole('textbox', { name: 'Key expression' }), '.actor.id');
 
     await user.click(screen.getByRole('button', { name: 'Register' }));
     await waitFor(() => {
@@ -227,6 +227,34 @@ describe('RegisterHookForm — edit mode', () => {
     await waitFor(() => {
       expect(onClose).toHaveBeenCalledOnce();
     });
+  });
+
+  it('saves a stored-template subject key expression and its kwargs back unchanged', async () => {
+    const user = userEvent.setup({ delay: null });
+    const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'notify-event' });
+    const client: StubApiClient = {
+      listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
+      listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      registerHook,
+    };
+    const subject = {
+      target_kind: 'agent' as const,
+      target_name: 'assistant',
+      kind: 'person',
+      key_expr: { id: 'stored-jq', kwargs: { field: 'actor' } },
+    };
+    renderWithProviders(
+      <RegisterHookForm initial={hook({ execution_key: 'svc-events', subject })} />,
+      { client, projection: accountSessionProjection() },
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled());
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => {
+      expect(registerHook).toHaveBeenCalledOnce();
+    });
+    expect(registerHook.mock.calls[0]?.[0]).toEqual(expect.objectContaining({ subject }));
   });
 
   it('does not warn on the edited hook itself, only when renamed onto another hook', async () => {

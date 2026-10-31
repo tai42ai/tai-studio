@@ -1,18 +1,18 @@
 /** The form-view list of MCP entries: managed + installed entries render read-only,
  *  hand-authored entries editable, plus the Add server affordance. */
 import type { Extension, McpEnvRef } from '@tai42/api-client';
-import type { JsonSchema, ToolListQuery } from '@tai42/studio-sdk';
+import type { JsonSchema } from '@tai42/studio-sdk';
 import { Button, defaultValueForSchema, EmptyState, NoFiniteValueError } from '@tai42/studio-sdk';
 import { type ReactNode, useState } from 'react';
 
 import { asRecord, connectorRefOf, STRIPPED_FIELDS, stripSchemaFields } from './mcp-config-parse';
 import { EditableEntryCard, InstalledEntryCard, ManagedEntryCard } from './mcp-entry-cards';
-import { type BoundToolsRead, serverToolsQuery } from './mcp-tool-list-editor';
+import type { McpStatusRead } from './mcp-server-tools';
 
 export function EntryList({
   schema,
   entries,
-  discoveredTools,
+  status,
   extensions,
   extensionsError,
   availableSecretKeys,
@@ -26,7 +26,7 @@ export function EntryList({
 }: {
   readonly schema: JsonSchema;
   readonly entries: readonly unknown[];
-  readonly discoveredTools: BoundToolsRead;
+  readonly status: McpStatusRead;
   readonly extensions: readonly Extension[];
   readonly extensionsError: string | undefined;
   readonly availableSecretKeys: readonly string[];
@@ -75,11 +75,6 @@ export function EntryList({
     onChange([...entries, seeded]);
   };
 
-  const toolsFor = (entry: unknown): ToolListQuery => {
-    const title = asRecord(entry).title;
-    return serverToolsQuery(discoveredTools, typeof title === 'string' ? title : undefined);
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
       {entries.length === 0 ? (
@@ -116,7 +111,7 @@ export function EntryList({
             entry={entry}
             index={index}
             formSchema={formSchema}
-            discoveredTools={toolsFor(entry)}
+            status={status}
             extensions={extensions}
             extensionsError={extensionsError}
             availableSecretKeys={availableSecretKeys}

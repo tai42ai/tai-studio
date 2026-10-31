@@ -33,26 +33,28 @@ function listOf(
  * rendered DOM, so a control added later is judged by the same rule. Controls
  * with no visible text (an icon-only button) are outside the criterion, and so
  * are landmarks/regions (their label names a container, not a visible caption)
- * and selects (their visible text is the chosen value, not their label).
+ * and selects (their visible text is the chosen value, not their label). Case,
+ * whitespace and punctuation are not significant to the criterion, so both sides are
+ * compared on their letters and digits alone (a chip showing `Untagged` and `1` is
+ * named `Untagged (1)`).
  */
 function labelInNameFailures(container: HTMLElement): string[] {
+  const words = (text: string): string => text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
   return [
     ...container.querySelectorAll<HTMLElement>(
       'button[aria-label]:not([role="combobox"]), a[aria-label], [role="button"][aria-label], [role="link"][aria-label]',
     ),
   ]
     .filter((node) => {
-      const visible = node.textContent.trim().toLowerCase();
-      return (
-        visible !== '' && !(node.getAttribute('aria-label') ?? '').toLowerCase().includes(visible)
-      );
+      const visible = words(node.textContent);
+      return visible !== '' && !words(node.getAttribute('aria-label') ?? '').includes(visible);
     })
     .map((node) => `${node.getAttribute('aria-label') ?? ''} !~ ${node.textContent.trim()}`);
 }
 
 describe('AgentsPage header', () => {
   it('renders the PageHeader: a "Capabilities" eyebrow above the level-1 "Agents" title', async () => {
-    renderWithProviders(<AgentsPage />, stubClient({ listAgents: listOf(agent()) }));
+    renderWithProviders(<AgentsPage search={{}} />, stubClient({ listAgents: listOf(agent()) }));
 
     // The h1 keeps its verbatim title and level (Playwright/DOM contract).
     const heading = await screen.findByRole('heading', { level: 1, name: 'Agents' });
@@ -64,7 +66,7 @@ describe('AgentsPage header', () => {
 
   it('titles the run view on the agent name under the Capabilities eyebrow', async () => {
     const client = stubClient({ listAgents: listOf(agent({ name: 'writer' })) });
-    renderWithProviders(<AgentsPage />, client);
+    renderWithProviders(<AgentsPage search={{}} />, client);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Run agent writer' }));
 
@@ -79,7 +81,7 @@ describe('AgentsPage list', () => {
     const client = stubClient({
       listAgents: listOf(agent({ name: 'writer', tool_name: 'writer_tool' })),
     });
-    renderWithProviders(<AgentsPage />, client);
+    renderWithProviders(<AgentsPage search={{}} />, client);
 
     const row = await findAgentRow('writer', 'registered');
     expect(within(row).getByText('Registered')).toBeInTheDocument();
@@ -90,7 +92,7 @@ describe('AgentsPage list', () => {
   });
 
   it('shows an empty state when no agents are registered', async () => {
-    renderWithProviders(<AgentsPage />, stubClient({ listAgents: listOf() }));
+    renderWithProviders(<AgentsPage search={{}} />, stubClient({ listAgents: listOf() }));
     expect(await screen.findByText('No agents registered')).toBeInTheDocument();
   });
 
@@ -98,7 +100,7 @@ describe('AgentsPage list', () => {
     const client = stubClient({
       listAgents: listOf(agent({ name: 'writer' }), agent({ name: 'planner' })),
     });
-    renderWithProviders(<AgentsPage />, client, {
+    renderWithProviders(<AgentsPage search={{}} />, client, {
       projection: scopedProjection({ agents: ['writer'] }),
     });
 
@@ -114,7 +116,7 @@ describe('AgentsPage list', () => {
     const client = stubClient({
       listAgents: listOf(agent({ name: 'writer' }), agent({ name: 'planner' })),
     });
-    renderWithProviders(<AgentsPage />, client, { projection: fullProjection() });
+    renderWithProviders(<AgentsPage search={{}} />, client, { projection: fullProjection() });
 
     expect(
       await screen.findByRole('link', { name: 'Open run tool for writer' }),
@@ -126,7 +128,9 @@ describe('AgentsPage list', () => {
 
   it('a scoped projection with no projected agents shows the empty state', async () => {
     const client = stubClient({ listAgents: listOf(agent({ name: 'writer' })) });
-    renderWithProviders(<AgentsPage />, client, { projection: scopedProjection({ agents: [] }) });
+    renderWithProviders(<AgentsPage search={{}} />, client, {
+      projection: scopedProjection({ agents: [] }),
+    });
 
     expect(await screen.findByText('No agents registered')).toBeInTheDocument();
   });
@@ -138,7 +142,7 @@ describe('AgentsPage run', () => {
       listAgents: listOf(agent()),
       streamAgentRun: scriptedStream(parse(FULL_TRANSCRIPT)),
     });
-    renderWithProviders(<AgentsPage />, client);
+    renderWithProviders(<AgentsPage search={{}} />, client);
 
     await userEvent.click(await screen.findByRole('button', { name: /^Run agent / }));
     // Now in the run view; start the run.
@@ -156,7 +160,7 @@ describe('AgentsPage run', () => {
       listAgents: listOf(agent()),
       streamAgentRun: scriptedStream(parse(ERROR_TRANSCRIPT)),
     });
-    renderWithProviders(<AgentsPage />, client);
+    renderWithProviders(<AgentsPage search={{}} />, client);
 
     await userEvent.click(await screen.findByRole('button', { name: /^Run agent / }));
     await userEvent.click(screen.getByRole('button', { name: 'Run' }));
@@ -175,7 +179,7 @@ describe('AgentsPage run', () => {
       // catch path sets `run.error` and no event is ever folded into a timeline.
       streamAgentRun: () => Promise.reject(new Error('connection dropped')),
     });
-    renderWithProviders(<AgentsPage />, client);
+    renderWithProviders(<AgentsPage search={{}} />, client);
 
     await userEvent.click(await screen.findByRole('button', { name: /^Run agent / }));
     await userEvent.click(screen.getByRole('button', { name: 'Run' }));
@@ -191,7 +195,7 @@ describe('AgentsPage run', () => {
       listAgents: listOf(agent()),
       streamAgentRun: hangingStream(parse(OPEN_TRANSCRIPT), captured),
     });
-    renderWithProviders(<AgentsPage />, client);
+    renderWithProviders(<AgentsPage search={{}} />, client);
 
     await userEvent.click(await screen.findByRole('button', { name: /^Run agent / }));
     await userEvent.click(screen.getByRole('button', { name: 'Run' }));
@@ -251,7 +255,9 @@ describe('AgentsPage folders', () => {
   }
 
   it('draws the folders holding an agent or nothing, never those holding only other tools', async () => {
-    renderWithProviders(<AgentsPage />, folderClient(), { projection: fullProjection() });
+    renderWithProviders(<AgentsPage search={{}} />, folderClient(), {
+      projection: fullProjection(),
+    });
 
     expect(await screen.findByRole('button', { name: 'Agents' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Authored' })).toBeInTheDocument();
@@ -264,7 +270,9 @@ describe('AgentsPage folders', () => {
 
   it('lists registered and authored agents together inside a folder, each with its own actions', async () => {
     const user = userEvent.setup({ delay: null });
-    renderWithProviders(<AgentsPage />, folderClient(), { projection: fullProjection() });
+    renderWithProviders(<AgentsPage search={{}} />, folderClient(), {
+      projection: fullProjection(),
+    });
 
     await user.click(await screen.findByRole('button', { name: 'Authored' }));
     const authored = await findAgentRow('assistant', 'authored');
@@ -285,7 +293,7 @@ describe('AgentsPage folders', () => {
   it('files an agent into a folder through its Move action', async () => {
     const user = userEvent.setup({ delay: null });
     const upsertToolMeta = vi.fn((toolName: string) => Promise.resolve(filed(toolName, 'f-fresh')));
-    renderWithProviders(<AgentsPage />, folderClient({ upsertToolMeta }), {
+    renderWithProviders(<AgentsPage search={{}} />, folderClient({ upsertToolMeta }), {
       projection: fullProjection(),
     });
 
@@ -308,7 +316,9 @@ describe('AgentsPage folders', () => {
   });
 
   it('offers the folder actions to a writer', async () => {
-    renderWithProviders(<AgentsPage />, folderClient(), { projection: fullProjection() });
+    renderWithProviders(<AgentsPage search={{}} />, folderClient(), {
+      projection: fullProjection(),
+    });
 
     expect(await screen.findByRole('button', { name: 'Rename folder Agents' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Move folder Agents' })).toBeInTheDocument();
@@ -316,7 +326,7 @@ describe('AgentsPage folders', () => {
   });
 
   it('gives a read-only caller the folders without any filing action', async () => {
-    renderWithProviders(<AgentsPage />, folderClient(), {
+    renderWithProviders(<AgentsPage search={{}} />, folderClient(), {
       projection: scopedProjection({
         routes: [
           { path: '/api/agents', methods: ['GET'] },
@@ -332,7 +342,7 @@ describe('AgentsPage folders', () => {
   });
 
   it('offers a caller who reaches only the tool edit route filing, but no folder action', async () => {
-    renderWithProviders(<AgentsPage />, folderClient(), {
+    renderWithProviders(<AgentsPage search={{}} />, folderClient(), {
       projection: scopedProjection({
         routes: [
           { path: '/api/agents', methods: ['GET'] },
@@ -359,7 +369,7 @@ describe('AgentsPage folders', () => {
         }),
       ),
     );
-    renderWithProviders(<AgentsPage />, folderClient({ upsertToolMeta }), {
+    renderWithProviders(<AgentsPage search={{}} />, folderClient({ upsertToolMeta }), {
       projection: fullProjection(),
     });
 
@@ -383,7 +393,7 @@ describe('AgentsPage folders', () => {
 
   it('does not tell a read-only caller to move an agent into an empty folder', async () => {
     const user = userEvent.setup({ delay: null });
-    renderWithProviders(<AgentsPage />, folderClient(), {
+    renderWithProviders(<AgentsPage search={{}} />, folderClient(), {
       projection: scopedProjection({
         routes: [
           { path: '/api/agents', methods: ['GET'] },
@@ -400,7 +410,9 @@ describe('AgentsPage folders', () => {
 
   it('tells a writer how to fill an empty folder', async () => {
     const user = userEvent.setup({ delay: null });
-    renderWithProviders(<AgentsPage />, folderClient(), { projection: fullProjection() });
+    renderWithProviders(<AgentsPage search={{}} />, folderClient(), {
+      projection: fullProjection(),
+    });
 
     await user.click(await screen.findByRole('button', { name: 'Fresh' }));
     expect(
@@ -411,7 +423,7 @@ describe('AgentsPage folders', () => {
   it('shows the authored agent active version', async () => {
     const user = userEvent.setup({ delay: null });
     renderWithProviders(
-      <AgentsPage />,
+      <AgentsPage search={{}} />,
       folderClient({
         listPresets: () =>
           Promise.resolve([
@@ -429,9 +441,9 @@ describe('AgentsPage folders', () => {
     expect(within(row).getAllByRole('cell')[versionColumn]).toHaveTextContent('3');
   });
 
-  it('shows the whole-screen empty state when no agent exists, even with folders', async () => {
+  it('shows the no-agents state above the folders, which keep their actions', async () => {
     renderWithProviders(
-      <AgentsPage />,
+      <AgentsPage search={{}} />,
       folderClient({
         listAgents: listOf(),
         listSpecRunnableAgents: listOf(),
@@ -440,12 +452,13 @@ describe('AgentsPage folders', () => {
     );
 
     expect(await screen.findByText('No agents registered')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Fresh' })).toBeNull();
+    expect(await screen.findByRole('button', { name: 'Fresh' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete folder Fresh' })).toBeInTheDocument();
   });
 
   it('states a failed overlay read loudly and still lists every agent at the root', async () => {
     renderWithProviders(
-      <AgentsPage />,
+      <AgentsPage search={{}} />,
       folderClient({ listToolMeta: () => Promise.reject(new Error('overlay store unreachable')) }),
       { projection: fullProjection() },
     );

@@ -1,10 +1,12 @@
 /**
  * The delete-preset confirm on its own: the consequence copy for a live preset, a
- * quarantined record and a stored row no read could classify, and a refused delete
- * whose body names holders — its first line above the list, Delete held disabled.
+ * quarantined record and a stored row no read could classify, a refused delete
+ * whose body names holders — its first line above the list, Delete held disabled —
+ * and the shared tool overlay refreshed after a delete.
  */
 import { ApiError } from '@tai42/api-client';
-import { screen, within } from '@testing-library/react';
+import { toolMetaKey } from '@tai42/studio-sdk';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -67,5 +69,33 @@ describe('DeletePresetDialog', () => {
     expect(screen.getByRole('link', { name: "hook 'h1'" })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled();
     expect(onDeleted).not.toHaveBeenCalled();
+  });
+
+  it('refreshes the shared tool overlay after a delete, so every screen drops the rows', async () => {
+    const user = userEvent.setup({ delay: null });
+    const deletePreset = vi.fn().mockResolvedValue({ name: 'paris_weather', deleted: true });
+    const onDeleted = vi.fn();
+    const { queryClient } = renderWithProviders(
+      <DeletePresetDialog
+        name="paris_weather"
+        conflicted={false}
+        onClose={vi.fn()}
+        onDeleted={onDeleted}
+      />,
+      {
+        client: { getPresetReferees: vi.fn(noHolders), deletePreset },
+        projection: fullProjection(),
+      },
+    );
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    await clickWhenInteractable(user, await screen.findByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => {
+      expect(onDeleted).toHaveBeenCalled();
+    });
+    expect(deletePreset).toHaveBeenCalledWith('paris_weather');
+    // A delete clears the removed tools' overlay rows (folder, tags, display name).
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: toolMetaKey });
   });
 });

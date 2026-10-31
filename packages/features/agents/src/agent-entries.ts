@@ -44,3 +44,8 @@ export function agentEntries(
   }
   return entries;
 }
+
+/** An entry's description: its agent's for a registered agent, its preset's for an authored one. */
+export function entryDescription(entry: AgentEntry): string {
+  return entry.kind === 'registered' ? entry.agent.description : entry.preset.description;
+}

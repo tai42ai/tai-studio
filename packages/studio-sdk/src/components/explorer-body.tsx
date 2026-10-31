@@ -1,6 +1,7 @@
 /**
  * The explorer's directory body: the empty-state ladder, the card grid and the
- * scrolling table (folders sorted above items in both), and the page footer. The
+ * scrolling table (folders sorted above items in both), and the page footer. When no
+ * item exists anywhere, the `empty` state leads and the folders still draw below it. The
  * pagination MATH lives in `ExplorerView`; this renders the result.
  */
 import type { ReactNode } from 'react';
@@ -113,6 +114,8 @@ function ExplorerPager({
 
 export interface ExplorerBodyProps<T> {
   readonly hasEntries: boolean;
+  /** No item exists in any folder: the `empty` state leads, above any folder entries. */
+  readonly noItems: boolean;
   /** Items in the current folder before filtering, so the empty ladder can tell
    *  "filter emptied it" (>0 → no-match) from "genuinely empty". */
   readonly inFolderCount: number;
@@ -206,6 +209,20 @@ function RowEntry<T>(
 }
 
 export function ExplorerBody<T>(props: ExplorerBodyProps<T>): ReactNode {
+  const { noItems, emptyStates } = props;
+  if (!noItems) return <ExplorerDirectory {...props} />;
+  // No item anywhere: say so first, and still draw the folders here, so their actions
+  // stay in reach.
+  return (
+    <>
+      <EmptyState {...emptyStates.empty} />
+      {props.hasEntries ? <ExplorerDirectory {...props} /> : null}
+    </>
+  );
+}
+
+/** The current folder's entries, or the ladder's state when it draws none. */
+function ExplorerDirectory<T>(props: ExplorerBodyProps<T>): ReactNode {
   const { hasEntries, inFolderCount, emptyStates, viewMode, label, columns, pageEntries, pager } =
     props;
 

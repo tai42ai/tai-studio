@@ -56,7 +56,13 @@ function buildWorkbenchRoutes(authedLayout: AuthedLayoutRoute) {
   const agentsRoute = createRoute({
     getParentRoute: () => authedLayout,
     path: '/agents',
-    component: (): ReactNode => <AgentsPage />,
+    validateSearch: (search: Record<string, unknown>): RouteSearch<'agents'> => ({
+      tags: parseTags(search.tags),
+      q: typeof search.q === 'string' ? search.q : undefined,
+    }),
+    component: function AgentsRoute(): ReactNode {
+      return <AgentsPage search={useSearch({ from: '/authed/agents' })} />;
+    },
   });
 
   const presetsRoute = createRoute({
@@ -65,6 +71,8 @@ function buildWorkbenchRoutes(authedLayout: AuthedLayoutRoute) {
     validateSearch: (search: Record<string, unknown>): RouteSearch<'presets'> => ({
       preset: typeof search.preset === 'string' ? search.preset : undefined,
       version: parseNumber(search.version),
+      tags: parseTags(search.tags),
+      q: typeof search.q === 'string' ? search.q : undefined,
     }),
     component: function PresetsRoute(): ReactNode {
       return <PresetsPage search={useSearch({ from: '/authed/presets' })} />;

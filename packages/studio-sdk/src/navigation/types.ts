@@ -23,9 +23,11 @@ import type { ConversationDeliveryStatus, ReferenceHolder } from '@tai42/api-cli
 export interface RouteSearchByToken {
   login: Record<string, never>;
   tools: { tool?: string; tags?: string[]; q?: string };
-  agents: Record<string, never>;
-  // `preset` opens one preset; `version` marks one row of its version history.
-  presets: { preset?: string; version?: number };
+  // `tags` and `q` filter the agents explorer, as on tools.
+  agents: { tags?: string[]; q?: string };
+  // `preset` opens one preset; `version` marks one row of its version history;
+  // `tags` and `q` filter the presets explorer, as on tools.
+  presets: { preset?: string; version?: number; tags?: string[]; q?: string };
   // The states surface: `state` opens one state, `tab` picks its section, and
   // `subject` (`<kind>:<key>`, split on the FIRST `:`, key URL-encoded) with `target`
   // (`<target_kind>:<target_name>`, same split rule) together address one subject's

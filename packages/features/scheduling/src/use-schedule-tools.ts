@@ -5,11 +5,17 @@
  * the picker never offers a tool the create door cannot schedule.
  */
 import type { ToolTagEntry } from '@tai42/api-client';
-import { hiddenToolNames, toolBadgesByName, useApi, useToolDisplayNames } from '@tai42/studio-sdk';
+import {
+  hiddenToolNames,
+  toolBadgesByName,
+  toolMetaKey,
+  useApi,
+  useToolDisplayNames,
+} from '@tai42/studio-sdk';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { scheduleToolMetaKey, scheduleToolTagsKey } from './keys';
+import { scheduleToolTagsKey } from './keys';
 
 /** The tools the picker offers: the tag rows the server serves as `schedulable`, in order. */
 export function pickableToolNames(rows: readonly ToolTagEntry[]): string[] {
@@ -25,7 +31,7 @@ export function useScheduleTools() {
   const displayNames = useToolDisplayNames();
 
   const tagsQuery = useQuery({ queryKey: scheduleToolTagsKey, queryFn: () => api.listToolTags() });
-  const metaQuery = useQuery({ queryKey: scheduleToolMetaKey, queryFn: () => api.listToolMeta() });
+  const metaQuery = useQuery({ queryKey: toolMetaKey, queryFn: () => api.listToolMeta() });
 
   const toolsQuery = useQuery({
     queryKey: scheduleToolTagsKey,

@@ -416,4 +416,189 @@ describe('SearchableSelect', () => {
     expect(screen.getByRole('dialog', { name: 'Letter' })).toBeInTheDocument();
     expect(screen.getByRole('listbox', { name: 'Letter' })).toBeInTheDocument();
   });
+
+  it('leaves the popup on Tab and moves focus to the control after the trigger', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <button type="button">Before</button>
+        <Controlled />
+        <button type="button">After</button>
+      </>,
+    );
+    await user.click(trigger());
+    expect(search()).toHaveFocus();
+
+    await user.tab();
+
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'After' })).toHaveFocus();
+  });
+
+  it('leaves the popup on Shift+Tab and moves focus to the control before the trigger', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <button type="button">Before</button>
+        <Controlled />
+        <button type="button">After</button>
+      </>,
+    );
+    await user.click(trigger());
+
+    await user.tab({ shift: true });
+
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Before' })).toHaveFocus();
+  });
+
+  it('leaves the value as it was when Tab leaves the popup', async () => {
+    const onValueChange = vi.fn();
+    const user = userEvent.setup();
+    render(<Controlled initial="a" onValueChange={onValueChange} />);
+    await user.click(trigger());
+    await user.keyboard('{ArrowDown}');
+
+    await user.tab();
+
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(trigger()).toHaveTextContent('Alpha');
+  });
+
+  it('moves the highlight to the first and last choosable option on Home and End', async () => {
+    const user = userEvent.setup();
+    render(<Controlled initial="c" />);
+    await user.click(trigger());
+
+    await user.keyboard('{End}');
+    expect(screen.getByRole('option', { name: 'Alphabet' })).toHaveAttribute('data-highlighted');
+
+    await user.keyboard('{Home}');
+    expect(screen.getByRole('option', { name: 'Alpha' })).toHaveAttribute('data-highlighted');
+  });
+
+  describe('a new query over a long list scrolled far down', () => {
+    /**
+     * Open a 200-option list holding `value`, with the listbox scrolled far down and
+     * every `scrollIntoView` recorded from here on.
+     */
+    function openScrolledList(value: string) {
+      const many = Array.from({ length: 200 }, (_, index) => ({
+        value: `tool_${String(index)}`,
+        label: `Tool ${String(index)}`,
+      }));
+      const scrolled: Element[] = [];
+      const scrollIntoView = vi
+        .spyOn(Element.prototype, 'scrollIntoView')
+        .mockImplementation(function record(this: Element) {
+          scrolled.push(this);
+        });
+      render(
+        <SearchableSelect
+          aria-label="Letter"
+          searchLabel="Search letters"
+          options={many}
+          value={value}
+          onValueChange={vi.fn()}
+        />,
+      );
+      fireEvent.keyDown(trigger(), { key: 'ArrowDown' });
+      const list = screen.getByRole('listbox');
+      let scrollTop = 4000;
+      Object.defineProperty(list, 'scrollTop', {
+        configurable: true,
+        get: () => scrollTop,
+        set: (next: number) => {
+          scrollTop = next;
+        },
+      });
+      return {
+        scrolled,
+        scrollTop: () => scrollTop,
+        type: (query: string) => {
+          scrolled.length = 0;
+          act(() => {
+            fireEvent.change(search(), { target: { value: query } });
+          });
+        },
+        restore: () => {
+          scrollIntoView.mockRestore();
+        },
+      };
+    }
+
+    function expectFirstMatchShown(
+      list: ReturnType<typeof openScrolledList>,
+      firstLabel: string,
+    ): void {
+      const first = screen.getByRole('option', { name: firstLabel });
+      expect(search()).toHaveAttribute('aria-activedescendant', first.id);
+      expect(first).toHaveAttribute('data-highlighted');
+      expect(list.scrollTop()).toBe(0);
+      expect(list.scrolled).toContain(first);
+    }
+
+    it('highlights the first match from the top when the query filters the highlight away', () => {
+      const list = openScrolledList('tool_180');
+      list.type('tool 2');
+      expectFirstMatchShown(list, 'Tool 2');
+      list.restore();
+    });
+
+    it('highlights the first match from the top even when the old highlight still matches', () => {
+      const list = openScrolledList('tool_180');
+      list.type('1');
+      expectFirstMatchShown(list, 'Tool 1');
+      expect(screen.getByRole('option', { name: 'Tool 180' })).not.toHaveAttribute(
+        'data-highlighted',
+      );
+      list.restore();
+    });
+
+    it('highlights the first match after the keyboard moved the highlight far down', () => {
+      const list = openScrolledList('');
+      act(() => {
+        fireEvent.keyDown(search(), { key: 'End' });
+      });
+      expect(screen.getByRole('option', { name: 'Tool 199' })).toHaveAttribute('data-highlighted');
+      list.type('1');
+      expectFirstMatchShown(list, 'Tool 1');
+      list.restore();
+    });
+
+    it('highlights the first match after the pointer moved the highlight far down', () => {
+      const list = openScrolledList('');
+      fireEvent.pointerMove(screen.getByRole('option', { name: 'Tool 180' }));
+      expect(screen.getByRole('option', { name: 'Tool 180' })).toHaveAttribute('data-highlighted');
+      list.type('1');
+      expectFirstMatchShown(list, 'Tool 1');
+      list.restore();
+    });
+  });
+
+  it('draws an option description under its label and finds the option by it', () => {
+    render(
+      <SearchableSelect
+        aria-label="Letter"
+        searchLabel="Search letters"
+        options={[
+          { value: 'a', label: 'Alpha', description: 'Sends a greeting' },
+          { value: 'c', label: 'Gamma' },
+        ]}
+        value=""
+        onValueChange={vi.fn()}
+      />,
+    );
+    fireEvent.keyDown(trigger(), { key: 'ArrowDown' });
+    expect(screen.getByRole('option', { name: /Alpha/ })).toHaveAccessibleDescription(
+      'Sends a greeting',
+    );
+
+    act(() => {
+      fireEvent.change(search(), { target: { value: 'GREETING' } });
+    });
+
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+    expect(screen.getByRole('option', { name: /Alpha/ })).toBeInTheDocument();
+  });
 });

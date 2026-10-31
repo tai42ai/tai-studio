@@ -5,8 +5,8 @@
  * `deleteFolder`).
  *
  * The SDK owns no query cache, so every write takes the screen's
- * `onFoldersChanged`: the screen re-reads the overlay under its own key, and the
- * write resolves only after that refresh, so the tree on screen is never stale when
+ * `onFoldersChanged`: the screen re-reads the overlay under the shared `toolMetaKey`,
+ * and the write resolves only after that refresh, so the tree on screen is never stale when
  * a dialog closes. Each dialog owns its own pending and error state, so a failure on
  * one folder never bleeds onto another, and every failure is shown in its dialog.
  *

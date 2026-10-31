@@ -11,7 +11,13 @@
  * labelling read decorates the chosen base, and the base-schema read needs a base by
  * construction — so the empty form never queries, nor errors on, either of them.
  */
-import { hiddenToolNames, toolBadgesByName, useApi, useToolDisplayNames } from '@tai42/studio-sdk';
+import {
+  hiddenToolNames,
+  toolBadgesByName,
+  toolMetaKey,
+  useApi,
+  useToolDisplayNames,
+} from '@tai42/studio-sdk';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
@@ -19,7 +25,6 @@ import {
   presetAgentsKey,
   presetSchemaKey,
   presetsListKey,
-  presetToolMetaKey,
   presetToolsKey,
   presetToolTagsKey,
 } from './keys';
@@ -41,7 +46,7 @@ export function usePresetToolCatalog(base: string | null) {
   const presetsQuery = useQuery({ queryKey: presetsListKey, queryFn: () => api.listPresets() });
   const tagsQuery = useQuery({ queryKey: presetToolTagsKey, queryFn: () => api.listToolTags() });
   const toolMetaQuery = useQuery({
-    queryKey: presetToolMetaKey,
+    queryKey: toolMetaKey,
     queryFn: () => api.listToolMeta(),
   });
   // ALL agents (not just spec-runnable) — the picker labels any agent run tool so an

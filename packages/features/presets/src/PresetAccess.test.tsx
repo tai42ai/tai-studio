@@ -72,7 +72,7 @@ describe('PresetsList access', () => {
   });
 
   it('withholds Create and says why when the projection lacks POST /api/presets', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       client: listClient(),
       projection: scoped([{ path: '/api/presets', methods: ['GET'] }]),
     });
@@ -81,7 +81,7 @@ describe('PresetsList access', () => {
   });
 
   it('offers Create with no status line on a full projection', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       client: listClient(),
       projection: fullProjection(),
     });
@@ -178,7 +178,7 @@ describe('the stored-preset fault view', () => {
     "Deleting preset 'broken' is outside your access — it needs write access to presets.";
 
   it('the list offers the delete of the unreadable row, with no Retry', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       client: { listPresets: vi.fn().mockRejectedValue(faultError('broken')) },
       projection: fullProjection(),
     });
@@ -222,7 +222,7 @@ describe('the stored-preset fault view', () => {
 
   it('keeps the selection when the faulted row is another preset', async () => {
     const user = userEvent.setup({ delay: null });
-    const { navigate } = renderWithProviders(<PresetsList selected="paris_weather" />, {
+    const { navigate } = renderWithProviders(<PresetsList search={{ preset: 'paris_weather' }} />, {
       client: {
         listPresets: vi.fn().mockRejectedValue(faultError('broken')),
         getPresetReferees: vi.fn().mockResolvedValue({ action: 'delete', holders: [] }),
@@ -240,7 +240,7 @@ describe('the stored-preset fault view', () => {
   });
 
   it('says the delete is outside the access on a ready projection without the grant', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       client: { listPresets: vi.fn().mockRejectedValue(faultError('broken')) },
       projection: scoped([{ path: '/api/presets', methods: ['GET'] }]),
     });
@@ -254,7 +254,7 @@ describe('the stored-preset fault view', () => {
     ['loading', undefined],
     ['failed', new Error('me read failed')],
   ])('draws neither the delete nor the line while the projection is %s', async (_, projection) => {
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       client: { listPresets: vi.fn().mockRejectedValue(faultError('broken')) },
       projection,
     });
@@ -266,7 +266,7 @@ describe('the stored-preset fault view', () => {
   });
 
   it('keeps the plain error with Retry for any other read failure', async () => {
-    renderWithProviders(<PresetsList selected={undefined} />, {
+    renderWithProviders(<PresetsList search={{}} />, {
       client: { listPresets: vi.fn().mockRejectedValue(new ApiError('boom', 500)) },
       projection: fullProjection(),
     });

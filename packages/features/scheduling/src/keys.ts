@@ -17,6 +17,3 @@ export const serverDateTimeKey = ['schedules', 'server-datetime'] as const;
 
 /** Native tool tags, visibility and `schedulable`: the add dialog's `ToolPicker` source. */
 export const scheduleToolTagsKey = ['schedules', 'tool-tags'] as const;
-
-/** The tool_meta overlay, for the picker's effective-hidden exclusion. */
-export const scheduleToolMetaKey = ['schedules', 'tool-meta'] as const;

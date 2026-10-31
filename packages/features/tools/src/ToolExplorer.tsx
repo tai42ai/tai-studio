@@ -1,14 +1,14 @@
 /**
- * The tools explorer body: the empty-catalog prompt, or the folder-aware
- * {@link ExplorerView} of the visible tools (a hidden tool is excluded outright —
- * unhiding is a CLI/API operation). A tags/overlay side-read failure renders a loud
+ * The tools explorer body: the folder-aware {@link ExplorerView} of the visible tools
+ * (a hidden tool is excluded outright — unhiding is a CLI/API operation). With no
+ * visible tool it leads with the empty-catalog prompt, or the every-tool-hidden note,
+ * above whatever folders exist. A tags/overlay side-read failure renders a loud
  * notice above the list and suppresses the tag chips, never a filter built from
  * partial data.
  */
 import {
   AppLink,
   Card,
-  EmptyState,
   errorMessage,
   ErrorState,
   type ExplorerColumn,
@@ -38,11 +38,24 @@ const TOOLS_VIEW_SURFACE = 'tools';
 /** The tools table's single column; folder rows span it. */
 const COLUMNS: ExplorerColumn[] = [{ key: 'name', header: 'Name' }];
 
-const EMPTY_STATES: ExplorerEmptyStates = {
-  empty: {
-    title: 'No visible tools',
-    description: 'Every installed tool is hidden. Unhide one with the tai tool-meta command.',
-  },
+/** No tool is installed: point the reader at the marketplace. */
+const NO_TOOLS: ExplorerEmptyStates['empty'] = {
+  title: 'No tools available',
+  description: 'Tools arrive as marketplace plugins — install one to run it here.',
+  action: (
+    <AppLink to="marketplace" search={{ kind: 'tool' }} className="tai-btn tai-btn-secondary">
+      Browse marketplace
+    </AppLink>
+  ),
+};
+
+/** Tools are installed, but every one is hidden. */
+const NO_VISIBLE_TOOLS: ExplorerEmptyStates['empty'] = {
+  title: 'No visible tools',
+  description: 'Every installed tool is hidden. Unhide one with the tai tool-meta command.',
+};
+
+const FOLDER_EMPTY_STATES: Omit<ExplorerEmptyStates, 'empty'> = {
   emptyFolder: {
     title: 'This folder is empty',
     description: 'No tools or subfolders are filed here.',
@@ -87,20 +100,6 @@ export function ToolExplorer({
   renderFolderActions,
 }: ToolExplorerProps): ReactNode {
   const navigate = useAppNavigate();
-
-  if (allViews.length === 0) {
-    return (
-      <EmptyState
-        title="No tools available"
-        description="Tools arrive as marketplace plugins — install one to run it here."
-        action={
-          <AppLink to="marketplace" search={{ kind: 'tool' }} className="tai-btn tai-btn-secondary">
-            Browse marketplace
-          </AppLink>
-        }
-      />
-    );
-  }
 
   const visibleViews = allViews.filter((view) => !view.hidden);
   const renderTool = (view: ToolView): ReactNode => (
@@ -167,7 +166,10 @@ export function ToolExplorer({
                 maxVisibleTags: MAX_VISIBLE_TAG_CHIPS,
               }
         }
-        emptyStates={EMPTY_STATES}
+        emptyStates={{
+          empty: allViews.length === 0 ? NO_TOOLS : NO_VISIBLE_TOOLS,
+          ...FOLDER_EMPTY_STATES,
+        }}
       />
     </>
   );

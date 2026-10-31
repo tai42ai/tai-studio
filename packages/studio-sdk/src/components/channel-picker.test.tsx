@@ -87,19 +87,34 @@ describe('ChannelPicker', () => {
     expect(screen.queryByRole('combobox')).toBeNull();
   });
 
-  it('refused: the no-grant note, no Retry and no ErrorState', () => {
+  it('refused: a typed entry named by the field, described by the no-list note', () => {
     renderPicker(stubQuery(forbiddenRead));
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'This session cannot list channels. Picking one needs read access to GET /api/channels; ask an administrator to grant it.',
+    const input = screen.getByRole('textbox', { name: 'Channel' });
+    expect(input).toHaveValue('');
+    // The note comes first; the field's own description follows it.
+    expect(input).toHaveAccessibleDescription(
+      expect.stringMatching(
+        /^This session cannot list channels, so type the channel's exact name\. Saving checks that the channel is installed\./,
+      ),
     );
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByRole('button', { name: /Retry/ })).toBeNull();
+    expect(screen.queryByRole('combobox')).toBeNull();
   });
 
-  it('refused with a stored value: the sole unflagged option, the error under it', () => {
+  it('refused: hands the typed name, trimmed, to onValueChange on blur', async () => {
+    const user = userEvent.setup();
+    const { onValueChange } = renderPicker(stubQuery(forbiddenRead));
+    await user.type(screen.getByRole('textbox', { name: 'Channel' }), '  typed_channel ');
+    expect(onValueChange).not.toHaveBeenCalled();
+    await user.tab();
+    expect(onValueChange).toHaveBeenCalledExactlyOnceWith('typed_channel');
+  });
+
+  it('refused with a stored value: the typed entry holds it, unflagged', () => {
     renderPicker(stubQuery(forbiddenRead), 'sms', REQUIRED);
-    expect(screen.getByRole('combobox', { name: 'Channel' })).toHaveTextContent('sms');
-    expect(screen.queryByText(/not installed/)).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Channel' })).toHaveValue('sms');
+    expect(screen.queryByText(/not registered|not installed/)).toBeNull();
     expect(screen.getByText(REQUIRED)).toBeInTheDocument();
   });
 

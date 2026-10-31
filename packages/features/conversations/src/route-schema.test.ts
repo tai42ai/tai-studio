@@ -7,11 +7,11 @@
 import { validateAgainstSchema } from '@tai42/studio-sdk';
 import { describe, expect, it } from 'vitest';
 
+import { API_VARIANT, CHANNEL_VARIANT, TEMPLATED_TEXT } from './route-document';
+import { requiredFieldErrors } from './route-form-errors';
 import {
   blankRouteValue,
   formValueToBody,
-  requiredFieldErrors,
-  routeFormErrors,
   routeFormSchema,
   type RouteFormValue,
   routeSettingsSchema,
@@ -81,27 +81,39 @@ describe('routeFormSchema', () => {
     expect(variableNames('reply_expr')).toEqual(['turn', 'asks', 'parked']);
   });
 
-  it('documents the carry keys the deliver: all payload adds', () => {
-    const tool = (routeFormSchema().properties?.target?.oneOf ?? []).find(
-      (v) => v.properties?.target_kind?.const === 'tool',
-    );
-    const annotation = tool?.properties?.start_expr?.['x-tai42-expression'] as
-      { readonly keys?: readonly { readonly name: string; readonly gloss: string }[] } | undefined;
-    const keys = annotation?.keys ?? [];
-    const byName = new Map(keys.map((key) => [key.name, key.gloss]));
-
-    expect(byName.get('messages')).toBe(
-      'under deliver: all, every message this turn carries, oldest first — each {id, text, accepted_at} plus form, attachments and location when present',
-    );
-    expect(byName.get('superseded')).toBe(
-      "under deliver: all, the earlier messages this turn's lead superseded or carried, oldest first — each in the same shape as messages, present only when non-empty",
-    );
+  it("draws each jq field as the contract's templated text, with the contract's own annotation", () => {
+    const schema = routeFormSchema();
+    const variants = schema.properties?.target?.oneOf ?? [];
+    expect(schema.$defs?.TemplatedText).toBe(TEMPLATED_TEXT);
+    for (const [kind, contract] of [
+      ['tool', API_VARIANT],
+      ['agent', CHANNEL_VARIANT],
+    ] as const) {
+      const variant = variants.find((v) => v.properties?.target_kind?.const === kind);
+      for (const field of [
+        'start_expr',
+        'reply_expr',
+        'cancel_expr',
+        'resume_expr',
+        'extras_expr',
+      ] as const) {
+        expect(variant?.properties?.[field]).toMatchObject({
+          anyOf: contract.properties[field].anyOf,
+          'x-tai42-expression': contract.properties[field]['x-tai42-expression'],
+        });
+      }
+    }
   });
 
   it('accepts a fully-populated tool + channel value under its own schema', () => {
     const value: RouteFormValue = {
       route_name: 'events',
-      target: { target_kind: 'tool', target_name: 'lookup', start_expr: '.', reply_expr: '.' },
+      target: {
+        target_kind: 'tool',
+        target_name: 'lookup',
+        start_expr: { content: '.' },
+        reply_expr: { content: '.' },
+      },
       delivery: { door: 'channel', channel: 'whatsapp', our_identity: '+1' },
       execution_key: 'svc',
       initial_mode: 'agent',
@@ -144,8 +156,8 @@ describe('routeToFormValue', () => {
       target: {
         target_kind: 'tool',
         target_name: 'lookup',
-        start_expr: '.message',
-        reply_expr: '.result',
+        start_expr: { content: '.message' },
+        reply_expr: { content: '.result' },
       },
       delivery: { door: 'api', callback_url: 'https://x/y' },
     });
@@ -172,6 +184,20 @@ describe('routeToFormValue', () => {
   });
 });
 
+describe('stored door expressions', () => {
+  it('round-trips a stored-template expression and its kwargs through an edit unchanged', () => {
+    const stored = { id: 'route-start', kwargs: { greeting: 'hi' } };
+    const inline = { content: '.result', kwargs: { limit: 3 } };
+    const route = makeRoute({ start_expr: stored, reply_expr: inline, cancel_expr: null });
+
+    const body = formValueToBody(routeToFormValue(route));
+
+    expect(body.start_expr).toEqual(stored);
+    expect(body.reply_expr).toEqual(inline);
+    expect(body.cancel_expr).toBeNull();
+  });
+});
+
 describe('formValueToBody', () => {
   it('flattens a tool + channel value, carrying the door jqs and nulling the api-only field', () => {
     const body = formValueToBody({
@@ -179,9 +205,9 @@ describe('formValueToBody', () => {
       target: {
         target_kind: 'tool',
         target_name: 'lookup',
-        start_expr: '.a',
-        reply_expr: '.b',
-        cancel_expr: '$parked[].id',
+        start_expr: { content: '.a' },
+        reply_expr: { content: '.b' },
+        cancel_expr: { content: '$parked[].id' },
       },
       delivery: { door: 'channel', channel: 'whatsapp', our_identity: '+1' },
       execution_key: 'svc',
@@ -213,7 +239,11 @@ describe('formValueToBody', () => {
   it('carries the door jqs on an agent target too, nulling the blank ones', () => {
     const body = formValueToBody({
       route_name: 'acct',
-      target: { target_kind: 'agent', target_name: 'assistant', start_expr: '{ q: .message }' },
+      target: {
+        target_kind: 'agent',
+        target_name: 'assistant',
+        start_expr: { content: '{ q: .message }' },
+      },
       delivery: { door: 'api', callback_url: 'https://x/y' },
       execution_key: 'svc',
       initial_mode: 'manual',
@@ -372,135 +402,6 @@ describe('overlap policy', () => {
     expect(settleError({ settle_seconds: 0 })).toBeUndefined();
     expect(settleError({ running: 'continue', deliver: 'one' })).toBeUndefined();
     expect(settleError(undefined)).toBeUndefined();
-  });
-});
-
-describe('requiredFieldErrors', () => {
-  it('flags the blank required identity fields on a create', () => {
-    const errors = requiredFieldErrors({ initial_mode: 'agent' }, false);
-    expect(errors.route_name).toBe('A route name is required.');
-    expect(errors.execution_key).toBe('An execution key is required.');
-  });
-
-  it('rejects a non-slug route name with the field text', () => {
-    expect(routeFormErrors(routeFormSchema(), { route_name: 'Bad Name' }, false).route_name).toBe(
-      'Use lowercase letters, digits and hyphens.',
-    );
-  });
-
-  it('skips the route-name check on edit (the name is read-only)', () => {
-    expect(requiredFieldErrors({ initial_mode: 'agent' }, true).route_name).toBeUndefined();
-  });
-
-  it('names the blank field per target kind and per door', () => {
-    const toolChannel = requiredFieldErrors(
-      {
-        route_name: 'ok',
-        execution_key: 'svc',
-        target: { target_kind: 'tool', target_name: '  ' },
-        delivery: { door: 'channel', channel: '', our_identity: '' },
-      },
-      false,
-    );
-    expect(toolChannel['target.target_name']).toBe('A tool name is required.');
-    expect(toolChannel['delivery.channel']).toBe('A channel is required.');
-    expect(toolChannel['delivery.our_identity']).toBe('An identity is required.');
-
-    const agentApi = requiredFieldErrors(
-      {
-        route_name: 'ok',
-        execution_key: 'svc',
-        target: { target_kind: 'agent', target_name: '' },
-        delivery: { door: 'api', callback_url: '' },
-      },
-      false,
-    );
-    expect(agentApi['target.target_name']).toBe('An agent name is required.');
-  });
-});
-
-describe('routeFormErrors', () => {
-  const apiRoute = (callback_url: string): RouteFormValue => ({
-    route_name: 'ok',
-    execution_key: 'svc',
-    target: { target_kind: 'agent', target_name: 'assistant' },
-    delivery: { door: 'api', callback_url },
-  });
-  const callbackError = (callback_url: string): string | undefined =>
-    routeFormErrors(routeFormSchema(), apiRoute(callback_url), false)['delivery.callback_url'];
-
-  it('accepts a poll-only api route, with no callback URL', () => {
-    expect(routeFormErrors(routeFormSchema(), apiRoute(''), false)).toEqual({});
-    expect(formValueToBody(apiRoute(''))).toMatchObject({ door: 'api', callback_url: null });
-  });
-
-  it('refuses a callback URL with a user name in-form, with the field text', () => {
-    expect(callbackError('https://user@host')).toBe(
-      'Must be an absolute https URL with no user name or password.',
-    );
-  });
-
-  it('refuses a non-https or relative callback URL and passes an absolute https one', () => {
-    const text = 'Must be an absolute https URL with no user name or password.';
-    expect(callbackError('http://sink.example/cb')).toBe(text);
-    expect(callbackError('sink.example/cb')).toBe(text);
-    expect(callbackError('https://sink.example/cb')).toBeUndefined();
-  });
-
-  it('refuses a channel name carrying a colon in-form and passes a clean one', () => {
-    const withChannel = (channel: string): string | undefined =>
-      routeFormErrors(
-        routeFormSchema(),
-        {
-          route_name: 'ok',
-          execution_key: 'svc',
-          target: { target_kind: 'agent', target_name: 'assistant' },
-          delivery: { door: 'channel', channel, our_identity: '+1' },
-        },
-        false,
-      )['delivery.channel'];
-    expect(withChannel('whats:app')).toBe('Use a ":"-free channel name.');
-    expect(withChannel('whatsapp')).toBeUndefined();
-  });
-
-  it('shows a reply text bound as its field text and accepts a blank reply', () => {
-    const withReply = (member: string, text: string): string | undefined =>
-      routeFormErrors(
-        routeFormSchema(),
-        { ...apiRoute('https://sink.example/cb'), reply_texts: { [member]: text } },
-        false,
-      )[`reply_texts.${member}`];
-    expect(withReply('error', 'x'.repeat(2001))).toBe(
-      'Enter the reply text (up to 2,000 characters).',
-    );
-    expect(withReply('pairing_code', 'x'.repeat(2001))).toBe(
-      'Enter the reply text (up to 2,000 characters).',
-    );
-    expect(withReply('error', '   ')).toBeUndefined();
-    expect(withReply('slow_down', 'One moment.')).toBeUndefined();
-  });
-
-  it('reads the route-name slug and the door rules from the contract document', () => {
-    const props = routeFormSchema().properties;
-    expect(props?.route_name?.pattern).toBe('^[a-z0-9-]+$');
-    const [api, channel] = props?.delivery?.oneOf ?? [];
-    expect(api?.required).toEqual(['door']);
-    expect(channel?.required).toEqual(['door', 'channel', 'our_identity']);
-    expect(props?.turns_per_hour_override).toMatchObject({ type: ['integer', 'null'], minimum: 1 });
-  });
-
-  it('returns no errors for a complete, valid value', () => {
-    expect(
-      requiredFieldErrors(
-        {
-          route_name: 'ok-1',
-          execution_key: 'svc',
-          target: { target_kind: 'tool', target_name: 'lookup' },
-          delivery: { door: 'channel', channel: 'sms', our_identity: '+1' },
-        },
-        false,
-      ),
-    ).toEqual({});
   });
 });
 

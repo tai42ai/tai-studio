@@ -1,15 +1,16 @@
 /**
  * The optional-subject sub-form shared by every form that keys a run's state to a
- * conversation subject (the add-schedule dialog and the tool run panel). A collapsible
- * block whose target / kind / key fields render only while expanded, so a form's default
- * (collapsed) shape sends no subject.
+ * conversation subject (the add-schedule dialog, the tool run panel and the hook form). A
+ * collapsible block whose target / kind / key fields render only while expanded, so a
+ * form's default (collapsed) shape sends no subject.
  *
  * Presentational and prop-driven, like {@link ExecutionKeyPicker}: the host feature owns
  * the conversation-targets query (the SDK holds no data-fetching library) and hands the
  * resolved `targetOptions` in. {@link useSubjectFields} owns the field state; the host
  * feature wraps it with its own targets query under its own query-key namespace. The
  * caption and the two placeholders are the only copy that differs between hosts, so they
- * are props.
+ * are props. The key is a plain text field by default; a host whose key is computed (an
+ * expression over an event, say) hands its own key field in instead.
  */
 import type { StateSubject } from '@tai42/api-client';
 import { type ReactNode, useState } from 'react';
@@ -86,40 +87,73 @@ export function useSubjectFields() {
   return { target, setTarget, kind, setKind, key, setKey, error, setError, open, setOpen };
 }
 
-export interface SubjectSectionProps {
+/** What every subject section takes, whatever its key field. */
+export interface SubjectSectionSharedProps {
   readonly open: boolean;
   readonly onToggle: () => void;
   readonly target: string;
   readonly onTargetChange: (value: string) => void;
   readonly kind: string;
   readonly onKindChange: (value: string) => void;
-  readonly subjectKey: string;
-  readonly onKeyChange: (value: string) => void;
   readonly error: string | null;
   readonly targetOptions: readonly SubjectTargetOption[];
   /** The block's descriptive caption, shown under the expanded header. */
   readonly caption: string;
   /** The target select's empty-choice placeholder. */
   readonly targetPlaceholder: string;
+}
+
+/** The TEXT key: the section draws a "Subject key" text field over `subjectKey`. */
+export interface SubjectSectionTextKeyProps extends SubjectSectionSharedProps {
+  readonly subjectKey: string;
+  readonly onKeyChange: (value: string) => void;
   /** The Subject key field's helper description. */
   readonly subjectKeyDescription: string;
 }
 
-export function SubjectSection({
-  open,
-  onToggle,
-  target,
-  onTargetChange,
-  kind,
-  onKindChange,
-  subjectKey,
-  onKeyChange,
-  error,
-  targetOptions,
-  caption,
-  targetPlaceholder,
-  subjectKeyDescription,
-}: SubjectSectionProps): ReactNode {
+/** The HOST'S key: the section draws `keyField` where the key goes, labelled by the host. */
+export interface SubjectSectionKeyFieldProps extends SubjectSectionSharedProps {
+  readonly keyField: ReactNode;
+}
+
+/** What `SubjectSection` accepts: exactly one of the two key shapes. */
+export type SubjectSectionProps =
+  | (SubjectSectionTextKeyProps & { readonly keyField?: undefined })
+  | (SubjectSectionKeyFieldProps & {
+      readonly subjectKey?: undefined;
+      readonly onKeyChange?: undefined;
+      readonly subjectKeyDescription?: undefined;
+    });
+
+function SubjectKeyField(props: SubjectSectionProps): ReactNode {
+  if (props.onKeyChange === undefined) return props.keyField;
+  const { subjectKey, onKeyChange, subjectKeyDescription } = props;
+  return (
+    <Field label="Subject key" description={subjectKeyDescription}>
+      <TextInput
+        value={subjectKey}
+        placeholder="e.g. a-42"
+        onChange={(event) => {
+          onKeyChange(event.target.value);
+        }}
+      />
+    </Field>
+  );
+}
+
+export function SubjectSection(props: SubjectSectionProps): ReactNode {
+  const {
+    open,
+    onToggle,
+    target,
+    onTargetChange,
+    kind,
+    onKindChange,
+    error,
+    targetOptions,
+    caption,
+    targetPlaceholder,
+  } = props;
   return (
     <div>
       <button
@@ -162,15 +196,7 @@ export function SubjectSection({
               }}
             />
           </Field>
-          <Field label="Subject key" description={subjectKeyDescription}>
-            <TextInput
-              value={subjectKey}
-              placeholder="e.g. a-42"
-              onChange={(event) => {
-                onKeyChange(event.target.value);
-              }}
-            />
-          </Field>
+          <SubjectKeyField {...props} />
           {error !== null ? (
             <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
               {error}

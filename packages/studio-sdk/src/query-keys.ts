@@ -14,6 +14,15 @@
 export const toolsListKey = ['tools'] as const;
 
 /**
+ * The tool_meta overlay (`GET /api/tool-meta`): the folder tree plus the per-tool
+ * display name, tags, folder and visibility rows. Every screen that files or labels
+ * tools by the overlay (tools, presets, agents, the schedule picker) reads it under
+ * this one key, and every overlay or folder write invalidates it, so a move made on
+ * one screen shows on every other without a reload.
+ */
+export const toolMetaKey = ['tool-meta'] as const;
+
+/**
  * The extension catalog (`GET /api/extensions`). The manifest feature keys its
  * loaded-extensions list on it; a tool's extension-combo save (in the tools feature)
  * invalidates it too — a cross-feature reference that must resolve to one

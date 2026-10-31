@@ -37,7 +37,27 @@ describe('ResultViewer', () => {
 
   it('shows an explicit empty state when the tool returned no value', () => {
     render(<ResultViewer result={undefined} />);
-    expect(screen.getByText('No result')).toBeInTheDocument();
+    expect(screen.getByText('Empty result')).toBeInTheDocument();
+    expect(screen.getByText('The tool returned no value.')).toBeInTheDocument();
+  });
+
+  it.each([
+    [null, 'null'],
+    ['', '""'],
+    [[], '[]'],
+    [{}, '{}'],
+  ])('says the result is empty, and what came back, for %j', (result, shown) => {
+    render(<ResultViewer result={result} />);
+    expect(screen.getByText('Empty result')).toBeInTheDocument();
+    expect(screen.getByText(`The tool returned an empty value: ${shown}.`)).toBeInTheDocument();
+  });
+
+  it('shows 0 and false as values, never as empty', () => {
+    const { rerender } = render(<ResultViewer result={0} />);
+    expect(screen.getByText('0')).toBeInTheDocument();
+    rerender(<ResultViewer result={false} />);
+    expect(screen.getByText('false')).toBeInTheDocument();
+    expect(screen.queryByText('Empty result')).toBeNull();
   });
 
   describe('media results', () => {

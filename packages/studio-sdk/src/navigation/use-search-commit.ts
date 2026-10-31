@@ -1,4 +1,4 @@
-import { type RefObject, useCallback, useEffect, useRef } from 'react';
+import { type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppNavigate } from './context';
 import type { RouteSearch, RouteToken } from './types';
@@ -81,4 +81,21 @@ export function useSearchCommit<T extends RouteToken>({
       el.removeEventListener('focusout', onFocusOut);
     };
   }, [commit, containerRef, containerMissingError, searchLabel]);
+}
+
+/**
+ * The live draft of a filter box whose committed value lives in the URL. The box edits
+ * the draft; {@link useSearchCommit} writes it to the URL on Enter or an edited blur.
+ * A committed value arriving from the URL (a deep link, back/forward, a commit made
+ * elsewhere) re-seeds the draft during render — React's adjust-state-on-prop-change
+ * pattern — so the box always shows what the URL now holds.
+ */
+export function useSearchDraft(committedValue: string): readonly [string, (value: string) => void] {
+  const [draft, setDraft] = useState(committedValue);
+  const [seed, setSeed] = useState(committedValue);
+  if (seed !== committedValue) {
+    setSeed(committedValue);
+    setDraft(committedValue);
+  }
+  return [draft, setDraft];
 }

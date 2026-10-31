@@ -1,13 +1,15 @@
 /**
  * `ToolPicker`'s tool select: a `SearchableSelect`, grouped by tag or flat, with the
  * option-label and grouping helpers it renders from. Its search matches the option
- * label, which carries both the display name and the raw name (`toolDisplayLabel`).
+ * label, which carries both the display name and the raw name (`toolDisplayLabel`),
+ * and the tool's description where the host supplies one.
  */
 import { type ReactNode, useMemo } from 'react';
 
 import { toolDisplayLabel } from '../hooks/useToolDisplayNames';
 import { SearchableSelect } from './searchable-select';
-import type { SelectGroup, SelectOption } from './select';
+import type { SearchableSelectGroup, SearchableSelectOption } from './searchable-select-model';
+import type { SelectOption } from './select';
 
 const NO_DISPLAY_NAMES: Readonly<Record<string, string>> = {};
 const UNTAGGED = 'Untagged';
@@ -32,13 +34,26 @@ function optionLabel(
   return agentToolNames?.has(name) === true ? `${base} (agent)` : base;
 }
 
+/** How a tool's option reads: its label sources and its description. */
+interface OptionTexts {
+  readonly displayNames: Readonly<Record<string, string>> | undefined;
+  readonly toolDescriptions: Readonly<Record<string, string>> | undefined;
+  readonly agentToolNames: ReadonlySet<string> | undefined;
+}
+
+/** The option for one tool name. */
+function toolOption(name: string, texts: OptionTexts): SearchableSelectOption {
+  const label = optionLabel(name, texts.displayNames, texts.agentToolNames);
+  const description = texts.toolDescriptions?.[name];
+  return description === undefined ? { value: name, label } : { value: name, label, description };
+}
+
 /** Build the grouped option clusters (sorted group labels, "Untagged" last). */
 function buildGroups(
   names: readonly string[],
   tagsByTool: Readonly<Record<string, readonly string[]>>,
-  displayNames: Readonly<Record<string, string>> | undefined,
-  agentToolNames: ReadonlySet<string> | undefined,
-): SelectGroup[] {
+  texts: OptionTexts,
+): SearchableSelectGroup[] {
   const byGroup = new Map<string, string[]>();
   for (const name of names) {
     const group = groupFor(name, tagsByTool);
@@ -54,10 +69,7 @@ function buildGroups(
     })
     .map(([label, groupNames]) => ({
       label,
-      options: groupNames.map((name) => ({
-        value: name,
-        label: optionLabel(name, displayNames, agentToolNames),
-      })),
+      options: groupNames.map((name) => toolOption(name, texts)),
     }));
 }
 
@@ -70,6 +82,7 @@ interface ToolSelectProps {
   readonly ariaLabel: string | undefined;
   readonly disabled: boolean | undefined;
   readonly displayNames: Readonly<Record<string, string>> | undefined;
+  readonly toolDescriptions: Readonly<Record<string, string>> | undefined;
   readonly agentToolNames: ReadonlySet<string> | undefined;
   /** An option drawn ahead of the list's own (a stored value the list does not carry). */
   readonly leading: SelectOption | undefined;
@@ -81,21 +94,19 @@ interface ToolSelectProps {
 function toolListing(
   filtered: readonly string[],
   tagsByTool: Readonly<Record<string, readonly string[]>> | undefined,
-  displayNames: Readonly<Record<string, string>> | undefined,
-  agentToolNames: ReadonlySet<string> | undefined,
+  texts: OptionTexts,
   leading: SelectOption | undefined,
-): { readonly groups: readonly SelectGroup[] } | { readonly options: readonly SelectOption[] } {
+):
+  | { readonly groups: readonly SearchableSelectGroup[] }
+  | { readonly options: readonly SearchableSelectOption[] } {
   if (tagsByTool !== undefined) {
-    const groups = buildGroups(filtered, tagsByTool, displayNames, agentToolNames);
+    const groups = buildGroups(filtered, tagsByTool, texts);
     return {
       groups:
         leading === undefined ? groups : [{ label: leading.label, options: [leading] }, ...groups],
     };
   }
-  const options = filtered.map((name) => ({
-    value: name,
-    label: optionLabel(name, displayNames, agentToolNames),
-  }));
+  const options = filtered.map((name) => toolOption(name, texts));
   return { options: leading === undefined ? options : [leading, ...options] };
 }
 
@@ -110,14 +121,21 @@ export function ToolSelect({
   ariaLabel,
   disabled,
   displayNames,
+  toolDescriptions,
   agentToolNames,
   leading,
   ariaDescribedBy,
 }: ToolSelectProps): ReactNode {
   // Memoised so a host re-render keeps the indexed options of an open list.
   const listing = useMemo(
-    () => toolListing(filtered, tagsByTool, displayNames, agentToolNames, leading),
-    [filtered, tagsByTool, displayNames, agentToolNames, leading],
+    () =>
+      toolListing(
+        filtered,
+        tagsByTool,
+        { displayNames, toolDescriptions, agentToolNames },
+        leading,
+      ),
+    [filtered, tagsByTool, displayNames, toolDescriptions, agentToolNames, leading],
   );
   const shared = {
     value: value ?? '',

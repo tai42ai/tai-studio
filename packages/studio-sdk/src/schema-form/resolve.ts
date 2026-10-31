@@ -50,12 +50,15 @@ export function isNullSchema(schema: JsonSchema): boolean {
   return schema.type === 'null';
 }
 
-/** The list of type tokens a schema declares, normalized to an array. */
+/**
+ * The list of type tokens a schema declares, normalized to an array. `type` names a set
+ * of types, so a token listed twice is read once.
+ */
 export function typeList(schema: JsonSchema): readonly JsonSchemaType[] {
   const type = schema.type;
   if (type === undefined) return [];
   if (typeof type === 'string') return [type];
-  return type;
+  return [...new Set(type)];
 }
 
 /**
@@ -98,17 +101,4 @@ export function variantTag(variant: JsonSchema, propertyName: string, root: Json
   const enumValues = propSchema.enum;
   if (enumValues?.length === 1) return enumValues[0];
   return undefined;
-}
-
-/** A human label for a union variant: its title, its tag, or a positional fallback. */
-export function variantLabel(
-  variant: JsonSchema,
-  index: number,
-  discriminatorTag: unknown,
-  root: JsonSchema,
-): string {
-  if (discriminatorTag !== undefined) return scalarLabel(discriminatorTag);
-  const resolved = resolveRef(variant, root);
-  if (typeof resolved.title === 'string' && resolved.title.length > 0) return resolved.title;
-  return `Option ${String(index + 1)}`;
 }

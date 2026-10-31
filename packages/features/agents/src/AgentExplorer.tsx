@@ -13,6 +13,9 @@
  * write; a caller who may file a tool gets a per-entry "Move". A
  * not-configured refusal of any overlay write withdraws them all, here and on every
  * other screen.
+ *
+ * The filter is the URL-backed one `useAgentsFilter` builds, the same as the tools
+ * screen's; filtering is one linear pass over the entries.
  */
 import type { AgentSummary } from '@tai42/api-client';
 import {
@@ -23,6 +26,7 @@ import {
   ExplorerView,
   FolderActionsMenu,
   MoveToFolderDialog,
+  type RouteSearch,
   Skeleton,
   useAppNavigate,
 } from '@tai42/studio-sdk';
@@ -32,36 +36,22 @@ import type { AgentEntry } from './agent-entries';
 import { AGENT_COLUMNS, AgentEntryCard, AgentEntryCells } from './AgentEntryView';
 import type { AuthoredRunTarget } from './authoring-types';
 import type { AgentCatalog } from './useAgentCatalog';
+import { useAgentsFilter } from './useAgentsFilter';
 
 /** The explorer's persisted list/card view key. */
 const AGENTS_VIEW_SURFACE = 'agents';
 
-export function AgentExplorer({
-  catalog,
-  onRun,
-  onRunAuthored,
-}: {
+interface AgentExplorerProps {
   readonly catalog: AgentCatalog;
+  /** The page's committed filter. */
+  readonly search: RouteSearch<'agents'>;
   readonly onRun: (agent: AgentSummary) => void;
   readonly onRunAuthored: (target: AuthoredRunTarget) => void;
-}): ReactNode {
-  const navigate = useAppNavigate();
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  const [moving, setMoving] = useState<AgentEntry | null>(null);
-  const {
-    agentsQuery,
-    presetsQuery,
-    metaQuery,
-    presetsFailed,
-    entries,
-    allFolders,
-    folders,
-    folderIdByTool,
-    overlayLoaded,
-    canFileTools,
-    onFoldersChanged,
-  } = catalog;
+}
 
+/** The registry read's loading and failure states, then the explorer over its agents. */
+export function AgentExplorer(props: AgentExplorerProps): ReactNode {
+  const { agentsQuery } = props.catalog;
   if (agentsQuery.isPending) {
     return (
       <div className="tai-stack" data-testid="agents-loading">
@@ -81,6 +71,34 @@ export function AgentExplorer({
       />
     );
   }
+  return <LoadedAgentExplorer {...props} />;
+}
+
+/** The explorer over a loaded registry, with its URL-backed filter. */
+function LoadedAgentExplorer({
+  catalog,
+  search,
+  onRun,
+  onRunAuthored,
+}: AgentExplorerProps): ReactNode {
+  const navigate = useAppNavigate();
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [moving, setMoving] = useState<AgentEntry | null>(null);
+  const {
+    presetsQuery,
+    metaQuery,
+    presetsFailed,
+    entries,
+    allFolders,
+    folders,
+    folderIdByTool,
+    tagsByTool,
+    overlayLoaded,
+    canFileTools,
+    onFoldersChanged,
+  } = catalog;
+
+  const filter = useAgentsFilter(search, tagsByTool, metaQuery.isSuccess);
 
   const run = (entry: AgentEntry): void => {
     if (entry.kind === 'registered') onRun(entry.agent);
@@ -93,7 +111,7 @@ export function AgentExplorer({
   });
 
   return (
-    <div className="tai-stack">
+    <div className="tai-stack" ref={filter.containerRef}>
       {presetsFailed ? (
         <ErrorState
           message={`Authored agents could not be loaded: ${errorMessage(presetsQuery.error)}`}
@@ -137,6 +155,8 @@ export function AgentExplorer({
               )
             : undefined
         }
+        search={filter.search}
+        tags={filter.tags}
         emptyStates={{
           empty: {
             title: 'No agents registered',
@@ -157,7 +177,10 @@ export function AgentExplorer({
             // The hint names an action only for a caller who has it.
             description: canFileTools ? 'Move an agent here with its "Move" action.' : undefined,
           },
-          noMatch: { title: 'No agents match' },
+          noMatch: {
+            title: 'No agents match',
+            description: 'No agent matches the search or the selected tags.',
+          },
         }}
       />
       {moving !== null ? (

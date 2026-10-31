@@ -7,6 +7,10 @@
   e2e suite exercises for the generic tool runner.
 - ``studio_demo_fail`` always raises, so the suite can assert the error surfaces
   loudly in the result viewer rather than being swallowed.
+- ``studio_demo_union`` takes a parameter whose type is a union of untitled
+  members, so the auto-form offers that union's variants by their shapes.
+- ``studio_demo_empty`` returns an empty value of the chosen shape, so the result
+  viewer's empty-result note can be exercised.
 - ``parking_ask`` asks and parks so a synchronous run returns a park: a caller
   ask surfaces as the caller-asks envelope the run panel lists, a user ask as the
   suspension receipt; ``parking_ask_resume`` is the resume continuation it binds.
@@ -73,6 +77,30 @@ async def studio_demo_fail(reason: str = "intentional failure") -> Any:
         reason: Message carried by the raised error.
     """
     raise RuntimeError(reason)
+
+
+@tai42_app.tools.tool
+async def studio_demo_union(value: str | int | list[str]) -> dict[str, Any]:
+    """Echo a value that is text, a whole number or a list of text.
+
+    Args:
+        value: The value to echo; its type is a union whose members carry no title.
+
+    Returns:
+        The value and the name of its type.
+    """
+    return {"value": value, "type": type(value).__name__}
+
+
+@tai42_app.tools.tool
+async def studio_demo_empty(shape: Literal["object", "list", "none"] = "object") -> Any:
+    """Return an empty value of the chosen shape.
+
+    Args:
+        shape: ``object`` returns ``{}``, ``list`` returns ``[]`` and ``none`` returns ``None``.
+    """
+    empty: dict[str, Any] = {"object": {}, "list": [], "none": None}
+    return empty[shape]
 
 
 def _ask_addressee(to: str) -> Literal["caller", "user"]:

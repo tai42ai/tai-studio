@@ -480,13 +480,20 @@ label. It reads a structural query interface
 disabled with the placeholder "Loading <plural noun>…"; error is an `ErrorState`
 with retry inside the field (`group` set); empty is a muted `role="status"` line
 naming where to create one; no grant to read the list is the no-grant line in
-place of the control. `ToolPicker` differs on a 403: the server checks a named
-tool on save, so it draws a text input that takes the tool's exact name, with a
-line under it saying the session cannot list tools (a host that draws the read's
-failure elsewhere through `errorNote` keeps that line instead). Values render as text, never
+place of the control. `ToolPicker`, `AgentPicker` and `ChannelPicker` differ on a
+403: the server checks a named tool, agent or channel on save, so each draws a text
+input that takes the exact name, with a line under it saying the session cannot list
+them (a `ToolPicker` host that draws the read's failure elsewhere through `errorNote`
+keeps that line instead). Values render as text, never
 HTML. A picker is composed outside `SchemaForm`. A picker whose list can grow long
 (`ToolPicker`, `AgentPicker` and `ChannelPicker` are the cases the SDK ships) is built on
-`SearchableSelect`, which opens with a search box over the option labels. Every
+`SearchableSelect`, which opens with a search box over the option labels and their
+descriptions (an option may carry a `description`, drawn as a quieter line under its
+label; `ToolPicker` takes them as `toolDescriptions`). In its search box ArrowUp and
+ArrowDown move the highlight, Home and End jump to the first and last option, Enter
+chooses, Escape closes, and Tab or Shift+Tab close the popup and move on to the next or
+previous control. Each change to the query moves the highlight to the first match and
+shows the list from its top. Every
 list searches by one rule, `matchesSearch(query, ...texts)`: the trimmed query,
 ignoring case, inside any one of the texts a row is searched by. A filterable
 checklist calls it over the label each row shows, and an `ExplorerView` search
@@ -512,7 +519,9 @@ the FULL tree. `FolderActionsMenu` (Rename, Move, Delete) goes on each drawn
 folder, `MoveToFolderDialog` files a single tool where the row has no edit dialog
 of its own, and `useCreateFolder` backs a `FolderPicker`'s inline create. Each
 takes the screen's `onFoldersChanged` refresh. A failed create or write is shown
-in its dialog or picker.
+in its dialog or picker. Every screen reads the overlay under the one query key
+`toolMetaKey` and every overlay or folder write invalidates it, so a move made on
+one screen shows on every other without a reload.
 
 Who may make each overlay write is `useToolMetaWriteAccess`: one flag per write
 (`editTool` for `PATCH /api/tool-meta/tools/{tool_name}`, and `createFolder`,
@@ -532,13 +541,29 @@ muted off note with the server's message for that refusal, an `ErrorState` for
 anything else.
 
 **Explorer states and selection.** `ExplorerView` shows its `empty` state
-whenever it has no items at all, whatever folders exist; `emptyFolder` is for an
-open folder that holds nothing while items exist elsewhere. A hint in either
-names an action only for a caller who has it. When `currentFolderId` names a
-folder that is not drawn (deleted, or no longer holding the screen's items), the
-explorer shows the root and calls `onNavigate(null)`. `selectedItemKey` gives the
-selected item's row or card the shared selected look, the same on every
-explorer screen; a table outside the explorer gets it from `TR selected`.
+whenever it has no items at all. With no folder either, that state is the whole
+view; with folders, it shows above them and the folders keep their actions, so a
+screen with no items of its own can still rename, move and delete its folders.
+`emptyFolder` is for an open folder that holds nothing while items exist
+elsewhere. A hint in either names an action only for a caller who has it. When
+`currentFolderId` names a folder that is not drawn (deleted, or no longer holding
+the screen's items), the explorer shows the root and calls `onNavigate(null)`.
+`selectedItemKey` gives the selected item's row or card the shared selected look,
+the same on every explorer screen; a table outside the explorer gets it from
+`TR selected`. A newly selected item (a link to it, a deep link) also opens the
+folder it is filed in, once that folder is drawn; the reader can then browse away
+freely.
+
+**Filters in the URL.** A filter box whose text lives in a route search param
+pairs `useSearchDraft(committedValue)`, the box's live draft re-seeded whenever the
+URL's value changes, with `useSearchCommit`, which writes the draft to the URL on
+Enter or an edited blur and replaces the history entry.
+
+**Run results.** `isEmptyResult(value)` is the rule for a run result that
+carries nothing: absent, `null`, a blank string, `[]` or `{}` (`0` and `false` are
+values). The tools result viewer and the observability span detail read through
+it, so both say "empty" for exactly those; the observability runs table's one-line
+previews do not use it.
 
 **Stepper.** An ordered list in a labelled `nav`, with `aria-current="step"` on
 the current step and each step's status spoken in visually hidden text. Done,

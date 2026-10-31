@@ -5,12 +5,7 @@
  * masked secret fields for its `env` map).
  */
 import type { ConnectorRef, Extension, McpEnvRef } from '@tai42/api-client';
-import type {
-  JsonSchema,
-  RecordEntryContext,
-  RecordEntryRenderer,
-  ToolListQuery,
-} from '@tai42/studio-sdk';
+import type { JsonSchema, RecordEntryContext, RecordEntryRenderer } from '@tai42/studio-sdk';
 import {
   AppLink,
   Badge,
@@ -26,6 +21,7 @@ import type { ReactNode } from 'react';
 
 import { asRecord, stringArray } from './mcp-config-parse';
 import { isEnvEntry } from './mcp-env-markers';
+import { type McpStatusRead, useServerTools } from './mcp-server-tools';
 import { ToolListEditor } from './mcp-tool-list-editor';
 
 /**
@@ -270,7 +266,7 @@ export function EditableEntryCard({
   entry,
   index,
   formSchema,
-  discoveredTools,
+  status,
   extensions,
   extensionsError,
   availableSecretKeys,
@@ -285,7 +281,7 @@ export function EditableEntryCard({
   readonly entry: unknown;
   readonly index: number;
   readonly formSchema: JsonSchema;
-  readonly discoveredTools: ToolListQuery;
+  readonly status: McpStatusRead;
   readonly extensions: readonly Extension[];
   readonly extensionsError: string | undefined;
   readonly availableSecretKeys: readonly string[];
@@ -298,6 +294,10 @@ export function EditableEntryCard({
   readonly onRemove: () => void;
 }): ReactNode {
   const record = asRecord(entry);
+  const serverTools = useServerTools(
+    status,
+    typeof record.title === 'string' ? record.title : undefined,
+  );
 
   // The value renderer the schema-form consults for every `record` entry. Only the
   // MCP entry's `env` map is secret-bearing: those entries mount the masked
@@ -354,10 +354,10 @@ export function EditableEntryCard({
           legend="Included tools"
           description="Bind only these tools from this server. Optionally stack extensions onto a tool."
           values={stringArray(record.include)}
-          discoveredTools={discoveredTools}
+          serverTools={serverTools}
           extensions={extensions}
           extensionsError={extensionsError}
-          composer
+          list="include"
           idPrefix={`mcp-entry-${String(index)}-include`}
           onChange={(next) => {
             onChange({ ...record, include: next });
@@ -367,10 +367,10 @@ export function EditableEntryCard({
           legend="Excluded tools"
           description="Suppress these tools from this server."
           values={stringArray(record.exclude)}
-          discoveredTools={discoveredTools}
+          serverTools={serverTools}
           extensions={extensions}
           extensionsError={extensionsError}
-          composer={false}
+          list="exclude"
           idPrefix={`mcp-entry-${String(index)}-exclude`}
           onChange={(next) => {
             onChange({ ...record, exclude: next });

@@ -11,14 +11,16 @@
  *  - string          → an escaped `<CodeBlock>` (never an HTML sink — a payload
  *                      containing `<script>` renders as literal text);
  *  - other primitive → readable monospace text;
- *  - `undefined`     → an explicit "no result" empty state.
+ *  - an empty value  → a plain "Empty result" note naming what came back, by the
+ *                      shared `isEmptyResult` rule (absent, `null`, a blank
+ *                      string, `[]`, `{}`).
  *
  * OVERSIZED payloads (serialized length over {@link RESULT_MAX_CHARS}) are shown
  * TRUNCATED with a download action that streams the FULL result as a Blob, so a
  * huge result never floods the DOM yet is never silently lost.
  */
 import { schemas } from '@tai42/api-client';
-import { Button, CodeBlock, EmptyState, JsonTree } from '@tai42/studio-sdk';
+import { Button, CodeBlock, EmptyState, isEmptyResult, JsonTree } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
 /** Serialized-length threshold above which a result is truncated + downloadable. */
@@ -55,8 +57,17 @@ function triggerDownload(content: string, filename: string, mime: string): void 
 }
 
 export function ResultViewer({ result }: { result: unknown }): ReactNode {
-  if (result === undefined) {
-    return <EmptyState title="No result" description="The tool returned no value." />;
+  if (isEmptyResult(result)) {
+    return (
+      <EmptyState
+        title="Empty result"
+        description={
+          result === undefined
+            ? 'The tool returned no value.'
+            : `The tool returned an empty value: ${JSON.stringify(result)}.`
+        }
+      />
+    );
   }
 
   // Media results: a direct tool run can return a serialized fastmcp

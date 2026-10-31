@@ -38,7 +38,7 @@ const COPY: NamedListCopy = {
   loadingPlaceholder: 'Loading channels…',
   placeholder: 'Select a channel',
   forbiddenNote:
-    'This session cannot list channels. Picking one needs read access to GET /api/channels; ask an administrator to grant it.',
+    "This session cannot list channels, so type the channel's exact name. Saving checks that the channel is installed.",
   emptyNote: 'No channels are installed on this deployment.',
   emptyAction: (
     <AppLink to="marketplace" search={{ kind: 'channel' }} className="tai-link">

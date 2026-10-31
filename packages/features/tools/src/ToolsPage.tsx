@@ -45,6 +45,7 @@ import {
   type RouteSearch,
   Skeleton,
   Stack,
+  toolMetaKey,
   useApi,
   useAppNavigate,
   useBreakpoint,
@@ -53,12 +54,12 @@ import {
   useReloadToolDisplayNames,
   useReportToolMetaRefusal,
   useSearchCommit,
+  useSearchDraft,
   useToolMetaWriteAccess,
 } from '@tai42/studio-sdk';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 
-import { toolMetaKey } from './keys';
 import { RunPanel } from './RunPanel';
 import { ToolAdminCard } from './ToolAdminCard';
 import { SEARCH_LABEL, ToolExplorer } from './ToolExplorer';
@@ -94,15 +95,9 @@ function ToolList({
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
   // The live search box holds a local draft; the committed `?q=` is written only on an
-  // explicit commit (Enter / an edited blur), never per keystroke. Re-seed the draft
-  // from the committed value DURING RENDER (React's adjust-state-on-prop-change pattern)
-  // so a query arriving from the URL (deep-link, back/forward) overwrites the box.
-  const [query, setQuery] = useState(committedQuery);
-  const [seed, setSeed] = useState(committedQuery);
-  if (seed !== committedQuery) {
-    setSeed(committedQuery);
-    setQuery(committedQuery);
-  }
+  // explicit commit (Enter / an edited blur), never per keystroke. A query arriving from
+  // the URL (deep-link, back/forward) re-seeds the box.
+  const [query, setQuery] = useSearchDraft(committedQuery);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const buildSearch = useCallback(

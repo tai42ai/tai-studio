@@ -5,10 +5,16 @@
  * read failure never takes down browsing — the merged view still renders from whatever
  * loaded, under a loud notice surfaced through `sideReadError`.
  */
-import { type CapabilityState, type Folder, toFolders, useApi } from '@tai42/studio-sdk';
+import {
+  type CapabilityState,
+  type Folder,
+  toFolders,
+  toolMetaKey,
+  useApi,
+} from '@tai42/studio-sdk';
 import { useQuery } from '@tanstack/react-query';
 
-import { toolMetaKey, toolsListKey, toolTagsKey } from './keys';
+import { toolsListKey, toolTagsKey } from './keys';
 import { projectedTools } from './toolProjection';
 import { buildToolViews, type ToolView } from './toolView';
 

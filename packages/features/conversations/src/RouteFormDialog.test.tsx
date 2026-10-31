@@ -542,7 +542,7 @@ describe('RouteFormDialog — "Our identity" description', () => {
 describe('RouteFormDialog — refused and failed picker reads', () => {
   const forbidden = (): Promise<never> => Promise.reject(new ApiError('forbidden', 403));
 
-  it('shows the agents note under a 403 and keeps the stored agent on save', async () => {
+  it('takes a typed agent name under a 403 and saves it', async () => {
     const user = userEvent.setup({ delay: null });
     const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
       created: false,
@@ -555,17 +555,17 @@ describe('RouteFormDialog — refused and failed picker reads', () => {
       client: { listAgents: vi.fn(forbidden), createOrReplaceConversationRoute },
     });
 
-    expect(
-      await screen.findByText(
-        'This session cannot list agents. Picking one needs read access to GET /api/agents; ask an administrator to grant it.',
-      ),
-    ).toBeInTheDocument();
+    const input = await screen.findByRole('textbox', { name: 'Agent' });
+    expect(input).toHaveValue('assistant');
+    expect(input).toHaveAccessibleDescription(/cannot list agents, so type the agent's exact name/);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    await user.clear(input);
+    await user.type(input, 'helper');
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() => {
       expect(createOrReplaceConversationRoute).toHaveBeenCalledWith(
-        expect.objectContaining({ target_kind: 'agent', target_name: 'assistant' }),
+        expect.objectContaining({ target_kind: 'agent', target_name: 'helper' }),
       );
     });
   });
@@ -607,14 +607,13 @@ describe('RouteFormDialog — refused and failed picker reads', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
   });
 
-  it('shows the channels note and the no-hint identity line under a 403', async () => {
+  it('takes a typed channel name and shows the no-hint identity line under a 403', async () => {
     renderDialog({ initial: makeRoute(), client: { listChannels: vi.fn(forbidden) } });
 
-    expect(
-      await screen.findByText(
-        'This session cannot list channels. Picking one needs read access to GET /api/channels; ask an administrator to grant it.',
-      ),
-    ).toBeInTheDocument();
+    const input = await screen.findByRole('textbox', { name: 'Channel' });
+    expect(input).toHaveAccessibleDescription(
+      /cannot list channels, so type the channel's exact name/,
+    );
     expect(identityBox()).toHaveAccessibleDescription(
       `${IDENTITY_FALLBACK} This session cannot read the channel list, so no hint is shown.`,
     );

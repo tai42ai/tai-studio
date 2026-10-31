@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -138,13 +139,22 @@ describe('ExplorerView empty-state ladder', () => {
     expect(screen.queryByRole('navigation', { name: 'Folder path' })).not.toBeInTheDocument();
   });
 
-  it('shows the bare nothing-anywhere state when no item exists, even with folders', () => {
-    // Folders are places for items: with no item anywhere there is nothing to browse,
-    // so the screen says so instead of drawing an empty folder.
-    renderExplorer({ items: [] });
+  it('says no item exists and still draws the folders with their actions', () => {
+    renderExplorer({
+      items: [],
+      renderFolderActions: (folder) => <button type="button">{`Rename ${folder.name}`}</button>,
+    });
     expect(screen.getByText('No rows anywhere')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Weather' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('navigation', { name: 'Folder path' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Weather' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rename Weather' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Folder path' })).toBeInTheDocument();
+  });
+
+  it('says no item exists inside an empty folder too, not that the folder is empty', () => {
+    renderExplorer({ items: [], currentFolderId: 'eu' });
+    expect(screen.getByText('No rows anywhere')).toBeInTheDocument();
+    expect(screen.queryByText('This folder is empty')).not.toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Folder path' })).toBeInTheDocument();
   });
 
   it('shows "this folder is empty" for a folder with no items and no subfolders', () => {
@@ -209,6 +219,64 @@ describe('ExplorerView selected item', () => {
     expect(screen.getByText('alpha').closest('[role="listitem"]')).not.toHaveAttribute(
       'data-selected',
     );
+  });
+});
+
+describe('ExplorerView reveals the selected item', () => {
+  function explorer(props: Partial<ExplorerViewProps<Row>>): ReactElement {
+    return (
+      <ExplorerView<Row>
+        items={ROWS}
+        getItemKey={(row) => row.id}
+        getFolderId={(row) => row.folderId}
+        folders={FOLDERS}
+        currentFolderId={null}
+        onNavigate={vi.fn()}
+        rootLabel="All rows"
+        viewSurface="explorer-reveal-test"
+        label="Rows"
+        columns={COLUMNS}
+        renderRow={(row) => <TD>{row.name}</TD>}
+        renderCard={(row) => <Card interactive>{row.name}</Card>}
+        emptyStates={EMPTY_STATES}
+        {...props}
+      />
+    );
+  }
+
+  it('opens the folder a selected item is filed in', () => {
+    const onNavigate = vi.fn();
+    renderExplorer({ selectedItemKey: 'delta', onNavigate });
+    expect(onNavigate).toHaveBeenCalledWith('w');
+  });
+
+  it('stays put for a selected item in the open folder', () => {
+    const onNavigate = vi.fn();
+    renderExplorer({ selectedItemKey: 'beta', onNavigate });
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  it('lets the reader browse away from the revealed item', () => {
+    const onNavigate = vi.fn();
+    const view = render(explorer({ selectedItemKey: 'delta', currentFolderId: 'w', onNavigate }));
+    view.rerender(explorer({ selectedItemKey: 'delta', currentFolderId: null, onNavigate }));
+    expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  it('reveals the item once its folder is drawn', () => {
+    const onNavigate = vi.fn();
+    const view = render(explorer({ selectedItemKey: 'delta', folders: [], onNavigate }));
+    expect(onNavigate).not.toHaveBeenCalledWith('w');
+    view.rerender(explorer({ selectedItemKey: 'delta', onNavigate }));
+    expect(onNavigate).toHaveBeenCalledWith('w');
+  });
+
+  it('follows the selected item when it is filed elsewhere', () => {
+    const onNavigate = vi.fn();
+    const view = render(explorer({ selectedItemKey: 'beta', onNavigate }));
+    const moved = ROWS.map((row) => (row.id === 'beta' ? { ...row, folderId: 'eu' } : row));
+    view.rerender(explorer({ selectedItemKey: 'beta', items: moved, onNavigate }));
+    expect(onNavigate).toHaveBeenCalledWith('eu');
   });
 });
 

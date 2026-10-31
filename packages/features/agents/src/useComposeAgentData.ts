@@ -10,6 +10,7 @@ import {
   hiddenToolNames,
   isForbiddenError,
   type JsonSchema,
+  toolMetaKey,
   useApi,
   useFeatureOff,
   useToolDisplayNames,
@@ -18,12 +19,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 
 import { hasField } from './authoring-schema';
-import {
-  agentsToolMetaKey,
-  authoredPresetsKey,
-  authoredToolsKey,
-  authoredToolTagsKey,
-} from './keys';
+import { authoredPresetsKey, authoredToolsKey, authoredToolTagsKey } from './keys';
 
 /** The compose dialog's read layer plus the memos derived from it. */
 export type ComposeAgentData = ReturnType<typeof useComposeAgentData>;
@@ -38,7 +34,7 @@ export function useComposeAgentData(baseAgent: AgentSummary | null, baseSchema: 
 
   const toolsQuery = useQuery({ queryKey: authoredToolsKey, queryFn: () => api.listTools() });
   const tagsQuery = useQuery({ queryKey: authoredToolTagsKey, queryFn: () => api.listToolTags() });
-  const metaQuery = useQuery({ queryKey: agentsToolMetaKey, queryFn: () => api.listToolMeta() });
+  const metaQuery = useQuery({ queryKey: toolMetaKey, queryFn: () => api.listToolMeta() });
   const presetsQuery = useQuery({ queryKey: authoredPresetsKey, queryFn: () => api.listPresets() });
 
   // A conflicted/quarantined preset is delete-only — it must NEVER seed a

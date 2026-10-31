@@ -705,6 +705,24 @@
     overflow-y: auto;
   }
 
+  /* An option with a description stacks its label over that quieter line; the text
+     column takes the row's width so the chosen-value mark stays at the far edge. */
+  .tai-search-select-option-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .tai-search-select-option-description {
+    color: var(--tai-color-text-muted);
+    font-size: var(--tai-text-sm);
+    overflow-wrap: anywhere;
+  }
+
+  .tai-select-item[data-highlighted] .tai-search-select-option-description {
+    color: inherit;
+  }
+
   .tai-search-select-empty {
     margin: 0;
     padding: var(--tai-space-2) var(--tai-space-3);

@@ -2,10 +2,11 @@
  * The preset detail panel — rename outcomes and delete: a rejected rename's verbatim
  * server message, the conflicted_reason note, the holder previews (block on a
  * non-empty list, allow on empty, stay advisory on a failed read or no grant, show a
- * refusal's holders in the list), and the post-delete `?preset=` clear.
+ * refusal's holders in the list), the shared tool overlay refreshed after a rename,
+ * and the post-delete `?preset=` clear.
  */
 import { ApiError, apiRoutes } from '@tai42/api-client';
-import { toolsListKey } from '@tai42/studio-sdk';
+import { toolMetaKey, toolsListKey } from '@tai42/studio-sdk';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -135,6 +136,35 @@ describe('PresetDetail — rename preflight + delete', () => {
     expect(renamePreset).toHaveBeenCalledWith('paris_weather', 'london_weather');
     // The old name's holder previews are dropped alongside its other caches.
     expect(remove).toHaveBeenCalledWith({ queryKey: presetRefereesKey('paris_weather') });
+  });
+
+  it('refreshes the shared tool overlay after a rename, so every screen re-keys the rows', async () => {
+    const user = userEvent.setup({ delay: null });
+    const renamePreset = vi.fn().mockResolvedValue({
+      name: 'london_weather',
+      renamed_from: 'paris_weather',
+      active_version: 7,
+    });
+    const client: StubApiClient = {
+      getPreset: vi.fn().mockResolvedValue(detail),
+      listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
+      getPresetReferees: vi.fn().mockResolvedValue({ action: 'rename', holders: [] }),
+      renamePreset,
+    };
+    const { navigate, queryClient } = renderWithProviders(<PresetDetail name="paris_weather" />, {
+      client,
+      projection: fullProjection(),
+    });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    await user.click(await screen.findByRole('button', { name: 'Rename preset paris_weather' }));
+    await user.type(screen.getByRole('textbox'), 'london_weather');
+    await user.click(screen.getByRole('button', { name: 'Rename' }));
+
+    expect(navigate).toHaveBeenCalledWith('presets', { preset: 'london_weather' });
+    // The overlay rows (folder, tags, display name) move to the new name.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: toolMetaKey });
   });
 
   it('preflight: a failed holder read degrades to advisory (submit stays enabled)', async () => {

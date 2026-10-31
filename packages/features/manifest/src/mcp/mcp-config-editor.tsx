@@ -35,7 +35,8 @@ import type { ConfigView } from './mcp-config-draft';
 import { useMcpConfigDraft } from './mcp-config-draft';
 import { asRecord } from './mcp-config-parse';
 import { EntryList } from './mcp-entry-list';
-import type { BoundToolsRead } from './mcp-tool-list-editor';
+import { JsonToolNamesCheck } from './mcp-json-tool-check';
+import type { McpStatusRead } from './mcp-server-tools';
 
 /** The Form / JSON view toggle. */
 function ConfigViewToggle({
@@ -172,7 +173,7 @@ function SaveFailure({ error }: { readonly error: unknown }): ReactNode {
 function McpConfigEditor(props: {
   readonly initialEntries: readonly Record<string, unknown>[];
   readonly schema: JsonSchema;
-  readonly discoveredTools: BoundToolsRead;
+  readonly status: McpStatusRead;
   readonly extensions: readonly Extension[];
   readonly extensionsError: string | undefined;
   readonly availableSecretKeys: readonly string[];
@@ -193,7 +194,7 @@ function McpConfigEditor(props: {
         <EntryList
           schema={props.schema}
           entries={draft.entries}
-          discoveredTools={props.discoveredTools}
+          status={props.status}
           extensions={props.extensions}
           extensionsError={props.extensionsError}
           availableSecretKeys={props.availableSecretKeys}
@@ -206,21 +207,24 @@ function McpConfigEditor(props: {
           onChange={draft.setEntries}
         />
       ) : (
-        <Field
-          label="MCP config"
-          description="A JSON array of server entries. Saving replaces the mounted MCP config."
-          error={draft.parseError}
-        >
-          <Textarea
-            value={draft.text}
-            onChange={(event) => {
-              draft.setText(event.currentTarget.value);
-            }}
-            rows={12}
-            spellCheck={false}
-            style={{ fontFamily: 'var(--tai-font-mono)' }}
-          />
-        </Field>
+        <>
+          <Field
+            label="MCP config"
+            description="A JSON array of server entries. Saving replaces the mounted MCP config."
+            error={draft.parseError}
+          >
+            <Textarea
+              value={draft.text}
+              onChange={(event) => {
+                draft.setText(event.currentTarget.value);
+              }}
+              rows={12}
+              spellCheck={false}
+              style={{ fontFamily: 'var(--tai-font-mono)' }}
+            />
+          </Field>
+          <JsonToolNamesCheck text={draft.text} status={props.status} />
+        </>
       )}
 
       {draft.canSave ? (
@@ -326,8 +330,8 @@ export function McpConfigSection(): ReactNode {
     queryKey: mcpConfigSchemaKey,
     queryFn: ({ signal }) => api.getMcpConfigSchema(signal),
   });
-  // The discovered tools feed the include/exclude picker; shares the status query's
-  // cache with the section above.
+  // The status names the mounted servers whose advertised tools feed the include/exclude
+  // editors; shares the status query's cache with the section above.
   const status = useQuery({
     queryKey: mcpStatusKey,
     queryFn: ({ signal }) => api.getMcpStatus(signal),
@@ -391,7 +395,7 @@ export function McpConfigSection(): ReactNode {
       <McpConfigEditor
         initialEntries={initialEntries}
         schema={schema.data}
-        discoveredTools={status}
+        status={status}
         extensions={extensions.data ?? []}
         extensionsError={extensionsError}
         availableSecretKeys={envConfig.data?.secret_keys ?? []}

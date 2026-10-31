@@ -18,7 +18,7 @@ export interface HookFormValues {
   readonly toolKwargs: string;
   readonly subjectTarget: string;
   readonly subjectKind: string;
-  readonly subjectKeyExpr: string;
+  readonly subjectKeyExpr: TemplatedText | null;
   readonly condition: TemplatedText | null;
   readonly startExpr: TemplatedText | null;
   readonly cancelExpr: TemplatedText | null;
@@ -36,7 +36,7 @@ function subjectTouched(values: HookFormValues): boolean {
   return (
     values.subjectTarget !== '' ||
     values.subjectKind.trim() !== '' ||
-    values.subjectKeyExpr.trim() !== ''
+    values.subjectKeyExpr !== null
   );
 }
 
@@ -44,14 +44,14 @@ function subjectTouched(values: HookFormValues): boolean {
 function resolveSubject(values: HookFormValues): HookSubject | null | { readonly message: string } {
   if (!subjectTouched(values)) return null;
   const separator = values.subjectTarget.indexOf(':');
-  if (separator < 0 || values.subjectKind.trim() === '' || values.subjectKeyExpr.trim() === '') {
+  if (separator < 0 || values.subjectKind.trim() === '' || values.subjectKeyExpr === null) {
     return { message: 'A subject needs a target, a kind, and a key expression.' };
   }
   return {
     target_kind: values.subjectTarget.slice(0, separator) as HookSubject['target_kind'],
     target_name: values.subjectTarget.slice(separator + 1),
     kind: values.subjectKind.trim(),
-    key_expr: { content: values.subjectKeyExpr.trim() },
+    key_expr: values.subjectKeyExpr,
   };
 }
 

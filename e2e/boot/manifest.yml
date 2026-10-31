@@ -188,8 +188,9 @@ channel_modules:
 # --- Tools ------------------------------------------------------------------
 # The reference plugin's demo tools (studio_demo_echo has a custom panel;
 # studio_demo_form / studio_demo_fail have none, so they exercise the auto-form
-# fallback + the loud-error result surface) and the ask built-in (the
-# blocking human-in-the-loop question the run-tool suite drives).
+# fallback + the loud-error result surface; studio_demo_union exercises the
+# auto-form's union variants and studio_demo_empty the empty-result note) and the
+# ask built-in (the blocking human-in-the-loop question the run-tool suite drives).
 #
 # Only runtime-native builtins are named here. The management capabilities
 # (config/manifest/templates/hooks/notify) are served by the routers loaded above

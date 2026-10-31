@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  edgeEntry,
   indexSections,
   type SearchEntry,
   shownEntry,
@@ -22,7 +23,7 @@ describe('indexSections', () => {
       { label: 'Two', options: [{ value: 'b', label: 'BETA' }] },
     ]);
     expect(sections.map((section) => section.label)).toEqual(['One', 'Two']);
-    expect(sections[1]?.entries[0]).toMatchObject({ position: 1, loweredLabel: 'beta' });
+    expect(sections[1]?.entries[0]).toMatchObject({ position: 1, loweredTexts: ['beta'] });
   });
 
   it('indexes a flat run as one unlabelled section', () => {
@@ -50,6 +51,34 @@ describe('visibleOptions', () => {
       'Two',
     ]);
     expect(visibleOptions(sections, '  ').sections).toEqual(sections);
+  });
+
+  it('keeps an entry whose description holds the query, but never across label and description', () => {
+    const sections = indexSections(
+      [
+        { value: 'a', label: 'Alpha', description: 'Sends a greeting' },
+        { value: 'c', label: 'Gamma' },
+      ],
+      undefined,
+    );
+    expect(visibleOptions(sections, 'greet').entries.map(valueOf)).toEqual(['a']);
+    expect(visibleOptions(sections, 'alphasends').entries).toEqual([]);
+  });
+});
+
+describe('edgeEntry', () => {
+  it('finds the first and last choosable entries, skipping disabled ones', () => {
+    const entries = indexSections(
+      [
+        { value: 'x', label: 'X', disabled: true },
+        ...FLAT,
+        { value: 'z', label: 'Z', disabled: true },
+      ],
+      undefined,
+    ).flatMap((section) => section.entries);
+    expect(valueOf(edgeEntry(entries, 'first'))).toBe('a');
+    expect(valueOf(edgeEntry(entries, 'last'))).toBe('d');
+    expect(edgeEntry([], 'first')).toBeUndefined();
   });
 });
 

@@ -11,7 +11,7 @@
  * them as ESCAPED text through the DS components, never an HTML sink.
  */
 import type { PresetRecord } from '@tai42/api-client';
-import { AppLink, Badge, Card, type ExplorerColumn, TD } from '@tai42/studio-sdk';
+import { AppLink, Badge, Card, type ExplorerColumn, type RouteSearch, TD } from '@tai42/studio-sdk';
 import type { CSSProperties, ReactNode } from 'react';
 
 import { TagChips } from './tags';
@@ -20,6 +20,14 @@ import { TagChips } from './tags';
 export interface OverlayDetail {
   readonly displayName: string | null;
   readonly tags: readonly string[];
+}
+
+/** The list's filter, kept in the URL: the selected tags and the search text. */
+export type PresetsFilter = Pick<RouteSearch<'presets'>, 'tags' | 'q'>;
+
+/** The search that opens preset `name` and keeps the list's filter. */
+export function presetOpenSearch(name: string, filter: PresetsFilter): RouteSearch<'presets'> {
+  return { preset: name, tags: filter.tags, q: filter.q };
 }
 
 /** The generic fallback shown when a conflicted row carries no server reason. */
@@ -55,17 +63,19 @@ interface PresetEntryProps {
   readonly preset: PresetRecord;
   readonly overlay: OverlayDetail | undefined;
   readonly selected: boolean;
+  /** The list's filter, kept by the name link. */
+  readonly filter: PresetsFilter;
 }
 
-/** The name link (sets `?preset=`), the display-name sub-line and, for a conflicted
- *  preset, its badge and reason. */
-function PresetName({ preset, overlay, selected }: PresetEntryProps): ReactNode {
+/** The name link (sets `?preset=`, keeping the filter), the display-name sub-line and,
+ *  for a conflicted preset, its badge and reason. */
+function PresetName({ preset, overlay, selected, filter }: PresetEntryProps): ReactNode {
   const displayName = overlay?.displayName ?? null;
   return (
     <>
       <AppLink
         to="presets"
-        search={{ preset: preset.name }}
+        search={presetOpenSearch(preset.name, filter)}
         aria-label={`Open preset ${preset.name}`}
         aria-current={selected ? 'page' : undefined}
       >
@@ -128,6 +138,8 @@ export function PresetCard(props: PresetEntryProps): ReactNode {
           {preset.base_tool}
         </span>
         {preset.description ? <span>{preset.description}</span> : null}
+        <span style={mutedStyle}>Active version {preset.active_version}</span>
+        <span style={mutedStyle}>Extensions {preset.extensions.length}</span>
         {tags.length > 0 ? <TagChips tags={tags} /> : null}
       </div>
     </Card>
