@@ -501,7 +501,16 @@ describe('preset client transport', () => {
   it('listToolTags hits /api/tools/tags', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: [{ name: 'weather', tags: [], badges: [], hidden: false, schedulable: false }],
+        data: [
+          {
+            name: 'weather',
+            description: null,
+            tags: [],
+            badges: [],
+            hidden: false,
+            schedulable: false,
+          },
+        ],
       }),
     );
     const out = await client.listToolTags();

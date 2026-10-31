@@ -7541,7 +7541,7 @@ export function createApiClient(config: ApiConfig): {
             name: string;
             selected: boolean;
             title: string | null;
-            unbound_reason: "server_failed" | "not_loaded" | "preset_conflict" | "unusable_schema" | "not_listed_at_bind" | null;
+            unbound_reason: "server_starting" | "server_failed" | "not_loaded" | "preset_conflict" | "unusable_schema" | "not_listed_at_bind" | null;
         }[];
         unadvertised: string[];
     }>;
@@ -9524,6 +9524,7 @@ export function createApiClient(config: ApiConfig): {
     }[]>;
     readonly listToolTags: (signal?: AbortSignal) => Promise<{
         badges: string[];
+        description: string | null;
         hidden: boolean;
         name: string;
         schedulable: boolean;
@@ -9538,6 +9539,7 @@ export function createApiClient(config: ApiConfig): {
     readonly request: <S extends Parameters<apiRequest>[2]>(path: string, schema: S, options?: Parameters<apiRequest>[3]) => Promise<output<S>>;
     readonly holdersFromError: (error: unknown) => ReferenceHolder[] | null;
     readonly storedPresetFaultFromError: (error: unknown) => string | null;
+    readonly isMcpStartingError: (error: unknown) => boolean;
 };
 
 // @public
@@ -10747,6 +10749,11 @@ const invokeMemberActionResult: z.ZodObject<{
 export function isFleetReportFailure(summary: FleetReportSummary | null): boolean;
 
 // @public
+export function isMcpStarting(record: {
+    readonly category?: string | undefined;
+}): boolean;
+
+// @public
 export function isSafeApiPath(path: string): boolean;
 
 // @public
@@ -11826,6 +11833,7 @@ const mcpAdvertisedTool: z.ZodObject<{
     selected: z.ZodBoolean;
     title: z.ZodNullable<z.ZodString>;
     unbound_reason: z.ZodNullable<z.ZodEnum<{
+        server_starting: "server_starting";
         server_failed: "server_failed";
         not_loaded: "not_loaded";
         preset_conflict: "preset_conflict";
@@ -11849,6 +11857,7 @@ const mcpAdvertisedTools: z.ZodObject<{
         selected: z.ZodBoolean;
         title: z.ZodNullable<z.ZodString>;
         unbound_reason: z.ZodNullable<z.ZodEnum<{
+            server_starting: "server_starting";
             server_failed: "server_failed";
             not_loaded: "not_loaded";
             preset_conflict: "preset_conflict";
@@ -24305,6 +24314,7 @@ export type ToolTagEntry = z.infer<typeof toolTagEntry>;
 // @public
 const toolTagEntry: z.ZodObject<{
     badges: z.ZodArray<z.ZodString>;
+    description: z.ZodNullable<z.ZodString>;
     hidden: z.ZodBoolean;
     name: z.ZodString;
     schedulable: z.ZodBoolean;
@@ -24314,6 +24324,7 @@ const toolTagEntry: z.ZodObject<{
 // @public (undocumented)
 const toolTags: z.ZodArray<z.ZodObject<{
     badges: z.ZodArray<z.ZodString>;
+    description: z.ZodNullable<z.ZodString>;
     hidden: z.ZodBoolean;
     name: z.ZodString;
     schedulable: z.ZodBoolean;

@@ -1,10 +1,10 @@
 /**
  * Shared test harness: render a feature tree inside the exact provider stack the
  * shell supplies at runtime — a fresh QueryClient (retries off so a rejected query
- * surfaces the error state immediately), the typed API client, the theme, and a
- * stub navigation context.
+ * surfaces the error state immediately), the typed API client carrying the served
+ * client's refusal readers, the theme, and a stub navigation context.
  */
-import type { ApiClient, MeProjection } from '@tai42/api-client';
+import { type ApiClient, createApiClient, type MeProjection } from '@tai42/api-client';
 import {
   ApiProvider,
   AuthProvider,
@@ -24,6 +24,11 @@ export interface ProviderOptions extends Omit<RenderOptions, 'wrapper'> {
   /** Supply a client to spy on invalidations; otherwise a fresh retry-free one is used. */
   readonly queryClient?: QueryClient;
 }
+
+/** The real refusal readers of a client: a stub client carries them so a refused write
+ * reads as the served client reads it. */
+const { isMcpStartingError } = createApiClient({ getToken: () => null });
+const refusalReaders = { isMcpStartingError };
 
 /** The session key `AuthProvider` seeds from, set so `CapabilityProvider` fetches. */
 const SESSION_KEY = 'tai-studio.apiKey';
@@ -53,8 +58,11 @@ export function renderWithProviders(ui: ReactNode, options: ProviderOptions): Re
   } else {
     globalThis.sessionStorage.removeItem(SESSION_KEY);
   }
+  const readingClient = { ...refusalReaders, ...client };
   const apiClient =
-    projection !== undefined ? { ...client, getMe: () => Promise.resolve(projection) } : client;
+    projection !== undefined
+      ? { ...readingClient, getMe: () => Promise.resolve(projection) }
+      : readingClient;
 
   function Wrapper({ children }: { children: ReactNode }): ReactNode {
     return (

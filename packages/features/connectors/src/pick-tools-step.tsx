@@ -1,10 +1,14 @@
 /**
  * The connect flow's Pick tools step: one section per server title, each listing the
  * tools the server advertises (a probe with the stored credential, so it runs when
- * the step opens and on Retry only) with a tick per tool. One Save writes the
- * sections whose pick differs from their stored lists, one at a time in section
- * order: every write reloads the fleet behind the reload gate, which refuses a write
- * that arrives during another reload.
+ * the step opens and on Retry only) with a tick per tool. A title whose live state is
+ * a server start still in progress is not probed: its section shows the start, and its
+ * tools are read once the live status no longer reads it starting. A read the platform
+ * refuses because the server is still starting shows the start the same way. Every door
+ * into Pick tools renders this step, so each one shows a start the same way. One Save
+ * writes the sections whose pick differs from their stored lists, one at a time in
+ * section order: every write reloads the fleet behind the reload gate, which refuses a
+ * write that arrives during another reload.
  */
 import {
   type FleetReportSummary,
@@ -23,7 +27,19 @@ import {
   sameBody,
   type ToolFilterBody,
 } from './pick-tools-model';
-import { SectionBody, SectionOutcome, SectionRead, type SectionResult } from './pick-tools-section';
+import {
+  SectionBody,
+  SectionOutcome,
+  SectionRead,
+  type SectionResult,
+  SectionStarting,
+} from './pick-tools-section';
+import {
+  liveStateOf,
+  type McpStatusView,
+  type ServerLiveState,
+  useRecheckMcpStatus,
+} from './use-directory';
 
 /** A section saved by the step, with the fleet report of its write. */
 export interface SavedPick {
@@ -35,6 +51,34 @@ type AdvertisedRead = UseQueryResult<McpAdvertisedTools>;
 
 function storedBody(read: McpAdvertisedTools): ToolFilterBody {
   return { include: read.include, exclude: read.exclude };
+}
+
+/**
+ * Each title's live state and its advertised-tools read. A title whose server start is
+ * still in progress is not read; its read runs once the live status no longer reads it
+ * starting.
+ */
+function useSectionReads(
+  titles: readonly string[],
+  status: McpStatusView | null,
+): {
+  lives: readonly ServerLiveState[];
+  starting: ReadonlySet<string>;
+  reads: readonly AdvertisedRead[];
+} {
+  const api = useApi();
+  const lives = titles.map((title) => liveStateOf(title, status));
+  const starting = new Set(titles.filter((_, index) => lives[index]?.kind === 'starting'));
+  const reads = useQueries({
+    queries: titles.map((title) => ({
+      queryKey: mcpAdvertisedToolsKey(title),
+      queryFn: ({ signal }: { signal: AbortSignal }) => api.listMcpAdvertisedTools(title, signal),
+      enabled: !starting.has(title),
+      staleTime: Infinity,
+      refetchOnWindowFocus: false,
+    })),
+  });
+  return { lives, starting, reads };
 }
 
 /** The sections' drafts, each seeded once its read answers, and the edit that sets one. */
@@ -63,18 +107,22 @@ function usePickDrafts(
 
 /**
  * Each section's write: its drafted body when it differs from the last saved or the
- * stored lists, else null; and whether its draft cannot be saved.
+ * stored lists, else null; and whether its draft cannot be saved. A section whose
+ * server is starting shows no pick, so it has no write.
  */
 function pickSections(
   titles: readonly string[],
   reads: readonly AdvertisedRead[],
   drafts: Record<string, PickDraft>,
   results: Record<string, SectionResult>,
+  starting: ReadonlySet<string>,
 ): { title: string; body: ToolFilterBody | null; blocked: boolean }[] {
   return titles.map((title, index) => {
     const read = reads[index]?.data;
     const draft = drafts[title];
-    if (read === undefined || draft === undefined) return { title, body: null, blocked: false };
+    if (read === undefined || draft === undefined || starting.has(title)) {
+      return { title, body: null, blocked: false };
+    }
     const body = draftBody(read, draft);
     const baseline = results[title]?.saved ?? storedBody(read);
     return {
@@ -87,6 +135,7 @@ function pickSections(
 
 export function PickToolsStep({
   titles,
+  status,
   justAdded,
   addFleet,
   onDone,
@@ -94,6 +143,8 @@ export function PickToolsStep({
   onLeave,
 }: {
   readonly titles: readonly string[];
+  /** The live MCP status, or `null` while it is not read. */
+  readonly status: McpStatusView | null;
   /** The titles were just added by this flow's own Connect step. */
   readonly justAdded: boolean;
   /** The fleet report of the connect or install that added them, when it did not converge. */
@@ -104,20 +155,14 @@ export function PickToolsStep({
   readonly onLeave: () => void;
 }): ReactNode {
   const api = useApi();
-  const reads = useQueries({
-    queries: titles.map((title) => ({
-      queryKey: mcpAdvertisedToolsKey(title),
-      queryFn: ({ signal }: { signal: AbortSignal }) => api.listMcpAdvertisedTools(title, signal),
-      staleTime: Infinity,
-      refetchOnWindowFocus: false,
-    })),
-  });
+  const { lives, starting, reads } = useSectionReads(titles, status);
+  const recheckStatus = useRecheckMcpStatus();
   const [drafts, editDraft] = usePickDrafts(titles, reads);
   const [results, setResults] = useState<Record<string, SectionResult>>({});
   const [progress, setProgress] = useState<{ i: number; n: number; title: string } | null>(null);
   const saveRef = useRef<HTMLButtonElement>(null);
 
-  const sections = pickSections(titles, reads, drafts, results);
+  const sections = pickSections(titles, reads, drafts, results, starting);
   const pending = sections.filter((section) => section.body !== null);
   const blocked = sections.find((section) => section.blocked);
   const dirty = pending.length > 0;
@@ -180,9 +225,16 @@ export function PickToolsStep({
       {titles.map((title, index) => {
         const query = reads[index];
         const draft = drafts[title];
+        const live = lives[index];
         const content = (
           <>
-            {query?.isSuccess === true && draft !== undefined ? (
+            {live?.kind === 'starting' ? (
+              <SectionStarting
+                title={title}
+                message={live.start.message}
+                onCheckAgain={recheckStatus}
+              />
+            ) : query?.isSuccess === true && draft !== undefined ? (
               <SectionBody
                 read={query.data}
                 draft={draft}

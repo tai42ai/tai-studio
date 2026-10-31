@@ -1,16 +1,18 @@
 /**
  * The raw JSON view's check of the tool names each entry lists: for every entry whose
- * server the MCP status knows, the `include` and `exclude` names that server does not
- * advertise are warned about in the form view's own words, and a failed read of the
- * server's tools says so in place of that server's check. The buffer is checked as it
- * is typed; a buffer that does not parse lists nothing here (saving states the parse
- * error).
+ * server the MCP status knows as a bound or a failed server, the `include` and `exclude`
+ * names that server does not advertise are warned about in the form view's own words,
+ * a failed read of the server's tools says so in place of that server's check, and a
+ * server whose start is still in progress is named as starting in its place, in the form
+ * view's words. An entry whose title the status does not carry is skipped without a
+ * warning: its server's tools are not read. The buffer is checked as it is typed; a
+ * buffer that does not parse lists nothing here (saving states the parse error).
  */
 import { errorMessage, ErrorState } from '@tai42/studio-sdk';
 import { type ReactNode, useMemo } from 'react';
 
 import { asRecord, parseEntries, stringArray } from './mcp-config-parse';
-import { type McpStatusRead, useAdvertisedByTitle } from './mcp-server-tools';
+import { type McpStatusRead, serverStartingNote, useAdvertisedByTitle } from './mcp-server-tools';
 import {
   type McpToolList,
   unadvertisedTokens,
@@ -55,13 +57,24 @@ export function JsonToolNamesCheck({
   );
 
   const lines: ReactNode[] = [];
-  const failedShown = new Set<string>();
+  /** The titles whose check a failure or a start already replaced, said once each. */
+  const shownInPlace = new Set<string>();
   entries.forEach((entry, index) => {
     const read = reads.get(entry.title);
     if (read === undefined || read.state === 'pending') return;
+    if (read.state === 'starting') {
+      if (shownInPlace.has(entry.title)) return;
+      shownInPlace.add(entry.title);
+      lines.push(
+        <p key={`${String(index)}-starting`} className="tai-status" style={{ margin: 0 }}>
+          {`${serverStartingNote(entry.title)} Its listed names are not checked.`}
+        </p>,
+      );
+      return;
+    }
     if (read.state === 'failed') {
-      if (failedShown.has(entry.title)) return;
-      failedShown.add(entry.title);
+      if (shownInPlace.has(entry.title)) return;
+      shownInPlace.add(entry.title);
       lines.push(
         <ErrorState
           key={`${String(index)}-failed`}

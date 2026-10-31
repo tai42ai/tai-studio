@@ -81,6 +81,7 @@ export { apiPathPrefixes, apiRoutes, buildPath } from './generated/api-routes';
 export { API_KEY_HEADER } from './headers';
 export type { ApiConfig, RequestOptions } from './http';
 export { apiDownload, apiRequest, apiText } from './http';
+export { isMcpStarting } from './mcp-failure';
 export type {
   AnswerFormat,
   AnswerPageWording,

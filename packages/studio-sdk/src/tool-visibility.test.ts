@@ -5,7 +5,7 @@ import { effectiveHidden, hiddenToolNames } from './tool-visibility';
 
 /** A native tag entry with the given plugin-declared visibility. */
 function tag(name: string, hidden: boolean, tags: string[] = []): ToolTagEntry {
-  return { name, tags, badges: [], hidden, schedulable: false };
+  return { name, description: null, tags, badges: [], hidden, schedulable: false };
 }
 
 /** An overlay row carrying only the tri-state `hidden` opinion under test. */

@@ -34,13 +34,13 @@ describe('McpServersSection — write gating (projection ⊆ gate)', () => {
       projection: scopedProjection(),
     });
 
-    // The failed-server section still renders (a reader may SEE what failed)…
-    await screen.findByText('Failed servers');
+    // The unbound-server section still renders (a reader may SEE what is not bound)…
+    await screen.findByText('Unbound servers');
     expect(screen.getByText('bad')).toBeInTheDocument();
     // …the mounted table lists the bound server without its Reload…
     expect(await screen.findByText('steady')).toBeInTheDocument();
     // …but its remediation doors are all withdrawn.
-    expect(screen.queryByRole('button', { name: 'Reload all failed' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reload all unbound' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Deregister bad' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Reload/ })).not.toBeInTheDocument();
     // The config editor renders read-only — its Save door is withdrawn.
@@ -52,8 +52,8 @@ describe('McpServersSection — write gating (projection ⊆ gate)', () => {
     // The harness defaults to a total (admin) projection.
     renderWithProviders(<McpServersSection />, { client: gatingClient() });
 
-    await screen.findByText('Failed servers');
-    expect(screen.getByRole('button', { name: 'Reload all failed' })).toBeInTheDocument();
+    await screen.findByText('Unbound servers');
+    expect(screen.getByRole('button', { name: 'Reload all unbound' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Deregister bad' })).toBeInTheDocument();
     expect(await screen.findByTestId('mcp-entry-0')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Save config/ })).toBeInTheDocument();

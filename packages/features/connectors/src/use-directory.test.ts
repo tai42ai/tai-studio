@@ -1,7 +1,7 @@
 /**
  * The directory rows built from the reads: their order, a managed entry kept on its
  * provider's card, servers drawn from the live status when the configuration is
- * refused, a listing folded once installed, and the search match.
+ * refused, a listing folded once installed, a title's live state, and the search match.
  */
 import { matchesSearch } from '@tai42/studio-sdk';
 import { describe, expect, it, vi } from 'vitest';
@@ -10,6 +10,7 @@ import { connection, listing, provider } from './test-utils';
 import {
   type DirectoryReads,
   directoryRows,
+  liveStateOf,
   type ReadState,
   rowSearchTexts,
   type ServerEntry,
@@ -139,6 +140,16 @@ describe('directoryRows', () => {
       reads({ installed: REFUSED, marketplace: marketplace([listing()]) }),
     );
     expect(rows).toEqual([]);
+  });
+});
+
+describe('liveStateOf', () => {
+  it('reads a failed record whose server start is still in progress as starting', () => {
+    const start = { title: 'slow', category: 'starting', message: 'start still in progress' };
+    const failure = { title: 'alerts', category: 'unreachable', message: 'refused' };
+    const status = { bound: {}, failed: [start, failure] };
+    expect(liveStateOf('slow', status)).toEqual({ kind: 'starting', start });
+    expect(liveStateOf('alerts', status)).toEqual({ kind: 'failed', failure });
   });
 });
 

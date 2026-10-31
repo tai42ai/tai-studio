@@ -592,7 +592,7 @@ export type MarketplaceUninstall = z.infer<typeof marketplaceUninstall>;
 export const marketplaceUpdate = z.object({ "accept_public_routes": z.boolean().default(false), "env": z.record(z.string(), z.string()).nullable().default(null), "ref": z.string(), "route_mounts": z.record(z.string(), z.string()).nullable().default(null), "secret_keys": z.array(z.string()).nullable().default(null), "version": z.string().nullable().default(null) });
 export type MarketplaceUpdate = z.infer<typeof marketplaceUpdate>;
 
-export const mcpAdvertisedTool = z.object({ "bound": z.boolean(), "description": z.string().nullable(), "name": z.string(), "selected": z.boolean(), "title": z.string().nullable(), "unbound_reason": z.enum(["server_failed","not_loaded","preset_conflict","unusable_schema","not_listed_at_bind"]).nullable() });
+export const mcpAdvertisedTool = z.object({ "bound": z.boolean(), "description": z.string().nullable(), "name": z.string(), "selected": z.boolean(), "title": z.string().nullable(), "unbound_reason": z.enum(["server_starting","server_failed","not_loaded","preset_conflict","unusable_schema","not_listed_at_bind"]).nullable() });
 export type McpAdvertisedTool = z.infer<typeof mcpAdvertisedTool>;
 
 export const mcpAdvertisedTools = z.object({ "exclude": z.array(z.string()), "include": z.array(z.string()), "title": z.string(), "tools": z.array(mcpAdvertisedTool), "unadvertised": z.array(z.string()) });
@@ -1318,7 +1318,7 @@ export type ToolRunView = z.infer<typeof toolRunView>;
 export const toolSchemaView = z.object({ "description": z.string().nullable(), "input": z.record(z.string(), jsonValue), "output": z.record(z.string(), jsonValue).nullable() });
 export type ToolSchemaView = z.infer<typeof toolSchemaView>;
 
-export const toolTagRow = z.object({ "badges": z.array(z.string()), "hidden": z.boolean(), "name": z.string(), "schedulable": z.boolean(), "tags": z.array(z.string()) });
+export const toolTagRow = z.object({ "badges": z.array(z.string()), "description": z.string().nullable(), "hidden": z.boolean(), "name": z.string(), "schedulable": z.boolean(), "tags": z.array(z.string()) });
 export type ToolTagRow = z.infer<typeof toolTagRow>;
 
 export const toolTagListResponse = z.array(toolTagRow);

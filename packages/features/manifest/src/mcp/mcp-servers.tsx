@@ -1,12 +1,12 @@
 /**
- * The "MCP servers" block of the Manifest screen: mounted status, the failed-server
+ * The "MCP servers" block of the Manifest screen: mounted status, the unbound-server
  * health section, and the manifest `mcp` config editor.
  */
 import { Card, DirtyGuardBoundary } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
 import { McpConfigSection } from './mcp-config-editor';
-import { FailedServersSection, McpStatusSection } from './mcp-status';
+import { McpStatusSection, UnboundServersSection } from './mcp-status';
 
 /**
  * Every sourced MCP server: mounted status plus the manifest `mcp` config
@@ -29,7 +29,7 @@ export function McpServersSection(): ReactNode {
             </h3>
             <McpStatusSection />
           </Card>
-          <FailedServersSection />
+          <UnboundServersSection />
           <Card>
             <h3 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>
               Configuration
