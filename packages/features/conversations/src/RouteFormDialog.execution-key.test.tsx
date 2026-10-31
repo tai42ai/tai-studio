@@ -65,6 +65,7 @@ function renderDialog({
       client: {
         listAgents: vi.fn().mockResolvedValue(agentListing(['assistant'])),
         listTools: vi.fn().mockResolvedValue([]),
+        listToolTags: vi.fn().mockResolvedValue([]),
         listChannels: vi.fn().mockResolvedValue(channelListing([['whatsapp', null]])),
         listTokensPayload,
         ...client,

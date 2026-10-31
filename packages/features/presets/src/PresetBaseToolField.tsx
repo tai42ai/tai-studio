@@ -48,6 +48,7 @@ export function PresetBaseToolField({
       tagsByTool={catalog.tagsByTool}
       agentToolNames={catalog.agentToolNames}
       displayNames={catalog.displayNames}
+      toolDescriptions={catalog.toolDescriptions}
       badgesByTool={catalog.badgesByTool}
     />
   );

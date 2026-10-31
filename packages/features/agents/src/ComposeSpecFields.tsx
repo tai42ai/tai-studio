@@ -6,8 +6,9 @@
  * A tool/preset read the pickers depend on renders a loud `ErrorState` instead of an
  * enabled empty control ("nothing to choose" and "the read failed" must never be the
  * same screen); a 403 on the tools list is not such a failure, as the tool pickers
- * then take a typed name. A tags failure degrades the group to flat mode but is
- * stated, never silently ungrouped.
+ * then take a typed name. A tags failure degrades the group to flat mode and the
+ * search to tool names only, but is stated, never silently ungrouped; the search's
+ * loss is named only while a picker draws its search.
  */
 import {
   defaultValueForSchema,
@@ -19,12 +20,13 @@ import {
   type SchemaEditorDraft,
   SchemaForm,
   Textarea,
+  TOOL_SEARCH_NAMES_ONLY_NOTE,
 } from '@tai42/studio-sdk';
 import { forwardRef, type ReactNode, useEffect, useImperativeHandle, useState } from 'react';
 
 import { hasField } from './authoring-schema';
 import type { InlinePresetSpec, InlineSubAgentSpec } from './authoring-types';
-import { MultiToolPicker } from './MultiToolPicker';
+import { addToolSearchShown, MultiToolPicker } from './MultiToolPicker';
 import { PresetSpecEditor } from './PresetSpecEditor';
 import { SubAgentComposer } from './SubAgentComposer';
 import type { ComposeAgentData } from './useComposeAgentData';
@@ -58,6 +60,15 @@ function SystemPromptField({
   );
 }
 
+/**
+ * A failed tags read: the pickers lose their grouping and their description search; the
+ * search's loss is named while a picker draws its search.
+ */
+function tagsReadFailedMessage(error: unknown, searchShown: boolean): string {
+  const failure = `Could not load tool tags and descriptions: ${errorMessage(error)}.`;
+  return searchShown ? `${failure} ${TOOL_SEARCH_NAMES_ONLY_NOTE}` : failure;
+}
+
 function ToolsField({
   data,
   value,
@@ -67,16 +78,18 @@ function ToolsField({
   readonly value: string[];
   readonly onChange: (value: string[]) => void;
 }): ReactNode {
-  const { toolsQuery, tagsQuery } = data;
+  const { tagsQuery } = data;
   return (
     <Field label="Tools" description="The tools this agent may call." group>
       {/* A tags failure must not take down tool picking: the picker keeps its flat
-          mode and the failure is stated rather than silently ungrouping. A failed
-          tools read is the picker's own state (its error, or its typed-name entry on a
-          403), which has no grouping, so this line stands aside. */}
-      {tagsQuery.isError && !toolsQuery.isError ? (
+          mode, searches tool names only, and the failure is stated rather than
+          silently ungrouping. */}
+      {tagsQuery.isError ? (
         <ErrorState
-          message={errorMessage(tagsQuery.error)}
+          message={tagsReadFailedMessage(
+            tagsQuery.error,
+            addToolSearchShown(data.visibleToolsQuery, value),
+          )}
           onRetry={() => void tagsQuery.refetch()}
         />
       ) : null}
@@ -84,6 +97,7 @@ function ToolsField({
         query={data.visibleToolsQuery}
         tagsByTool={data.tagsByTool}
         displayNames={data.displayNames}
+        toolDescriptions={data.toolDescriptions}
         value={value}
         onChange={onChange}
         idPrefix="compose-tools"
@@ -135,38 +149,40 @@ function SubAgentsField({
   readonly onChange: (value: InlineSubAgentSpec[]) => void;
 }): ReactNode {
   const { toolsQuery, toolsReadFailed, presetsQuery, tagsQuery } = data;
+  const composerShown = !toolsReadFailed && !presetsQuery.isError;
   return (
     <Field
       label="Sub-agents"
       description="Inline sub-agent specs this agent can delegate to."
       group
     >
-      {toolsReadFailed || presetsQuery.isError ? (
+      {/* A tags failure must not take down sub-agent tool picking: the composer's
+          pickers keep flat mode, search tool names only, and the failure is stated. */}
+      {tagsQuery.isError ? (
+        <ErrorState
+          message={tagsReadFailedMessage(
+            tagsQuery.error,
+            composerShown &&
+              value.some((spec) => addToolSearchShown(data.visibleToolsQuery, spec.tool_names)),
+          )}
+          onRetry={() => void tagsQuery.refetch()}
+        />
+      ) : null}
+      {composerShown ? (
+        <SubAgentComposer
+          toolsQuery={data.visibleToolsQuery}
+          tagsByTool={data.tagsByTool}
+          displayNames={data.displayNames}
+          toolDescriptions={data.toolDescriptions}
+          presetRecords={data.usablePresets}
+          value={value}
+          onChange={onChange}
+        />
+      ) : (
         <ErrorState
           message={errorMessage(toolsReadFailed ? toolsQuery.error : presetsQuery.error)}
           onRetry={data.retryReads}
         />
-      ) : (
-        <>
-          {/* A tags failure must not take down sub-agent tool picking: the composer's
-              pickers keep flat mode and the failure is stated. Under a 403 on the tools
-              list the pickers take a typed name, which has no grouping, so this line
-              stands aside. */}
-          {tagsQuery.isError && !toolsQuery.isError ? (
-            <ErrorState
-              message={errorMessage(tagsQuery.error)}
-              onRetry={() => void tagsQuery.refetch()}
-            />
-          ) : null}
-          <SubAgentComposer
-            toolsQuery={data.visibleToolsQuery}
-            tagsByTool={data.tagsByTool}
-            displayNames={data.displayNames}
-            presetRecords={data.usablePresets}
-            value={value}
-            onChange={onChange}
-          />
-        </>
       )}
     </Field>
   );

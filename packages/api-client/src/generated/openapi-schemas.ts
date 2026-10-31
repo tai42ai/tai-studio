@@ -1318,7 +1318,7 @@ export type ToolRunView = z.infer<typeof toolRunView>;
 export const toolSchemaView = z.object({ "description": z.string().nullable(), "input": z.record(z.string(), jsonValue), "output": z.record(z.string(), jsonValue).nullable() });
 export type ToolSchemaView = z.infer<typeof toolSchemaView>;
 
-export const toolTagRow = z.object({ "badges": z.array(z.string()), "hidden": z.boolean(), "name": z.string(), "schedulable": z.boolean(), "tags": z.array(z.string()) });
+export const toolTagRow = z.object({ "badges": z.array(z.string()), "description": z.string().nullable(), "hidden": z.boolean(), "name": z.string(), "schedulable": z.boolean(), "tags": z.array(z.string()) });
 export type ToolTagRow = z.infer<typeof toolTagRow>;
 
 export const toolTagListResponse = z.array(toolTagRow);

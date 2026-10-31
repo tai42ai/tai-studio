@@ -205,6 +205,52 @@ function tagsAcross(
   );
 }
 
+/** The sentence a host adds while a failed description read leaves the search on names alone. */
+export const TOOL_SEARCH_NAMES_ONLY_NOTE = 'The tool search matches tool names only.';
+
+/**
+ * Whether a `ToolPicker` given these props draws its search: the list is loaded, the
+ * select offers an option (a listed tool, or a flagged stored value) and the picker is
+ * enabled. A pending, failed, refused or empty read, or a disabled picker, draws none. A
+ * host reads it to say what the search matches only while the search is there.
+ */
+export function toolSearchShown({
+  query,
+  value,
+  excludeNames,
+  unlistedLabel,
+  disabled,
+}: Pick<
+  ToolPickerProps,
+  'query' | 'value' | 'excludeNames' | 'unlistedLabel' | 'disabled'
+>): boolean {
+  const state = pickerState(
+    query,
+    availableNames(query.data, excludeNames),
+    value,
+    unlistedLabel,
+    undefined,
+  );
+  return selectView(state, disabled).searchShown;
+}
+
+/**
+ * The picker's select: drawn in the `select` and `unlisted` phases, disabled while the
+ * host disables the picker or the read is pending. Its search opens only from a drawn,
+ * enabled select.
+ */
+interface SelectView {
+  readonly drawn: boolean;
+  readonly disabled: boolean;
+  readonly searchShown: boolean;
+}
+
+function selectView(state: PickerState, disabled: boolean | undefined): SelectView {
+  const drawn = state.phase === 'select' || state.phase === 'unlisted';
+  const locked = disabled === true || state.pending;
+  return { drawn, disabled: locked, searchShown: drawn && !locked };
+}
+
 /** The tag filter's choices, and the available names the chosen tag keeps. */
 function tagView(
   available: readonly string[],
@@ -283,6 +329,7 @@ export function ToolPicker({
   );
   const state = pickerState(query, available, value, unlistedLabel, errorNote);
   const { phase, stored } = state;
+  const view = selectView(state, disabled);
 
   const listed = !state.pending && phase !== 'error' && phase !== 'refused';
   const { allTags, filtered } = useMemo(
@@ -303,7 +350,7 @@ export function ToolPicker({
       placeholder={state.pending ? 'Loading tools…' : placeholder}
       ariaLabel={ariaLabel}
       ariaDescribedBy={state.unlisted ? unlistedId : undefined}
-      disabled={disabled === true || state.pending}
+      disabled={view.disabled}
       displayNames={displayNames}
       toolDescriptions={toolDescriptions}
       agentToolNames={agentToolNames}
@@ -319,8 +366,9 @@ export function ToolPicker({
 
   // Only a rendered control claims the field's control id; with none the host's
   // error is hidden and the note in its place says why the field is empty.
-  const controlRenders = phase === 'unlisted' || phase === 'select' || phase === 'refused';
-  const contentByPhase: Record<PickerPhase, () => ReactNode> = {
+  const controlRenders = view.drawn || phase === 'refused';
+  // The select is drawn where `selectView` says; each phase adds its own lines beside it.
+  const besideSelectByPhase: Record<PickerPhase, () => ReactNode> = {
     refused: () => (
       <TypedNameEntry
         value={stored}
@@ -334,7 +382,6 @@ export function ToolPicker({
       errorNote !== undefined ? <MutedLine text={errorNote} /> : <ReadError query={query} />,
     unlisted: () => (
       <>
-        {select(filtered)}
         {state.empty ? emptyState : null}
         <p id={unlistedId} className="tai-field-hint" style={{ margin: 0 }}>
           <Badge variant="warning">{unlistedLabel}</Badge> {stored} is {unlistedLabel}. Pick
@@ -343,9 +390,14 @@ export function ToolPicker({
       </>
     ),
     empty: () => emptyState,
-    select: () => select(filtered),
+    select: () => null,
   };
-  const content = contentByPhase[phase]();
+  const content = (
+    <>
+      {view.drawn ? select(filtered) : null}
+      {besideSelectByPhase[phase]()}
+    </>
+  );
 
   return (
     <div data-testid={idPrefix} className="tai-stack tai-stack-2">

@@ -28,6 +28,7 @@ import {
   servedConstants,
   type TargetConversationConfig,
   type TokensPayload,
+  type ToolTagEntry,
 } from '@tai42/api-client';
 import type { NavigateOptions, NavigationContextValue, RouteSearch } from '@tai42/studio-sdk';
 import {
@@ -456,6 +457,11 @@ export function agentListing(names: readonly string[]): AgentListing {
     })),
     total: names.length,
   };
+}
+
+/** One tool's declaration row (`listToolTags`), carrying only the description under test. */
+export function toolTag(name: string, description: string | null): ToolTagEntry {
+  return { name, description, tags: [], badges: [], hidden: false, schedulable: false };
 }
 
 /** The installed-channel list: each entry a name and its declared identity hint. */

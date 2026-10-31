@@ -33,6 +33,7 @@ import {
   pickOption,
   renderWithProviders,
   type StubApiClient,
+  toolTag,
 } from './test-utils';
 
 /**
@@ -75,6 +76,12 @@ function pickerClient(overrides: StubApiClient = {}): StubApiClient {
   return {
     listAgents: vi.fn().mockResolvedValue(agentListing(['assistant', 'researcher'])),
     listTools: vi.fn().mockResolvedValue(['lookup_record', 'lookup_account']),
+    listToolTags: vi
+      .fn()
+      .mockResolvedValue([
+        toolTag('lookup_record', null),
+        toolTag('lookup_account', 'Reads one account by its identifier'),
+      ]),
     listChannels: vi.fn().mockResolvedValue(
       channelListing([
         ['whatsapp', WHATSAPP_HINT],
@@ -209,14 +216,77 @@ describe('RouteFormDialog — create', () => {
     await user.click(await screen.findByRole('combobox', { name: 'Tool' }));
     const search = screen.getByRole('combobox', { name: 'Search tools' });
     await user.type(search, 'find');
-    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
-      'Find Record (lookup_record)',
-    ]);
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+    expect(screen.getByRole('option')).toHaveAccessibleName('Find Record (lookup_record)');
     await user.clear(search);
     await user.type(search, 'lookup_acc');
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+    expect(screen.getByRole('option')).toHaveAccessibleName('lookup_account');
+  });
+
+  it('finds a tool by a word of its declared description', async () => {
+    const user = userEvent.setup({ delay: null });
+    renderDialog();
+
+    await pickOption(user, 'Target kind', 'Tool');
+    await user.click(await screen.findByRole('combobox', { name: 'Tool' }));
+    await user.type(screen.getByRole('combobox', { name: 'Search tools' }), 'identifier');
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(1);
+    expect(options[0]).toHaveAccessibleName('lookup_account');
+    expect(options[0]).toHaveAccessibleDescription('Reads one account by its identifier');
+  });
+
+  it('states a failed tool-description read on the tool field and still lists the tools', async () => {
+    const user = userEvent.setup({ delay: null });
+    renderDialog({
+      client: { listToolTags: vi.fn().mockRejectedValue(new ApiError('boom', 500)) },
+    });
+
+    await pickOption(user, 'Target kind', 'Tool');
+    const tool = await screen.findByRole('combobox', { name: 'Tool' });
+    await waitFor(() => {
+      expect(tool).toHaveAccessibleDescription(
+        'Could not load tool descriptions: boom. The tool search matches tool names only.',
+      );
+    });
+    await user.click(tool);
     expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'lookup_record',
       'lookup_account',
     ]);
+  });
+
+  it('states a failed tool-description read without the tool search while the tools read is pending', async () => {
+    const user = userEvent.setup({ delay: null });
+    renderDialog({
+      client: {
+        listTools: vi.fn().mockReturnValue(new Promise<never>(() => undefined)),
+        listToolTags: vi.fn().mockRejectedValue(new ApiError('boom', 500)),
+      },
+    });
+
+    await pickOption(user, 'Target kind', 'Tool');
+    const tool = await screen.findByRole('combobox', { name: 'Tool' });
+    await waitFor(() => {
+      expect(tool).toHaveAccessibleDescription('Could not load tool descriptions: boom.');
+    });
+    expect(tool).toBeDisabled();
+  });
+
+  it('states a failed tool-description read without the tool search when no tool is registered', async () => {
+    const user = userEvent.setup({ delay: null });
+    renderDialog({
+      client: {
+        listTools: vi.fn().mockResolvedValue([]),
+        listToolTags: vi.fn().mockRejectedValue(new ApiError('boom', 500)),
+      },
+    });
+
+    await pickOption(user, 'Target kind', 'Tool');
+    expect(await screen.findByText('No tools are registered on this deployment.')).toBeVisible();
+    expect(await screen.findByText('Could not load tool descriptions: boom.')).toBeVisible();
+    expect(document.body).not.toHaveTextContent('The tool search matches tool names only.');
   });
 
   it('shows only the api door field for the api door and the channel fields for channel', async () => {
@@ -596,6 +666,20 @@ describe('RouteFormDialog — refused and failed picker reads', () => {
         expect.objectContaining({ target_kind: 'tool', target_name: 'fetch_record' }),
       );
     });
+  });
+
+  it('states both failures, without the tool search, when the tool and tool-description reads both fail', async () => {
+    renderDialog({
+      initial: makeRoute({ target_kind: 'tool', target_name: 'lookup_record' }),
+      client: {
+        listTools: vi.fn().mockRejectedValue(new ApiError('tools down', 500)),
+        listToolTags: vi.fn().mockRejectedValue(new ApiError('tags down', 500)),
+      },
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('tools down');
+    expect(await screen.findByText('Could not load tool descriptions: tags down.')).toBeVisible();
+    expect(document.body).not.toHaveTextContent('The tool search matches tool names only.');
   });
 
   it('shows the error state when the tool list fails', async () => {

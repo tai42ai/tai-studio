@@ -16,6 +16,7 @@ export function SubAgentCard({
   toolsQuery,
   tagsByTool,
   displayNames,
+  toolDescriptions,
   presetRecords,
   onChange,
   onRemove,
@@ -26,6 +27,7 @@ export function SubAgentCard({
   readonly toolsQuery: ToolListQuery;
   readonly tagsByTool?: Readonly<Record<string, readonly string[]>>;
   readonly displayNames?: Readonly<Record<string, string>>;
+  readonly toolDescriptions?: Readonly<Record<string, string>>;
   readonly presetRecords: readonly PresetRecord[];
   readonly onChange: (next: InlineSubAgentSpec) => void;
   readonly onRemove: () => void;
@@ -74,6 +76,7 @@ export function SubAgentCard({
             query={toolsQuery}
             tagsByTool={tagsByTool}
             displayNames={displayNames}
+            toolDescriptions={toolDescriptions}
             value={spec.tool_names}
             onChange={(next) => {
               onChange({ ...spec, tool_names: next });

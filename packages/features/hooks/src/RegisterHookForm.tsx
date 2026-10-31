@@ -30,6 +30,7 @@ import { type ReactNode, type SyntheticEvent } from 'react';
 import { buildHookParams } from './buildHookParams';
 import { fireGateUnsatisfiable } from './fire-path-gate';
 import { HookConditionExprFields } from './HookConditionExprFields';
+import { HookFormReadNotices } from './HookFormReadNotices';
 import { HookIdentityFields } from './HookIdentityFields';
 import { HookSubjectSection } from './HookSubjectSection';
 import { useHookFormData } from './useHookFormData';
@@ -107,12 +108,7 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
       onSubmit={onSubmit}
       style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}
     >
-      {data.hooksQuery.isError ? (
-        <p role="alert" style={{ margin: 0, color: 'var(--tai-color-warn-text)' }}>
-          Could not load existing hooks: {errorMessage(data.hooksQuery.error)}. Overwrite detection
-          is unavailable; a register still replaces any existing hook with the same name.
-        </p>
-      ) : null}
+      <HookFormReadNotices data={data} tool={fields.tool} />
       <HookIdentityFields
         fields={fields}
         missing={missing}
@@ -121,6 +117,7 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
         keysQuery={data.keysQuery}
         toolsQuery={data.toolsQuery}
         toolDisplayNames={data.toolDisplayNames}
+        toolDescriptions={data.toolDescriptions}
         binding={data.binding}
       />
       <HookSubjectSection

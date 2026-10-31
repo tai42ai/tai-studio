@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { buildToolViews } from './toolView';
 
 const tagEntry = (overrides: Partial<ToolTagEntry> & { name: string }): ToolTagEntry => ({
+  description: null,
   tags: [],
   badges: [],
   hidden: false,

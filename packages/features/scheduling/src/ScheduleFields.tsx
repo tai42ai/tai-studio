@@ -19,6 +19,7 @@ export function ScheduleFields({
   toolsQuery,
   excludeToolNames,
   displayNames,
+  toolDescriptions,
   badgesByTool,
 }: {
   readonly name: string;
@@ -34,6 +35,7 @@ export function ScheduleFields({
   readonly toolsQuery: ToolListQuery;
   readonly excludeToolNames: readonly string[];
   readonly displayNames: Readonly<Record<string, string>>;
+  readonly toolDescriptions: Readonly<Record<string, string>>;
   readonly badgesByTool: Readonly<Record<string, readonly string[]>>;
 }): ReactNode {
   // The read serves no schedulable tool at all, versus every one it serves is hidden.
@@ -68,6 +70,7 @@ export function ScheduleFields({
         }
         excludeNames={excludeToolNames}
         displayNames={displayNames}
+        toolDescriptions={toolDescriptions}
         badgesByTool={badgesByTool}
       />
 

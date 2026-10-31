@@ -14,6 +14,14 @@
 export const toolsListKey = ['tools'] as const;
 
 /**
+ * Each tool's own declarations (`GET /api/tools/tags`): its description, native tags,
+ * visibility and badges. A screen that reads them under this key shares its cached read
+ * with the Tools screen, which reads them here. The key sits under {@link toolsListKey},
+ * so an invalidation of the registered-tool population refreshes it too.
+ */
+export const toolTagsKey = ['tools', 'tags'] as const;
+
+/**
  * The tool_meta overlay (`GET /api/tool-meta`): the folder tree plus the per-tool
  * display name, tags, folder and visibility rows. Every screen that files or labels
  * tools by the overlay (tools, presets, agents, the schedule picker) reads it under

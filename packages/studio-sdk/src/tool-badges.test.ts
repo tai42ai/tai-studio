@@ -5,7 +5,7 @@ import { mergeToolBadges, toolBadgesByName } from './tool-badges';
 
 /** A native tag entry carrying only the plugin-declared badges under test. */
 function tag(name: string, badges: string[]): ToolTagEntry {
-  return { name, tags: [], badges, hidden: false, schedulable: false };
+  return { name, description: null, tags: [], badges, hidden: false, schedulable: false };
 }
 
 /** An overlay row carrying only the operator badge overlay under test. */

@@ -150,7 +150,7 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
           submitted={submitted}
         />
 
-        <PresetEnrichmentErrors catalog={catalog} />
+        <PresetEnrichmentErrors catalog={catalog} base={base} />
 
         <PresetKwargsEditor
           hints={catalog.hints}

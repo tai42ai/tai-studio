@@ -16,6 +16,7 @@ import type {
   HookParams,
   MeProjection,
   TokensPayload,
+  ToolTagEntry,
   TriggerLinkRecord,
 } from '@tai42/api-client';
 import {
@@ -48,6 +49,19 @@ export interface RenderWithProvidersResult extends RenderResult {
  */
 export const HOOK_TOOLS: readonly string[] = ['notify', 'slack.post_message'];
 
+/**
+ * The declaration rows every render serves through `listToolTags` unless the test's
+ * client stubs its own: one per {@link HOOK_TOOLS} name, `notify` carrying a description.
+ */
+export const HOOK_TOOL_TAGS: readonly ToolTagEntry[] = HOOK_TOOLS.map((name) => ({
+  name,
+  description: name === 'notify' ? 'Posts a short notice to a webhook' : null,
+  tags: [],
+  badges: [],
+  hidden: false,
+  schedulable: false,
+}));
+
 export function renderWithProviders(
   ui: ReactElement,
   { client, projection }: { client: StubApiClient; projection?: MeProjection },
@@ -65,7 +79,11 @@ export function renderWithProviders(
   // The stub only implements the methods exercised by a given test; the cast
   // asserts the shape the SDK context expects. A seeded projection stubs `getMe`
   // so `CapabilityProvider` resolves to `ready`.
-  const withTools: StubApiClient = { listTools: () => Promise.resolve([...HOOK_TOOLS]), ...client };
+  const withTools: StubApiClient = {
+    listTools: () => Promise.resolve([...HOOK_TOOLS]),
+    listToolTags: () => Promise.resolve([...HOOK_TOOL_TAGS]),
+    ...client,
+  };
   const apiClient =
     projection !== undefined
       ? ({ ...withTools, getMe: () => Promise.resolve(projection) } as ApiClient)

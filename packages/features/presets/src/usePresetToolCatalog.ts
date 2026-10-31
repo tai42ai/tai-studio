@@ -1,7 +1,8 @@
 /**
  * The create-preset base-picker's enrichment layer: the tool / preset / tag / overlay
  * / agent / base-schema reads and the memos derived from them (grouping tags, the
- * "(agent)" label set, declared badges, the base-exclusion list, the kwargs hint).
+ * "(agent)" label set, declared badges and descriptions, the base-exclusion list, the
+ * kwargs hint).
  * None is load-bearing, so a failure surfaces loudly (`enrichmentFailed`) but keeps
  * the form usable — never a silently ungrouped, unlabelled picker.
  *
@@ -14,6 +15,7 @@
 import {
   hiddenToolNames,
   toolBadgesByName,
+  toolDescriptionsByName,
   toolMetaKey,
   useApi,
   useToolDisplayNames,
@@ -108,6 +110,13 @@ export function usePresetToolCatalog(base: string | null) {
     [tagsQuery.data, toolMetaQuery.data],
   );
 
+  // Each tool's declared description, drawn under its option and searched with its
+  // label. A failed tags read leaves the map empty (the search matches labels only).
+  const toolDescriptions = useMemo(
+    () => toolDescriptionsByName(tagsQuery.data ?? []),
+    [tagsQuery.data],
+  );
+
   const enrichmentFailed =
     tagsQuery.isError || toolMetaQuery.isError || agentsQuery.isError || schemaQuery.isError;
   const retryEnrichment = (): void => {
@@ -129,6 +138,7 @@ export function usePresetToolCatalog(base: string | null) {
     excludeNames,
     tagsByTool,
     badgesByTool,
+    toolDescriptions,
     enrichmentFailed,
     retryEnrichment,
     hints: inputFieldNames(schemaQuery.data?.input),

@@ -5494,6 +5494,7 @@ status: "running" | "parked" | "failed" | "succeeded" | "lost";
 }[]>;
 readonly listToolTags: (signal?: AbortSignal) => Promise<{
 badges: string[];
+description: string | null;
 hidden: boolean;
 name: string;
 schedulable: boolean;
@@ -14075,6 +14076,7 @@ function createApiClient(config: ApiConfig): {
     }[]>;
     readonly listToolTags: (signal?: AbortSignal) => Promise<{
         badges: string[];
+        description: string | null;
         hidden: boolean;
         name: string;
         schedulable: boolean;
@@ -30404,6 +30406,9 @@ const tokensPayload: z.ZodArray<z.ZodObject<{
 export const tokensPayloadKey: readonly ["auth-tokens-payload"];
 
 // @public
+export const TOOL_SEARCH_NAMES_ONLY_NOTE = "The tool search matches tool names only.";
+
+// @public
 interface ToolAdminArgs {
     // (undocumented)
     readonly kind: string;
@@ -30415,6 +30420,9 @@ interface ToolAdminArgs {
 
 // @public
 export function toolBadgesByName(tagEntries: readonly ToolTagEntry[], overlayRows: readonly ToolMetaRecord[]): Readonly<Record<string, readonly string[]>>;
+
+// @public
+export function toolDescriptionsByName(tagEntries: readonly ToolTagEntry[]): Readonly<Record<string, string>>;
 
 // @public
 export function toolDisplayLabel(names: Readonly<Record<string, string>>, rawName: string): string;
@@ -30827,6 +30835,9 @@ const toolSchema: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public
+export function toolSearchShown(input: Pick<ToolPickerProps, 'query' | 'value' | 'excludeNames' | 'unlistedLabel' | 'disabled'>): boolean;
+
+// @public
 export const ToolsIcon: IconComponent;
 
 // @public
@@ -30838,6 +30849,7 @@ type ToolTagEntry = z.infer<typeof toolTagEntry>;
 // @public
 const toolTagEntry: z.ZodObject<{
     badges: z.ZodArray<z.ZodString>;
+    description: z.ZodNullable<z.ZodString>;
     hidden: z.ZodBoolean;
     name: z.ZodString;
     schedulable: z.ZodBoolean;
@@ -30847,11 +30859,15 @@ const toolTagEntry: z.ZodObject<{
 // @public (undocumented)
 const toolTags: z.ZodArray<z.ZodObject<{
     badges: z.ZodArray<z.ZodString>;
+    description: z.ZodNullable<z.ZodString>;
     hidden: z.ZodBoolean;
     name: z.ZodString;
     schedulable: z.ZodBoolean;
     tags: z.ZodArray<z.ZodString>;
 }, z.core.$strip>>;
+
+// @public
+export const toolTagsKey: readonly ["tools", "tags"];
 
 // @public (undocumented)
 export function Tooltip(input: TooltipProps): JSX.Element;

@@ -137,6 +137,41 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     expect(await screen.findByRole('option', { name: 'Weather (weather)' })).toBeInTheDocument();
   });
 
+  it('finds a base tool by a word of its declared description', async () => {
+    const user = userEvent.setup({ delay: null });
+    const client = baseClient({
+      listTools: vi.fn().mockResolvedValue(['weather', 'radar']),
+      listToolTags: vi.fn().mockResolvedValue([
+        {
+          name: 'weather',
+          description: null,
+          tags: [],
+          badges: [],
+          hidden: false,
+          schedulable: false,
+        },
+        {
+          name: 'radar',
+          description: 'Scans the sky for rain',
+          tags: [],
+          badges: [],
+          hidden: false,
+          schedulable: false,
+        },
+      ]),
+    });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
+
+    await openBasePicker(user);
+    await user.type(screen.getByRole('combobox', { name: 'Search tools' }), 'sky');
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('option')).toHaveLength(1);
+    });
+    expect(screen.getByRole('option')).toHaveAccessibleName('radar');
+    expect(screen.getByRole('option')).toHaveAccessibleDescription('Scans the sky for rain');
+  });
+
   it('renders a 400 base-is-a-preset message verbatim', async () => {
     const user = userEvent.setup({ delay: null });
     const createPreset = vi
@@ -157,7 +192,7 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     [
       'listToolTags',
       { listToolTags: vi.fn().mockRejectedValue(new Error('tags down')) },
-      'Tag grouping is unavailable: tags down',
+      'Tag grouping is unavailable: tags down. The tool search matches tool names only.',
     ],
     [
       'listAgents',
@@ -202,6 +237,49 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     expect(screen.getByRole('button', { name: 'Add kwarg' })).toBeEnabled();
   });
 
+  it.each([
+    ['listTools', { listTools: vi.fn().mockRejectedValue(new ApiError('tools down', 500)) }],
+    ['listTools (403)', { listTools: vi.fn().mockRejectedValue(new ApiError('forbidden', 403)) }],
+    ['listPresets', { listPresets: vi.fn().mockRejectedValue(new ApiError('presets down', 500)) }],
+  ])(
+    'states a failed tag read without the tool-search line when the %s read failing replaces the picker',
+    async (_label, override) => {
+      // A failed tools or preset read puts an error in place of the base picker, so no
+      // tool search is on screen and the tag line names only the lost grouping.
+      renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+        client: baseClient({
+          listToolTags: vi.fn().mockRejectedValue(new Error('tags down')),
+          ...override,
+        }),
+      });
+
+      expect(await screen.findByText('Tag grouping is unavailable: tags down')).toBeInTheDocument();
+      expect(screen.queryByRole('combobox', { name: 'Base tool' })).toBeNull();
+      expect(document.body).not.toHaveTextContent('The tool search matches tool names only.');
+    },
+  );
+
+  it.each([
+    ['is pending', { listTools: vi.fn().mockReturnValue(new Promise<never>(() => undefined)) }],
+    ['returns no tool', { listTools: vi.fn().mockResolvedValue([]) }],
+  ])(
+    'states a failed tag read without the tool-search line while the tools read %s',
+    async (_label, override) => {
+      // A pending tools read draws a disabled picker and an empty one draws the empty
+      // note: neither puts a tool search on screen, so the tag line names only the lost
+      // grouping.
+      renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+        client: baseClient({
+          listToolTags: vi.fn().mockRejectedValue(new Error('tags down')),
+          ...override,
+        }),
+      });
+
+      expect(await screen.findByText('Tag grouping is unavailable: tags down')).toBeInTheDocument();
+      expect(document.body).not.toHaveTextContent('The tool search matches tool names only.');
+    },
+  );
+
   it('gives each failed enrichment read its OWN line, never one run-together sentence', async () => {
     const user = userEvent.setup({ delay: null });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
@@ -217,7 +295,7 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     const alert = await screen.findByRole('alert');
     const lines = [...alert.querySelectorAll('p')];
     expect(lines.map((line) => line.textContent)).toEqual([
-      'Tag grouping is unavailable: tags down',
+      'Tag grouping is unavailable: tags down. The tool search matches tool names only.',
       'Agent labelling is unavailable: agents down',
     ]);
     // Each line is the published wrapping carrier, so a 320 px viewport never

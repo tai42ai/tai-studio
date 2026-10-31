@@ -83,7 +83,9 @@ export type ToolMediaResult = z.infer<typeof toolMediaResult>;
  * `badges` are the tool's plugin-DECLARED capability labels — purely INFORMATIONAL
  * (e.g. `network`, `filesystem`), never a gate the server enforces. The overlay's
  * own badges are merged on top client-side; this read exposes only the declaration.
- * `schedulable` is whether the tool can be scheduled.
+ * `schedulable` is whether the tool can be scheduled. `description` is the tool's own
+ * declared description, `null` when it declares none; tool pickers draw it under the
+ * tool's option and search it with the tool's label.
  */
 export const toolTagEntry = openapi.toolTagRow;
 export const toolTags = openapi.toolTagListResponse;

@@ -11,6 +11,7 @@ export function SubAgentComposer({
   toolsQuery,
   tagsByTool,
   displayNames,
+  toolDescriptions,
   presetRecords,
   value,
   onChange,
@@ -19,6 +20,7 @@ export function SubAgentComposer({
   readonly toolsQuery: ToolListQuery;
   readonly tagsByTool?: Readonly<Record<string, readonly string[]>>;
   readonly displayNames?: Readonly<Record<string, string>>;
+  readonly toolDescriptions?: Readonly<Record<string, string>>;
   readonly presetRecords: readonly PresetRecord[];
   readonly value: readonly InlineSubAgentSpec[];
   readonly onChange: (next: InlineSubAgentSpec[]) => void;
@@ -35,6 +37,7 @@ export function SubAgentComposer({
           toolsQuery={toolsQuery}
           tagsByTool={tagsByTool}
           displayNames={displayNames}
+          toolDescriptions={toolDescriptions}
           presetRecords={presetRecords}
           disabled={disabled}
           onChange={(next) => {

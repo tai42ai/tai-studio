@@ -17,7 +17,14 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
-import { API_KEY, EXECUTION_KEY_ID, loginViaUi, pickExecutionKey, seedCredential } from './helpers';
+import {
+  API_KEY,
+  EXECUTION_KEY_ID,
+  loginViaUi,
+  pickExecutionKey,
+  pickTool,
+  seedCredential,
+} from './helpers';
 import {
   ACCOUNT_EMPTY_NOTE,
   accountSession,
@@ -36,17 +43,6 @@ needs('kind:identity', 'kind:webhook_verifiers:github', 'mutable', 'setting:hook
 /** The register form — the page also carries a topic filter and the bind form. */
 function registerForm(page: Page): Locator {
   return page.getByRole('form', { name: 'Register hook' });
-}
-
-/**
- * Choose `tool` in the register form's Tool picker: search for its raw name, then take
- * the option that reads the raw name bare or as the `Display (raw)` suffix.
- */
-async function pickTool(page: Page, form: Locator, tool: string): Promise<void> {
-  await form.getByRole('combobox', { name: 'Tool' }).click();
-  await page.getByRole('combobox', { name: 'Search tools' }).fill(tool);
-  const escaped = tool.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  await page.getByRole('option', { name: new RegExp(`(^|\\()${escaped}\\)?$`) }).click();
 }
 
 /** Fill the register form's required fields and bind the seeded execution key. */

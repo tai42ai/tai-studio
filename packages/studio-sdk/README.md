@@ -489,7 +489,11 @@ HTML. A picker is composed outside `SchemaForm`. A picker whose list can grow lo
 (`ToolPicker`, `AgentPicker` and `ChannelPicker` are the cases the SDK ships) is built on
 `SearchableSelect`, which opens with a search box over the option labels and their
 descriptions (an option may carry a `description`, drawn as a quieter line under its
-label; `ToolPicker` takes them as `toolDescriptions`). In its search box ArrowUp and
+label; the option is named by its label alone and the description is its accessible
+description). `ToolPicker` takes each tool's declared description as `toolDescriptions`,
+which `toolDescriptionsByName` builds from the `listToolTags` rows; a tool that declares no
+description has no entry. A host that reads those rows can read them under `toolTagsKey` to
+share the cache with the Tools screen. In its search box ArrowUp and
 ArrowDown move the highlight, Home and End jump to the first and last option, Enter
 chooses, Escape closes, and Tab or Shift+Tab close the popup and move on to the next or
 previous control. Each change to the query moves the highlight to the first match and

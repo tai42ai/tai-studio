@@ -153,6 +153,7 @@ export {
   tokensPayloadKey,
   toolMetaKey,
   toolsListKey,
+  toolTagsKey,
 } from './query-keys';
 
 // -- Extension-combo editing helpers -----------------------------------------
@@ -163,6 +164,9 @@ export { effectiveHidden, hiddenToolNames } from './tool-visibility';
 
 // -- Tool declared-badge merge (native ∪ overlay) ----------------------------
 export { mergeToolBadges, toolBadgesByName } from './tool-badges';
+
+// -- Tool declared descriptions ----------------------------------------------
+export { toolDescriptionsByName } from './tool-descriptions';
 
 // -- Text search shared by pickers and filterable lists ----------------------
 export { isBlankSearch, matchesSearch } from './search-match';
@@ -362,7 +366,12 @@ export { TemplatedTextField, templatedTextSummary } from './components/templated
 export type { TokenName } from './components/tokens';
 export { TOKEN_NAMES } from './components/tokens';
 export type { ToolListQuery, ToolPickerProps } from './components/tool-picker';
-export { BADGES_NOTE, ToolPicker } from './components/tool-picker';
+export {
+  BADGES_NOTE,
+  TOOL_SEARCH_NAMES_ONLY_NOTE,
+  ToolPicker,
+  toolSearchShown,
+} from './components/tool-picker';
 export type { TooltipProps } from './components/tooltip';
 export { Tooltip } from './components/tooltip';
 export type {
