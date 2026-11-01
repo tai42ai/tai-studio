@@ -293,7 +293,7 @@ export function mcpEntry(
 ): ManifestMcpEntry {
   return {
     title,
-    config: { transport: 'streamable-http', url: 'https://mcp.example.com/mcp' },
+    config: { type: 'http', url: 'https://mcp.example.com/mcp' },
     include,
     exclude,
     managed:

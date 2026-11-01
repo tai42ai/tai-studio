@@ -76,7 +76,7 @@ describe('manifest / mcp client transport', () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
-          mcp: [{ name: 'files' }],
+          mcp: [{ title: 'files', config: { type: 'stdio', command: 'files-server' } }],
           user_tools: ['echo'],
           extension_settings: {
             extensions_modules: [],
@@ -91,14 +91,16 @@ describe('manifest / mcp client transport', () => {
     const out = await client.getManifest();
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/manifest');
-    expect(out.mcp).toEqual([{ name: 'files' }]);
+    expect(out.mcp).toEqual([
+      { title: 'files', config: { type: 'stdio', command: 'files-server' } },
+    ]);
     expect(out.user_tools).toEqual(['echo']);
   });
 
   it('getManifest exposes the typed managed provenance and passes the rest of each entry through', async () => {
     const managed = {
       title: 'github-repo',
-      config: { transport: 'stdio', command: 'run' },
+      config: { type: 'stdio', command: 'run' },
       managed: { connection_id: 'c1', provider_id: 'github', sub_service: 'repo' },
     };
     const { client } = harness(() =>
@@ -126,7 +128,7 @@ describe('manifest / mcp client transport', () => {
     // A hand-authored entry carries no provenance marker.
     expect(out.mcp[1]?.managed).toBeUndefined();
     // Every other field rides through unmodeled so the editor edits the whole entry.
-    expect(out.mcp[0]?.config).toEqual({ transport: 'stdio', command: 'run' });
+    expect(out.mcp[0]?.config).toEqual({ type: 'stdio', command: 'run' });
     expect(out.mcp[0]?.title).toBe('github-repo');
   });
 
@@ -208,10 +210,14 @@ describe('manifest / mcp client transport', () => {
         },
       }),
     );
-    const out = await client.setMcpConfig([{ name: 'files' }]);
+    const out = await client.setMcpConfig([
+      { title: 'files', config: { type: 'stdio', command: 'files-server' } },
+    ]);
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/mcp-config');
-    expect(captured[0]?.body).toEqual({ mcp: [{ name: 'files' }] });
+    expect(captured[0]?.body).toEqual({
+      mcp: [{ title: 'files', config: { type: 'stdio', command: 'files-server' } }],
+    });
     expect(out.status).toBe('ok');
     expect(out.fanout.mode).toBe('local-only');
   });

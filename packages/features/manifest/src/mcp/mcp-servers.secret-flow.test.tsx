@@ -123,7 +123,9 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
     await user.click(screen.getByRole('button', { name: 'JSON' }));
     const textarea = await screen.findByRole('textbox', { name: 'MCP config' });
     fireEvent.change(textarea, {
-      target: { value: '[{"title":"srv","env":{"API_KEY":"!ENV ${SECRET_1:fallback}"}}]' },
+      target: {
+        value: '[{"title":"srv","config":{"env":{"API_KEY":"!ENV ${SECRET_1:fallback}"}}}]',
+      },
     });
     await user.click(screen.getByRole('button', { name: /Save config/ }));
     await waitFor(() => {
@@ -447,9 +449,9 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
     const setMcpSecretEnv = vi.fn().mockResolvedValue(reload(1));
     const client = {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
-      // A blank-key env row: pasting would emit `key_hint: ''` + pointer `mcp/0/env/`.
+      // A blank-key env row: pasting would emit `key_hint: ''` + pointer `mcp/0/config/env/`.
       getManifestPreserved: vi.fn().mockResolvedValue({
-        mcp: [{ title: 'srv', env: { '': '' } }],
+        mcp: [{ title: 'srv', config: { env: { '': '' } } }],
         user_tools: [],
         extension_settings: {
           extensions_modules: [],

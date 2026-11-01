@@ -323,14 +323,14 @@ describe('combined env+manifest op + preserved manifest transport', () => {
     const out = await client.setMcpSecretEnv({
       value: 'a-pasted-secret',
       key_hint: 'GITHUB_TOKEN',
-      manifest_pointer: 'mcp/0/headers/Authorization',
+      manifest_pointer: 'mcp/0/config/headers/Authorization',
     });
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/mcp-config/secret-env');
     expect(captured[0]?.body).toEqual({
       value: 'a-pasted-secret',
       key_hint: 'GITHUB_TOKEN',
-      manifest_pointer: 'mcp/0/headers/Authorization',
+      manifest_pointer: 'mcp/0/config/headers/Authorization',
     });
     expect(out.status).toBe('ok');
     expect(out.fanout.mode).toBe('local-only');
@@ -340,7 +340,17 @@ describe('combined env+manifest op + preserved manifest transport', () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
-          mcp: [{ title: 'gh', headers: { Authorization: '!ENV ${GITHUB_TOKEN}' }, managed: null }],
+          mcp: [
+            {
+              title: 'gh',
+              config: {
+                type: 'http',
+                url: 'https://mcp.example.com/mcp',
+                headers: { Authorization: '!ENV ${GITHUB_TOKEN}' },
+              },
+              managed: null,
+            },
+          ],
           user_tools: ['search'],
           extension_settings: {
             extensions_modules: [],
@@ -356,8 +366,8 @@ describe('combined env+manifest op + preserved manifest transport', () => {
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/manifest/preserved');
     // The preserved read keeps `!ENV` markers intact (passthrough entry preserves them).
-    const entry = out.mcp[0] as { headers: Record<string, string> };
-    expect(entry.headers).toEqual({ Authorization: '!ENV ${GITHUB_TOKEN}' });
+    const entry = out.mcp[0] as { config: { headers: Record<string, string> } };
+    expect(entry.config.headers).toEqual({ Authorization: '!ENV ${GITHUB_TOKEN}' });
     expect(out.user_tools).toEqual(['search']);
   });
 });

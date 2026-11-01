@@ -7,7 +7,7 @@
 import type { RecordEntryContext } from '@tai42/studio-sdk';
 
 /**
- * The leaf value at a slash-separated manifest pointer (`mcp/0/env/KEY`) — the same
+ * The leaf value at a slash-separated manifest pointer (`mcp/0/config/env/KEY`) — the same
  * pointer form the combined paste op targets — or `undefined` when any segment does
  * not resolve. Array segments index by number; object segments key by name.
  */

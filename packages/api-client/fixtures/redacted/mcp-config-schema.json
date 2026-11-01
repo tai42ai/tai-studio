@@ -1,9 +1,166 @@
 {
-  "type": "object",
-  "title": "McpServerConfig",
-  "properties": {
-    "url": { "type": "string", "title": "URL" },
-    "headers": { "type": "object", "title": "Headers" }
+  "$defs": {
+    "ConnectorRef": {
+      "additionalProperties": false,
+      "description": "Marker on a manifest entry pointing back at a Connection.\n\nHand-authored entries leave ``managed`` as ``None`` and are unaffected.",
+      "properties": {
+        "connection_id": {
+          "title": "Connection Id",
+          "type": "string"
+        },
+        "provider_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "sub_service": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Sub Service",
+          "type": "string"
+        }
+      },
+      "required": ["connection_id", "provider_id", "sub_service"],
+      "title": "ConnectorRef",
+      "type": "object"
+    },
+    "MCPConfig": {
+      "additionalProperties": false,
+      "description": "Transport config for one MCP server: exactly one of ``url``/``uds``/``command``.",
+      "properties": {
+        "args": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Args",
+          "type": "array"
+        },
+        "command": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Command"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Env",
+          "type": "object"
+        },
+        "headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Headers",
+          "type": "object"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type"
+        },
+        "uds": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uds"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Url"
+        }
+      },
+      "title": "MCPConfig",
+      "type": "object"
+    }
   },
-  "required": ["url"]
+  "additionalProperties": false,
+  "description": "An MCP block: a transport ``config`` plus optional managed-connector binding.",
+  "properties": {
+    "config": {
+      "$ref": "#/$defs/MCPConfig"
+    },
+    "exclude": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Exclude",
+      "type": "array"
+    },
+    "extensions": {
+      "additionalProperties": {
+        "items": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "type": "array"
+      },
+      "title": "Extensions",
+      "type": "object"
+    },
+    "include": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Include",
+      "type": "array"
+    },
+    "managed": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ConnectorRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    }
+  },
+  "required": ["title", "config"],
+  "title": "TaiMCPConfig",
+  "type": "object"
 }

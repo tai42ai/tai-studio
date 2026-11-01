@@ -26,8 +26,7 @@ const ADVERTISED = ['search', 'fetch', 'list'] as const;
 /** The entry: one advertised and one unadvertised name included, one unadvertised excluded. */
 const ENTRY = {
   title: SERVER,
-  transport: 'stdio',
-  command: 'srv-command',
+  config: { type: 'stdio', command: 'srv-command' },
   include: ['search', 'ghost'],
   exclude: ['gone'],
 } as const;

@@ -183,20 +183,26 @@ export const MANIFEST_CONFIGURED = {
   },
 };
 
-/** An MCP-entry schema carrying a secret-bearing `env` map (a string→string record)
- *  alongside the transport `title`. */
+/** An MCP-entry schema whose `config` carries a secret-bearing `env` map (a
+ *  string→string record) alongside the entry's `title`. */
 export const SECRET_SCHEMA = {
   type: 'object',
   title: 'TaiMCPConfig',
   required: ['title'],
   properties: {
     title: { type: 'string', title: 'Title' },
-    env: { type: 'object', title: 'Env', additionalProperties: { type: 'string' } },
+    config: {
+      type: 'object',
+      title: 'MCPConfig',
+      properties: {
+        env: { type: 'object', title: 'Env', additionalProperties: { type: 'string' } },
+      },
+    },
   },
 } as const;
 
 export const withEnvBlank = {
-  mcp: [{ title: 'srv', env: { API_KEY: '' } }],
+  mcp: [{ title: 'srv', config: { env: { API_KEY: '' } } }],
   user_tools: ['echo'],
   extension_settings: {
     extensions_modules: [],
@@ -207,7 +213,7 @@ export const withEnvBlank = {
   },
 };
 export const withEnvMarker = {
-  mcp: [{ title: 'srv', env: { API_KEY: '!ENV ${SECRET_1}' } }],
+  mcp: [{ title: 'srv', config: { env: { API_KEY: '!ENV ${SECRET_1}' } } }],
   user_tools: ['echo'],
   extension_settings: {
     extensions_modules: [],

@@ -117,7 +117,7 @@ test('a connector-managed MCP entry renders read-only in the config form', async
       mcp: [
         {
           title: 'acme-mcp',
-          transport: 'http',
+          config: { type: 'http', url: 'https://mcp.example.com/mcp' },
           include: ['acme.search'],
           managed: { connection_id: 'conn-1', provider_id: 'acme', sub_service: 'search' },
         },

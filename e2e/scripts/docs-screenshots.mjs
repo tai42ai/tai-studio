@@ -1126,7 +1126,7 @@ const CONNECTORS_SCENE_TOOLS = ['search', 'fetch_page', 'list_sources'];
 function sceneMcpEntry(title, connectionId) {
   return {
     title,
-    config: { transport: 'streamable-http', url: `https://mcp.example.com/${title}` },
+    config: { type: 'http', url: `https://mcp.example.com/${title}` },
     include: [],
     exclude: [],
     managed:
