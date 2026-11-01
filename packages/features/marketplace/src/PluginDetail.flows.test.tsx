@@ -108,8 +108,10 @@ describe('PluginDetail — install flow', () => {
     await waitFor(() => {
       expect(installMarketplacePlugin).toHaveBeenCalledWith({ ref: 'tai42/toolbox' });
     });
-    const status = await screen.findByRole('status');
-    expect(status).toHaveTextContent('Installed tai42/toolbox 1.2.0');
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Installed tai42/toolbox 1.2.0');
+    });
+    const status = screen.getByRole('status');
     expect(status).toHaveTextContent('Selected as the OPENAI provider via OPENAI_API_KEY.');
     expect(status).toHaveTextContent('Minor issue.');
     expect(invalidate).toHaveBeenCalledWith();
@@ -237,7 +239,9 @@ describe('PluginDetail — update and uninstall flows', () => {
     await waitFor(() => {
       expect(updateMarketplacePlugin).toHaveBeenCalledWith({ ref: 'tai42/toolbox' });
     });
-    expect(await screen.findByRole('status')).toHaveTextContent('Updated tai42/toolbox 2.0.0');
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Updated tai42/toolbox 2.0.0');
+    });
   });
 
   it('the update confirm names re-fetching the descriptor, not pip, for a descriptor plugin', async () => {
@@ -295,8 +299,10 @@ describe('PluginDetail — update and uninstall flows', () => {
     await waitFor(() => {
       expect(uninstallMarketplacePlugin).toHaveBeenCalledWith({ ref: 'tai42/toolbox' });
     });
-    const status = await screen.findByRole('status');
-    expect(status).toHaveTextContent('Uninstalled tai42/toolbox');
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Uninstalled tai42/toolbox');
+    });
+    const status = screen.getByRole('status');
     expect(status).toHaveTextContent('Removed.');
   });
 

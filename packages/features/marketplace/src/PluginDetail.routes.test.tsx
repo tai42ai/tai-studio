@@ -233,8 +233,10 @@ describe('PluginDetail — route surface and mounting', () => {
         accept_public_routes: false,
       });
     });
-    const status = await screen.findByRole('status');
-    expect(status).toHaveTextContent('Mounted routes');
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Mounted routes');
+    });
+    const status = screen.getByRole('status');
     expect(status).toHaveTextContent('/api/channels/web/inbound');
   });
 
@@ -280,7 +282,9 @@ describe('PluginDetail — route surface and mounting', () => {
         accept_public_routes: false,
       });
     });
-    expect(await screen.findByRole('status')).toHaveTextContent('Updated tai42/toolbox 2.0.0');
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Updated tai42/toolbox 2.0.0');
+    });
   });
 
   it('renders an installed plugin’s routes at the ACTUAL mounted base, not the declared default', async () => {

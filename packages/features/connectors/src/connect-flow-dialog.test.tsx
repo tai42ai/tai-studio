@@ -680,8 +680,10 @@ describe('ConnectFlowDialog — a marketplace listing', () => {
     await waitFor(async () => {
       expect(await currentStep()).toContain('Pick tools');
     });
-    const starting = await screen.findByRole('status');
-    expect(starting).toHaveTextContent('Starting');
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('Starting');
+    });
+    const starting = screen.getByRole('status');
     expect(starting).toHaveClass('tai-status-pending');
     expect(screen.getByText(message)).toBeVisible();
     expect(screen.queryByRole('alert')).toBeNull();

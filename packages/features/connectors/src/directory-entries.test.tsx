@@ -206,8 +206,10 @@ describe('A provider card by its connections', () => {
     await within(card).findByText('Starting: acme_mail_work');
     await user.click(within(card).getByRole('button', { name: 'Pick tools for work' }));
     const dialog = await screen.findByRole('dialog', { name: 'Pick tools: Acme (work)' });
-    const starting = await within(dialog).findByRole('status');
-    expect(starting).toHaveTextContent('Starting');
+    await waitFor(() => {
+      expect(within(dialog).getByRole('status')).toHaveTextContent('Starting');
+    });
+    const starting = within(dialog).getByRole('status');
     expect(starting).toHaveClass('tai-status-pending');
     expect(within(dialog).getByText(message)).toBeVisible();
     expect(
