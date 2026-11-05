@@ -1,12 +1,13 @@
 name: release-label
 
-# A pull request's Conventional-Commits title and body decide the version
-# release-please will publish. This gate projects that version and runs the release
-# API-diff gate against the committed api-extractor reports on the pull request head —
-# the same gate release-npm.yml runs on the tag — so a breaking public-API change under
-# a bump its label could not honestly carry is refused here, before the merge, never
-# after the tag. The `edited` type is included so re-labelling the release by editing
-# the pull request body (a `!`, a `BREAKING CHANGE:` footer, a `Release-As:` line)
+# A pull request's Conventional-Commits title and body decide the release bump. This
+# gate projects that bump from the manifest's version and runs the release API-diff gate
+# — the same gate release-npm.yml runs on the tag — on the public-API change the pull
+# request carries: a surface item counts only when it is breaking both against the newest
+# published version and between the pull request's base and the checkout. A counted item
+# under a bump its label could not honestly carry is refused here, before the merge,
+# never after the tag. The `edited` type is included so re-labelling the release by
+# editing the pull request body (a `!`, a `BREAKING CHANGE:` footer, a `Release-As:` line)
 # re-runs the check.
 on:
   pull_request:
@@ -25,8 +26,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        # Full history + tags: the gate diffs the projected version against the
-        # previous released tag's committed report, the way release-npm.yml does.
+        # On the pull_request event this checks out the merge commit
+        # (refs/pull/<number>/merge, the head merged into the base branch tip), so
+        # the gate reads the base side's reports at its first parent, HEAD^1. Full
+        # history + tags: fetch-depth 0 keeps that parent and brings the tags whose
+        # committed reports the published side reads.
         with:
           fetch-depth: 0
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -41,9 +45,10 @@ jobs:
       - name: Refuse a mislabelled release
         # The title and body reach the script through the environment, never
         # interpolated into the shell, so a backtick or $(...) in a pull request
-        # body cannot run on the runner. The npm baseline reads are public (no
-        # token) and the package list and versions come from the repo's own
-        # release-please config and manifest, so this runs unchanged on a fork.
+        # body cannot run on the runner. The npm reads that choose the published
+        # version are public (no token) and the package list and versions come from
+        # the repo's own release-please config and manifest, so this runs unchanged
+        # on a fork.
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}

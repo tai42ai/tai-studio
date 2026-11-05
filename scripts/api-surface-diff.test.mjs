@@ -16,10 +16,112 @@ import { classify } from './api-surface-diff.mjs';
 
 // Build a minimal api-extractor report around a `ts` fence body.
 const report = (body) => '```ts\n' + body + '\n```';
-const findings = (oldBody, newBody) =>
+const classified = (oldBody, newBody) =>
   classify('r', parseReport('r', report(oldBody)), parseReport('r', report(newBody)));
+const findings = (oldBody, newBody) => classified(oldBody, newBody).map(({ text }) => text);
 
 // ----------------------------------------------------- interface member diff
+
+// The identity of the single finding a change produces.
+const identityOf = (oldBody, newBody) => {
+  const items = classified(oldBody, newBody);
+  assert.equal(items.length, 1, JSON.stringify(items));
+  return items[0].identity;
+};
+
+const shape = (...members) => `export interface Foo {\n${members.join('\n')}\n}`;
+
+test('a member has one identity however it broke', () => {
+  const removed = identityOf(shape('a: string;'), shape());
+  assert.equal(identityOf(shape('a: string;'), shape('a: number;')), removed);
+  assert.equal(identityOf(shape('a?: string;'), shape('a: string;')), removed);
+  assert.equal(identityOf(shape(), shape('a: string;')), removed);
+  assert.notEqual(identityOf(shape('b: string;'), shape()), removed);
+});
+
+test('an enum member has one identity however it broke, apart from its enum', () => {
+  const removed = identityOf(
+    'export enum Foo {\n  A = 1,\n  B = 2,\n}',
+    'export enum Foo {\n  B = 2,\n}',
+  );
+  assert.equal(
+    identityOf(
+      'export enum Foo {\n  A = 1,\n  B = 2,\n}',
+      'export enum Foo {\n  A = 3,\n  B = 2,\n}',
+    ),
+    removed,
+  );
+  assert.notEqual(
+    identityOf(
+      'export enum Foo {\n  A = 1,\n  B = 2,\n}',
+      'export const enum Foo {\n  A = 1,\n  B = 2,\n}',
+    ),
+    removed,
+  );
+});
+
+test('every finding about the symbol as a whole shares the symbol identity', () => {
+  const symbol = identityOf('export const Foo: string;', '');
+  const iface = shape('a: string;');
+  const changes = [
+    [iface, 'interface Foo {\n  a: string;\n}'],
+    [iface, 'export type Foo = string;'],
+    [iface, 'export interface Foo<T> {\n  a: string;\n}'],
+    ['export function Foo(a: string): void;', 'export function Foo(a: number): void;'],
+    ['export enum Foo {\n  A = 1,\n}', 'export const enum Foo {\n  A = 1,\n}'],
+    ['export type Foo<T> = string;', 'export type Foo<T, U> = string;'],
+    ["export type Foo = 'a' | 'b';", "export type Foo = 'a';"],
+    ['export type Foo = string;', 'export type Foo = number;'],
+    ['export const Foo: string;', 'export const Foo: number;'],
+  ];
+  for (const [oldBody, newBody] of changes)
+    assert.equal(identityOf(oldBody, newBody), symbol, `${oldBody} -> ${newBody}`);
+});
+
+test('text TypeScript could not parse is one symbol whether dropped or added', () => {
+  const unparsed = 'export declare const x: <S>(p: S) => Promise<infer<S> | null>;';
+  const dropped = classified(unparsed, '').map(({ identity }) => identity);
+  assert.ok(dropped.includes(identityOf('', unparsed)));
+});
+
+test('a nested symbol keeps one identity however it broke', () => {
+  const inSpace = (declaration) => `export namespace Space {\n  ${declaration}\n}`;
+  const removed = identityOf(
+    'export namespace Space {\n  let Foo: string;\n  let Bar: string;\n}',
+    'export namespace Space {\n  let Bar: string;\n}',
+  );
+  assert.equal(identityOf(inSpace('let Foo: string;'), inSpace('const Foo: string;')), removed);
+});
+
+test('a member key holding a separator or a quote keeps its own identity', () => {
+  const oldBody = shape('"a: b": string;', '"a\\"b": string;', 'a: string;');
+  const identities = [
+    identityOf(oldBody, shape('"a\\"b": string;', 'a: string;')),
+    identityOf(oldBody, shape('"a: b": string;', 'a: string;')),
+    identityOf(oldBody, shape('"a: b": string;', '"a\\"b": string;')),
+  ];
+  assert.equal(new Set(identities).size, 3);
+});
+
+test('a nested symbol, a member and a top-level symbol have distinct identities', () => {
+  const nested = identityOf(
+    'export namespace Foo {\n  export const a: string;\n  export const b: string;\n}',
+    'export namespace Foo {\n  export const b: string;\n}',
+  );
+  const member = identityOf(shape('a: string;'), shape());
+  const topLevel = identityOf('export const a: string;', '');
+  assert.equal(new Set([nested, member, topLevel]).size, 3);
+});
+
+test('the same symbol in another report has another identity', () => {
+  const inReport = (name) =>
+    classify(
+      name,
+      parseReport(name, report('export const a: string;')),
+      parseReport(name, report('')),
+    )[0].identity;
+  assert.notEqual(inReport('r'), inReport('s'));
+});
 
 test('removing an index signature is breaking', () => {
   const found = findings(

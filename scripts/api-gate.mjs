@@ -236,29 +236,18 @@ function reportAtWorktree(dir, name) {
   }
 }
 
-// The core gate over one release version: classify every committed report against its
-// own published baseline and collect the reasons a report's surface change exceeds the
-// bump. Factored out of the CLI so the two entry points that need it — the post-tag gate
-// (`main` below, called from release-npm.yml) and the pre-merge label check
-// (release-label-check.mjs, which runs it against the version release-please would
-// publish) — share one classification/baseline implementation rather than duplicating
-// it. The I/O seams are injectable through `deps` (mode, tag list, npm lookup, the two
-// report readers, and the log sink), defaulting to the production seams, so the whole
-// gate is unit-testable without git or the network. Returns the list of failing reasons,
-// empty when the release is honest; a tooling error (bad config, a missing report, an
-// unclassifiable export) throws GateError.
-function runGate(version, deps = {}) {
+// The release's baseline: for each report, the newest tag below `version` that is
+// PUBLISHED on npm for the report's package, or null on a first publish. Logs what it
+// decides. npm is queried once per package. The I/O seams are injectable through `deps`
+// (tag list, npm lookup, the report reader, the log sink), defaulting to production.
+function publishedBaseline(version, deps = {}) {
   const {
-    mode = readMode(),
     tags = gitTags(),
     publishedVersionsFor = npmPublishedVersions,
     readReportAtRef = reportAtRef,
-    readReportAtWorktree = reportAtWorktree,
     log = console.log,
   } = deps;
 
-  // Baselines are per package, so each report is classified and judged against its
-  // own baseline; the gate fails if ANY report fails. npm is queried once per package.
   const publishedCache = new Map();
   const publishedFor = (packageName) => {
     if (!publishedCache.has(packageName))
@@ -266,33 +255,59 @@ function runGate(version, deps = {}) {
     return publishedCache.get(packageName);
   };
 
-  const failReasons = [];
-  for (const { dir, name } of REPORTS) {
+  return ({ dir, name }) => {
     const packageName = packageNameForReport(dir);
     const publishedVersions = publishedFor(packageName);
     const baselineTag = previousPublishedTag(version, tags, publishedVersions);
     if (baselineTag === null) {
       log(`api-gate: ${name}: first publish, no published prior version to diff — passes`);
-      continue;
+      return null;
     }
     const skipped = skippedUnpublishedTags(baselineTag, version, tags, publishedVersions);
     if (skipped.length)
       log(
         `api-gate: ${name}: skipping unpublished tag(s) ${skipped.join(', ')} — not on npm for ${packageName}`,
       );
+    return {
+      oldVersion: baselineTag.replace(/^v/, ''),
+      breakingFindings: (diffFrom) => diffFrom(readReportAtRef(baselineTag, dir, name)),
+    };
+  };
+}
 
-    const oldVersion = baselineTag.replace(/^v/, '');
+// The core gate over one new version: classify every committed report against the baseline
+// its caller supplies and collect the reasons a report's surface change exceeds the bump.
+// `baselineFor({ dir, name })` returns the report's `{ oldVersion, breakingFindings }`, or
+// null when the report has nothing to diff against and passes. `breakingFindings(diffFrom)`
+// returns the findings to judge, where `diffFrom(oldSource)` lists classify's findings
+// between an old report's text and the new report, and a null old report (absent there)
+// breaks nothing.
+// Its two callers each answer for their own baseline: the post-tag gate (`main` below,
+// called from release-npm.yml) passes publishedBaseline, and the pre-merge label check
+// (release-label-check.mjs) passes its two-sided rule over it. The remaining I/O seams are
+// injectable through `deps` (mode, the new report reader and the log sink), defaulting to
+// production, so the whole gate is unit-testable without git or the network. Returns the
+// list of failing reasons, empty when the bump is honest; a tooling error (bad config, a
+// missing report, an unclassifiable export) throws GateError.
+function runGate(version, baselineFor, deps = {}) {
+  const { mode = readMode(), readReportAtWorktree = reportAtWorktree, log = console.log } = deps;
+
+  const failReasons = [];
+  for (const { dir, name } of REPORTS) {
+    const baseline = baselineFor({ dir, name });
+    if (baseline === null) continue;
+
+    const { oldVersion, breakingFindings } = baseline;
     const bump = bumpClass(oldVersion, version);
     const header = `api-gate: ${name}: ${oldVersion} -> ${version} (${bump} bump, mode=${mode})`;
 
-    const oldSource = readReportAtRef(baselineTag, dir, name);
     const newSource = readReportAtWorktree(dir, name);
     if (newSource === null) fail(`committed report ${dir}/${name} is missing at the release`);
-    // report absent at the baseline tag — additive, nothing to diff.
-    const reportFindings =
+    const reportFindings = breakingFindings((oldSource) =>
       oldSource === null
         ? []
-        : classify(name, parseReport(name, oldSource), parseReport(name, newSource));
+        : classify(name, parseReport(name, oldSource), parseReport(name, newSource)),
+    );
 
     const { passes, reason } = gatePasses(mode, oldVersion, version, reportFindings.length > 0);
     if (reportFindings.length === 0) {
@@ -300,12 +315,12 @@ function runGate(version, deps = {}) {
       continue;
     }
     log(`${header}: ${reportFindings.length} breaking surface item(s):`);
-    for (const line of reportFindings) log(`  - ${line}`);
+    for (const { text } of reportFindings) log(`  - ${text}`);
     if (passes) {
       log(`${header}: ${reason} — gate passes.`);
     } else {
       log(`${header}: ${reason} — gate FAILS.`);
-      failReasons.push(`${name} ${reason} (${reportFindings.join('; ')})`);
+      failReasons.push(`${name} ${reason} (${reportFindings.map(({ text }) => text).join('; ')})`);
     }
   }
   return failReasons;
@@ -315,11 +330,19 @@ function main() {
   const versionArg = process.argv.indexOf('--version');
   if (versionArg === -1 || !process.argv[versionArg + 1]) fail('missing --version <X.Y.Z>');
   const version = process.argv[versionArg + 1];
-  const failReasons = runGate(version);
+  const failReasons = runGate(version, publishedBaseline(version));
   if (failReasons.length) fail(`api-gate ${version}: ${failReasons.join(' | ')}`);
 }
 
-export { bumpClass, allowedBumps, gatePasses, previousPublishedTag, reportAtRef, runGate };
+export {
+  bumpClass,
+  allowedBumps,
+  gatePasses,
+  previousPublishedTag,
+  publishedBaseline,
+  reportAtRef,
+  runGate,
+};
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {

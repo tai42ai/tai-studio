@@ -371,11 +371,11 @@ function classifyMembers(add, symbol, oldMembers, newMembers, shape) {
   for (const [key, oldMember] of oldMembers) {
     const newMember = newMembers.get(key);
     if (!newMember) {
-      add(symbol, `member "${key}" was removed`);
+      add(symbol, `member "${key}" was removed`, key);
       continue;
     }
     if (oldMember.optional && !newMember.optional) {
-      add(symbol, `member "${key}" became required`);
+      add(symbol, `member "${key}" became required`, key);
       continue;
     }
     const newSignatures = [...newMember.signatures.values()];
@@ -386,13 +386,13 @@ function classifyMembers(add, symbol, oldMembers, newMembers, shape) {
       // the old one grown only additively (isAdditiveFragment).
       if (newSignatures.some((candidate) => isAdditiveFragment(oldText, candidate, shape)))
         continue;
-      add(symbol, `member "${key}" signature removed or changed`);
+      add(symbol, `member "${key}" signature removed or changed`, key);
       break;
     }
   }
   for (const [key, newMember] of newMembers) {
     if (!oldMembers.has(key) && !newMember.optional) {
-      add(symbol, `new required member "${key}" was added`);
+      add(symbol, `new required member "${key}" was added`, key);
     }
   }
 }
@@ -467,9 +467,17 @@ function variableKeywordBreaks(oldKeyword, newKeyword, block) {
 // Breaking classification for one entries map, old -> new. `scope` prefixes every
 // finding and `block` names the kind of block the entries sit in ('module' for a
 // report's top level); it recurses into namespaces with the nested scope and block.
+// A finding is `{ identity, text }`: `text` says what happened, and `identity` is what it
+// happened to, equal for two findings about the same report, symbol and member whichever
+// way that member broke. A finding that names no member (the symbol as a whole, an
+// overload, a union alternative, a declaration's text) is about the symbol.
 function classifyEntries(scope, oldEntries, newEntries, block = 'module') {
   const findings = [];
-  const add = (symbol, detail) => findings.push(`${scope}${symbol}: ${detail}`);
+  const add = (symbol, detail, member = null) =>
+    findings.push({
+      identity: JSON.stringify([`${scope}${symbol}`, member]),
+      text: `${scope}${symbol}: ${detail}`,
+    });
 
   for (const [name, oldEntry] of oldEntries) {
     const newEntry = newEntries.get(name);
@@ -535,8 +543,8 @@ function classifyEntries(scope, oldEntries, newEntries, block = 'module') {
         if (!oldEntry.constant && newEntry.constant) add(name, 'enum made const');
         for (const [member, text] of oldEntry.members) {
           const newText = newEntry.members.get(member);
-          if (newText === undefined) add(name, `enum member "${member}" was removed`);
-          else if (newText !== text) add(name, `enum member "${member}" changed`);
+          if (newText === undefined) add(name, `enum member "${member}" was removed`, member);
+          else if (newText !== text) add(name, `enum member "${member}" changed`, member);
         }
         break;
       case 'namespace':

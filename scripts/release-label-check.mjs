@@ -23,28 +23,39 @@
 // ships at one version — the same version release-npm.yml tags and the API-diff gate reads
 // from `--version`. So the projection is the root package's next version, computed from its
 // current manifest version and the squash-message rules above; there is no per-file package
-// attribution to make. The version is fed to the SAME gate release-npm.yml runs on the tag
-// (runGate from api-gate.mjs), against the committed api-extractor reports on the pull
-// request head. A breaking surface change under a bump the projected label could not
-// honestly carry fails the check with the gate's own message, so the mislabel is caught
-// before the tag rather than after it.
+// attribution to make.
+//
+// A surface item counts as breaking only when it is breaking both against the newest
+// published version, so a consumer can see it, and between the base side of the checkout
+// and the checkout, so this pull request made it, matched per finding: report, symbol and
+// member. The SAME gate release-npm.yml runs on the tag (runGate from api-gate.mjs)
+// classifies each side's committed api-extractor report against the checkout's and judges
+// the items on both, with the manifest's current version as the old version and the
+// projection as the new one; an item on one side alone is logged as not counted, with the
+// side it lacks. A counted item under a bump the label could not honestly carry fails the
+// check with the gate's own message, so the mislabel is caught before the tag rather than
+// after it.
 //
 // The package list, its directories and the pre-major flags come from
 // release-please-config.json; the current version from .release-please-manifest.json — org
 // values live in the repo's own config, never here. The title and body are read from the
 // PR_TITLE / PR_BODY environment variables (never interpolated into a shell). The npm
-// baseline reads the gate makes are public (no token), so this runs unchanged on a fork.
+// reads that choose the published version are public (no token), so this runs unchanged on
+// a fork.
 //
-// Usage: PR_TITLE=… PR_BODY=… node scripts/release-label-check.mjs
+// Usage, in a pull request's merge checkout: PR_TITLE=… PR_BODY=… node scripts/release-label-check.mjs
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-import { runGate } from './api-gate.mjs';
+import { publishedBaseline, reportAtRef, runGate } from './api-gate.mjs';
 import { GateError, fail } from './gate-error.mjs';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+// release-label.yml checks out the pull request's merge commit, whose first parent is the
+// base branch tip that commit was merged into.
+const BASE_REF = 'HEAD^1';
 
 // release-please starts a new bumping chunk only at a blank line immediately followed by a
 // whitelisted `type(scope)?: ` header. The `!` breaking marker is NOT in this lookahead, so
@@ -188,45 +199,82 @@ function loadPackages(config) {
 // The version release-please would publish for one declared package: a Release-As footer
 // forces it, else the projected bump lifts the package's current manifest version. Returns
 // null when the projection is no release.
-function packageReleaseVersion(directory, entry, manifest, bump, forced) {
+function packageReleaseVersion(entry, current, bump, forced) {
   if (forced !== null) return forced;
-  const current = manifest[directory];
-  if (current === undefined)
-    fail(`package ${directory} has no entry in the release-please manifest`);
   return projectVersion(current, bump, {
     bumpMinorPreMajor: Boolean(entry[BUMP_MINOR_PRE_MAJOR]),
     bumpPatchForMinorPreMajor: Boolean(entry[BUMP_PATCH_FOR_MINOR_PRE_MAJOR]),
   });
 }
 
-// The set of versions the pull request would release across every declared package. One
-// entry for this repo's single root package; the gate runs once per distinct version.
-function projectedReleaseVersions(title, body, packages, manifest) {
+// The releases the pull request would make across every declared package, each as its
+// current and next version. One entry for this repo's single root package; the gate runs
+// once per distinct pair.
+function projectedReleases(title, body, packages, manifest) {
   const bump = projectedBump(title, body);
   const forced = releaseAs(title, body);
-  const versions = new Set();
+  const releases = new Map();
   for (const [directory, entry] of packages) {
-    const version = packageReleaseVersion(directory, entry, manifest, bump, forced);
-    if (version !== null) versions.add(version);
+    const current = manifest[directory];
+    if (current === undefined)
+      fail(`package ${directory} has no entry in the release-please manifest`);
+    const next = packageReleaseVersion(entry, current, bump, forced);
+    if (next !== null) releases.set(`${current} -> ${next}`, { current, next });
   }
   const label = forced !== null ? `forced to ${forced} by Release-As` : `${BUMP_NAME[bump]} bump`;
-  return { versions, label };
+  return { releases: [...releases.values()], label };
 }
 
-// Gate every projected release version against the committed reports on the pull request
-// head; throw with the gate's own message when any is dishonest. Prints the projection and
-// the gate's own per-report output. `deps` forwards the gate's injectable I/O seams so a
-// test can drive it without git or the network.
+// The findings on both sides, matched per finding (report, symbol and member), in the own
+// change's words. Each finding on one side alone is logged with the side it lacks.
+function countedFindings(published, own, log) {
+  const publishedIdentities = new Set(published.map(({ identity }) => identity));
+  const ownIdentities = new Set(own.map(({ identity }) => identity));
+  for (const { identity, text } of own)
+    if (!publishedIdentities.has(identity))
+      log(`release-label-check: not counted, not breaking against the published version: ${text}`);
+  for (const { identity, text } of published)
+    if (!ownIdentities.has(identity))
+      log(
+        `release-label-check: not counted, not breaking in the pull request's own change: ${text}`,
+      );
+  return own.filter(({ identity }) => publishedIdentities.has(identity));
+}
+
+// The gate's baseline for a pull request: the two-sided rule over the published baseline
+// and the base side of the checkout, judged from the manifest's current version. With no
+// published version the published side holds nothing, so nothing counts.
+function twoSidedBaseline(current, next, deps) {
+  const { readReportAtRef = reportAtRef, log = console.log } = deps;
+  const publishedFor = publishedBaseline(next, deps);
+  return ({ dir, name }) => ({
+    oldVersion: current,
+    breakingFindings: (diffFrom) => {
+      const published = publishedFor({ dir, name });
+      return countedFindings(
+        published === null ? [] : published.breakingFindings(diffFrom),
+        diffFrom(readReportAtRef(BASE_REF, dir, name)),
+        log,
+      );
+    },
+  });
+}
+
+// Gate every projected release against the public-API change the pull request carries;
+// throw with the gate's own message when any is dishonest. Prints the projection and the
+// gate's own per-report output. `deps` forwards the I/O seams (mode, tag list, npm lookup,
+// the two report readers and the log sink) so a test can drive it without git or the
+// network.
 function check(title, body, packages, manifest, deps = {}) {
   const log = deps.log ?? console.log;
-  const { versions, label } = projectedReleaseVersions(title, body, packages, manifest);
-  if (versions.size === 0) {
+  const { releases, label } = projectedReleases(title, body, packages, manifest);
+  if (releases.length === 0) {
     log(`release-label-check: ${label} projects no release — nothing to gate.`);
     return;
   }
-  for (const version of versions) {
-    log(`release-label-check: projects ${version} (${label})`);
-    const failReasons = runGate(version, deps);
+  for (const { current, next } of releases) {
+    log(`release-label-check: projects ${next} (${label})`);
+    const failReasons = runGate(next, twoSidedBaseline(current, next, deps), deps);
     if (failReasons.length)
       fail(
         `the pull request's release (${label}) cannot honestly carry this API change: ` +
@@ -235,7 +283,7 @@ function check(title, body, packages, manifest, deps = {}) {
           "CHANGE:' footer, or set 'Release-As: <next major>.0.0').",
       );
   }
-  log(`release-label-check: ${label} is honest for the projected surface change.`);
+  log(`release-label-check: ${label} is honest for the public-API change it carries.`);
 }
 
 function main() {
@@ -256,7 +304,7 @@ export {
   releaseAs,
   projectVersion,
   loadPackages,
-  projectedReleaseVersions,
+  projectedReleases,
   check,
   GateError,
 };
