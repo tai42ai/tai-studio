@@ -8,14 +8,14 @@
  * closed while the projection is not ready; once ready and denied, the button is not
  * rendered so a non-admin never sees a control that 403s.
  */
-import { apiRoutes, type FleetResult, summarizeFleetResult } from '@tai42/api-client';
+import { apiRoutes, type FleetReloadResult, summarizeFleetReload } from '@tai42/api-client';
 import {
   Button,
   Card,
   EmptyState,
   errorMessage,
   ErrorState,
-  FleetReport,
+  FleetReloadReport,
   Skeleton,
   Spinner,
   useApi,
@@ -37,28 +37,6 @@ const FLEET_POLL_MS = 5000;
 /** The admin-fenced reload route the reload control gates on (projection ⊆ gate). */
 const FLEET_RELOAD_ROUTE = apiRoutes.post_api_fleet_reload_config.path;
 
-/** The last reload's outcome: a calm converged note, or the honest per-worker failure
- * report — never faked success on a departed / timed_out / failed worker. */
-function ReloadSummary({ result }: { readonly result: FleetResult | null }): ReactNode {
-  if (result === null) return null;
-  const summary = summarizeFleetResult(result);
-  if (summary.status === 'converged') {
-    return (
-      <p
-        role="status"
-        style={{ margin: '0 0 var(--tai-space-4)', color: 'var(--tai-color-ok-text)' }}
-      >
-        Reload converged across the fleet.
-      </p>
-    );
-  }
-  return (
-    <div style={{ marginBottom: 'var(--tai-space-4)' }}>
-      <FleetReport summary={summary} action="reload" />
-    </div>
-  );
-}
-
 export function WorkersCard(): ReactNode {
   const api = useApi();
   const workers = useQuery({
@@ -74,7 +52,7 @@ export function WorkersCard(): ReactNode {
   const [confirming, setConfirming] = useState(false);
   // The last successful reload's per-worker report, kept so it persists after the
   // dialog closes; cleared when the operator opens a fresh reload.
-  const [lastReloaded, setLastReloaded] = useState<FleetResult | null>(null);
+  const [lastReloaded, setLastReloaded] = useState<FleetReloadResult | null>(null);
 
   const rows = workers.data?.workers ?? [];
   const selection = useWorkerSelection(rows);
@@ -150,7 +128,14 @@ export function WorkersCard(): ReactNode {
         </p>
       ) : null}
 
-      <ReloadSummary result={lastReloaded} />
+      {lastReloaded !== null ? (
+        <div style={{ marginBottom: 'var(--tai-space-4)' }}>
+          <FleetReloadReport
+            summary={summarizeFleetReload(lastReloaded)}
+            recycle={lastReloaded.recycle}
+          />
+        </div>
+      ) : null}
 
       {body}
 

@@ -23,9 +23,10 @@ import {
   errorMessage,
   ErrorState,
   ExtensionComboBuilder,
-  FleetReport,
+  FleetOutcomeReport,
   Skeleton,
   Spinner,
+  WriteFailure,
 } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
@@ -128,7 +129,7 @@ function EditExtensionsDialog({
           availableReady={availableReady}
         />
 
-        {save.isError ? <ErrorState message={errorMessage(save.error)} /> : null}
+        {save.isError ? <WriteFailure error={save.error} /> : null}
 
         {ext.confirmingClear ? (
           <p role="alert" className="tai-status-err" style={{ margin: 0 }}>
@@ -223,12 +224,9 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
           <p role="status" className="tai-status-ok" style={{ margin: 0 }}>
             Extensions applied.
           </p>
-          <FleetReport
-            summary={summarizeFleetFanout(
-              save.data.fanout,
-              save.data.awaiting_respawn,
-              save.data.span_release_error,
-            )}
+          <FleetOutcomeReport
+            summary={summarizeFleetFanout(save.data)}
+            recycle={save.data.recycle}
           />
         </>
       ) : null}

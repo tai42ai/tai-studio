@@ -16,6 +16,7 @@ import {
   SystemKindsProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
+import { refusalReaders } from '@tai42/test-support';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
@@ -60,6 +61,7 @@ export function renderWithProviders(
   // The kind-status table defaults to empty (every kind not off) unless the test
   // supplies its own read.
   const apiClient = {
+    ...refusalReaders,
     getSystemKinds: () => Promise.resolve([]),
     ...client,
     ...(projection !== undefined ? { getMe: () => Promise.resolve(projection) } : {}),

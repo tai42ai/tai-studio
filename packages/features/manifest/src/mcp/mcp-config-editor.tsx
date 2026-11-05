@@ -15,7 +15,7 @@ import {
   errorMessage,
   ErrorState,
   Field,
-  FleetReport,
+  FleetOutcomeReport,
   HolderList,
   installedMarketplacePluginsKey,
   mcpConfigSchemaKey,
@@ -258,21 +258,27 @@ function McpConfigEditor(props: {
           ) : null}
         </div>
       ) : null}
-      {/* The save persists then broadcasts a reload; surface any failed propagation
-          honestly (nothing on a converged / lone-worker save). */}
-      {save.isSuccess ? (
-        <FleetReport
-          summary={summarizeFleetFanout(
-            save.data.fanout,
-            save.data.awaiting_respawn,
-            save.data.span_release_error,
-          )}
+      {/* Each write the save made reports its own fleet outcome, one that landed before a
+          later write failed among them. */}
+      {save.replies.map((reply) => (
+        <FleetOutcomeReport
+          key={reply.write}
+          summary={summarizeFleetFanout(reply.result)}
+          recycle={reply.result.recycle}
+          scope={reply.write}
         />
-      ) : null}
+      ))}
       {save.isError ? <SaveFailure error={save.error} /> : null}
       {/* The combined op is server-gated by the shared X-band + dangling-`!ENV`
           validator; a refusal (or any failure) surfaces loudly, never swallowed. */}
       {draft.secretEnvError ? <SaveFailure error={draft.secretEnvErrorObj} /> : null}
+      {draft.secretEnvReply !== null ? (
+        <FleetOutcomeReport
+          summary={summarizeFleetFanout(draft.secretEnvReply)}
+          recycle={draft.secretEnvReply.recycle}
+          scope="manifest and secret"
+        />
+      ) : null}
 
       <SwitchViewConfirmDialog
         target={draft.confirmTarget}

@@ -11,9 +11,9 @@ import {
   Card,
   Checkbox,
   Dialog,
-  ErrorState,
   FleetReport,
   Spinner,
+  WriteFailure,
 } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
@@ -142,7 +142,7 @@ export function ConnectionNotices({
   unreachableLabels,
   consentBlocked,
   refusal,
-  mutationError,
+  mutationFailure,
   patchFleet,
   oauthNotice,
   onClearOauthNotice,
@@ -152,7 +152,7 @@ export function ConnectionNotices({
   readonly unreachableLabels: readonly string[];
   readonly consentBlocked: boolean;
   readonly refusal: ReturnType<typeof readConnectorRefusal>;
-  readonly mutationError: string | null;
+  readonly mutationFailure: unknown;
   readonly patchFleet: FleetReportSummary | null;
   readonly oauthNotice: OAuthNotice | null;
   readonly onClearOauthNotice: () => void;
@@ -203,8 +203,8 @@ export function ConnectionNotices({
 
       {refusal !== null ? (
         <ConnectorRefusalNotice refusal={refusal} />
-      ) : mutationError !== null ? (
-        <ErrorState message={mutationError} />
+      ) : mutationFailure !== null ? (
+        <WriteFailure error={mutationFailure} />
       ) : null}
       {/* A sub-service change that writes the manifest broadcasts a reload to the
           fleet; surface any failed propagation honestly (nothing on a converged

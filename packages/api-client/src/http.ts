@@ -10,6 +10,7 @@
 import type { z } from 'zod';
 
 import { ApiConflictError, ApiError, ApiSchemaError, ApiUnauthorizedError } from './errors';
+import { checkFailedReplyRoll } from './failed-reply-roll';
 import { API_KEY_HEADER } from './headers';
 
 /** Supplies the current API key (in-memory or sessionStorage-backed) + base URL. */
@@ -109,8 +110,9 @@ function retryAfterSeconds(header: string | null): number | undefined {
  * Read the JSON body of a request response, applying the transport's error
  * policy: a non-2xx status throws (a 409 as `ApiConflictError` carrying the
  * parsed body, every other as `ApiError` with the server message/code and the
- * named `Retry-After` delay), and a body that is not JSON throws `ApiSchemaError`
- * on a 2xx or `ApiError` otherwise. Returns the parsed payload only for a 2xx.
+ * named `Retry-After` delay), a non-2xx whose recycle roll does not match its schema
+ * throws `ApiSchemaError`, and a body that is not JSON throws `ApiSchemaError` on a
+ * 2xx or `ApiError` otherwise. Returns the parsed payload only for a 2xx.
  */
 async function readJsonPayload(
   response: Response,
@@ -131,6 +133,7 @@ async function readJsonPayload(
   }
 
   if (!response.ok) {
+    checkFailedReplyRoll(path, payload);
     const { message, code } = extractError(payload);
     const text = message ?? (response.statusText || 'request failed');
     // The parsed body rides the error so a caller can key a follow-up on its structured

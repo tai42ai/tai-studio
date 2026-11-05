@@ -3,10 +3,12 @@
  * message is acted on ONLY when origin + source + type all match; any failure is
  * ignored and `completeOAuth` is never called.
  */
+import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { Notice } from './notice';
 import {
   OAUTH_MESSAGE_TYPE,
   OAUTH_REDIRECT_STORAGE_KEY,
@@ -432,5 +434,25 @@ describe('useOAuthRedirectResume — completing a redirect flow', () => {
     await waitFor(() => {
       expect(screen.getByTestId('notice').textContent).toBe('error:resume boom');
     });
+  });
+});
+
+function ResumeNoticeHarness(): React.ReactNode {
+  const resume = useOAuthRedirectResume();
+  return resume.notice === null ? null : <Notice notice={resume.notice} onDismiss={vi.fn()} />;
+}
+
+describe('a failed sign-in completion that carries a recycle roll', () => {
+  it('shows the roll in the notice', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      `/connectors?${OAUTH_RESUME_PARAMS.state}=st&${OAUTH_RESUME_PARAMS.code}=cd`,
+    );
+    const completeOAuth = vi.fn().mockRejectedValue(failureWithRoll());
+    renderWithProviders(<ResumeNoticeHarness />, { client: makeClient({ completeOAuth }) });
+
+    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

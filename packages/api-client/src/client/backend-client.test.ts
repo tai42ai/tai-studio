@@ -149,6 +149,42 @@ describe('backend client transport', () => {
     expect(out.results[0]?.outcome).toBe('applied');
   });
 
+  it('reloadFleetConfig keeps the reload verdict and the roll it ran', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          ok: true,
+          op: 'reload_config',
+          reachable: true,
+          local_only: false,
+          results: [
+            {
+              name: 'serve-1',
+              outcome: 'applied',
+              payload: { status: 'ok', env_keys: 3, awaiting_respawn: ['BACKEND_MANIFEST_KEY'] },
+              error: null,
+              detail: null,
+            },
+          ],
+          error: null,
+          awaiting_respawn: [{ name: 'serve-1', keys: ['BACKEND_MANIFEST_KEY'] }],
+          recycle: {
+            recycle: [],
+            skipped: ['backend-1'],
+            fresh: [],
+            recycle_stopped: { kind: 'serve', name: null, detail: 'bus unreadable' },
+          },
+          roll_deferred: false,
+          roll_deferred_to: null,
+        },
+      }),
+    );
+    const out = await client.reloadFleetConfig(null);
+    expect(out.awaiting_respawn).toEqual([{ name: 'serve-1', keys: ['BACKEND_MANIFEST_KEY'] }]);
+    expect(out.recycle?.skipped).toEqual(['backend-1']);
+    expect(out.roll_deferred).toBe(false);
+  });
+
   it('reloadFleetConfig POSTs the selected targets and reports a non-converged worker honestly', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({

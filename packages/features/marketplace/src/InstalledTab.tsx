@@ -4,14 +4,15 @@
  * choice persists), each entry opening its detail and carrying an update /
  * up-to-date / not-in-registry status badge. The "Upgrade all" action moves every
  * installed plugin to its newest compatible version, rendering the per-plugin
- * outcome readout. A loud advisories banner sits above the list when any
+ * outcome readout and the batch's recycle roll and awaiting workers. A loud advisories banner sits above the list when any
  * non-withdrawn advisory matches an installed plugin.
  * Per-plugin install / update / uninstall actions live on the detail view.
  */
 import {
   apiRoutes,
   type MarketplaceAdvisory,
-  type MarketplaceUpgradeAllRow,
+  type MarketplaceUpgradeAllResult,
+  summarizeFleetFanout,
 } from '@tai42/api-client';
 import {
   AppLink,
@@ -23,6 +24,7 @@ import {
   ErrorState,
   FeatureDisabled,
   featureDisabledMessage,
+  FleetOutcomeReport,
   installedMarketplacePluginsKey,
   isFeatureDisabled,
   Skeleton,
@@ -30,6 +32,7 @@ import {
   useCanWrite,
   useViewMode,
   ViewToggle,
+  WriteFailure,
 } from '@tai42/studio-sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -47,20 +50,28 @@ const OUTCOME_VARIANT: Record<string, string> = {
   failed: 'danger',
 };
 
-/** The per-plugin readout of one completed upgrade-all run. */
+/** The refs whose config writes left the store's write span unreleased, each with its errors. */
+function unreleasedSpans(results: MarketplaceUpgradeAllResult['results']): string | null {
+  const errors = results.flatMap((row) =>
+    row.span_release_error !== null ? [`${row.ref}: ${row.span_release_error}`] : [],
+  );
+  return errors.length > 0 ? errors.join('; ') : null;
+}
+
+/** The readout of one completed upgrade-all run: each plugin's outcome, then the batch's fleet side. */
 function UpgradeAllReadout({
-  results,
+  result,
 }: {
-  readonly results: readonly MarketplaceUpgradeAllRow[];
+  readonly result: MarketplaceUpgradeAllResult;
 }): ReactNode {
   return (
     <Card>
       <div className="tai-stack tai-stack-2">
         <strong>Upgrade results</strong>
-        {results.length === 0 ? (
+        {result.results.length === 0 ? (
           <span>No installed plugins to upgrade.</span>
         ) : (
-          results.map((row) => (
+          result.results.map((row) => (
             <div key={row.ref} className="tai-row">
               <span className="tai-mono">{row.ref}</span>
               <Badge variant={OUTCOME_VARIANT[row.outcome]}>{row.outcome}</Badge>
@@ -68,6 +79,13 @@ function UpgradeAllReadout({
             </div>
           ))
         )}
+        <FleetOutcomeReport
+          summary={summarizeFleetFanout({
+            ...result,
+            span_release_error: unreleasedSpans(result.results),
+          })}
+          recycle={result.recycle}
+        />
       </div>
     </Card>
   );
@@ -208,11 +226,11 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
             message={featureDisabledMessage(upgradeAllMutation.error)}
           />
         ) : (
-          <ErrorState message={errorMessage(upgradeAllMutation.error)} />
+          <WriteFailure error={upgradeAllMutation.error} />
         )
       ) : null}
       {upgradeAllMutation.data !== undefined ? (
-        <UpgradeAllReadout results={upgradeAllMutation.data.results} />
+        <UpgradeAllReadout result={upgradeAllMutation.data} />
       ) : null}
 
       <InstalledPlugins installed={installed} search={search} mode={viewMode} />

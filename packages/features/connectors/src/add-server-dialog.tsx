@@ -10,6 +10,7 @@ import {
   Badge,
   Button,
   Dialog,
+  FailedReplyOutcome,
   Field,
   FleetReport,
   ScrollRegion,
@@ -41,12 +42,15 @@ function RequestRefusal({ failure }: { failure: RequestFailure | null }): ReactN
   if (failure.refusal !== null) return <ConnectorRefusalNotice refusal={failure.refusal} />;
   if (failure.message === null) return null;
   return (
-    <div role="alert" className="tai-error-state tai-stack tai-stack-2">
-      <strong className="tai-error-state-title">
-        <XCircleIcon />
-        The server could not be added
-      </strong>
-      <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{failure.message}</p>
+    <div className="tai-stack tai-stack-3">
+      <div role="alert" className="tai-error-state tai-stack tai-stack-2">
+        <strong className="tai-error-state-title">
+          <XCircleIcon />
+          The server could not be added
+        </strong>
+        <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{failure.message}</p>
+      </div>
+      <FailedReplyOutcome error={failure.error} />
     </div>
   );
 }

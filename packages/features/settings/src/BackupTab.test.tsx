@@ -153,6 +153,8 @@ describe('BackupTab', () => {
       sections: {
         manifest: {
           span_release_error: null,
+          roll_deferred: false,
+          roll_deferred_to: null,
           created: 1,
           updated: 0,
           skipped: 0,
@@ -164,6 +166,8 @@ describe('BackupTab', () => {
         },
         env: {
           span_release_error: null,
+          roll_deferred: false,
+          roll_deferred_to: null,
           created: 0,
           updated: 0,
           skipped: 1,
@@ -246,6 +250,8 @@ describe('BackupTab', () => {
       sections: {
         env: {
           span_release_error: null,
+          roll_deferred: false,
+          roll_deferred_to: null,
           created: 0,
           updated: 0,
           skipped: 0,
@@ -278,6 +284,8 @@ describe('BackupTab', () => {
       sections: {
         env: {
           span_release_error: null,
+          roll_deferred: false,
+          roll_deferred_to: null,
           created: 0,
           updated: 0,
           skipped: 0,
@@ -309,6 +317,8 @@ describe('BackupTab', () => {
       sections: {
         env: {
           span_release_error: null,
+          roll_deferred: false,
+          roll_deferred_to: null,
           created: 0,
           updated: 1,
           skipped: 0,
@@ -319,7 +329,19 @@ describe('BackupTab', () => {
             op: 'reload_config',
             reachable: true,
             local_only: false,
-            results: [],
+            results: [
+              {
+                name: 'serve-1',
+                outcome: 'applied',
+                payload: {
+                  status: 'ok',
+                  env_keys: 1,
+                  awaiting_respawn: ['BACKEND_MANIFEST_KEY'],
+                },
+                error: null,
+                detail: null,
+              },
+            ],
             error: null,
           },
           recycle: {
@@ -329,9 +351,11 @@ describe('BackupTab', () => {
                 kind: 'backend',
                 status: 'timed-out',
                 generation_before: 1,
+                keys: ['BACKEND_MANIFEST_KEY'],
                 detail: 'old life still present after 30s',
               },
             ],
+            skipped: [],
             fresh: [],
             recycle_stopped: {
               kind: 'backend',
@@ -356,8 +380,13 @@ describe('BackupTab', () => {
     await uploadBackup(user);
     await user.click(await screen.findByRole('button', { name: 'Import selected' }));
 
-    const roll = await screen.findByTestId('report-recycle-env');
+    const roll = await screen.findByTestId('report-fleet-env');
     expect(within(roll).getByText('timed-out')).toBeInTheDocument();
+    expect(
+      within(roll).getByText(
+        'Some changed settings take effect only in a fresh worker process, so the fleet restarts the workers that need it, one at a time.',
+      ),
+    ).toBeInTheDocument();
     const awaiting = screen.getByText('2 workers need a restart to apply some settings');
     const panel = awaiting.closest('[role="status"]');
     expect(panel).not.toBeNull();
@@ -372,6 +401,8 @@ describe('BackupTab', () => {
       sections: {
         env: {
           span_release_error: null,
+          roll_deferred: false,
+          roll_deferred_to: null,
           created: 0,
           updated: 1,
           skipped: 0,
@@ -393,6 +424,7 @@ describe('BackupTab', () => {
                 kind: 'backend',
                 status: 'recycled',
                 generation_before: 1,
+                keys: ['BACKEND_MANIFEST_KEY'],
               },
               {
                 detail: null,
@@ -400,8 +432,10 @@ describe('BackupTab', () => {
                 kind: 'serve',
                 status: 'self-deferred',
                 generation_before: 2,
+                keys: ['BACKEND_MANIFEST_KEY'],
               },
             ],
+            skipped: [],
             fresh: [{ name: 'backend-1', kind: 'backend', generation: 2 }],
             recycle_stopped: null,
           },
@@ -419,11 +453,77 @@ describe('BackupTab', () => {
     await uploadBackup(user);
     await user.click(await screen.findByRole('button', { name: 'Import selected' }));
 
-    const roll = await screen.findByTestId('report-recycle-env');
+    const roll = await screen.findByTestId('report-fleet-env');
     expect(
-      within(roll).getByText('this worker recycles itself after replying'),
+      within(roll).getByText(
+        'restarts once its own in-flight change has replied, which this report cannot confirm',
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/need(s)? a restart to apply some settings/)).not.toBeInTheDocument();
+  });
+
+  it('does not list a worker the section\u2019s roll recycled, past the section\u2019s skipped count', async () => {
+    const user = userEvent.setup();
+    const report = {
+      ok: true,
+      sections: {
+        env: {
+          span_release_error: null,
+          roll_deferred: false,
+          roll_deferred_to: null,
+          created: 0,
+          updated: 1,
+          skipped: 3,
+          errors: [],
+          details: {},
+          fanout: {
+            mode: 'fleet',
+            op: 'reload_config',
+            reachable: true,
+            local_only: false,
+            results: [
+              {
+                name: 'backend-1',
+                outcome: 'timed_out',
+                payload: null,
+                error: null,
+                detail: 'no reply in time',
+              },
+            ],
+            error: null,
+          },
+          recycle: {
+            recycle: [
+              {
+                detail: null,
+                name: 'backend-1',
+                kind: 'backend',
+                status: 'recycled',
+                generation_before: 1,
+                keys: ['BACKEND_MANIFEST_KEY'],
+              },
+            ],
+            skipped: [],
+            fresh: [{ name: 'backend-1', kind: 'backend', generation: 2 }],
+            recycle_stopped: null,
+          },
+          awaiting_respawn: [],
+        },
+      },
+    };
+    const importBackup = vi.fn().mockResolvedValue(report);
+    renderWithProviders(<BackupTab readOnly={false} />, {
+      client: baseStub({ importBackup }),
+      projection: fullProjection(),
+    });
+
+    await screen.findByRole('button', { name: 'Choose backup file' });
+    await uploadBackup(user);
+    await user.click(await screen.findByRole('button', { name: 'Import selected' }));
+
+    const roll = await screen.findByTestId('report-fleet-env');
+    expect(within(roll).getByTestId('apply-recycle')).toHaveTextContent('life 1 to 2');
+    expect(within(roll).queryByText(/did not converge/)).toBeNull();
   });
 
   it('fronts the import surface with a danger-zone note and a danger restore button', async () => {

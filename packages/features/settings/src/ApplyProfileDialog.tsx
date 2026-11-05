@@ -12,8 +12,7 @@ import {
   Dialog,
   errorMessage,
   ErrorState,
-  FleetReport,
-  RecycleRollSection,
+  FleetOutcomeReport,
   Spinner,
   useApi,
   WriteFailure,
@@ -97,12 +96,9 @@ function ApplyReport({ report }: { readonly report: ApplyResponse }): ReactNode 
   const unjoinedFresh = report.fresh.filter((life) => !recycledNames.has(life.name));
   return (
     <div className="tai-stack" data-testid="apply-report">
-      <FleetReport
-        summary={summarizeFleetFanout(
-          report.fanout,
-          report.awaiting_respawn,
-          report.span_release_error,
-        )}
+      <FleetOutcomeReport
+        summary={summarizeFleetFanout({ ...report, recycle: report })}
+        recycle={report}
       />
 
       <section>
@@ -118,16 +114,6 @@ function ApplyReport({ report }: { readonly report: ApplyResponse }): ReactNode 
             ))}
           </div>
         )}
-      </section>
-
-      <section>
-        <h4 style={sectionTitleStyle}>Recycle</h4>
-        <RecycleRollSection
-          recycle={report.recycle}
-          fresh={report.fresh}
-          stopped={report.recycle_stopped}
-          writerNote="this worker (the applier) recycles itself after replying"
-        />
       </section>
 
       {unjoinedFresh.length > 0 ? (

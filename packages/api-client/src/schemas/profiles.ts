@@ -52,18 +52,20 @@ export type SettingsProfileDiff = z.infer<typeof settingsProfileDiff>;
 /**
  * `POST /api/config/profiles/{name}/apply` — the dedicated `profile_apply_response`
  * (action=fenced, destructive). NAMES-ONLY (no env value in any
- * section): `hot` is the hot-swapped key names; `recycle` is the orchestrator's
- * per-worker section — one `{name, kind, status, generation_before}` row per recycled
- * target, `generation_before` the life that was recycled, the applier's OWN row carrying
- * the `self-deferred` status literal when the diff has serve-affecting recycle keys;
- * `fresh` is the per-kind list of NEW ready lives observed since the pre-apply snapshot
+ * section): `hot` is the hot-swapped key names; `recycle` is the roll's worker lines —
+ * one `{name, kind, status, generation_before, keys, detail}` line per worker the roll
+ * reached (`RecycleEntry` names the statuses), the applier's OWN line carrying the
+ * `self-deferred` status when its own restart is armed; `skipped` names the workers whose
+ * reload confirmed no moved recycle-class key, left running; `fresh` is the per-kind list of NEW ready lives observed since the pre-apply snapshot
  * (each `{name, kind, generation}`), evidence of fresh capacity and never claimed as any
  * target's successor; `refused` is `[]` on success by construction (the refused key
  * names only on a refusal), the populated refusal surfaces being the diff preview and
  * the refusal error report; `recycle_stopped` names the target a stopped recycle roll
  * halted at, or is `null` when the roll ran to its end; `awaiting_respawn` names the
- * workers (name + keys) still awaiting a respawn after the apply (empty when the roll
- * converged). `fanout` is the mode-wrapped fleet broadcast, parsed EXPLICITLY so a failed
+ * workers (name + keys) still awaiting a respawn after the apply — when the roll
+ * converged, only the workers whose reload was refused at their epoch build, left running
+ * on their current config; `roll_deferred` is `true` when the roll is not judged in this
+ * reply, `roll_deferred_to` then naming the worker that carries it out. `fanout` is the mode-wrapped fleet broadcast, parsed EXPLICITLY so a failed
  * propagation reaches the shared fleet-report handler. A drift throws `ApiSchemaError`.
  */
 // The fan-out is hand-typed: the spec publishes it as one object with optional fields.

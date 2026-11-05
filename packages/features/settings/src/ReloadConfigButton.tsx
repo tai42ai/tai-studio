@@ -2,27 +2,26 @@
  * The config soft-restart control on the Settings surface.
  *
  * `POST /api/config/reload` re-reads env from the config manager, resets the settings
- * caches, and re-initializes the deployment from its manifest — in-process, applied on
- * the serving worker and broadcast to the fleet. It is DISTINCT from the System page's
- * fleet door (`/api/fleet/reload-config`): this is the config surface's own "apply the
- * saved configuration" action, so it lives beside the config-mode card.
+ * caches, and re-initializes the deployment from its manifest, on the serving worker and
+ * across the fleet; then it restarts, one at a time, the workers whose moved settings need
+ * a new process. It is DISTINCT from the System page's fleet door
+ * (`/api/fleet/reload-config`): this is the config surface's own "apply the saved
+ * configuration" action, so it lives beside the config-mode card.
  *
  * The door is admin-`fenced` server-side, so the control gates on the caller's
  * projection reaching this exact route+method (`useCanWrite`): fail-closed (disabled)
  * while the projection is not ready, and hidden entirely once ready-and-denied so a
  * non-admin never sees a button that would 403.
  *
- * A confirm dialog owns the mutation. The outcome routes through the shared
- * `FleetReport` exactly as the System page's reload does: a converged reload shows a
- * calm `role="status"` success line, while a degraded/unreachable broadcast renders the
- * honest per-worker failure state — never a faked success on a stranded worker. A
- * failed request surfaces loudly inside the dialog.
+ * A confirm dialog owns the mutation. The outcome renders through the shared
+ * `FleetReloadReport`, the same report the System page's reload mounts. A failed request
+ * surfaces loudly inside the dialog.
  */
-import { apiRoutes, type FleetResult, summarizeFleetResult } from '@tai42/api-client';
+import { apiRoutes, type FleetReloadResult, summarizeFleetReload } from '@tai42/api-client';
 import {
   Button,
   ConfirmDialog,
-  FleetReport,
+  FleetReloadReport,
   useApi,
   useCanWrite,
   useCapabilities,
@@ -49,7 +48,7 @@ function ReloadConfigDialog({
   onReloaded,
   onClose,
 }: {
-  readonly onReloaded: (result: FleetResult) => void;
+  readonly onReloaded: (result: FleetReloadResult) => void;
   readonly onClose: () => void;
 }): ReactNode {
   const api = useApi();
@@ -79,7 +78,8 @@ function ReloadConfigDialog({
     >
       <p style={{ margin: 0 }}>
         Soft-restart the deployment? Each worker re-reads its environment and reloads its manifest
-        registries. No configuration is changed.
+        registries. A worker whose changed settings need a new process is then restarted, one at a
+        time. No configuration is changed.
       </p>
     </ConfirmDialog>
   );
@@ -99,11 +99,9 @@ export function ReloadConfigButton(): ReactNode {
   const [confirming, setConfirming] = useState(false);
   // The last successful reload's per-worker report, kept so it persists after the
   // dialog closes; cleared when a fresh reload opens.
-  const [lastReloaded, setLastReloaded] = useState<FleetResult | null>(null);
+  const [lastReloaded, setLastReloaded] = useState<FleetReloadResult | null>(null);
 
   if (hide) return null;
-
-  const summary = lastReloaded !== null ? summarizeFleetResult(lastReloaded) : null;
 
   return (
     <div className="tai-stack tai-stack-3">
@@ -120,13 +118,11 @@ export function ReloadConfigButton(): ReactNode {
         </Button>
       </div>
 
-      {summary !== null && summary.status === 'converged' ? (
-        <p role="status" style={{ margin: 0, color: 'var(--tai-color-ok-text)' }}>
-          Configuration reloaded.
-        </p>
-      ) : null}
-      {summary !== null && summary.status !== 'converged' ? (
-        <FleetReport summary={summary} action="reload" />
+      {lastReloaded !== null ? (
+        <FleetReloadReport
+          summary={summarizeFleetReload(lastReloaded)}
+          recycle={lastReloaded.recycle}
+        />
       ) : null}
 
       {confirming ? (

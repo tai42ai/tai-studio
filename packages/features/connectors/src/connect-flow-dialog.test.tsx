@@ -13,6 +13,7 @@ import {
 } from '@tai42/api-client';
 import { mcpStatusKey } from '@tai42/studio-sdk';
 import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
+import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -362,6 +363,69 @@ describe('ConnectFlowDialog — Pick tools for a connection', () => {
 });
 
 describe('ConnectFlowDialog — the Pick tools rows', () => {
+  it('reports the recycle roll the pick save ran', async () => {
+    const user = userEvent.setup();
+    const setMcpToolFilter = vi.fn().mockResolvedValue({
+      status: 'ok',
+      env_keys: 1,
+      awaiting_respawn: [{ name: 'backend-2', keys: ['K'] }],
+      span_release_error: null,
+      roll_deferred: false,
+      roll_deferred_to: null,
+      fanout: {
+        mode: 'fleet',
+        op: 'reload_config',
+        reachable: true,
+        local_only: false,
+        results: [
+          {
+            name: 'backend-2',
+            outcome: 'applied',
+            payload: { status: 'ok' },
+            error: null,
+            detail: null,
+          },
+        ],
+        error: null,
+      },
+      recycle: {
+        recycle: [
+          {
+            name: 'backend-2',
+            kind: 'backend',
+            status: 'timed-out',
+            generation_before: 1,
+            keys: ['K'],
+            detail: 'old life still present',
+          },
+        ],
+        skipped: [],
+        fresh: [],
+        recycle_stopped: { kind: 'backend', name: 'backend-2', detail: 'old life still present' },
+      },
+    });
+    renderFlow(
+      { kind: 'pick', name: 'acme', titles: ['acme'], connectionId: null },
+      {
+        client: baseClient({ setMcpToolFilter }),
+        projection: editorProjection(),
+        directory: reads({ manifest: [entry('acme')], status: BOUND }),
+      },
+    );
+    await user.click(
+      await screen.findByRole('checkbox', {
+        name: 'Mount every tool, including tools the server adds later',
+      }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByTestId('recycle-stopped')).toHaveTextContent(
+      'The recycle stopped at backend-2 (backend workers)',
+    );
+    expect(screen.getByTestId('recycle-stopped')).toHaveTextContent('old life still present');
+    expect(screen.getByText('1 worker needs a restart to apply some settings')).toBeVisible();
+  });
+
   it('shows a save refused while the server is still starting as that start, not a failure', async () => {
     const user = userEvent.setup();
     const message =
@@ -1015,5 +1079,28 @@ describe('ConnectFlowDialog — a marketplace listing', () => {
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByRole('form', { name: 'Install plugin' })).toBeInTheDocument();
     expect(getMarketplacePlugin).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('ConnectFlowDialog — a failed tool pick that carries a recycle roll', () => {
+  it('shows the roll beside the save failure', async () => {
+    const user = userEvent.setup();
+    renderFlow(
+      { kind: 'pick', name: 'acme', titles: ['acme'], connectionId: null },
+      {
+        client: baseClient({ setMcpToolFilter: vi.fn().mockRejectedValue(failureWithRoll()) }),
+        projection: editorProjection(),
+        directory: reads({ manifest: [entry('acme')], status: BOUND }),
+      },
+    );
+    await user.click(
+      await screen.findByRole('checkbox', {
+        name: 'Mount every tool, including tools the server adds later',
+      }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(screen.getByText(`Could not save acme: ${ROLL_FAILURE_MESSAGE}`)).toBeInTheDocument();
   });
 });

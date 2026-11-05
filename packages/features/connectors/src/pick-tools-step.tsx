@@ -12,6 +12,7 @@
 import {
   type FleetReportSummary,
   type McpAdvertisedTools,
+  type RecycleRoll,
   summarizeFleetFanout,
 } from '@tai42/api-client';
 import { Button, Field, mcpAdvertisedToolsKey, useApi } from '@tai42/studio-sdk';
@@ -28,10 +29,11 @@ import {
 } from './pick-tools-model';
 import { SectionBody, SectionOutcome, SectionRead, type SectionResult } from './pick-tools-section';
 
-/** A section saved by the step, with the fleet report of its write. */
+/** A section saved by the step, with the fleet outcome of its write. */
 export interface SavedPick {
   readonly title: string;
   readonly summary: FleetReportSummary | null;
+  readonly recycle: RecycleRoll | null;
 }
 
 type AdvertisedRead = UseQueryResult<McpAdvertisedTools>;
@@ -141,7 +143,11 @@ export function PickToolsStep({
   const savedList = (current: Record<string, SectionResult>): SavedPick[] =>
     titles
       .filter((title) => current[title]?.saved !== undefined)
-      .map((title) => ({ title, summary: current[title]?.summary ?? null }));
+      .map((title) => ({
+        title,
+        summary: current[title]?.summary ?? null,
+        recycle: current[title]?.recycle ?? null,
+      }));
 
   const save = async (): Promise<void> => {
     if (pending.length === 0) {
@@ -162,11 +168,8 @@ export function PickToolsStep({
           ...current,
           [section.title]: {
             saved: body,
-            summary: summarizeFleetFanout(
-              reply.fanout,
-              reply.awaiting_respawn,
-              reply.span_release_error,
-            ),
+            summary: summarizeFleetFanout(reply),
+            recycle: reply.recycle,
           },
         };
         setResults(current);

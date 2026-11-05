@@ -266,12 +266,18 @@ export type MarketplaceInstalled = z.infer<typeof marketplaceInstalled>;
 /**
  * One per-plugin outcome of `POST /api/marketplace/upgrade-all`: `upgraded`,
  * already `up-to-date`, `no-compatible-version` in the registry, or `failed`;
- * `detail` always carries the human-readable specifics.
+ * `detail` always carries the human-readable specifics; `span_release_error` the store's
+ * errors releasing its write span after the ref's config writes, or `null` when it released.
  */
 export const marketplaceUpgradeAllRow = openapi.upgradeRow;
 export type MarketplaceUpgradeAllRow = z.infer<typeof marketplaceUpgradeAllRow>;
 
-/** The whole upgrade-all readout: one outcome row per installed plugin. */
+/**
+ * The whole upgrade-all reply: one outcome row per installed plugin, the one recycle roll
+ * the batch settled (`recycle`, `null` when it had no worker to visit), the workers still
+ * awaiting a respawn after it, and `roll_deferred` / `roll_deferred_to` (set, naming the
+ * worker, when the roll is carried out after the reply).
+ */
 export const marketplaceUpgradeAllResult = openapi.upgradeAllResult;
 export type MarketplaceUpgradeAllResult = z.infer<typeof marketplaceUpgradeAllResult>;
 

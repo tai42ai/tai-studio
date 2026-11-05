@@ -6,6 +6,7 @@
  * completing a popup-blocked redirect on arrival.
  */
 import { ApiError } from '@tai42/api-client';
+import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -531,5 +532,22 @@ describe('ConnectorsPage — routes', () => {
     await waitFor(() => {
       expect(nav.querySelector('[aria-current="step"]')).toHaveTextContent('Pick tools');
     });
+  });
+});
+
+describe('ConnectorsPage — a failed provider removal that carries a recycle roll', () => {
+  it('shows the roll beside the error', async () => {
+    const user = userEvent.setup();
+    renderPage({
+      listProviders: vi.fn().mockResolvedValue(providerCatalog([discoveredProvider()])),
+      removeProvider: vi.fn().mockRejectedValue(failureWithRoll()),
+    });
+    const menu = await openMenu(user, 'Remote files');
+    await user.click(within(menu).getByRole('menuitem', { name: 'Remove' }));
+    const dialog = screen.getByRole('dialog', { name: 'Remove this server?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Remove' }));
+
+    expect(await within(dialog).findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(within(dialog).getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

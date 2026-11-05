@@ -64,10 +64,7 @@ export function useConnectForm(provider: ProviderView, onConnected: OnConnected)
       // No-auth provider: the connection is already created and its manifest entry
       // broadcast to the fleet.
       void queryClient.invalidateQueries({ queryKey: CONNECTIONS_KEY });
-      settle(
-        summarizeFleetFanout(result.fanout, [], result.span_release_error),
-        result.connection_id,
-      );
+      settle(summarizeFleetFanout(result), result.connection_id);
     },
   });
 
@@ -104,8 +101,7 @@ export function useConnectForm(provider: ProviderView, onConnected: OnConnected)
 
   // A named refusal is rendered as the muted OFF note below, never here — so the red
   // ErrorState is reserved for genuine errors (validation, upstream, 5xx).
-  const errorMessage =
-    refusal === null && connect.error instanceof Error ? connect.error.message : null;
+  const failure = refusal === null ? connect.error : null;
 
   return {
     alias,
@@ -119,7 +115,7 @@ export function useConnectForm(provider: ProviderView, onConnected: OnConnected)
     refusal,
     canSubmit,
     handleSubmit,
-    errorMessage,
+    failure,
     oauthNotice: oauth.notice,
     clearNotice: oauth.clearNotice,
     pending: connect.isPending || oauth.pending,

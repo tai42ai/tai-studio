@@ -406,6 +406,8 @@ export const installReceipt = (ref: string): MarketplaceInstallResult => ({
     env_keys: 0,
     recycle: null,
     awaiting_respawn: [],
+    roll_deferred: false,
+    roll_deferred_to: null,
     fanout: {
       mode: 'local-only',
       note: 'only this worker reloaded',

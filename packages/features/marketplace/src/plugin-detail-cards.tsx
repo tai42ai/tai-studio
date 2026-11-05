@@ -14,7 +14,7 @@ import {
   deliveryOf,
   EmptyState,
   ExternalLinkButton,
-  InstallReport,
+  FleetOutcomeReport,
   type RouteItem,
   ScrollRegion,
   Table,
@@ -325,12 +325,8 @@ export function ActionResultCard({ result }: { readonly result: ActionResult }):
       </div>
       {/* The reload the action ran and the worker roll that followed it. */}
       {result.reload !== null ? (
-        <InstallReport
-          summary={summarizeFleetFanout(
-            result.reload.fanout,
-            result.reload.awaiting_respawn,
-            result.reload.span_release_error,
-          )}
+        <FleetOutcomeReport
+          summary={summarizeFleetFanout(result.reload)}
           recycle={result.reload.recycle}
         />
       ) : null}

@@ -1,10 +1,8 @@
 /**
- * The marketplace install UI the package publishes: the install and update forms,
- * the install report, and the helpers a screen composes them with. The Marketplace
- * detail screen and the Connectors flow render the same forms and the same report.
+ * The marketplace install UI the package publishes: the install and update forms
+ * and the helpers a screen composes them with. The Marketplace detail screen and the
+ * Connectors flow render the same forms.
  */
-export type { InstallReportProps } from './install-report';
-export { InstallReport } from './install-report';
 export type { MountInstallDialogProps } from './mount-install';
 export { MountInstallDialog, MountInstallForm } from './mount-install';
 export { deliveryOf } from './plugin-detail';

@@ -5,7 +5,7 @@
  * invalidates the census and hands the per-worker fleet report back through
  * `onReloaded` so the card can render it after this (now-unmounted) dialog closes.
  */
-import type { FleetResult } from '@tai42/api-client';
+import type { FleetReloadResult } from '@tai42/api-client';
 import { ConfirmDialog, useApi } from '@tai42/studio-sdk';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -14,7 +14,7 @@ import { fleetWorkersKey } from './keys';
 
 export interface ReloadConfigDialogProps {
   readonly targets: string[] | null;
-  readonly onReloaded: (result: FleetResult) => void;
+  readonly onReloaded: (result: FleetReloadResult) => void;
   readonly onClose: () => void;
 }
 
@@ -50,7 +50,8 @@ export function ReloadConfigDialog({
         {targets === null
           ? 'Soft-restart every worker in the fleet? '
           : `Soft-restart ${String(targets.length)} selected worker${targets.length === 1 ? '' : 's'}? `}
-        Each targeted worker re-reads its environment and reloads its manifest registries.
+        Each targeted worker re-reads its environment and reloads its manifest registries. A
+        targeted worker whose changed settings need a new process is then restarted, one at a time.
       </p>
     </ConfirmDialog>
   );

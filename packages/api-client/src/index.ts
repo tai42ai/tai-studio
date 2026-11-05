@@ -62,18 +62,23 @@ export {
   ApiSetupFailedError,
   ApiUnauthorizedError,
 } from './errors';
+export type { FailedMcpEntry } from './failed-mcp-roster';
+export { failedMcpsFromReport } from './failed-mcp-roster';
+export type { FailedReplyRoll } from './failed-reply-roll';
+export { failedReplyRoll } from './failed-reply-roll';
 export type {
-  FailedMcpEntry,
+  AwaitingRestartReading,
   FleetFailureOutcome,
+  FleetFanoutReply,
   FleetReportStatus,
   FleetReportSummary,
   FleetWorkerAwaitingRespawn,
   FleetWorkerFailure,
 } from './fleet-report';
 export {
-  failedMcpsFromReport,
   isFleetReportFailure,
   summarizeFleetFanout,
+  summarizeFleetReload,
   summarizeFleetResult,
 } from './fleet-report';
 export type { ApiOperationId, ApiPathPrefix, ApiPathTemplate } from './generated/api-routes';
@@ -92,6 +97,7 @@ export type {
   AttachmentMediaKind,
   AuthCapabilities,
   AuthRoute,
+  AwaitingWorker,
   BackendInfo,
   BackupDocument,
   BackupExportDocument,

@@ -20,6 +20,8 @@ describe('FleetReport', () => {
 
   it('renders nothing for a converged report (the caller shows its own success)', () => {
     const summary: FleetReportSummary = {
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'converged',
       awaiting: [],
@@ -33,15 +35,17 @@ describe('FleetReport', () => {
 
   it('renders a loud alert naming every non-converged worker and its outcome', () => {
     const summary: FleetReportSummary = {
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
       failures: [
-        { name: 'serve-a', outcome: 'failed', message: 'reload raised' },
-        { name: 'backend-b', outcome: 'timed_out', message: null },
-        { name: 'serve-c', outcome: 'departed', message: null },
-        { name: 'serve-d', outcome: 'missing', message: null },
+        { name: 'serve-a', outcome: 'failed', message: 'reload raised', withheld: false },
+        { name: 'backend-b', outcome: 'timed_out', message: null, withheld: false },
+        { name: 'serve-c', outcome: 'departed', message: null, withheld: false },
+        { name: 'serve-d', outcome: 'missing', message: null, withheld: false },
       ],
       error: null,
     };
@@ -64,14 +68,16 @@ describe('FleetReport', () => {
 
   it('renders the per-worker gap outcomes (resyncing / recycling / stale) with their labels and tone', () => {
     const summary: FleetReportSummary = {
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
       failures: [
-        { name: 'serve-1', outcome: 'resyncing', message: null },
-        { name: 'backend-1', outcome: 'recycling', message: null },
-        { name: 'serve-2', outcome: 'stale', message: null },
+        { name: 'serve-1', outcome: 'resyncing', message: null, withheld: false },
+        { name: 'backend-1', outcome: 'recycling', message: null, withheld: false },
+        { name: 'serve-2', outcome: 'stale', message: null, withheld: false },
       ],
       error: null,
     };
@@ -90,15 +96,17 @@ describe('FleetReport', () => {
 
   it('gives every state a mark AND a label, never color alone', () => {
     const summary: FleetReportSummary = {
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
       failures: [
-        { name: 'serve-a', outcome: 'failed', message: null },
-        { name: 'backend-b', outcome: 'timed_out', message: null },
-        { name: 'serve-c', outcome: 'departed', message: null },
-        { name: 'serve-d', outcome: 'missing', message: null },
+        { name: 'serve-a', outcome: 'failed', message: null, withheld: false },
+        { name: 'backend-b', outcome: 'timed_out', message: null, withheld: false },
+        { name: 'serve-c', outcome: 'departed', message: null, withheld: false },
+        { name: 'serve-d', outcome: 'missing', message: null, withheld: false },
       ],
       error: null,
     };
@@ -120,6 +128,8 @@ describe('FleetReport', () => {
 
   it('marks an unreachable bus as an error state', () => {
     const summary: FleetReportSummary = {
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'unreachable',
       awaiting: [],
@@ -139,6 +149,8 @@ describe('FleetReport', () => {
 
   it('renders a loud alert with the transport error when the bus was unreachable', () => {
     const summary: FleetReportSummary = {
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'unreachable',
       awaiting: [],
@@ -154,6 +166,8 @@ describe('FleetReport', () => {
 
   it('omits the error line when an unreachable report carries no message', () => {
     const summary: FleetReportSummary = {
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'unreachable',
       awaiting: [],
@@ -167,13 +181,15 @@ describe('FleetReport', () => {
 
   it('drops the "Change saved" framing and System-page pointer on a degraded reload action', () => {
     const summary: FleetReportSummary = {
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
       failures: [
-        { name: 'serve-a', outcome: 'failed', message: 'reload raised' },
-        { name: 'backend-b', outcome: 'timed_out', message: null },
+        { name: 'serve-a', outcome: 'failed', message: 'reload raised', withheld: false },
+        { name: 'backend-b', outcome: 'timed_out', message: null, withheld: false },
       ],
       error: null,
     };
@@ -193,6 +209,8 @@ describe('FleetReport', () => {
 
   it('drops the "Change saved" framing and System-page pointer on an unreachable reload action', () => {
     const summary: FleetReportSummary = {
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'unreachable',
       awaiting: [],
@@ -211,11 +229,13 @@ describe('FleetReport', () => {
 
   it('points a degraded remove at re-running the remove, never a reload', () => {
     const summary: FleetReportSummary = {
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
-      failures: [{ name: 'serve-b', outcome: 'timed_out', message: null }],
+      failures: [{ name: 'serve-b', outcome: 'timed_out', message: null, withheld: false }],
       error: null,
     };
     render(<FleetReport summary={summary} action="remove" />);
@@ -231,6 +251,8 @@ describe('FleetReport', () => {
 
   it('points an unreachable remove at re-running the remove, never a reload', () => {
     const summary: FleetReportSummary = {
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'unreachable',
       awaiting: [],
@@ -247,11 +269,13 @@ describe('FleetReport', () => {
 
   it('points a degraded deregister at re-running the deregister, never a reload', () => {
     const summary: FleetReportSummary = {
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
-      failures: [{ name: 'serve-b', outcome: 'timed_out', message: null }],
+      failures: [{ name: 'serve-b', outcome: 'timed_out', message: null, withheld: false }],
       error: null,
     };
     render(<FleetReport summary={summary} action="deregister" />);
@@ -268,6 +292,8 @@ describe('FleetReport', () => {
 
   it('points an unreachable deregister at re-running the deregister, never a reload', () => {
     const summary: FleetReportSummary = {
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'unreachable',
       awaiting: [],
@@ -288,11 +314,13 @@ describe('FleetReport', () => {
 
   it('keeps the alert, its mark and its per-worker labels', () => {
     const summary: FleetReportSummary = {
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
-      failures: [{ name: 'serve-a', outcome: 'failed', message: null }],
+      failures: [{ name: 'serve-a', outcome: 'failed', message: null, withheld: false }],
       error: null,
     };
     render(<FleetReport summary={summary} />);
@@ -311,11 +339,13 @@ describe('FleetReport', () => {
     // the commonest degraded fleet there is. Both halves of the copy agree — the
     // headline's noun and the guidance line's subject and its pronoun.
     const degraded = (names: readonly string[]): FleetReportSummary => ({
+      restartsPending: [],
+      reloadsUnconfirmed: [],
       spanReleaseError: null,
       status: 'degraded',
       awaiting: [],
       note: null,
-      failures: names.map((name) => ({ name, outcome: 'failed', message: null })),
+      failures: names.map((name) => ({ name, outcome: 'failed', message: null, withheld: false })),
       error: null,
     });
 
@@ -340,25 +370,40 @@ describe('FleetReport', () => {
 });
 
 describe('FleetReport — workers awaiting a respawn', () => {
+  const SUPERVISOR = 'your deployment’s supervisor (on a bare server, restart the server)';
   const awaiting: FleetReportSummary = {
+    restartsPending: [],
+    reloadsUnconfirmed: [],
     spanReleaseError: null,
     status: 'converged',
     awaiting: [
-      { name: 'serve-1', keys: ['BACKEND_MANIFEST_KEY'] },
-      { name: 'backend-1', keys: ['BACKEND_MANIFEST_KEY', 'TAI_BUS_HEARTBEAT_TTL'] },
+      { name: 'serve-1', keys: ['BACKEND_MANIFEST_KEY'], reading: 'restartable' },
+      {
+        name: 'backend-1',
+        keys: ['BACKEND_MANIFEST_KEY', 'TAI_BUS_HEARTBEAT_TTL'],
+        reading: 'restartable',
+      },
     ],
     note: null,
     failures: [],
     error: null,
   };
 
+  /** The status panel holding the given heading, read through its role. */
+  function panelOf(heading: string): HTMLElement {
+    const panel = screen.getByText(heading).closest<HTMLElement>('[role="status"]');
+    if (panel === null) throw new Error(`no status panel for ${heading}`);
+    return panel;
+  }
+
   it('names each worker and the keys that take effect only when it restarts', () => {
     render(<FleetReport summary={awaiting} action="reload" />);
-    const panel = screen.getByRole('status');
-    expect(panel).toHaveTextContent('2 workers need a restart to apply some settings');
-    expect(panel).toHaveTextContent(
-      'These settings changed in the stored environment after the worker started. The reload applied every other change; these take effect only when the worker restarts. Restart it through your deployment’s supervisor (on a bare server, restart the server).',
-    );
+    const panel = panelOf('2 workers need a restart to apply some settings');
+    expect(
+      within(panel).getByText(
+        `These settings changed in the stored environment after these workers started, and take effect only when they restart. Restart them through ${SUPERVISOR}.`,
+      ),
+    ).toBeInTheDocument();
     const [first, second] = within(panel).getAllByRole('listitem');
     if (first === undefined || second === undefined) throw new Error('expected two worker rows');
     expect(first).toHaveTextContent('serve-1');
@@ -370,11 +415,21 @@ describe('FleetReport — workers awaiting a respawn', () => {
     expect(statusFor(panel, /need a restart/)).toHaveClass('tai-status-warn');
   });
 
-  it('agrees the noun with a single worker', () => {
-    render(<FleetReport summary={{ ...awaiting, awaiting: [{ name: 'serve-1', keys: ['K'] }] }} />);
-    expect(screen.getByRole('status')).toHaveTextContent(
-      '1 worker needs a restart to apply some settings',
+  it('agrees the words with a single restartable worker', () => {
+    render(
+      <FleetReport
+        summary={{
+          ...awaiting,
+          awaiting: [{ name: 'serve-1', keys: ['K'], reading: 'restartable' }],
+        }}
+      />,
     );
+    const panel = panelOf('1 worker needs a restart to apply some settings');
+    expect(
+      within(panel).getByText(
+        `These settings changed in the stored environment after this worker started, and take effect only when it restarts. Restart it through ${SUPERVISOR}.`,
+      ),
+    ).toBeInTheDocument();
   });
 
   it('shows the restart list beside a degraded report', () => {
@@ -383,11 +438,188 @@ describe('FleetReport — workers awaiting a respawn', () => {
         summary={{
           ...awaiting,
           status: 'degraded',
-          failures: [{ name: 'serve-2', outcome: 'missing', message: null }],
+          failures: [{ name: 'serve-2', outcome: 'missing', message: null, withheld: false }],
         }}
       />,
     );
     expect(screen.getByRole('alert')).toHaveTextContent('serve-2');
     expect(screen.getByRole('status')).toHaveTextContent('serve-1');
+  });
+
+  it('counts each group apart, with its own heading, guidance and rows', () => {
+    render(
+      <FleetReport
+        summary={{
+          ...awaiting,
+          status: 'degraded',
+          failures: [
+            { name: 'backend-1', outcome: 'failed', message: 'build refused', withheld: true },
+          ],
+          awaiting: [
+            { name: 'serve-1', keys: ['K'], reading: 'restartable' },
+            { name: 'backend-1', keys: ['K'], reading: 'withheld' },
+            { name: 'backend-2', keys: ['K'], reading: 'withheld' },
+            { name: 'serve-2', keys: ['K'], reading: 'unstated' },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getAllByRole('status')).toHaveLength(3);
+    const restart = panelOf('1 worker needs a restart to apply some settings');
+    expect(within(restart).getAllByRole('listitem')).toHaveLength(1);
+    expect(restart).toHaveTextContent('serve-1');
+    const withheld = panelOf('2 workers could not build the stored configuration');
+    expect(within(withheld).getAllByRole('listitem')).toHaveLength(2);
+    expect(withheld).toHaveTextContent('backend-1');
+    expect(withheld).toHaveTextContent('backend-2');
+    expect(
+      within(withheld).getByText(
+        `The stored configuration did not build on these workers, so they keep running their current configuration and were not restarted: a restart may fail the same way. Fix the stored configuration, or the cause the build error names, then restart them through ${SUPERVISOR}.`,
+      ),
+    ).toBeInTheDocument();
+    const unstated = panelOf('1 worker has settings it has not applied');
+    expect(within(unstated).getAllByRole('listitem')).toHaveLength(1);
+    expect(unstated).toHaveTextContent('serve-2');
+  });
+
+  it('never tells a withheld worker that it needs or waits for a restart', () => {
+    render(
+      <FleetReport
+        summary={{
+          ...awaiting,
+          awaiting: [{ name: 'backend-1', keys: ['K'], reading: 'withheld' }],
+        }}
+      />,
+    );
+    const panel = panelOf('1 worker could not build the stored configuration');
+    expect(
+      within(panel).getByText(
+        `The stored configuration did not build on this worker, so it keeps running its current configuration and was not restarted: a restart may fail the same way. Fix the stored configuration, or the cause the build error names, then restart it through ${SUPERVISOR}.`,
+      ),
+    ).toBeInTheDocument();
+    const row = within(panel).getByRole('listitem');
+    expect(row).toHaveTextContent('backend-1has not applied:K');
+    expect(panel).not.toHaveTextContent('needs a restart');
+    expect(panel).not.toHaveTextContent('waits for a restart');
+  });
+
+  it('gives a worker the reply does not place the guidance that holds either way', () => {
+    render(
+      <FleetReport
+        summary={{
+          ...awaiting,
+          awaiting: [{ name: 'backend-1', keys: ['K'], reading: 'unstated' }],
+        }}
+      />,
+    );
+    const panel = panelOf('1 worker has settings it has not applied');
+    expect(
+      within(panel).getByText(
+        `These settings take effect only when this worker restarts. If its new build failed, fix the stored configuration first, since a restart may fail the same way. Then restart it through ${SUPERVISOR}.`,
+      ),
+    ).toBeInTheDocument();
+    expect(within(panel).getByRole('listitem')).toHaveTextContent('backend-1has not applied:K');
+  });
+
+  it('agrees the words with several workers the reply does not place', () => {
+    render(
+      <FleetReport
+        summary={{
+          ...awaiting,
+          awaiting: [
+            { name: 'backend-1', keys: ['K'], reading: 'unstated' },
+            { name: 'backend-2', keys: ['K'], reading: 'unstated' },
+          ],
+        }}
+      />,
+    );
+    const panel = panelOf('2 workers have settings they have not applied');
+    expect(
+      within(panel).getByText(
+        `These settings take effect only when these workers restart. If a worker’s new build failed, fix the stored configuration first, since a restart may fail the same way. Then restart them through ${SUPERVISOR}.`,
+      ),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('FleetReport — a worker whose reload was refused at its epoch build', () => {
+  const summary = (failures: FleetReportSummary['failures']): FleetReportSummary => ({
+    restartsPending: [],
+    reloadsUnconfirmed: [],
+    spanReleaseError: null,
+    status: 'degraded',
+    awaiting: [],
+    note: null,
+    failures,
+    error: null,
+  });
+  const WITHHELD_ONE =
+    'The stored configuration did not build on this worker, so it keeps running its current configuration. Trying again may be refused the same way: first fix the stored configuration, or the cause the build error names.';
+  const held = (name: string) =>
+    ({ name, outcome: 'failed', message: 'epoch build refused', withheld: true }) as const;
+
+  it('tells a withheld worker to fix the configuration, never to reload again', () => {
+    render(<FleetReport summary={summary([held('serve-a')])} />);
+    const alert = screen.getByRole('alert');
+    expect(within(alert).getByText(WITHHELD_ONE)).toBeInTheDocument();
+    expect(within(alert).getByText('serve-a')).toBeInTheDocument();
+    expect(alert).not.toHaveTextContent('reload the fleet');
+  });
+
+  it('words the advice for several withheld workers', () => {
+    render(<FleetReport summary={summary([held('serve-a'), held('serve-b')])} />);
+    expect(
+      within(screen.getByRole('alert')).getByText(
+        'The stored configuration did not build on these workers, so they keep running their current configuration. Trying again may be refused the same way: first fix the stored configuration, or the cause the build error names.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('gives each worker of a mix its own next step', () => {
+    render(
+      <FleetReport
+        summary={summary([
+          held('serve-a'),
+          { name: 'serve-b', outcome: 'timed_out', message: null, withheld: false },
+        ])}
+      />,
+    );
+    const alert = screen.getByRole('alert');
+    expect(within(alert).getByText('2 workers did not converge', { exact: false })).toBeTruthy();
+    const retry = within(alert).getByText(
+      'This worker may still be running the old config — reload the fleet from the System page to converge it.',
+    );
+    const withheld = within(alert).getByText(WITHHELD_ONE);
+    expect(retry.nextElementSibling).toHaveTextContent('serve-b');
+    expect(retry.nextElementSibling).not.toHaveTextContent('serve-a');
+    expect(withheld.nextElementSibling).toHaveTextContent('serve-a');
+    expect(withheld.nextElementSibling).not.toHaveTextContent('serve-b');
+  });
+});
+
+describe('FleetReport — an unreleased write span', () => {
+  it('says the write landed and what the held lock can do, with the store error', () => {
+    render(
+      <FleetReport
+        summary={{
+          restartsPending: [],
+          reloadsUnconfirmed: [],
+          spanReleaseError: 'tai42/toolbox: OSError: release failed',
+          status: 'converged',
+          awaiting: [],
+          note: null,
+          failures: [],
+          error: null,
+        }}
+      />,
+    );
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('The config store did not release its write lock');
+    expect(
+      within(alert).getByText(
+        'The write landed, but the store may hold its write lock until the server process that wrote it exits. Until then another config change can wait or be refused.',
+      ),
+    ).toBeInTheDocument();
+    expect(within(alert).getByText('tai42/toolbox: OSError: release failed')).toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 import { type ApiClient, ApiError, type SettingsSchema } from '@tai42/api-client';
+import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -94,6 +95,8 @@ function stubClient(methods: Stub): ApiClient {
 function saved(): ReturnType<ApiClient['setEnvConfig']> {
   return Promise.resolve({
     span_release_error: null,
+    roll_deferred: false,
+    roll_deferred_to: null,
     status: 'reloaded',
     env_keys: 1,
     awaiting_respawn: [],
@@ -156,6 +159,70 @@ describe('SettingsTab', () => {
     await waitFor(() => {
       expect(setEnvConfig).toHaveBeenCalledWith({ env: { TAI_PORT: '123', TAI_DEBUG: 'true' } });
     });
+  });
+
+  it('reports the recycle roll a save ran', async () => {
+    const user = userEvent.setup();
+    const client = stubClient({
+      getSettingsSchema: vi.fn(() => Promise.resolve(schemaFixture())),
+      setEnvConfig: vi.fn(() =>
+        Promise.resolve({
+          status: 'ok',
+          env_keys: 1,
+          awaiting_respawn: [{ name: 'backend-2', keys: ['K'] }],
+          span_release_error: null,
+          roll_deferred: false,
+          roll_deferred_to: null,
+          fanout: {
+            mode: 'fleet' as const,
+            op: 'reload_config',
+            reachable: true,
+            local_only: false,
+            results: [
+              {
+                name: 'backend-2',
+                outcome: 'applied' as const,
+                payload: { status: 'ok' },
+                error: null,
+                detail: null,
+              },
+            ],
+            error: null,
+          },
+          recycle: {
+            recycle: [
+              {
+                name: 'backend-2',
+                kind: 'backend' as const,
+                status: 'timed-out' as const,
+                generation_before: 1,
+                keys: ['K'],
+                detail: 'old life still present',
+              },
+            ],
+            skipped: [],
+            fresh: [],
+            recycle_stopped: {
+              kind: 'backend' as const,
+              name: 'backend-2',
+              detail: 'old life still present',
+            },
+          },
+        }),
+      ),
+    });
+    renderWithProviders(<SettingsTab readOnly={false} />, { client });
+
+    const port = await screen.findByLabelText('port');
+    await user.clear(port);
+    await user.type(port, '123');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByTestId('recycle-stopped')).toHaveTextContent(
+      'The recycle stopped at backend-2 (backend workers)',
+    );
+    expect(screen.getByTestId('recycle-stopped')).toHaveTextContent('old life still present');
+    expect(screen.getByText('1 worker needs a restart to apply some settings')).toBeVisible();
   });
 
   it('shows a save refused while an MCP server is still starting as that start, not an error', async () => {
@@ -413,5 +480,24 @@ describe('SettingsTab — fields the deployment sets', () => {
     await waitFor(() => {
       expect(setEnvConfig).toHaveBeenCalledWith({ env: { TAI_PORT: '9000' } });
     });
+  });
+});
+
+describe('SettingsTab — a failed save that carries a recycle roll', () => {
+  it('shows the roll beside the error', async () => {
+    const user = userEvent.setup();
+    const client = stubClient({
+      getSettingsSchema: vi.fn(() => Promise.resolve(schemaFixture())),
+      setEnvConfig: vi.fn(() => Promise.reject(failureWithRoll())),
+    });
+    renderWithProviders(<SettingsTab readOnly={false} />, { client });
+
+    const port = await screen.findByLabelText('port');
+    await user.clear(port);
+    await user.type(port, '123');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

@@ -36,12 +36,14 @@ export function useConnectorAdmin(): boolean {
 export interface RequestFailure {
   readonly refusal: ConnectorRefusal | null;
   readonly message: string | null;
+  /** The rejected value of the request. */
+  readonly error: unknown;
 }
 
 function failureOf(error: unknown): RequestFailure {
   const refusal = readConnectorRefusal(error);
-  if (refusal !== null) return { refusal, message: null };
-  return { refusal: null, message: error instanceof Error ? error.message : null };
+  if (refusal !== null) return { refusal, message: null, error };
+  return { refusal: null, message: error instanceof Error ? error.message : null, error };
 }
 
 function statusOf(error: unknown): unknown {
@@ -94,7 +96,7 @@ function useReviewStep(
     onSuccess: (result: AddServerResult) => {
       void queryClient.invalidateQueries({ queryKey: PROVIDERS_KEY });
       void queryClient.invalidateQueries({ queryKey: CONNECTIONS_KEY });
-      const fleet = summarizeFleetFanout(result.fanout, [], result.span_release_error);
+      const fleet = summarizeFleetFanout(result);
       // A reload that did not reach every worker keeps the dialog open on its report.
       if (isFleetReportFailure(fleet)) {
         setFleetFailure(fleet);

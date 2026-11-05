@@ -1,5 +1,6 @@
 import { type ApiClient, ApiError, type SettingsSchema } from '@tai42/api-client';
 import { GuardedTabs } from '@tai42/studio-sdk';
+import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -58,6 +59,8 @@ function stubClient(methods: Stub): ApiClient {
 function saved(): ReturnType<ApiClient['setEnvConfig']> {
   return Promise.resolve({
     span_release_error: null,
+    roll_deferred: false,
+    roll_deferred_to: null,
     status: 'reloaded',
     env_keys: 1,
     awaiting_respawn: [],
@@ -70,6 +73,8 @@ function saved(): ReturnType<ApiClient['setEnvConfig']> {
 function degradedSave(): ReturnType<ApiClient['setEnvConfig']> {
   return Promise.resolve({
     span_release_error: null,
+    roll_deferred: false,
+    roll_deferred_to: null,
     status: 'reloaded',
     env_keys: 1,
     awaiting_respawn: [],
@@ -352,6 +357,8 @@ function rolledSave(stopped: boolean): ReturnType<ApiClient['setEnvConfig']> {
   const awaiting = { status: 'ok', env_keys: 1, awaiting_respawn: ['BACKEND_MANIFEST_KEY'] };
   return Promise.resolve({
     span_release_error: null,
+    roll_deferred: false,
+    roll_deferred_to: null,
     status: 'ok',
     env_keys: 1,
     // The operation's verdict: a converged roll leaves nobody waiting; a stopped one leaves
@@ -383,9 +390,11 @@ function rolledSave(stopped: boolean): ReturnType<ApiClient['setEnvConfig']> {
               kind: 'backend',
               status: 'timed-out',
               generation_before: 3,
+              keys: ['BACKEND_MANIFEST_KEY'],
               detail: 'its old life was still present after 90s',
             },
           ],
+          skipped: [],
           fresh: [],
           recycle_stopped: {
             kind: 'backend',
@@ -400,6 +409,7 @@ function rolledSave(stopped: boolean): ReturnType<ApiClient['setEnvConfig']> {
               kind: 'backend',
               status: 'recycled',
               generation_before: 3,
+              keys: ['BACKEND_MANIFEST_KEY'],
               detail: null,
             },
             {
@@ -407,6 +417,7 @@ function rolledSave(stopped: boolean): ReturnType<ApiClient['setEnvConfig']> {
               kind: 'backend',
               status: 'recycled',
               generation_before: 1,
+              keys: ['BACKEND_MANIFEST_KEY'],
               detail: null,
             },
             {
@@ -414,9 +425,11 @@ function rolledSave(stopped: boolean): ReturnType<ApiClient['setEnvConfig']> {
               kind: 'serve',
               status: 'self-deferred',
               generation_before: 2,
+              keys: ['BACKEND_MANIFEST_KEY'],
               detail: null,
             },
           ],
+          skipped: [],
           fresh: [
             { name: 'backend-1', kind: 'backend', generation: 4 },
             { name: 'backend-2', kind: 'backend', generation: 2 },
@@ -605,7 +618,7 @@ describe('EnvironmentTab — a save that rolls a worker recycle', () => {
 
     const section = await screen.findByRole('region', { name: 'Worker recycle' });
     expect(section).toHaveTextContent(
-      'Some changed settings take effect only in a fresh worker process, so the fleet recycled its workers one at a time.',
+      'Some changed settings take effect only in a fresh worker process, so the fleet restarts the workers that need it, one at a time.',
     );
     const rows = within(section).getAllByRole('listitem');
     expect(rows).toHaveLength(3);
@@ -613,7 +626,9 @@ describe('EnvironmentTab — a save that rolls a worker recycle', () => {
     expect(rows[0]).toHaveTextContent('recycled');
     expect(rows[0]).toHaveTextContent('life 3 to 4');
     expect(rows[2]).toHaveTextContent('self-deferred');
-    expect(rows[2]).toHaveTextContent('this worker recycles itself after replying');
+    expect(rows[2]).toHaveTextContent(
+      'restarts once its own in-flight change has replied, which this report cannot confirm',
+    );
     // The server's verdict is empty for a converged roll: no restart panel, whatever the rows say.
     expect(screen.queryByText(/need a restart/)).toBeNull();
   });
@@ -646,5 +661,21 @@ describe('EnvironmentTab — a save that rolls a worker recycle', () => {
       expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
     });
     expect(screen.queryByRole('region', { name: 'Worker recycle' })).toBeNull();
+  });
+});
+
+describe('EnvironmentTab — a failed save that carries a recycle roll', () => {
+  it('shows the roll beside the error', async () => {
+    const user = userEvent.setup();
+    const setEnvConfig = vi.fn(() => Promise.reject(failureWithRoll()));
+    renderWithProviders(<EnvironmentTab readOnly={false} />, { client: baseStub(setEnvConfig) });
+
+    const row = (await screen.findByLabelText('Name of variable OPENAI_API_KEY')).closest('li');
+    expect(row).not.toBeNull();
+    await user.click(within(row as HTMLElement).getByRole('checkbox', { name: 'Secret' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

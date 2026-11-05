@@ -26,5 +26,14 @@
     }
   ],
   "error": null,
-  "ok": false
+  "ok": false,
+  "recycle": {
+    "recycle": [],
+    "skipped": ["serve-1", "serve-2", "backend-1"],
+    "fresh": [],
+    "recycle_stopped": null
+  },
+  "awaiting_respawn": [],
+  "roll_deferred": false,
+  "roll_deferred_to": null
 }

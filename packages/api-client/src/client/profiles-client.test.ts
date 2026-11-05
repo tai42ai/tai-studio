@@ -148,9 +148,22 @@ describe('settings-profiles client transport', () => {
         data: {
           hot: ['APP_TITLE'],
           recycle: [
-            { name: 'serve-1', kind: 'serve', status: 'recycled', generation_before: 4 },
-            { name: 'serve-2', kind: 'serve', status: 'self-deferred', generation_before: 2 },
+            {
+              name: 'serve-1',
+              kind: 'serve',
+              status: 'recycled',
+              generation_before: 4,
+              keys: ['TAI_DEFAULT_REDIS_URL'],
+            },
+            {
+              name: 'serve-2',
+              kind: 'serve',
+              status: 'self-deferred',
+              generation_before: 2,
+              keys: ['TAI_DEFAULT_REDIS_URL'],
+            },
           ],
+          skipped: [],
           fresh: [{ name: 'serve-1', kind: 'serve', generation: 5 }],
           refused: [],
           recycle_stopped: null,
@@ -174,6 +187,7 @@ describe('settings-profiles client transport', () => {
       kind: 'serve',
       status: 'recycled',
       generation_before: 4,
+      keys: ['TAI_DEFAULT_REDIS_URL'],
       detail: null,
     });
     expect(out.recycle_stopped).toBeNull();
@@ -190,6 +204,7 @@ describe('settings-profiles client transport', () => {
         data: {
           hot: [],
           recycle: [],
+          skipped: [],
           fresh: [],
           refused: ['TAI_APP_PROVIDERS', 'TAI_DEFAULT_REDIS_URL'],
           recycle_stopped: null,

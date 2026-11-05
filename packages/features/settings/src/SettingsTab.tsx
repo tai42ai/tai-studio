@@ -5,19 +5,22 @@
  * Nested-group fields render a muted reference to the group that owns them.
  *
  * Edits accumulate into a pending `Record<env_var, string>`; Save posts the whole
- * pending map through the env merge door (`setEnvConfig`). The store is env strings,
- * so every edited value is serialised the way pydantic-settings re-parses it.
+ * pending map through the env merge door (`setEnvConfig`), and the save reports its fleet
+ * outcome. The store is env strings, so every edited value is serialised the way
+ * pydantic-settings re-parses it.
  *
  * State follows the shared convention: <Spinner> while loading, <ErrorState> (loud)
  * on any failure — a rejected request or a zod mismatch is always a visible error,
  * never a silent render. Read-only config mode disables every input and Save.
  */
+import { summarizeFleetFanout } from '@tai42/api-client';
 import {
   Button,
   Card,
   EmptyState,
   errorMessage,
   ErrorState,
+  FleetOutcomeReport,
   Spinner,
   useApi,
   WriteFailure,
@@ -148,6 +151,13 @@ export function SettingsTab({ readOnly }: SettingsTabProps): ReactNode {
         <div>
           <WriteFailure error={mutation.error} />
         </div>
+      ) : null}
+
+      {mutation.isSuccess ? (
+        <FleetOutcomeReport
+          summary={summarizeFleetFanout(mutation.data)}
+          recycle={mutation.data.recycle}
+        />
       ) : null}
 
       {readOnly ? (

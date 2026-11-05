@@ -573,6 +573,7 @@ name: string;
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -582,7 +583,10 @@ detail: string;
 kind: string;
 name: string | null;
 } | null;
+skipped: string[];
 } | null;
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 span_release_error: string | null;
 status: string;
 fanout: {
@@ -618,6 +622,7 @@ mode: "unreachable";
 };
 }>;
 readonly uninstallMarketplacePlugin: (body: MarketplaceUninstallBody) => Promise<{
+manifest_written: boolean;
 notes: string[];
 ref: string;
 uninstalled: boolean;
@@ -636,6 +641,7 @@ name: string;
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -645,7 +651,10 @@ detail: string;
 kind: string;
 name: string | null;
 } | null;
+skipped: string[];
 } | null;
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 span_release_error: string | null;
 status: string;
 fanout: {
@@ -716,6 +725,7 @@ name: string;
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -725,7 +735,10 @@ detail: string;
 kind: string;
 name: string | null;
 } | null;
+skipped: string[];
 } | null;
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 span_release_error: string | null;
 status: string;
 fanout: {
@@ -761,12 +774,39 @@ mode: "unreachable";
 };
 }>;
 readonly upgradeAllMarketplacePlugins: () => Promise<{
+awaiting_respawn: {
+keys: string[];
+name: string;
+}[];
+recycle: {
+fresh: {
+generation: number;
+kind: string;
+name: string;
+}[];
+recycle: {
+detail: string | null;
+generation_before: number;
+keys: string[];
+kind: string;
+name: string;
+status: string;
+}[];
+recycle_stopped: {
+detail: string;
+kind: string;
+name: string | null;
+} | null;
+skipped: string[];
+} | null;
 results: {
 detail: string;
 outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
 ref: string;
 span_release_error: string | null;
 }[];
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 }>;
 readonly getMarketplaceAdvisories: (signal?: AbortSignal) => Promise<{
 fetched_at: string;
@@ -950,6 +990,7 @@ name: string;
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -959,7 +1000,10 @@ detail: string;
 kind: string;
 name: string | null;
 } | null;
+skipped: string[];
 } | null;
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 skipped: number;
 span_release_error: string | null;
 updated: number;
@@ -3200,6 +3244,7 @@ name: string;
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -3209,7 +3254,10 @@ detail: string;
 kind: string;
 name: string | null;
 } | null;
+skipped: string[];
 } | null;
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 span_release_error: string | null;
 status: string;
 fanout: {
@@ -3323,6 +3371,7 @@ hot: string[];
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -3333,6 +3382,9 @@ kind: string;
 name: string | null;
 } | null;
 refused: string[];
+roll_deferred: boolean;
+roll_deferred_to: string | null;
+skipped: string[];
 span_release_error: string | null;
 fanout: {
 mode: "local-only";
@@ -3409,6 +3461,7 @@ name: string;
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -3418,7 +3471,10 @@ detail: string;
 kind: string;
 name: string | null;
 } | null;
+skipped: string[];
 } | null;
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 span_release_error: string | null;
 status: string;
 fanout: {
@@ -3457,11 +3513,36 @@ config_mode: string;
 read_only: boolean;
 }>;
 readonly reloadConfig: (targets?: string[] | null) => Promise<{
+awaiting_respawn: {
+keys: string[];
+name: string;
+}[];
 error: string | null;
 local_only: boolean;
 ok: boolean;
 op: string;
 reachable: boolean;
+recycle: {
+fresh: {
+generation: number;
+kind: string;
+name: string;
+}[];
+recycle: {
+detail: string | null;
+generation_before: number;
+keys: string[];
+kind: string;
+name: string;
+status: string;
+}[];
+recycle_stopped: {
+detail: string;
+kind: string;
+name: string | null;
+} | null;
+skipped: string[];
+} | null;
 results: {
 detail: string | null;
 error: string | null;
@@ -3469,6 +3550,8 @@ name: string;
 outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 }[];
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 }>;
 readonly listSubMcp: (signal?: AbortSignal) => Promise<Record<string, {
 access_pattern: string;
@@ -3530,6 +3613,7 @@ name: string;
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -3539,7 +3623,10 @@ detail: string;
 kind: string;
 name: string | null;
 } | null;
+skipped: string[];
 } | null;
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 span_release_error: string | null;
 status: string;
 fanout: {
@@ -3677,6 +3764,7 @@ name: string;
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -3686,7 +3774,10 @@ detail: string;
 kind: string;
 name: string | null;
 } | null;
+skipped: string[];
 } | null;
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 span_release_error: string | null;
 status: string;
 fanout: {
@@ -3735,6 +3826,7 @@ name: string;
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -3744,7 +3836,10 @@ detail: string;
 kind: string;
 name: string | null;
 } | null;
+skipped: string[];
 } | null;
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 span_release_error: string | null;
 status: string;
 fanout: {
@@ -3793,6 +3888,7 @@ name: string;
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -3802,7 +3898,10 @@ detail: string;
 kind: string;
 name: string | null;
 } | null;
+skipped: string[];
 } | null;
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 span_release_error: string | null;
 status: string;
 fanout: {
@@ -3851,6 +3950,7 @@ name: string;
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -3860,7 +3960,10 @@ detail: string;
 kind: string;
 name: string | null;
 } | null;
+skipped: string[];
 } | null;
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 span_release_error: string | null;
 status: string;
 fanout: {
@@ -3909,6 +4012,7 @@ name: string;
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -3918,7 +4022,10 @@ detail: string;
 kind: string;
 name: string | null;
 } | null;
+skipped: string[];
 } | null;
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 span_release_error: string | null;
 status: string;
 fanout: {
@@ -3967,6 +4074,7 @@ name: string;
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -3976,7 +4084,10 @@ detail: string;
 kind: string;
 name: string | null;
 } | null;
+skipped: string[];
 } | null;
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 span_release_error: string | null;
 status: string;
 fanout: {
@@ -4144,6 +4255,7 @@ name: string;
 recycle: {
 detail: string | null;
 generation_before: number;
+keys: string[];
 kind: string;
 name: string;
 status: string;
@@ -4153,7 +4265,10 @@ detail: string;
 kind: string;
 name: string | null;
 } | null;
+skipped: string[];
 } | null;
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 span_release_error: string | null;
 status: string;
 fanout: {
@@ -4210,11 +4325,36 @@ state: "resyncing" | "recycling" | "ready";
 }[];
 }>;
 readonly reloadFleetConfig: (targets: string[] | null) => Promise<{
+awaiting_respawn: {
+keys: string[];
+name: string;
+}[];
 error: string | null;
 local_only: boolean;
 ok: boolean;
 op: string;
 reachable: boolean;
+recycle: {
+fresh: {
+generation: number;
+kind: string;
+name: string;
+}[];
+recycle: {
+detail: string | null;
+generation_before: number;
+keys: string[];
+kind: string;
+name: string;
+status: string;
+}[];
+recycle_stopped: {
+detail: string;
+kind: string;
+name: string | null;
+} | null;
+skipped: string[];
+} | null;
 results: {
 detail: string | null;
 error: string | null;
@@ -4222,6 +4362,8 @@ name: string;
 outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 }[];
+roll_deferred: boolean;
+roll_deferred_to: string | null;
 }>;
 readonly getStorageInfo: (signal?: AbortSignal) => Promise<{
 module: string | null;
@@ -5511,6 +5653,7 @@ readonly holdersFromError: (error: unknown) => ReferenceHolder[] | null;
 readonly storedPresetFaultFromError: (error: unknown) => string | null;
 readonly isMcpStartingError: (error: unknown) => boolean;
 readonly isMcpNotLoadedError: (error: unknown) => boolean;
+readonly failedReplyRoll: failedReplyRoll;
 } | null>;
 
 // @public (undocumented)
@@ -5679,6 +5822,9 @@ export interface AuthState {
     readonly token: string | null;
 }
 
+// @public
+type AwaitingRestartReading = 'restartable' | 'withheld' | 'unstated';
+
 // @public (undocumented)
 type AwaitingWorker = z.infer<typeof awaitingWorker>;
 
@@ -5742,6 +5888,7 @@ const backupImportReport: z.ZodObject<{
             recycle: z.ZodArray<z.ZodObject<{
                 detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 generation_before: z.ZodNumber;
+                keys: z.ZodArray<z.ZodString>;
                 kind: z.ZodString;
                 name: z.ZodString;
                 status: z.ZodString;
@@ -5751,7 +5898,10 @@ const backupImportReport: z.ZodObject<{
                 kind: z.ZodString;
                 name: z.ZodNullable<z.ZodString>;
             }, z.core.$strip>>>;
+            skipped: z.ZodArray<z.ZodString>;
         }, z.core.$strip>>>;
+        roll_deferred: z.ZodDefault<z.ZodBoolean>;
+        roll_deferred_to: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         skipped: z.ZodDefault<z.ZodNumber>;
         span_release_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         updated: z.ZodDefault<z.ZodNumber>;
@@ -5843,6 +5993,7 @@ const backupSectionReport: z.ZodObject<{
         recycle: z.ZodArray<z.ZodObject<{
             detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             generation_before: z.ZodNumber;
+            keys: z.ZodArray<z.ZodString>;
             kind: z.ZodString;
             name: z.ZodString;
             status: z.ZodString;
@@ -5852,7 +6003,10 @@ const backupSectionReport: z.ZodObject<{
             kind: z.ZodString;
             name: z.ZodNullable<z.ZodString>;
         }, z.core.$strip>>>;
+        skipped: z.ZodArray<z.ZodString>;
     }, z.core.$strip>>>;
+    roll_deferred: z.ZodDefault<z.ZodBoolean>;
+    roll_deferred_to: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     skipped: z.ZodDefault<z.ZodNumber>;
     span_release_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     updated: z.ZodDefault<z.ZodNumber>;
@@ -9157,6 +9311,7 @@ function createApiClient(config: ApiConfig): {
                 recycle: {
                     detail: string | null;
                     generation_before: number;
+                    keys: string[];
                     kind: string;
                     name: string;
                     status: string;
@@ -9166,7 +9321,10 @@ function createApiClient(config: ApiConfig): {
                     kind: string;
                     name: string | null;
                 } | null;
+                skipped: string[];
             } | null;
+            roll_deferred: boolean;
+            roll_deferred_to: string | null;
             span_release_error: string | null;
             status: string;
             fanout: {
@@ -9202,6 +9360,7 @@ function createApiClient(config: ApiConfig): {
         };
     }>;
     readonly uninstallMarketplacePlugin: (body: MarketplaceUninstallBody) => Promise<{
+        manifest_written: boolean;
         notes: string[];
         ref: string;
         uninstalled: boolean;
@@ -9220,6 +9379,7 @@ function createApiClient(config: ApiConfig): {
                 recycle: {
                     detail: string | null;
                     generation_before: number;
+                    keys: string[];
                     kind: string;
                     name: string;
                     status: string;
@@ -9229,7 +9389,10 @@ function createApiClient(config: ApiConfig): {
                     kind: string;
                     name: string | null;
                 } | null;
+                skipped: string[];
             } | null;
+            roll_deferred: boolean;
+            roll_deferred_to: string | null;
             span_release_error: string | null;
             status: string;
             fanout: {
@@ -9300,6 +9463,7 @@ function createApiClient(config: ApiConfig): {
                 recycle: {
                     detail: string | null;
                     generation_before: number;
+                    keys: string[];
                     kind: string;
                     name: string;
                     status: string;
@@ -9309,7 +9473,10 @@ function createApiClient(config: ApiConfig): {
                     kind: string;
                     name: string | null;
                 } | null;
+                skipped: string[];
             } | null;
+            roll_deferred: boolean;
+            roll_deferred_to: string | null;
             span_release_error: string | null;
             status: string;
             fanout: {
@@ -9345,12 +9512,39 @@ function createApiClient(config: ApiConfig): {
         };
     }>;
     readonly upgradeAllMarketplacePlugins: () => Promise<{
+        awaiting_respawn: {
+            keys: string[];
+            name: string;
+        }[];
+        recycle: {
+            fresh: {
+                generation: number;
+                kind: string;
+                name: string;
+            }[];
+            recycle: {
+                detail: string | null;
+                generation_before: number;
+                keys: string[];
+                kind: string;
+                name: string;
+                status: string;
+            }[];
+            recycle_stopped: {
+                detail: string;
+                kind: string;
+                name: string | null;
+            } | null;
+            skipped: string[];
+        } | null;
         results: {
             detail: string;
             outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
             ref: string;
             span_release_error: string | null;
         }[];
+        roll_deferred: boolean;
+        roll_deferred_to: string | null;
     }>;
     readonly getMarketplaceAdvisories: (signal?: AbortSignal) => Promise<{
         fetched_at: string;
@@ -9534,6 +9728,7 @@ function createApiClient(config: ApiConfig): {
                 recycle: {
                     detail: string | null;
                     generation_before: number;
+                    keys: string[];
                     kind: string;
                     name: string;
                     status: string;
@@ -9543,7 +9738,10 @@ function createApiClient(config: ApiConfig): {
                     kind: string;
                     name: string | null;
                 } | null;
+                skipped: string[];
             } | null;
+            roll_deferred: boolean;
+            roll_deferred_to: string | null;
             skipped: number;
             span_release_error: string | null;
             updated: number;
@@ -11784,6 +11982,7 @@ function createApiClient(config: ApiConfig): {
             recycle: {
                 detail: string | null;
                 generation_before: number;
+                keys: string[];
                 kind: string;
                 name: string;
                 status: string;
@@ -11793,7 +11992,10 @@ function createApiClient(config: ApiConfig): {
                 kind: string;
                 name: string | null;
             } | null;
+            skipped: string[];
         } | null;
+        roll_deferred: boolean;
+        roll_deferred_to: string | null;
         span_release_error: string | null;
         status: string;
         fanout: {
@@ -11907,6 +12109,7 @@ function createApiClient(config: ApiConfig): {
         recycle: {
             detail: string | null;
             generation_before: number;
+            keys: string[];
             kind: string;
             name: string;
             status: string;
@@ -11917,6 +12120,9 @@ function createApiClient(config: ApiConfig): {
             name: string | null;
         } | null;
         refused: string[];
+        roll_deferred: boolean;
+        roll_deferred_to: string | null;
+        skipped: string[];
         span_release_error: string | null;
         fanout: {
             mode: "local-only";
@@ -11993,6 +12199,7 @@ function createApiClient(config: ApiConfig): {
             recycle: {
                 detail: string | null;
                 generation_before: number;
+                keys: string[];
                 kind: string;
                 name: string;
                 status: string;
@@ -12002,7 +12209,10 @@ function createApiClient(config: ApiConfig): {
                 kind: string;
                 name: string | null;
             } | null;
+            skipped: string[];
         } | null;
+        roll_deferred: boolean;
+        roll_deferred_to: string | null;
         span_release_error: string | null;
         status: string;
         fanout: {
@@ -12041,11 +12251,36 @@ function createApiClient(config: ApiConfig): {
         read_only: boolean;
     }>;
     readonly reloadConfig: (targets?: string[] | null) => Promise<{
+        awaiting_respawn: {
+            keys: string[];
+            name: string;
+        }[];
         error: string | null;
         local_only: boolean;
         ok: boolean;
         op: string;
         reachable: boolean;
+        recycle: {
+            fresh: {
+                generation: number;
+                kind: string;
+                name: string;
+            }[];
+            recycle: {
+                detail: string | null;
+                generation_before: number;
+                keys: string[];
+                kind: string;
+                name: string;
+                status: string;
+            }[];
+            recycle_stopped: {
+                detail: string;
+                kind: string;
+                name: string | null;
+            } | null;
+            skipped: string[];
+        } | null;
         results: {
             detail: string | null;
             error: string | null;
@@ -12053,6 +12288,8 @@ function createApiClient(config: ApiConfig): {
             outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
         }[];
+        roll_deferred: boolean;
+        roll_deferred_to: string | null;
     }>;
     readonly listSubMcp: (signal?: AbortSignal) => Promise<Record<string, {
         access_pattern: string;
@@ -12114,6 +12351,7 @@ function createApiClient(config: ApiConfig): {
             recycle: {
                 detail: string | null;
                 generation_before: number;
+                keys: string[];
                 kind: string;
                 name: string;
                 status: string;
@@ -12123,7 +12361,10 @@ function createApiClient(config: ApiConfig): {
                 kind: string;
                 name: string | null;
             } | null;
+            skipped: string[];
         } | null;
+        roll_deferred: boolean;
+        roll_deferred_to: string | null;
         span_release_error: string | null;
         status: string;
         fanout: {
@@ -12261,6 +12502,7 @@ function createApiClient(config: ApiConfig): {
             recycle: {
                 detail: string | null;
                 generation_before: number;
+                keys: string[];
                 kind: string;
                 name: string;
                 status: string;
@@ -12270,7 +12512,10 @@ function createApiClient(config: ApiConfig): {
                 kind: string;
                 name: string | null;
             } | null;
+            skipped: string[];
         } | null;
+        roll_deferred: boolean;
+        roll_deferred_to: string | null;
         span_release_error: string | null;
         status: string;
         fanout: {
@@ -12319,6 +12564,7 @@ function createApiClient(config: ApiConfig): {
             recycle: {
                 detail: string | null;
                 generation_before: number;
+                keys: string[];
                 kind: string;
                 name: string;
                 status: string;
@@ -12328,7 +12574,10 @@ function createApiClient(config: ApiConfig): {
                 kind: string;
                 name: string | null;
             } | null;
+            skipped: string[];
         } | null;
+        roll_deferred: boolean;
+        roll_deferred_to: string | null;
         span_release_error: string | null;
         status: string;
         fanout: {
@@ -12377,6 +12626,7 @@ function createApiClient(config: ApiConfig): {
             recycle: {
                 detail: string | null;
                 generation_before: number;
+                keys: string[];
                 kind: string;
                 name: string;
                 status: string;
@@ -12386,7 +12636,10 @@ function createApiClient(config: ApiConfig): {
                 kind: string;
                 name: string | null;
             } | null;
+            skipped: string[];
         } | null;
+        roll_deferred: boolean;
+        roll_deferred_to: string | null;
         span_release_error: string | null;
         status: string;
         fanout: {
@@ -12435,6 +12688,7 @@ function createApiClient(config: ApiConfig): {
             recycle: {
                 detail: string | null;
                 generation_before: number;
+                keys: string[];
                 kind: string;
                 name: string;
                 status: string;
@@ -12444,7 +12698,10 @@ function createApiClient(config: ApiConfig): {
                 kind: string;
                 name: string | null;
             } | null;
+            skipped: string[];
         } | null;
+        roll_deferred: boolean;
+        roll_deferred_to: string | null;
         span_release_error: string | null;
         status: string;
         fanout: {
@@ -12493,6 +12750,7 @@ function createApiClient(config: ApiConfig): {
             recycle: {
                 detail: string | null;
                 generation_before: number;
+                keys: string[];
                 kind: string;
                 name: string;
                 status: string;
@@ -12502,7 +12760,10 @@ function createApiClient(config: ApiConfig): {
                 kind: string;
                 name: string | null;
             } | null;
+            skipped: string[];
         } | null;
+        roll_deferred: boolean;
+        roll_deferred_to: string | null;
         span_release_error: string | null;
         status: string;
         fanout: {
@@ -12551,6 +12812,7 @@ function createApiClient(config: ApiConfig): {
             recycle: {
                 detail: string | null;
                 generation_before: number;
+                keys: string[];
                 kind: string;
                 name: string;
                 status: string;
@@ -12560,7 +12822,10 @@ function createApiClient(config: ApiConfig): {
                 kind: string;
                 name: string | null;
             } | null;
+            skipped: string[];
         } | null;
+        roll_deferred: boolean;
+        roll_deferred_to: string | null;
         span_release_error: string | null;
         status: string;
         fanout: {
@@ -12728,6 +12993,7 @@ function createApiClient(config: ApiConfig): {
             recycle: {
                 detail: string | null;
                 generation_before: number;
+                keys: string[];
                 kind: string;
                 name: string;
                 status: string;
@@ -12737,7 +13003,10 @@ function createApiClient(config: ApiConfig): {
                 kind: string;
                 name: string | null;
             } | null;
+            skipped: string[];
         } | null;
+        roll_deferred: boolean;
+        roll_deferred_to: string | null;
         span_release_error: string | null;
         status: string;
         fanout: {
@@ -12794,11 +13063,36 @@ function createApiClient(config: ApiConfig): {
         }[];
     }>;
     readonly reloadFleetConfig: (targets: string[] | null) => Promise<{
+        awaiting_respawn: {
+            keys: string[];
+            name: string;
+        }[];
         error: string | null;
         local_only: boolean;
         ok: boolean;
         op: string;
         reachable: boolean;
+        recycle: {
+            fresh: {
+                generation: number;
+                kind: string;
+                name: string;
+            }[];
+            recycle: {
+                detail: string | null;
+                generation_before: number;
+                keys: string[];
+                kind: string;
+                name: string;
+                status: string;
+            }[];
+            recycle_stopped: {
+                detail: string;
+                kind: string;
+                name: string | null;
+            } | null;
+            skipped: string[];
+        } | null;
         results: {
             detail: string | null;
             error: string | null;
@@ -12806,6 +13100,8 @@ function createApiClient(config: ApiConfig): {
             outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
         }[];
+        roll_deferred: boolean;
+        roll_deferred_to: string | null;
     }>;
     readonly getStorageInfo: (signal?: AbortSignal) => Promise<{
         module: string | null;
@@ -14095,6 +14391,7 @@ function createApiClient(config: ApiConfig): {
     readonly storedPresetFaultFromError: (error: unknown) => string | null;
     readonly isMcpStartingError: (error: unknown) => boolean;
     readonly isMcpNotLoadedError: (error: unknown) => boolean;
+    readonly failedReplyRoll: typeof failedReplyRoll;
 };
 
 // @public
@@ -14797,6 +15094,23 @@ export const EyeIcon: IconComponent;
 // @public
 export const EyeOffIcon: IconComponent;
 
+// @public (undocumented)
+export function FailedReplyOutcome(input: FailedReplyOutcomeProps): ReactNode;
+
+// @public (undocumented)
+export interface FailedReplyOutcomeProps {
+    readonly error: unknown;
+}
+
+// @public
+interface FailedReplyRoll {
+    readonly recycle: RecycleRoll | null;
+    readonly summary: FleetReportSummary | null;
+}
+
+// @public
+function failedReplyRoll(error: unknown): FailedReplyRoll | null;
+
 // @public
 export function FeatureDisabled(input: FeatureDisabledProps): ReactNode;
 
@@ -14921,15 +15235,61 @@ const fleetOutcome: z.ZodEnum<{
 }>;
 
 // @public (undocumented)
+export function FleetOutcomeReport(input: FleetOutcomeReportProps): ReactNode;
+
+// @public (undocumented)
+export interface FleetOutcomeReportProps {
+    readonly action?: FleetReportProps['action'];
+    readonly recycle: RecycleRollSectionProps['roll'] | null;
+    readonly scope?: string;
+    // (undocumented)
+    readonly summary: FleetReportSummary | null;
+}
+
+// @public (undocumented)
+export function FleetReloadReport(input: FleetReloadReportProps): ReactNode;
+
+// @public (undocumented)
+export interface FleetReloadReportProps {
+    readonly recycle: RecycleRoll | null;
+    readonly summary: FleetReportSummary;
+}
+
+// @public (undocumented)
 type FleetReloadResult = z.infer<typeof fleetReloadResult>;
 
 // @public
 const fleetReloadResult: z.ZodObject<{
+    awaiting_respawn: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        keys: z.ZodArray<z.ZodString>;
+        name: z.ZodString;
+    }, z.core.$strip>>>;
     error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     local_only: z.ZodDefault<z.ZodBoolean>;
     ok: z.ZodReadonly<z.ZodBoolean>;
     op: z.ZodString;
     reachable: z.ZodDefault<z.ZodBoolean>;
+    recycle: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        fresh: z.ZodArray<z.ZodObject<{
+            generation: z.ZodNumber;
+            kind: z.ZodString;
+            name: z.ZodString;
+        }, z.core.$strip>>;
+        recycle: z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            generation_before: z.ZodNumber;
+            keys: z.ZodArray<z.ZodString>;
+            kind: z.ZodString;
+            name: z.ZodString;
+            status: z.ZodString;
+        }, z.core.$strip>>;
+        recycle_stopped: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            detail: z.ZodString;
+            kind: z.ZodString;
+            name: z.ZodNullable<z.ZodString>;
+        }, z.core.$strip>>>;
+        skipped: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>>>;
     results: z.ZodDefault<z.ZodArray<z.ZodObject<{
         detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -14946,9 +15306,11 @@ const fleetReloadResult: z.ZodObject<{
         }>;
         payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
     }, z.core.$strip>>>;
+    roll_deferred: z.ZodDefault<z.ZodBoolean>;
+    roll_deferred_to: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>;
 
-// @public (undocumented)
+// @public
 export function FleetReport(input: FleetReportProps): ReactNode;
 
 // @public (undocumented)
@@ -15004,9 +15366,9 @@ const fleetReportFanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
     mode: z.ZodLiteral<"unreachable">;
 }, z.core.$strip>], "mode">;
 
-// @public
+// @public (undocumented)
 export interface FleetReportProps {
-    readonly action?: 'save' | 'reload' | 'deregister' | 'remove';
+    readonly action?: 'save' | 'reload' | 'deregister' | 'remove' | 'failed';
     // (undocumented)
     readonly summary: FleetReportSummary | null;
 }
@@ -15020,6 +15382,8 @@ interface FleetReportSummary {
     readonly error: string | null;
     readonly failures: readonly FleetWorkerFailure[];
     readonly note: string | null;
+    readonly reloadsUnconfirmed: readonly string[];
+    readonly restartsPending: readonly string[];
     readonly spanReleaseError: string | null;
     // (undocumented)
     readonly status: FleetReportStatus;
@@ -15086,6 +15450,8 @@ interface FleetWorkerAwaitingRespawn {
     readonly keys: readonly string[];
     // (undocumented)
     readonly name: string;
+    // (undocumented)
+    readonly reading: AwaitingRestartReading;
 }
 
 // @public
@@ -15095,6 +15461,7 @@ interface FleetWorkerFailure {
     readonly name: string;
     // (undocumented)
     readonly outcome: FleetFailureOutcome;
+    readonly withheld: boolean;
 }
 
 // @public (undocumented)
@@ -15942,17 +16309,6 @@ export type InstallActionState = {
 
 // @public
 export const installedMarketplacePluginsKey: readonly ["marketplace", "installed"];
-
-// @public (undocumented)
-export function InstallReport(input: InstallReportProps): ReactNode;
-
-// @public (undocumented)
-export interface InstallReportProps {
-    // (undocumented)
-    readonly recycle: RecycleRoll | null;
-    // (undocumented)
-    readonly summary: FleetReportSummary | null;
-}
 
 // @public (undocumented)
 type Interaction = z.infer<typeof interaction>;
@@ -16862,6 +17218,7 @@ const marketplaceInstallResult: z.ZodObject<{
             recycle: z.ZodArray<z.ZodObject<{
                 detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 generation_before: z.ZodNumber;
+                keys: z.ZodArray<z.ZodString>;
                 kind: z.ZodString;
                 name: z.ZodString;
                 status: z.ZodString;
@@ -16871,7 +17228,10 @@ const marketplaceInstallResult: z.ZodObject<{
                 kind: z.ZodString;
                 name: z.ZodNullable<z.ZodString>;
             }, z.core.$strip>>>;
+            skipped: z.ZodArray<z.ZodString>;
         }, z.core.$strip>>>;
+        roll_deferred: z.ZodDefault<z.ZodBoolean>;
+        roll_deferred_to: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         span_release_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         status: z.ZodString;
         fanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
@@ -17329,6 +17689,7 @@ type MarketplaceUninstallResult = z.infer<typeof marketplaceUninstallResult>;
 
 // @public
 const marketplaceUninstallResult: z.ZodObject<{
+    manifest_written: z.ZodBoolean;
     notes: z.ZodArray<z.ZodString>;
     ref: z.ZodString;
     uninstalled: z.ZodBoolean;
@@ -17347,6 +17708,7 @@ const marketplaceUninstallResult: z.ZodObject<{
             recycle: z.ZodArray<z.ZodObject<{
                 detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
                 generation_before: z.ZodNumber;
+                keys: z.ZodArray<z.ZodString>;
                 kind: z.ZodString;
                 name: z.ZodString;
                 status: z.ZodString;
@@ -17356,7 +17718,10 @@ const marketplaceUninstallResult: z.ZodObject<{
                 kind: z.ZodString;
                 name: z.ZodNullable<z.ZodString>;
             }, z.core.$strip>>>;
+            skipped: z.ZodArray<z.ZodString>;
         }, z.core.$strip>>>;
+        roll_deferred: z.ZodDefault<z.ZodBoolean>;
+        roll_deferred_to: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         span_release_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         status: z.ZodString;
         fanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
@@ -17415,6 +17780,31 @@ type MarketplaceUpgradeAllResult = z.infer<typeof marketplaceUpgradeAllResult>;
 
 // @public
 const marketplaceUpgradeAllResult: z.ZodObject<{
+    awaiting_respawn: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        keys: z.ZodArray<z.ZodString>;
+        name: z.ZodString;
+    }, z.core.$strip>>>;
+    recycle: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        fresh: z.ZodArray<z.ZodObject<{
+            generation: z.ZodNumber;
+            kind: z.ZodString;
+            name: z.ZodString;
+        }, z.core.$strip>>;
+        recycle: z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            generation_before: z.ZodNumber;
+            keys: z.ZodArray<z.ZodString>;
+            kind: z.ZodString;
+            name: z.ZodString;
+            status: z.ZodString;
+        }, z.core.$strip>>;
+        recycle_stopped: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            detail: z.ZodString;
+            kind: z.ZodString;
+            name: z.ZodNullable<z.ZodString>;
+        }, z.core.$strip>>>;
+        skipped: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>>>;
     results: z.ZodArray<z.ZodObject<{
         detail: z.ZodString;
         outcome: z.ZodEnum<{
@@ -17426,6 +17816,8 @@ const marketplaceUpgradeAllResult: z.ZodObject<{
         ref: z.ZodString;
         span_release_error: z.ZodNullable<z.ZodString>;
     }, z.core.$strip>>;
+    roll_deferred: z.ZodDefault<z.ZodBoolean>;
+    roll_deferred_to: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -19272,6 +19664,7 @@ const profileApplyResponse: z.ZodObject<{
     recycle: z.ZodArray<z.ZodObject<{
         detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         generation_before: z.ZodNumber;
+        keys: z.ZodArray<z.ZodString>;
         kind: z.ZodString;
         name: z.ZodString;
         status: z.ZodString;
@@ -19282,6 +19675,9 @@ const profileApplyResponse: z.ZodObject<{
         name: z.ZodNullable<z.ZodString>;
     }, z.core.$strip>>>;
     refused: z.ZodArray<z.ZodString>;
+    roll_deferred: z.ZodDefault<z.ZodBoolean>;
+    roll_deferred_to: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    skipped: z.ZodArray<z.ZodString>;
     span_release_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     fanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
@@ -19733,6 +20129,7 @@ type RecycleEntry = z.infer<typeof recycleEntry>;
 const recycleEntry: z.ZodObject<{
     detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     generation_before: z.ZodNumber;
+    keys: z.ZodArray<z.ZodString>;
     kind: z.ZodString;
     name: z.ZodString;
     status: z.ZodString;
@@ -19751,6 +20148,7 @@ const recycleRoll: z.ZodObject<{
     recycle: z.ZodArray<z.ZodObject<{
         detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         generation_before: z.ZodNumber;
+        keys: z.ZodArray<z.ZodString>;
         kind: z.ZodString;
         name: z.ZodString;
         status: z.ZodString;
@@ -19760,6 +20158,7 @@ const recycleRoll: z.ZodObject<{
         kind: z.ZodString;
         name: z.ZodNullable<z.ZodString>;
     }, z.core.$strip>>>;
+    skipped: z.ZodArray<z.ZodString>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -19767,13 +20166,8 @@ export function RecycleRollSection(input: RecycleRollSectionProps): ReactNode;
 
 // @public (undocumented)
 export interface RecycleRollSectionProps {
-    // (undocumented)
-    readonly fresh: readonly FreshLife[];
-    // (undocumented)
-    readonly recycle: readonly RecycleEntry[];
-    // (undocumented)
-    readonly stopped: RecycleStop | null;
-    readonly writerNote: string;
+    readonly roll: Pick<RecycleRoll, 'recycle' | 'fresh' | 'recycle_stopped'>;
+    readonly scope?: string;
 }
 
 // @public (undocumented)
@@ -19847,6 +20241,7 @@ const reloadConfigResult: z.ZodObject<{
         recycle: z.ZodArray<z.ZodObject<{
             detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             generation_before: z.ZodNumber;
+            keys: z.ZodArray<z.ZodString>;
             kind: z.ZodString;
             name: z.ZodString;
             status: z.ZodString;
@@ -19856,7 +20251,10 @@ const reloadConfigResult: z.ZodObject<{
             kind: z.ZodString;
             name: z.ZodNullable<z.ZodString>;
         }, z.core.$strip>>>;
+        skipped: z.ZodArray<z.ZodString>;
     }, z.core.$strip>>>;
+    roll_deferred: z.ZodDefault<z.ZodBoolean>;
+    roll_deferred_to: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     span_release_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     status: z.ZodString;
     fanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
@@ -26417,7 +26815,7 @@ const servedDocumentsJson: {
             };
         };
         readonly additionalProperties: false;
-        readonly description: "One row of the schedule listing: no arguments, no kwargs.";
+        readonly description: "One row of the schedule listing: no arguments, no kwargs.\n\n``next_run_at_ts`` is the next run's POSIX timestamp, ``None`` when the schedule has no next\nrun (``0.0`` is a timestamp like any other). ``next_run_at_iso`` is derived from it, the UTC\nISO-8601 form or ``None``: a row is built without it, and a given value that disagrees with\nthe timestamp is refused.";
         readonly properties: {
             readonly cadence: {
                 readonly discriminator: {
@@ -30501,6 +30899,7 @@ const toolExtensionsApplyResult: z.ZodObject<{
         recycle: z.ZodArray<z.ZodObject<{
             detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             generation_before: z.ZodNumber;
+            keys: z.ZodArray<z.ZodString>;
             kind: z.ZodString;
             name: z.ZodString;
             status: z.ZodString;
@@ -30510,7 +30909,10 @@ const toolExtensionsApplyResult: z.ZodObject<{
             kind: z.ZodString;
             name: z.ZodNullable<z.ZodString>;
         }, z.core.$strip>>>;
+        skipped: z.ZodArray<z.ZodString>;
     }, z.core.$strip>>>;
+    roll_deferred: z.ZodDefault<z.ZodBoolean>;
+    roll_deferred_to: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     span_release_error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     status: z.ZodString;
     fanout: z.ZodDiscriminatedUnion<[z.ZodObject<{

@@ -77,20 +77,24 @@ export type FleetWorkerResult = z.infer<typeof fleetWorkerResult>;
  * sibling is a visible `failed`/`missing`/`departed`/`timed_out`/`resyncing`/`recycling`/
  * `stale` entry, never a silent stale worker. Bus-unreachable (`reachable: false`): the
  * transport failed before any worker could reply, so `results` is empty and only `error`
- * is carried. This is the bare body of `POST /api/fleet/reload-config` and the single-MCP
- * reload; it is also the body the mode-wrapped {@link fleetReportFanout} carries under its
+ * is carried. This is the bare body of the single-MCP reload, deregister and tool
+ * reload/remove; it is also the body the mode-wrapped {@link fleetReportFanout} carries under its
  * `fleet` / `unreachable` modes.
  */
 export const fleetResult = openapi.fleetResult;
 export type FleetResult = z.infer<typeof fleetResult>;
 
 /**
- * `POST /api/fleet/reload-config` — soft-restart the fleet and report per-worker. The
- * serving worker applies its own reload first, then broadcasts; the returned report
- * names every worker's outcome. A failed local apply does not abort the broadcast, so
- * the report is embedded even on the convergence-failure path.
+ * `POST /api/fleet/reload-config` and `POST /api/config/reload` — soft-restart the fleet,
+ * then restart the workers whose env needs a restart. The serving worker applies its own
+ * reload first, then broadcasts; the reply carries the per-worker {@link fleetResult}
+ * fields, `recycle` (the recycle roll the reload ran, `null` when it had no worker to
+ * visit), `awaiting_respawn` (the operation's verdict: the workers still awaiting a
+ * respawn after the roll), and `roll_deferred` / `roll_deferred_to` (set, naming the bus
+ * member, when the roll is carried out after the reply). A failed local apply does not
+ * abort the broadcast, so the report is embedded even on the convergence-failure path.
  */
-export const fleetReloadResult = fleetResult;
+export const fleetReloadResult = openapi.fleetReloadResponse;
 export type FleetReloadResult = z.infer<typeof fleetReloadResult>;
 
 /**
@@ -120,8 +124,12 @@ export type FleetReportFanout = z.infer<typeof fleetReportFanout>;
 /**
  * One worker line of a fleet recycle roll. `status` is `recycled` (confirmed on
  * reality), `timed-out` or `failed` (the target the roll stopped at — `detail` names
- * why), or `self-deferred` (the worker that took the change recycles itself after
- * replying). `generation_before` is the life that was recycled.
+ * why), `self-deferred` (a restart the roll cannot confirm: the writer's own post-reply
+ * self-exit, or a target whose exit waits on its own in-flight change), or `withheld` (a
+ * worker whose reload was refused at its epoch build, left running on its current
+ * config). `keys` are the recycle-class keys that worker reported moved — the reason it
+ * was restarted, or for a `withheld` worker the keys it still awaits.
+ * `generation_before` is the life the line started from.
  */
 export const recycleEntry = openapi.recycleEntry;
 export type RecycleEntry = z.infer<typeof recycleEntry>;
@@ -138,8 +146,9 @@ export const recycleStop = openapi.recycleStop;
 export type RecycleStop = z.infer<typeof recycleStop>;
 
 /**
- * The report of a fleet recycle roll an env change carrying a recycle-class key ran:
- * the worker lines, the fresh lives, and where the roll stopped (`null` when it ran to
+ * The report of a fleet recycle roll a reload ran for the workers that needed a restart:
+ * the worker lines, `skipped` (the workers whose reload confirmed no moved recycle-class
+ * key, left running), the fresh lives, and where the roll stopped (`null` when it ran to
  * its end). Names only — never an env value.
  */
 export const recycleRoll = openapi.recycleRoll;

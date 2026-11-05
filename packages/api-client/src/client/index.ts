@@ -1,5 +1,6 @@
 /** Composition root: assembles the per-resource sub-clients into the client. */
 import { holdersFromError, storedPresetFaultFromError } from '../errors';
+import { failedReplyRoll } from '../failed-reply-roll';
 import type { ApiConfig } from '../http';
 import { isMcpNotLoadedError, isMcpStartingError } from '../mcp-failure';
 import { servedConstants } from '../schemas';
@@ -101,6 +102,7 @@ export function createApiClient(config: ApiConfig) {
     storedPresetFaultFromError,
     isMcpStartingError,
     isMcpNotLoadedError,
+    failedReplyRoll,
     ...toolsClient(t),
     ...presetsClient(t),
     ...statesClient(t),

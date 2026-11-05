@@ -6,6 +6,7 @@
  * for a presets-page hint when the selected tool is a preset.
  */
 import { ApiError, type Extension, type PresetRecord } from '@tai42/api-client';
+import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -324,6 +325,63 @@ describe('ToolExtensionsCard', () => {
     });
   });
 
+  it('reports the recycle roll a save ran beside the success line', async () => {
+    const user = userEvent.setup();
+    const setToolExtensions = vi.fn().mockResolvedValue({
+      status: 'ok',
+      env_keys: 1,
+      awaiting_respawn: [{ name: 'backend-2', keys: ['K'] }],
+      span_release_error: null,
+      roll_deferred: false,
+      roll_deferred_to: null,
+      fanout: {
+        mode: 'fleet',
+        op: 'reload_config',
+        reachable: true,
+        local_only: false,
+        results: [
+          {
+            name: 'backend-2',
+            outcome: 'applied',
+            payload: { status: 'ok' },
+            error: null,
+            detail: null,
+          },
+        ],
+        error: null,
+      },
+      recycle: {
+        recycle: [
+          {
+            name: 'backend-2',
+            kind: 'backend',
+            status: 'timed-out',
+            generation_before: 1,
+            keys: ['K'],
+            detail: 'old life still present',
+          },
+        ],
+        skipped: [],
+        fresh: [],
+        recycle_stopped: { kind: 'backend', name: 'backend-2', detail: 'old life still present' },
+      },
+    });
+    renderWithProviders(<ToolExtensionsCard tool="shout" />, {
+      client: baseClient({ setToolExtensions }),
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Edit extension sets' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('Extensions applied.')).toBeInTheDocument();
+    expect(await screen.findByTestId('recycle-stopped')).toHaveTextContent(
+      'The recycle stopped at backend-2 (backend workers)',
+    );
+    expect(screen.getByTestId('recycle-stopped')).toHaveTextContent('old life still present');
+    expect(screen.getByText('1 worker needs a restart to apply some settings')).toBeVisible();
+  });
+
   it('renders the flat apply-result success line after a single-process save', async () => {
     const user = userEvent.setup();
     renderWithProviders(<ToolExtensionsCard tool="shout" />, { client: baseClient() });
@@ -390,5 +448,21 @@ describe('ToolExtensionsCard', () => {
     expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Save' })).toBeInTheDocument();
     expect(setToolExtensions).not.toHaveBeenCalled();
+  });
+});
+
+describe('ToolExtensionsCard — a failed save that carries a recycle roll', () => {
+  it('shows the roll beside the error', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ToolExtensionsCard tool="shout" />, {
+      client: baseClient({ setToolExtensions: vi.fn().mockRejectedValue(failureWithRoll()) }),
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Edit extension sets' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    expect(await within(dialog).findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(within(dialog).getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

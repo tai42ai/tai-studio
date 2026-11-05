@@ -3,6 +3,7 @@
  * the popup flow), and the confirm-gated disconnect that navigates back.
  */
 import { ApiError } from '@tai42/api-client';
+import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -413,5 +414,20 @@ describe('ConnectionDetail', () => {
     const note = await screen.findByTestId('connector-provider-off');
     expect(note).toHaveTextContent('GITHUB_OAUTH_CLIENT_SECRET');
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+describe('ConnectionDetail — a failed write that carries a recycle roll', () => {
+  it('shows the roll beside the error of a failed disconnect', async () => {
+    renderWithProviders(<ConnectionDetail connectionId="conn-1" />, {
+      client: baseClient({ disconnect: vi.fn().mockRejectedValue(failureWithRoll()) }),
+    });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Disconnect' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Disconnect' }));
+
+    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

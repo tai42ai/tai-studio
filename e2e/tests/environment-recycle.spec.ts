@@ -11,7 +11,7 @@
  * A change to a recycle-class key rolls a worker recycle, whose exited workers only a
  * supervisor brings back; the boot skeleton runs under none, so the rows that roll
  * returns, and the workers the server names as still awaiting a restart, are rendered
- * from a fixed response here.
+ * from a fixed response here, on a reply that succeeded and on one that failed.
  */
 import { type APIRequestContext, expect, type Page } from '@playwright/test';
 
@@ -163,6 +163,7 @@ test('a save that rolled a worker recycle shows each worker and the writer recyc
                   kind: 'backend',
                   status: 'recycled',
                   generation_before: 3,
+                  keys: [RECYCLE_KEY],
                   detail: null,
                 },
                 {
@@ -170,12 +171,17 @@ test('a save that rolled a worker recycle shows each worker and the writer recyc
                   kind: 'serve',
                   status: 'self-deferred',
                   generation_before: 2,
+                  keys: [RECYCLE_KEY],
                   detail: null,
                 },
               ],
+              skipped: [],
               fresh: [{ name: 'backend-1', kind: 'backend', generation: 4 }],
               recycle_stopped: null,
             },
+            roll_deferred: false,
+            roll_deferred_to: null,
+            span_release_error: null,
           },
         },
       });
@@ -191,7 +197,55 @@ test('a save that rolled a worker recycle shows each worker and the writer recyc
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0)).toContainText('backend-1');
   await expect(rows.nth(0)).toContainText('life 3 to 4');
-  await expect(rows.nth(1)).toContainText('this worker recycles itself after replying');
+  await expect(rows.nth(1)).toContainText(
+    'restarts once its own in-flight change has replied, which this report cannot confirm',
+  );
+});
+
+test('a failed save shows the roll its reply carries beside the error', async ({ page }) => {
+  await seedCredential(page);
+  await page.route(
+    (url) => url.pathname === '/api/config/env',
+    async (route) => {
+      if (route.request().method() !== 'POST') {
+        await route.continue();
+        return;
+      }
+      await route.fulfill({
+        status: 500,
+        json: {
+          error: 'Internal Server Error',
+          error_id: 'e2e-error-id',
+          awaiting_respawn: [{ name: 'serve-1', keys: [RECYCLE_KEY] }],
+          recycle: {
+            recycle: [
+              {
+                name: 'backend-1',
+                kind: 'backend',
+                status: 'recycled',
+                generation_before: 3,
+                keys: [RECYCLE_KEY],
+                detail: null,
+              },
+            ],
+            skipped: [],
+            fresh: [{ name: 'backend-1', kind: 'backend', generation: 4 }],
+            recycle_stopped: null,
+          },
+          roll_deferred: false,
+          roll_deferred_to: null,
+        },
+      });
+    },
+  );
+  await page.goto('/settings');
+  await page.getByRole('tab', { name: 'Environment' }).click();
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  await expect(page.getByText('Internal Server Error')).toBeVisible();
+  await expect(page.getByText('1 worker has settings it has not applied')).toBeVisible();
+  const section = page.getByRole('region', { name: 'Worker recycle' });
+  await expect(section.getByRole('listitem').first()).toContainText('life 3 to 4');
 });
 
 /** Upload a backup document whose one `env` section sets `env`, then import it. */
@@ -242,8 +296,20 @@ test('an env restore whose recycle stopped shows the roll and the workers awaiti
                 errors: [],
                 details: {},
                 fanout: {
-                  mode: 'local-only',
-                  note: 'no worker bus configured; only this worker reloaded',
+                  mode: 'fleet',
+                  op: 'reload_config',
+                  reachable: true,
+                  local_only: false,
+                  results: [
+                    {
+                      name: 'serve-1',
+                      outcome: 'applied',
+                      payload: { status: 'ok', env_keys: 1, awaiting_respawn: [RECYCLE_KEY] },
+                      error: null,
+                      detail: null,
+                    },
+                  ],
+                  error: null,
                 },
                 recycle: {
                   recycle: [
@@ -252,9 +318,11 @@ test('an env restore whose recycle stopped shows the roll and the workers awaiti
                       kind: 'backend',
                       status: 'timed-out',
                       generation_before: 3,
+                      keys: [RECYCLE_KEY],
                       detail: 'its old life was still present after 90s',
                     },
                   ],
+                  skipped: [],
                   fresh: [],
                   recycle_stopped: {
                     kind: 'backend',
@@ -266,6 +334,9 @@ test('an env restore whose recycle stopped shows the roll and the workers awaiti
                   { name: 'backend-1', keys: [RECYCLE_KEY] },
                   { name: 'serve-1', keys: [RECYCLE_KEY] },
                 ],
+                roll_deferred: false,
+                roll_deferred_to: null,
+                span_release_error: null,
               },
             },
           },
@@ -274,7 +345,7 @@ test('an env restore whose recycle stopped shows the roll and the workers awaiti
   );
   await restoreEnvSection(page, { [RECYCLE_KEY]: '7' });
 
-  const roll = page.getByTestId('report-recycle-env');
+  const roll = page.getByTestId('report-fleet-env');
   await expect(roll.getByTestId('recycle-stopped')).toContainText(
     'its old life was still present after 90s',
   );

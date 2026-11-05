@@ -4,6 +4,7 @@
  * adds the server. Every server refusal is shown with the server's message.
  */
 import { ApiError } from '@tai42/api-client';
+import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -270,5 +271,17 @@ describe('AddServerDialog — step 2, the review', () => {
     const user = await lookUp();
     await user.click(await screen.findByRole('button', { name: 'Back' }));
     expect(screen.getByLabelText('Server address')).toHaveValue('https://mcp.example.com/mcp');
+  });
+});
+
+describe('AddServerDialog — a failed add that carries a recycle roll', () => {
+  it('shows the roll beside the refusal', async () => {
+    renderDialog({ addServer: vi.fn().mockRejectedValue(failureWithRoll()) });
+    const user = await lookUp();
+    await user.click(await screen.findByRole('button', { name: 'Add server' }));
+
+    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(screen.getByText('The server could not be added')).toBeInTheDocument();
+    expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

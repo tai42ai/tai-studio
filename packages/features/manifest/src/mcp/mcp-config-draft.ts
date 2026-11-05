@@ -3,7 +3,7 @@
  * (form ⇄ JSON), the combined secret-paste op, the manifest save with its
  * session-generated orphan-key sweep, and the composed hook the editor consumes.
  */
-import { ApiError, apiRoutes } from '@tai42/api-client';
+import { ApiError, apiRoutes, type ReloadConfigResult } from '@tai42/api-client';
 import {
   collectEnvRefs,
   envConfigKey,
@@ -37,6 +37,8 @@ export interface SecretPaste {
   readonly isPending: boolean;
   readonly isError: boolean;
   readonly error: unknown;
+  /** The latest paste's reply, kept when its confirmation read fails: the op itself landed. */
+  readonly reply: ReloadConfigResult | null;
 }
 
 /**
@@ -53,10 +55,12 @@ export function useSecretPasteMutation(
 ): SecretPaste {
   const api = useApi();
   const queryClient = useQueryClient();
+  const [reply, setReply] = useState<ReloadConfigResult | null>(null);
 
   const secretEnv = useMutation({
     mutationFn: (body: Parameters<typeof api.setMcpSecretEnv>[0]) => api.setMcpSecretEnv(body),
-    onSuccess: async (_result, variables) => {
+    onSuccess: async (result, variables) => {
+      setReply(result);
       // CONFIRM the paste against an AUTHORITATIVE re-read before anything else. The op's
       // response carries a COUNT, not the generated name, so the only way to learn the key
       // is the preserved manifest's leaf at the paste pointer — and it is the sole key the
@@ -98,6 +102,7 @@ export function useSecretPasteMutation(
       : undefined;
 
   const onPasteSecret = (manifestPointer: string, keyHint: string, secret: string): void => {
+    setReply(null);
     secretEnv.mutate({ value: secret, key_hint: keyHint, manifest_pointer: manifestPointer });
   };
 
@@ -107,24 +112,42 @@ export function useSecretPasteMutation(
     isPending: secretEnv.isPending,
     isError: secretEnv.isError,
     error: secretEnv.error,
+    reply,
   };
+}
+
+/** The reply of one write a save made: the manifest's, or one swept key's env delete. */
+export interface McpSaveReply {
+  /** The write's name, as the heading of its recycle roll reads it. */
+  readonly write: string;
+  readonly result: ReloadConfigResult;
 }
 
 /**
  * The manifest save with its orphan cleanup: MANIFEST-FIRST, so the marker is dropped
  * from the manifest before its generated env key is deleted (the window can only ever
  * hold an inert orphan key, never a dangling `!ENV`). A save moves both manifest views
- * (and the env config only when a generated key was swept), so it re-reads each.
+ * (and the env config only when a generated key was swept), so it re-reads each. Each write
+ * reloads the fleet and can run a recycle roll, so `replies` holds every reply of the latest
+ * save, those of the writes that landed before one failed among them.
  */
 export function useMcpSaveMutation() {
   const api = useApi();
   const queryClient = useQueryClient();
-  return useMutation({
+  const [replies, setReplies] = useState<readonly McpSaveReply[]>([]);
+  const mutation = useMutation({
     mutationFn: async ({ mcp, orphanedKeys }: { mcp: unknown[]; orphanedKeys: string[] }) => {
-      // The delete rides the env editor's blank-value path.
       const result = await api.setMcpConfig(mcp);
-      for (const key of orphanedKeys) await api.setEnvConfig({ env: { [key]: '' } });
+      setReplies([{ write: 'manifest', result }]);
+      for (const key of orphanedKeys) {
+        // The delete rides the env editor's blank-value path.
+        const swept = await api.setEnvConfig({ env: { [key]: '' } });
+        setReplies((current) => [...current, { write: `env key ${key}`, result: swept }]);
+      }
       return result;
+    },
+    onMutate: () => {
+      setReplies([]);
     },
     onSuccess: async (_result, { orphanedKeys }) => {
       await queryClient.invalidateQueries({ queryKey: preservedManifestKey });
@@ -135,6 +158,7 @@ export function useMcpSaveMutation() {
       }
     },
   });
+  return { ...mutation, replies };
 }
 
 export interface ConfigDraft {
@@ -260,6 +284,7 @@ export interface McpConfigDraft extends ConfigDraft {
   readonly secretEnvPending: boolean;
   readonly secretEnvError: boolean;
   readonly secretEnvErrorObj: unknown;
+  readonly secretEnvReply: SecretPaste['reply'];
   readonly save: ReturnType<typeof useMcpSaveMutation>;
   readonly onSave: () => void;
 }
@@ -314,6 +339,7 @@ export function useMcpConfigDraft({
     secretEnvPending: paste.isPending,
     secretEnvError: paste.isError,
     secretEnvErrorObj: paste.error,
+    secretEnvReply: paste.reply,
     save,
     onSave,
   };

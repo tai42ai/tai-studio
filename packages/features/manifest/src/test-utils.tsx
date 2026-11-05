@@ -20,6 +20,7 @@ import {
   NavigationProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
+import { refusalReaders } from '@tai42/test-support';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { RenderResult } from '@testing-library/react';
 import { render } from '@testing-library/react';
@@ -56,8 +57,11 @@ export function renderWithProviders(
   } else {
     globalThis.sessionStorage.removeItem(SESSION_KEY);
   }
+  const readingClient = { ...refusalReaders, ...client };
   const resolvedClient = (
-    projection !== undefined ? { ...client, getMe: () => Promise.resolve(projection) } : client
+    projection !== undefined
+      ? { ...readingClient, getMe: () => Promise.resolve(projection) }
+      : readingClient
   ) as ApiClient;
   return render(
     <QueryClientProvider client={resolvedQueryClient}>

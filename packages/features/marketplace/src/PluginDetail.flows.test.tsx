@@ -3,6 +3,7 @@ import {
   type MarketplaceInstalled,
   type MarketplaceInstallResult,
 } from '@tai42/api-client';
+import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -283,6 +284,7 @@ describe('PluginDetail — update and uninstall flows', () => {
     const uninstallMarketplacePlugin = vi.fn().mockResolvedValue({
       ref: 'tai42/toolbox',
       uninstalled: true,
+      manifest_written: true,
       notes: ['Removed.'],
       reload: null,
     });
@@ -411,5 +413,39 @@ describe('PluginDetail — update store-off note and dialog cancels', () => {
       expect(screen.queryByRole('dialog')).toBeNull();
     });
     expect(uninstallMarketplacePlugin).not.toHaveBeenCalled();
+  });
+});
+
+describe('PluginDetail — a failed write that carries a recycle roll', () => {
+  it('shows the roll beside the error of a failed update, a 409 included', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      ...reads(detailFixture(), [installedRow({ update_available: true, latest: '2.0.0' })]),
+      updateMarketplacePlugin: vi.fn().mockRejectedValue(failureWithRoll(409)),
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Update' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Update' }));
+
+    expect(await within(dialog).findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(within(dialog).getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
+  });
+
+  it('shows the roll beside the error of a failed uninstall', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      ...reads(detailFixture(), [installedRow()]),
+      uninstallMarketplacePlugin: vi.fn().mockRejectedValue(failureWithRoll()),
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Uninstall' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Uninstall' }));
+
+    expect(await within(dialog).findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(within(dialog).getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

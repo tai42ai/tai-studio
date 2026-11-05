@@ -7,7 +7,7 @@
  * landed connection's id goes to `onConnected`.
  */
 import type { ProviderView } from '@tai42/api-client';
-import { Button, ErrorState, Field, Spinner, TextInput } from '@tai42/studio-sdk';
+import { Button, Field, Spinner, TextInput, WriteFailure } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
 import { ConnectorRefusalNotice, Notice } from './notice';
@@ -40,7 +40,7 @@ export function ConnectForm({
     refusal,
     canSubmit,
     handleSubmit,
-    errorMessage,
+    failure,
     oauthNotice,
     clearNotice,
     pending,
@@ -107,8 +107,8 @@ export function ConnectForm({
             ) : undefined
           }
         />
-      ) : errorMessage !== null ? (
-        <ErrorState message={errorMessage} />
+      ) : failure !== null ? (
+        <WriteFailure error={failure} />
       ) : null}
       {oauthNotice !== null ? <Notice notice={oauthNotice} onDismiss={clearNotice} /> : null}
 

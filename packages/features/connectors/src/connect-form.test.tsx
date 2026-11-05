@@ -5,6 +5,7 @@
  * before submit.
  */
 import { ApiError } from '@tai42/api-client';
+import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -363,5 +364,21 @@ describe('ConnectForm', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ConnectForm — a failed connect that carries a recycle roll', () => {
+  it('shows the roll beside the error', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <ConnectForm provider={provider()} onConnected={vi.fn()} onCancel={vi.fn()} />,
+      { client: makeClient({ startConnect: vi.fn().mockRejectedValue(failureWithRoll()) }) },
+    );
+
+    await user.type(screen.getByLabelText('Alias'), 'work-account');
+    fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+
+    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

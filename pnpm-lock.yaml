@@ -1097,6 +1097,9 @@ importers:
         specifier: workspace:*
         version: link:../../studio-sdk
     devDependencies:
+      '@tai42/test-support':
+        specifier: workspace:*
+        version: link:../../test-support
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.103.1(react@19.3.1)

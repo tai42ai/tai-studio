@@ -57,6 +57,15 @@ export interface UseOAuthPopupResult {
   readonly pending: boolean;
 }
 
+/** The notice for a completion request that failed, keeping the rejection for its report. */
+function completionFailure(err: unknown): OAuthNotice {
+  return {
+    kind: 'error',
+    message: err instanceof Error ? err.message : 'Failed to complete sign-in.',
+    cause: err,
+  };
+}
+
 export function useOAuthPopup(options: UseOAuthPopupOptions = {}): UseOAuthPopupResult {
   const { onSuccess } = options;
   const api = useApi();
@@ -133,10 +142,7 @@ export function useOAuthPopup(options: UseOAuthPopupOptions = {}): UseOAuthPopup
           })
           .catch((err: unknown) => {
             popup.close();
-            settle({
-              kind: 'error',
-              message: err instanceof Error ? err.message : 'Failed to complete sign-in.',
-            });
+            settle(completionFailure(err));
           });
       };
 
@@ -243,10 +249,7 @@ export function useOAuthRedirectResume(
       })
       .catch((err: unknown) => {
         setPending(false);
-        setNotice({
-          kind: 'error',
-          message: err instanceof Error ? err.message : 'Failed to complete sign-in.',
-        });
+        setNotice(completionFailure(err));
       });
   }, [api, queryClient, onSuccess]);
 

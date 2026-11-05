@@ -540,7 +540,13 @@ describe('marketplace client transport', () => {
   it('uninstallMarketplacePlugin POSTs to /api/marketplace/uninstall and parses the receipt', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: { ref: 'tai42/toolbox', uninstalled: true, reload: null, notes: [] },
+        data: {
+          ref: 'tai42/toolbox',
+          uninstalled: true,
+          reload: null,
+          notes: [],
+          manifest_written: false,
+        },
       }),
     );
     const out = await client.uninstallMarketplacePlugin({ ref: 'tai42/toolbox' });

@@ -444,3 +444,46 @@ describe('An install refused because an MCP server holds no tool listing', () =>
     },
   );
 });
+
+describe('PluginInstallPanel — a failed install that carries a recycle roll', () => {
+  it('shows the roll beside the error', async () => {
+    const user = userEvent.setup();
+    const failure = new Error('Internal Server Error');
+    renderWithApi(
+      <PluginInstallPanel
+        refValue="acme/relay"
+        version="1.0.0"
+        detail={detail()}
+        onInstalled={noop}
+        onDismiss={noop}
+      />,
+      {
+        previewMarketplaceInstall: vi.fn().mockResolvedValue(envPreview([])),
+        installMarketplacePlugin: vi.fn().mockRejectedValue(failure),
+        failedReplyRoll: (error: unknown) =>
+          error === failure
+            ? {
+                summary: {
+                  status: 'converged',
+                  note: null,
+                  failures: [],
+                  error: null,
+                  awaiting: [{ name: 'serve-a', keys: ['TAI_KEY'], reading: 'unstated' }],
+                  restartsPending: [],
+                  reloadsUnconfirmed: [],
+                  spanReleaseError: null,
+                },
+                recycle: null,
+              }
+            : null,
+      },
+    );
+
+    const form = screen.getByRole('form', { name: 'Install plugin' });
+    await within(form).findByText(/The app will pip-install the package and reload\./);
+    await user.click(within(form).getByRole('button', { name: 'Install' }));
+
+    expect(await screen.findByText('1 worker has settings it has not applied')).toBeInTheDocument();
+    expect(screen.getByText('Internal Server Error')).toBeInTheDocument();
+  });
+});

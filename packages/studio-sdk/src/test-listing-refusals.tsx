@@ -1,6 +1,6 @@
 /**
  * Test helpers for the listing refusals a write can meet: an `ApiError`-shaped refusal
- * carrying the platform's envelope code, the client's readers of the two codes, and a
+ * carrying the platform's envelope code, the client's readers of a failed write, and a
  * render helper that mounts the tree under an `ApiProvider` whose client carries those
  * readers. Built without importing `@tai42/api-client` at runtime: the SDK depends on its
  * types only.
@@ -23,17 +23,22 @@ const codeOf = (error: unknown): unknown =>
   typeof error === 'object' && error !== null ? (error as { code?: unknown }).code : undefined;
 
 /** The client's readers of the two listing refusals, reading the envelope code. */
-export const listingRefusalReaders: Pick<ApiClient, 'isMcpStartingError' | 'isMcpNotLoadedError'> =
-  {
-    isMcpStartingError: (error) => codeOf(error) === 'mcp-server-starting',
-    isMcpNotLoadedError: (error) => codeOf(error) === 'mcp-server-not-loaded',
-  };
+const listingRefusalReaders: Pick<ApiClient, 'isMcpStartingError' | 'isMcpNotLoadedError'> = {
+  isMcpStartingError: (error) => codeOf(error) === 'mcp-server-starting',
+  isMcpNotLoadedError: (error) => codeOf(error) === 'mcp-server-not-loaded',
+};
 
-/** Render `ui` under a client that carries {@link listingRefusalReaders} and `client`. */
+/** What `WriteFailure` reads of a client: the listing refusals, and no roll on a failed reply. */
+export const writeFailureReaders: Pick<
+  ApiClient,
+  'isMcpStartingError' | 'isMcpNotLoadedError' | 'failedReplyRoll'
+> = { ...listingRefusalReaders, failedReplyRoll: () => null };
+
+/** Render `ui` under a client that carries {@link writeFailureReaders} and `client`. */
 export function renderWithRefusalReaders(
   ui: ReactElement,
   client: Partial<ApiClient> = {},
 ): RenderResult {
-  const api = { ...listingRefusalReaders, ...client } as unknown as ApiClient;
+  const api = { ...writeFailureReaders, ...client } as unknown as ApiClient;
   return render(<ApiProvider value={api}>{ui}</ApiProvider>);
 }

@@ -3,7 +3,12 @@
  * tool, the state of its read while it has not answered (a server still starting or not
  * loaded on the worker that answered among them), and the outcome of its save.
  */
-import type { FleetReportSummary, McpAdvertisedTool, McpAdvertisedTools } from '@tai42/api-client';
+import type {
+  FleetReportSummary,
+  McpAdvertisedTool,
+  McpAdvertisedTools,
+  RecycleRoll,
+} from '@tai42/api-client';
 import {
   AlertTriangleIcon,
   Badge,
@@ -12,7 +17,9 @@ import {
   CheckIcon,
   errorMessage,
   ErrorState,
+  FailedReplyOutcome,
   Field,
+  FleetOutcomeReport,
   FleetReport,
   HolderList,
   isForbiddenError,
@@ -58,6 +65,7 @@ function statusOf(error: unknown): number | null {
 export interface SectionResult {
   readonly saved?: ToolFilterBody;
   readonly summary?: FleetReportSummary | null;
+  readonly recycle?: RecycleRoll | null;
   readonly error?: unknown;
 }
 
@@ -325,6 +333,7 @@ export function SectionOutcome({
             onNavigate={onLeave}
           />
         ) : null}
+        <FailedReplyOutcome error={result.error} />
       </div>
     );
   }
@@ -340,9 +349,7 @@ export function SectionOutcome({
         <CheckIcon />
         Saved
       </p>
-      {result.summary !== undefined && result.summary !== null ? (
-        <FleetReport summary={result.summary} />
-      ) : null}
+      <FleetOutcomeReport summary={result.summary ?? null} recycle={result.recycle ?? null} />
     </>
   );
 }

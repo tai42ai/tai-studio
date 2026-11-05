@@ -9,7 +9,13 @@
  * Every message is rendered as TEXT (JSX children) — never as HTML — so a provider-
  * or server-supplied string can carry no markup sink.
  */
-import { Button, EmptyState, FeatureDisabled, featureDisabledMessage } from '@tai42/studio-sdk';
+import {
+  Button,
+  EmptyState,
+  FailedReplyOutcome,
+  FeatureDisabled,
+  featureDisabledMessage,
+} from '@tai42/studio-sdk';
 import type { CSSProperties, ReactNode } from 'react';
 
 import type { OAuthNotice } from './oauth';
@@ -76,6 +82,9 @@ export function Notice({
       <div>
         <strong style={{ color: palette.fg }}>{title ?? palette.title}</strong>
         <p style={{ margin: 'var(--tai-space-1) 0 0', whiteSpace: 'pre-wrap' }}>{notice.message}</p>
+        {notice.kind === 'error' && notice.cause !== undefined ? (
+          <FailedReplyOutcome error={notice.cause} />
+        ) : null}
       </div>
       <Button onClick={onDismiss} aria-label="Dismiss notice">
         Dismiss

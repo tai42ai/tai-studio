@@ -55,7 +55,12 @@ export type OAuthNotice =
   | { readonly kind: 'success'; readonly message: string }
   | { readonly kind: 'failed'; readonly message: string }
   | { readonly kind: 'cancelled'; readonly message: string }
-  | { readonly kind: 'error'; readonly message: string };
+  | {
+      readonly kind: 'error';
+      readonly message: string;
+      /** The rejected value of the completion, when a request failed. */
+      readonly cause?: unknown;
+    };
 
 /** Is `v` a string or explicitly null (the callback fields' allowed shape)? */
 function isStringOrNull(v: unknown): v is string | null {
@@ -102,7 +107,7 @@ export function applyCompletion(
       // non-converged broadcast stays visible as its own honest FleetReport (never a
       // silent close) and the consumer can open the connection's next step; only a
       // converged completion confirms success in a notice.
-      const fleet = summarizeFleetFanout(result.fanout, [], result.span_release_error);
+      const fleet = summarizeFleetFanout(result);
       onSuccess?.(fleet, result.connection_id);
       if (isFleetReportFailure(fleet)) return null;
       return { kind: 'success', message: 'Connected successfully.' };

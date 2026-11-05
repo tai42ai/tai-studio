@@ -9,6 +9,7 @@ import {
   Button,
   errorMessage,
   ErrorState,
+  FleetOutcomeReport,
   FleetReport,
   preservedManifestKey,
   Spinner,
@@ -332,10 +333,10 @@ export function DoneStep({
         }
       })}
       {saved.map((pick) =>
-        pick.summary === null ? null : (
+        pick.summary === null && pick.recycle === null ? null : (
           <div key={pick.title}>
             {saved.length > 1 ? <p style={{ margin: 0 }}>{pick.title}</p> : null}
-            <FleetReport summary={pick.summary} />
+            <FleetOutcomeReport summary={pick.summary} recycle={pick.recycle} scope={pick.title} />
           </div>
         ),
       )}

@@ -198,7 +198,7 @@ function useConnectionMutations(connectionId: string, connection: ConnectionView
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: CONNECTIONS_KEY });
       setConfirmOpen(false);
-      const summary = summarizeFleetFanout(result.fanout, [], result.span_release_error);
+      const summary = summarizeFleetFanout(result);
       const fleetConverged = !isFleetReportFailure(summary);
       // Navigate away only on a fully-clean disconnect (upstream access confirmed
       // revoked AND the reload converged). A failed/skipped revoke or a stranded fleet
@@ -243,15 +243,14 @@ function useConnectionActions(connectionId: string) {
   const mutationErrorObj =
     actions.patch.error ?? actions.reconnect.error ?? actions.disconnect.error;
   const refusal = readConnectorRefusal(mutationErrorObj);
-  const mutationError =
-    refusal === null && mutationErrorObj instanceof Error ? mutationErrorObj.message : null;
+  const mutationFailure = refusal === null ? mutationErrorObj : null;
   const busy =
     actions.patch.isPending ||
     actions.reconnect.isPending ||
     actions.disconnect.isPending ||
     actions.oauth.pending;
 
-  return { ...data, ...actions, refusal, mutationError, busy };
+  return { ...data, ...actions, refusal, mutationFailure, busy };
 }
 
 export function ConnectionDetail({ connectionId }: { connectionId: string }): ReactNode {
@@ -274,7 +273,7 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
     oauth,
     oauthFleet,
     refusal,
-    mutationError,
+    mutationFailure,
     busy,
   } = useConnectionActions(connectionId);
 
@@ -333,12 +332,8 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
         unreachableLabels={unreachableLabels}
         consentBlocked={consentBlocked}
         refusal={refusal}
-        mutationError={mutationError}
-        patchFleet={
-          patch.isSuccess
-            ? summarizeFleetFanout(patch.data.fanout, [], patch.data.span_release_error)
-            : null
-        }
+        mutationFailure={mutationFailure}
+        patchFleet={patch.isSuccess ? summarizeFleetFanout(patch.data) : null}
         oauthNotice={oauth.notice}
         onClearOauthNotice={oauth.clearNotice}
         oauthFleet={oauthFleet}

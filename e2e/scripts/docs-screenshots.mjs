@@ -1198,6 +1198,7 @@ const ENV_SAVE_RECYCLE_ROLL = {
         kind: 'backend',
         status: 'recycled',
         generation_before: 3,
+        keys: ['TAI_BUS_HEARTBEAT_TTL'],
         detail: null,
       },
       {
@@ -1205,6 +1206,7 @@ const ENV_SAVE_RECYCLE_ROLL = {
         kind: 'backend',
         status: 'recycled',
         generation_before: 1,
+        keys: ['TAI_BUS_HEARTBEAT_TTL'],
         detail: null,
       },
       {
@@ -1212,15 +1214,20 @@ const ENV_SAVE_RECYCLE_ROLL = {
         kind: 'serve',
         status: 'self-deferred',
         generation_before: 2,
+        keys: ['TAI_BUS_HEARTBEAT_TTL'],
         detail: null,
       },
     ],
+    skipped: [],
     fresh: [
       { name: 'backend-1', kind: 'backend', generation: 4 },
       { name: 'backend-2', kind: 'backend', generation: 2 },
     ],
     recycle_stopped: null,
   },
+  roll_deferred: false,
+  roll_deferred_to: null,
+  span_release_error: null,
 };
 
 /** The backup document the `backup-restore-recycle-stopped` scene uploads: one `env`
@@ -1243,7 +1250,22 @@ const BACKUP_RESTORE_STOPPED = {
       skipped: 0,
       errors: [],
       details: {},
-      fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
+      fanout: {
+        mode: 'fleet',
+        op: 'reload_config',
+        reachable: true,
+        local_only: false,
+        results: [
+          {
+            name: 'serve-1',
+            outcome: 'applied',
+            payload: { status: 'ok', env_keys: 1, awaiting_respawn: ['TAI_BUS_HEARTBEAT_TTL'] },
+            error: null,
+            detail: null,
+          },
+        ],
+        error: null,
+      },
       recycle: {
         recycle: [
           {
@@ -1251,6 +1273,7 @@ const BACKUP_RESTORE_STOPPED = {
             kind: 'backend',
             status: 'recycled',
             generation_before: 3,
+            keys: ['TAI_BUS_HEARTBEAT_TTL'],
             detail: null,
           },
           {
@@ -1258,9 +1281,11 @@ const BACKUP_RESTORE_STOPPED = {
             kind: 'backend',
             status: 'timed-out',
             generation_before: 1,
+            keys: ['TAI_BUS_HEARTBEAT_TTL'],
             detail: 'its old life was still present after 90s',
           },
         ],
+        skipped: [],
         fresh: [{ name: 'backend-1', kind: 'backend', generation: 4 }],
         recycle_stopped: {
           kind: 'backend',
@@ -1272,6 +1297,9 @@ const BACKUP_RESTORE_STOPPED = {
         { name: 'backend-2', keys: ['TAI_BUS_HEARTBEAT_TTL'] },
         { name: 'serve-1', keys: ['TAI_BUS_HEARTBEAT_TTL'] },
       ],
+      roll_deferred: false,
+      roll_deferred_to: null,
+      span_release_error: null,
     },
   },
 };
@@ -1292,15 +1320,24 @@ const BACKUP_EXPORT_SECTION_ERRORS = {
 const PROFILE_APPLY_STOPPED = {
   hot: ['LOG_LEVEL'],
   recycle: [
-    { name: 'backend-1', kind: 'backend', status: 'recycled', generation_before: 3, detail: null },
+    {
+      name: 'backend-1',
+      kind: 'backend',
+      status: 'recycled',
+      generation_before: 3,
+      keys: ['TAI_BUS_HEARTBEAT_TTL'],
+      detail: null,
+    },
     {
       name: 'backend-2',
       kind: 'backend',
       status: 'timed-out',
       generation_before: 1,
+      keys: ['TAI_BUS_HEARTBEAT_TTL'],
       detail: 'its old life was still present after 90s',
     },
   ],
+  skipped: [],
   fresh: [{ name: 'backend-1', kind: 'backend', generation: 4 }],
   refused: [],
   recycle_stopped: {
@@ -1312,7 +1349,25 @@ const PROFILE_APPLY_STOPPED = {
     { name: 'backend-2', keys: ['TAI_BUS_HEARTBEAT_TTL'] },
     { name: 'serve-1', keys: ['TAI_BUS_HEARTBEAT_TTL'] },
   ],
-  fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
+  fanout: {
+    mode: 'fleet',
+    op: 'reload_config',
+    reachable: true,
+    local_only: false,
+    results: [
+      {
+        name: 'serve-1',
+        outcome: 'applied',
+        payload: { status: 'ok', env_keys: 1, awaiting_respawn: ['TAI_BUS_HEARTBEAT_TTL'] },
+        error: null,
+        detail: null,
+      },
+    ],
+    error: null,
+  },
+  roll_deferred: false,
+  roll_deferred_to: null,
+  span_release_error: null,
 };
 
 const AUTHED_PAGES = [

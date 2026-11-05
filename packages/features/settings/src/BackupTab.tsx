@@ -25,7 +25,7 @@
  * minted-key metadata — renders as ESCAPED text through the design-system components, never an HTML
  * sink.
  */
-import type { BackupImportReport, RecycleRoll } from '@tai42/api-client';
+import type { BackupImportReport } from '@tai42/api-client';
 import { apiRoutes, schemas, summarizeFleetFanout } from '@tai42/api-client';
 import {
   AlertTriangleIcon,
@@ -36,8 +36,7 @@ import {
   EmptyState,
   errorMessage,
   ErrorState,
-  FleetReport,
-  RecycleRollSection,
+  FleetOutcomeReport,
   ScrollRegion,
   Spinner,
   Table,
@@ -50,7 +49,7 @@ import {
   useCanWrite,
 } from '@tai42/studio-sdk';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { type CSSProperties, type ReactNode, useId, useRef, useState } from 'react';
+import { type CSSProperties, type ReactNode, useRef, useState } from 'react';
 
 import { checklistStyle, headingStyle, noteStyle, warningStyle } from './backup-styles';
 import { ExportCard, ExportSectionList } from './BackupExportCard';
@@ -91,12 +90,6 @@ const errorListStyle: CSSProperties = {
   fontSize: 'var(--tai-text-sm)',
 };
 
-const recycleTitleStyle: CSSProperties = {
-  margin: '0 0 var(--tai-space-2)',
-  fontSize: 'var(--tai-text-md)',
-  color: 'var(--tai-color-text)',
-};
-
 const mintedStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
@@ -106,59 +99,21 @@ const mintedStyle: CSSProperties = {
 
 // -- import ------------------------------------------------------------------
 
-/** The fleet recycle a section restore of recycle-class keys ran: why, then the rows. */
-function RestoreRecycleReport({
-  section,
-  roll,
-}: {
-  readonly section: string;
-  readonly roll: RecycleRoll;
-}): ReactNode {
-  const headingId = useId();
-  return (
-    <section
-      aria-labelledby={headingId}
-      data-testid={`report-recycle-${section}`}
-      style={{ marginTop: 'var(--tai-space-3)' }}
-    >
-      <h4 id={headingId} style={recycleTitleStyle}>
-        Worker recycle — <span className="tai-mono">{section}</span>
-      </h4>
-      <p style={noteStyle}>
-        Some restored settings take effect only in a fresh worker process, so the fleet recycled its
-        workers one at a time.
-      </p>
-      <RecycleRollSection
-        recycle={roll.recycle}
-        fresh={roll.fresh}
-        stopped={roll.recycle_stopped}
-        writerNote="this worker recycles itself after replying"
-      />
-    </section>
-  );
-}
-
 function ImportReportTable({ report }: { readonly report: BackupImportReport }): ReactNode {
   const entries = Object.entries(report.sections);
   const minted = entries.flatMap(([name, section]) =>
     (section.details.new_api_keys ?? []).map((key) => ({ section: name, ...key })),
   );
   // A section whose restore broadcast (the `manifest` and `env` reloads, the templates
-  // cache eviction) carries a fleet fan-out; surface any failed propagation honestly, with
-  // the workers the restore leaves awaiting a respawn.
-  const fleetReports = entries
+  // cache eviction) carries a fleet fan-out, and one whose env change moved a recycle-class key
+  // a roll; each section reports its own fleet outcome.
+  const fleetOutcomes = entries
     .map(([name, section]) => ({
       name,
-      summary: summarizeFleetFanout(
-        section.fanout,
-        section.awaiting_respawn,
-        section.span_release_error,
-      ),
+      summary: summarizeFleetFanout(section),
+      recycle: section.recycle,
     }))
-    .filter((entry) => entry.summary !== null);
-  const recycleRolls = entries.flatMap(([name, section]) =>
-    section.recycle === null ? [] : [{ name, roll: section.recycle }],
-  );
+    .filter((entry) => entry.summary !== null || entry.recycle !== null);
 
   return (
     <div>
@@ -210,14 +165,14 @@ function ImportReportTable({ report }: { readonly report: BackupImportReport }):
         </Table>
       </ScrollRegion>
 
-      {fleetReports.map((entry) => (
-        <div key={entry.name} style={{ marginTop: 'var(--tai-space-3)' }}>
-          <FleetReport summary={entry.summary} />
+      {fleetOutcomes.map((entry) => (
+        <div
+          key={entry.name}
+          data-testid={`report-fleet-${entry.name}`}
+          style={{ marginTop: 'var(--tai-space-3)' }}
+        >
+          <FleetOutcomeReport summary={entry.summary} recycle={entry.recycle} scope={entry.name} />
         </div>
-      ))}
-
-      {recycleRolls.map((entry) => (
-        <RestoreRecycleReport key={entry.name} section={entry.name} roll={entry.roll} />
       ))}
 
       {minted.length > 0 ? (

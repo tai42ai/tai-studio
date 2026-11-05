@@ -5,7 +5,6 @@ import {
   AppLink,
   ConfirmDialog,
   deliveryOf,
-  errorMessage,
   FeatureDisabled,
   featureDisabledMessage,
   isFeatureDisabled,
@@ -49,7 +48,7 @@ function UpdatePluginDialog({
       pendingLabel="Updating"
       confirmVariant="primary"
       isPending={action.state.status === 'pending'}
-      error={failure === null || disabled ? null : errorMessage(failure)}
+      error={disabled ? null : failure}
       disabledNote={
         disabled ? (
           <FeatureDisabled

@@ -12,7 +12,8 @@
  * its JSON (title validated client-side) and removed by naming its title; an api-tools
  * name is added to / removed from a list by name. Every write crosses the config
  * pipeline and reloads the fleet, so a save re-reads the manifest artifact and reports
- * any failed fleet propagation. Removes are destructive and ask the house confirm.
+ * its fleet outcome: any failed propagation, the workers left awaiting a restart, and the
+ * recycle roll it ran. Removes are destructive and ask the house confirm.
  * Each section renders only for a caller whose projection can reach its door.
  */
 import type { ApiClient } from '@tai42/api-client';
@@ -22,10 +23,8 @@ import {
   Button,
   Card,
   ConfirmDialog,
-  errorMessage,
-  ErrorState,
   Field,
-  FleetReport,
+  FleetOutcomeReport,
   Select,
   Spinner,
   Stack,
@@ -33,6 +32,7 @@ import {
   TextInput,
   useApi,
   useCanWrite,
+  WriteFailure,
 } from '@tai42/studio-sdk';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, useState } from 'react';
@@ -111,14 +111,11 @@ function EntrySectionEditor({
         </Button>
         {addMutation.isSuccess ? <Badge variant="success">Added</Badge> : null}
       </div>
-      {addMutation.isError ? <ErrorState message={errorMessage(addMutation.error)} /> : null}
+      {addMutation.isError ? <WriteFailure error={addMutation.error} /> : null}
       {addMutation.isSuccess ? (
-        <FleetReport
-          summary={summarizeFleetFanout(
-            addMutation.data.fanout,
-            addMutation.data.awaiting_respawn,
-            addMutation.data.span_release_error,
-          )}
+        <FleetOutcomeReport
+          summary={summarizeFleetFanout(addMutation.data)}
+          recycle={addMutation.data.recycle}
         />
       ) : null}
 
@@ -150,12 +147,9 @@ function EntrySectionEditor({
             </Button>
           </div>
           {removeMutation.isSuccess ? (
-            <FleetReport
-              summary={summarizeFleetFanout(
-                removeMutation.data.fanout,
-                removeMutation.data.awaiting_respawn,
-                removeMutation.data.span_release_error,
-              )}
+            <FleetOutcomeReport
+              summary={summarizeFleetFanout(removeMutation.data)}
+              recycle={removeMutation.data.recycle}
             />
           ) : null}
 
@@ -267,15 +261,9 @@ function ApiToolsEditor({ api }: { readonly api: ApiClient }): ReactNode {
         </Button>
         {edit.isSuccess ? <Badge variant="success">Updated</Badge> : null}
       </div>
-      {edit.isError ? <ErrorState message={errorMessage(edit.error)} /> : null}
+      {edit.isError ? <WriteFailure error={edit.error} /> : null}
       {edit.isSuccess ? (
-        <FleetReport
-          summary={summarizeFleetFanout(
-            edit.data.fanout,
-            edit.data.awaiting_respawn,
-            edit.data.span_release_error,
-          )}
-        />
+        <FleetOutcomeReport summary={summarizeFleetFanout(edit.data)} recycle={edit.data.recycle} />
       ) : null}
     </Stack>
   );

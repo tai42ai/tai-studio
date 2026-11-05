@@ -29,22 +29,21 @@
  * State follows the shared convention: <Spinner> while loading, <ErrorState>
  * (loud) on any failure. Read-only config mode disables every control.
  */
-import { type RecycleRoll, summarizeFleetFanout } from '@tai42/api-client';
+import { summarizeFleetFanout } from '@tai42/api-client';
 import {
   Button,
   Card,
   EmptyState,
   errorMessage,
   ErrorState,
-  FleetReport,
-  RecycleRollSection,
+  FleetOutcomeReport,
   Spinner,
   useApi,
   useRegisterDirty,
   WriteFailure,
 } from '@tai42/studio-sdk';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type CSSProperties, type ReactNode, useId, useState } from 'react';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
 import { type EnvVarRow, EnvVarRows, useEnvVarRows } from './env-var-rows';
 import { envConfigKey, settingsSchemaKey } from './keys';
@@ -127,40 +126,6 @@ function assembleEnvSave(input: {
   }
   const marks = [...secretKeys].filter((key) => presentKeys.has(key) && !isOwned(key)).sort();
   return { env, secret_keys: marks };
-}
-
-const sectionTitleStyle: CSSProperties = {
-  margin: '0 0 var(--tai-space-2)',
-  fontSize: 'var(--tai-text-md)',
-  color: 'var(--tai-color-text)',
-};
-
-const sectionIntroStyle: CSSProperties = {
-  margin: '0 0 var(--tai-space-3)',
-  color: 'var(--tai-color-text-muted)',
-  fontSize: 'var(--tai-text-sm)',
-};
-
-/** The roll a save of a recycle-class key ran: why the workers recycled, then the rows. */
-function SaveRecycleReport({ roll }: { readonly roll: RecycleRoll }): ReactNode {
-  const headingId = useId();
-  return (
-    <section aria-labelledby={headingId} style={{ marginTop: 'var(--tai-space-4)' }}>
-      <h4 id={headingId} style={sectionTitleStyle}>
-        Worker recycle
-      </h4>
-      <p style={sectionIntroStyle}>
-        Some changed settings take effect only in a fresh worker process, so the fleet recycled its
-        workers one at a time.
-      </p>
-      <RecycleRollSection
-        recycle={roll.recycle}
-        fresh={roll.fresh}
-        stopped={roll.recycle_stopped}
-        writerNote="this worker recycles itself after replying"
-      />
-    </section>
-  );
 }
 
 /** The Save button and its fleet-reload pending line — hidden in read-only mode. */
@@ -317,22 +282,12 @@ function EnvironmentEditor({
         </div>
       ) : null}
 
-      {/* A saved env broadcasts a reload to the fleet; surface any failed propagation
-          honestly (nothing on a converged / lone-worker save), the workers the server names
-          as still awaiting a respawn after the save, and the worker recycle a
-          recycle-class change rolled. */}
       {mutation.isSuccess ? (
         <div style={{ marginTop: 'var(--tai-space-4)' }}>
-          <FleetReport
-            summary={summarizeFleetFanout(
-              mutation.data.fanout,
-              mutation.data.awaiting_respawn,
-              mutation.data.span_release_error,
-            )}
+          <FleetOutcomeReport
+            summary={summarizeFleetFanout(mutation.data)}
+            recycle={mutation.data.recycle}
           />
-          {mutation.data.recycle !== null ? (
-            <SaveRecycleReport roll={mutation.data.recycle} />
-          ) : null}
         </div>
       ) : null}
 

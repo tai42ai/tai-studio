@@ -25,7 +25,7 @@ import {
   Button,
   errorMessage,
   ErrorState,
-  InstallReport,
+  FleetOutcomeReport,
   marketplacePluginKey,
   mcpStatusKey,
   PluginInstallPanel,
@@ -337,11 +337,7 @@ export function ListingConnectStep({
   }
 
   const { reload } = installed.result;
-  const summary = summarizeFleetFanout(
-    reload.fanout,
-    reload.awaiting_respawn,
-    reload.span_release_error,
-  );
+  const summary = summarizeFleetFanout(reload);
   const converged = summary?.status === 'converged' && reload.awaiting_respawn.length === 0;
   const { target } = installed;
   let wait: ReactNode;
@@ -375,7 +371,7 @@ export function ListingConnectStep({
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
-      <InstallReport summary={summary} recycle={reload.recycle} />
+      <FleetOutcomeReport summary={summary} recycle={reload.recycle} />
       {wait}
     </div>
   );

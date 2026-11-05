@@ -110,7 +110,7 @@ export function RemoveProviderDialog({
     mutationFn: () => api.removeProvider(provider.id),
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: PROVIDERS_KEY });
-      const fleet = summarizeFleetFanout(result.fanout, [], result.span_release_error);
+      const fleet = summarizeFleetFanout(result);
       if (isFleetReportFailure(fleet)) {
         setFleetFailure(fleet);
         return;

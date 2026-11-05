@@ -14,6 +14,7 @@ import {
   type MarketplaceInstalledPlugin,
 } from '@tai42/api-client';
 import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
+import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -228,6 +229,91 @@ describe('InstalledTab — advisories banner', () => {
 });
 
 describe('InstalledTab — upgrade all', () => {
+  it('reports the roll, the awaiting workers and the write spans the batch left', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue(installedList([installedRow({})])),
+      getMarketplaceAdvisories: vi.fn().mockResolvedValue(noAdvisories),
+      upgradeAllMarketplacePlugins: vi.fn().mockResolvedValue({
+        results: [
+          {
+            ref: 'tai42/toolbox',
+            outcome: 'upgraded',
+            detail: '1.0.0 -> 2.0.0',
+            span_release_error: 'OSError: span one',
+          },
+          {
+            ref: 'tai42/stable',
+            outcome: 'up-to-date',
+            detail: '1.0.0 is the latest compatible version',
+            span_release_error: null,
+          },
+          {
+            ref: 'tai42/flaky',
+            outcome: 'failed',
+            detail: 'pip install failed',
+            span_release_error: 'OSError: span two',
+          },
+        ],
+        recycle: {
+          recycle: [],
+          skipped: [],
+          fresh: [],
+          recycle_stopped: { kind: 'serve', name: 'serve-2', detail: 'old life still present' },
+        },
+        awaiting_respawn: [{ name: 'serve-2', keys: ['TAI_KEY'] }],
+        roll_deferred: false,
+        roll_deferred_to: null,
+      }),
+    };
+    renderWithProviders(<InstalledTab search={{}} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Upgrade all' }));
+
+    expect(await screen.findByTestId('recycle-stopped')).toHaveTextContent(
+      'The recycle stopped at serve-2 (serve workers)',
+    );
+    expect(screen.getByText('1 worker has settings it has not applied')).toBeInTheDocument();
+    expect(
+      screen.getByText('tai42/toolbox: OSError: span one; tai42/flaky: OSError: span two'),
+    ).toBeInTheDocument();
+  });
+
+  it('reads a text true for a restartable and a refused worker when the reply names only the worker', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue(installedList([installedRow({})])),
+      getMarketplaceAdvisories: vi.fn().mockResolvedValue(noAdvisories),
+      upgradeAllMarketplacePlugins: vi.fn().mockResolvedValue({
+        results: [
+          {
+            ref: 'tai42/toolbox',
+            outcome: 'upgraded',
+            detail: '1.0.0 -> 2.0.0',
+            span_release_error: null,
+          },
+        ],
+        recycle: null,
+        awaiting_respawn: [{ name: 'backend-1', keys: ['K'] }],
+        roll_deferred: false,
+        roll_deferred_to: null,
+      }),
+    };
+    renderWithProviders(<InstalledTab search={{}} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Upgrade all' }));
+
+    const heading = await screen.findByText('1 worker has settings it has not applied');
+    const panel = heading.closest('[role="status"]');
+    if (!(panel instanceof HTMLElement)) throw new Error('the panel is not a status region');
+    expect(panel).toHaveTextContent(
+      'These settings take effect only when this worker restarts. If its new build failed, fix the stored configuration first, since a restart may fail the same way. Then restart it through your deployment’s supervisor (on a bare server, restart the server).',
+    );
+    expect(within(panel).getByRole('listitem')).toHaveTextContent('backend-1has not applied:K');
+    expect(screen.queryByText(/needs a restart/)).toBeNull();
+    expect(screen.queryByTestId('recycle-stopped')).toBeNull();
+  });
+
   it('runs the upgrade, renders the per-plugin readout, and refetches server state', async () => {
     const user = userEvent.setup();
     const client: StubApiClient = {
@@ -235,15 +321,35 @@ describe('InstalledTab — upgrade all', () => {
       getMarketplaceAdvisories: vi.fn().mockResolvedValue(noAdvisories),
       upgradeAllMarketplacePlugins: vi.fn().mockResolvedValue({
         results: [
-          { ref: 'tai42/toolbox', outcome: 'upgraded', detail: '1.0.0 -> 2.0.0' },
+          {
+            ref: 'tai42/toolbox',
+            outcome: 'upgraded',
+            detail: '1.0.0 -> 2.0.0',
+            span_release_error: null,
+          },
           {
             ref: 'tai42/stable',
             outcome: 'up-to-date',
             detail: '1.0.0 is the latest compatible version',
+            span_release_error: null,
           },
-          { ref: 'tai42/orphan', outcome: 'no-compatible-version', detail: 'newest is 9.0.0' },
-          { ref: 'tai42/flaky', outcome: 'failed', detail: 'pip install failed' },
+          {
+            ref: 'tai42/orphan',
+            outcome: 'no-compatible-version',
+            detail: 'newest is 9.0.0',
+            span_release_error: null,
+          },
+          {
+            ref: 'tai42/flaky',
+            outcome: 'failed',
+            detail: 'pip install failed',
+            span_release_error: null,
+          },
         ],
+        recycle: null,
+        awaiting_respawn: [],
+        roll_deferred: false,
+        roll_deferred_to: null,
       }),
     };
     renderWithProviders(<InstalledTab search={{}} />, { client });
@@ -364,5 +470,22 @@ describe('InstalledTab — Upgrade all follows the grant', () => {
     );
     expect(line.closest('[role="status"]')).not.toBeNull();
     expect(screen.queryByRole('button', { name: 'Upgrade all' })).toBeNull();
+  });
+});
+
+describe('InstalledTab — a failed upgrade-all that carries a recycle roll', () => {
+  it('shows the roll beside the error', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue(installedList([installedRow({})])),
+      getMarketplaceAdvisories: vi.fn().mockResolvedValue(noAdvisories),
+      upgradeAllMarketplacePlugins: vi.fn().mockRejectedValue(failureWithRoll()),
+    };
+    renderWithProviders(<InstalledTab search={{}} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Upgrade all' }));
+
+    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

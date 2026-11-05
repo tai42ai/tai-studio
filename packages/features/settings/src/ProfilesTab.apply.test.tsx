@@ -1,4 +1,5 @@
 import { type ApiClient, ApiError, type SettingsSchema } from '@tai42/api-client';
+import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
 import { QueryClient } from '@tanstack/react-query';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -68,17 +69,28 @@ function cleanDiff(): {
 function applyReport(): ReturnType<ApiClient['applySettingsProfile']> {
   return Promise.resolve({
     span_release_error: null,
+    roll_deferred: false,
+    roll_deferred_to: null,
     hot: ['APP_TITLE'],
     recycle: [
-      { detail: null, name: 'serve-1', kind: 'serve', status: 'recycled', generation_before: 4 },
+      {
+        detail: null,
+        name: 'serve-1',
+        kind: 'serve',
+        status: 'recycled',
+        generation_before: 4,
+        keys: ['TAI_DEFAULT_REDIS_URL'],
+      },
       {
         detail: null,
         name: 'serve-2',
         kind: 'serve',
         status: 'self-deferred',
         generation_before: 2,
+        keys: ['TAI_DEFAULT_REDIS_URL'],
       },
     ],
+    skipped: [],
     fresh: [{ name: 'serve-1', kind: 'serve', generation: 5 }],
     refused: [] as string[],
     recycle_stopped: null,
@@ -88,6 +100,25 @@ function applyReport(): ReturnType<ApiClient['applySettingsProfile']> {
       note: 'no worker bus configured; only this worker reloaded',
     },
   });
+}
+
+function fleetFanoutWithTimedOutRow() {
+  return {
+    mode: 'fleet' as const,
+    op: 'reload_config',
+    reachable: true,
+    local_only: false,
+    error: null,
+    results: [
+      {
+        name: 'serve-1',
+        outcome: 'timed_out' as const,
+        payload: null,
+        error: null,
+        detail: 'no reply in time',
+      },
+    ],
+  };
 }
 
 interface Stub {
@@ -217,6 +248,81 @@ describe('ProfilesTab — apply', () => {
     expect(screen.queryByText('Something went wrong')).toBeNull();
   });
 
+  it.each<[string, string, string[]]>([
+    ['recycled', 'recycled', []],
+    ['deferred its restart', 'self-deferred', []],
+  ])(
+    'does not list a worker the flat roll says %s as not converged',
+    async (_c, status, skipped) => {
+      const user = userEvent.setup();
+      const applySettingsProfile = vi.fn(() =>
+        applyReport().then((report) => ({
+          ...report,
+          recycle: [
+            {
+              detail: null,
+              name: 'serve-1',
+              kind: 'serve',
+              status,
+              generation_before: 3,
+              keys: ['TAI_DEFAULT_REDIS_URL'],
+            },
+          ],
+          skipped,
+          fanout: fleetFanoutWithTimedOutRow(),
+        })),
+      );
+      renderWithProviders(<ProfilesTab readOnly={false} />, {
+        client: stubClient({
+          diffSettingsProfile: vi.fn(() => Promise.resolve(cleanDiff())),
+          applySettingsProfile,
+        }),
+        projection: fullProjection(),
+      });
+
+      await user.click(await screen.findByRole('button', { name: 'Apply profile prod' }));
+      const apply = await screen.findByRole('button', { name: 'Apply profile' });
+      await waitFor(() => {
+        expect(apply).toBeEnabled();
+      });
+      await user.click(apply);
+
+      const report = await screen.findByTestId('apply-report');
+      expect(within(report).queryByText(/did not converge/)).toBeNull();
+      expect(within(report).getByTestId('apply-recycle')).toHaveTextContent('serve-1');
+    },
+  );
+
+  it('does not list a worker the flat `skipped` names as not converged', async () => {
+    const user = userEvent.setup();
+    const applySettingsProfile = vi.fn(() =>
+      applyReport().then((report) => ({
+        ...report,
+        recycle: [],
+        skipped: ['serve-1'],
+        fanout: fleetFanoutWithTimedOutRow(),
+      })),
+    );
+    renderWithProviders(<ProfilesTab readOnly={false} />, {
+      client: stubClient({
+        diffSettingsProfile: vi.fn(() => Promise.resolve(cleanDiff())),
+        applySettingsProfile,
+      }),
+      projection: fullProjection(),
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Apply profile prod' }));
+    const apply = await screen.findByRole('button', { name: 'Apply profile' });
+    await waitFor(() => {
+      expect(apply).toBeEnabled();
+    });
+    await user.click(apply);
+
+    const report = await screen.findByTestId('apply-report');
+    expect(within(report).queryByText(/did not converge/)).toBeNull();
+    expect(within(report).getByText('No worker was recycled.')).toBeInTheDocument();
+  });
+
   it('renders a fresh life on a DIFFERENT name un-joined, on its own row (no successor claim)', async () => {
     const user = userEvent.setup();
     const applySettingsProfile = vi.fn(() =>
@@ -229,15 +335,19 @@ describe('ProfilesTab — apply', () => {
             kind: 'serve',
             status: 'recycled',
             generation_before: 3,
+            keys: ['TAI_DEFAULT_REDIS_URL'],
           },
         ],
         // The fresh life carries a DIFFERENT name than the recycled target: it is not
         // joined onto that row, it renders on its own under Fresh lives.
+        skipped: [],
         fresh: [{ name: 'serve-9', kind: 'serve', generation: 1 }],
         refused: [] as string[],
         recycle_stopped: null,
         awaiting_respawn: [],
         span_release_error: null,
+        roll_deferred: false,
+        roll_deferred_to: null,
         fanout: { mode: 'local-only' as const, note: 'only this worker reloaded' },
       }),
     );
@@ -273,11 +383,14 @@ describe('ProfilesTab — apply', () => {
       Promise.resolve({
         hot: [],
         recycle: [],
+        skipped: [],
         fresh: [],
         refused: ['TAI_APP_PROVIDERS'],
         recycle_stopped: null,
         awaiting_respawn: [],
         span_release_error: null,
+        roll_deferred: false,
+        roll_deferred_to: null,
         fanout: { mode: 'local-only' as const, note: 'only this worker reloaded' },
       }),
     );
@@ -438,6 +551,8 @@ function rolledApply(
   const moved = { status: 'ok', env_keys: 2, awaiting_respawn: ['BACKEND_MANIFEST_KEY'] };
   return Promise.resolve({
     span_release_error: null,
+    roll_deferred: false,
+    roll_deferred_to: null,
     hot: [],
     recycle: [
       {
@@ -446,6 +561,7 @@ function rolledApply(
         kind: 'backend',
         status: 'recycled',
         generation_before: 1,
+        keys: ['TAI_DEFAULT_REDIS_URL'],
       },
       {
         detail: null,
@@ -453,8 +569,10 @@ function rolledApply(
         kind: 'serve',
         status: 'self-deferred',
         generation_before: 2,
+        keys: ['TAI_DEFAULT_REDIS_URL'],
       },
     ],
+    skipped: [],
     fresh: [{ name: 'backend-1', kind: 'backend', generation: 2 }],
     refused: [] as string[],
     recycle_stopped: null,
@@ -468,6 +586,13 @@ function rolledApply(
         { name: 'serve-1', outcome: 'applied' as const, payload: moved, error: null, detail: null },
         {
           name: 'backend-1',
+          outcome: 'applied' as const,
+          payload: moved,
+          error: null,
+          detail: null,
+        },
+        {
+          name: 'backend-2',
           outcome: 'applied' as const,
           payload: moved,
           error: null,
@@ -511,5 +636,28 @@ describe('ProfilesTab — apply report restart panel', () => {
       .closest('[role="status"]');
     expect(panel).not.toBeNull();
     expect(panel).toHaveTextContent('backend-2');
+  });
+});
+
+describe('ProfilesTab — a failed apply that carries a recycle roll', () => {
+  it('shows the roll beside the error', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ProfilesTab readOnly={false} />, {
+      client: stubClient({
+        diffSettingsProfile: vi.fn(() => Promise.resolve(cleanDiff())),
+        applySettingsProfile: vi.fn(() => Promise.reject(failureWithRoll())),
+      }),
+      projection: fullProjection(),
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Apply profile prod' }));
+    const apply = await screen.findByRole('button', { name: 'Apply profile' });
+    await waitFor(() => {
+      expect(apply).toBeEnabled();
+    });
+    await user.click(apply);
+
+    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

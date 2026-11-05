@@ -143,6 +143,7 @@ test('the redirect-resume completes the exchange via the forwarded state and str
           connection_id: 'conn-1',
           return_url: '/connectors',
           fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+          span_release_error: null,
         },
       },
     });
@@ -185,6 +186,7 @@ test('a disconnect whose upstream revoke FAILED surfaces the warning and stays o
             upstream_revoke_status: 502,
             removed_manifest_entries: [],
             fanout: null,
+            span_release_error: null,
           },
         },
       });
@@ -238,7 +240,7 @@ test('an MCP server added by its address lands in the connect flow', async ({ pa
       calls.push(`${method} ${path}`);
       if (path === `${PROVIDERS_PATH}/discover`) return ADD_SERVER_LOOKUP;
       providers = [...providers, ADDED_PROVIDER];
-      return { provider: ADDED_PROVIDER, fanout: null };
+      return { provider: ADDED_PROVIDER, fanout: null, span_release_error: null };
     },
   );
 
@@ -273,7 +275,12 @@ test('a removable provider is removed after its confirm', async ({ page }) => {
     (method, path) => {
       calls.push(`${method} ${path}`);
       providers = providers.filter((p) => p !== ADDED_PROVIDER);
-      return { provider_id: 'remote_files', removed_clients: 1, fanout: null };
+      return {
+        provider_id: 'remote_files',
+        removed_clients: 1,
+        fanout: null,
+        span_release_error: null,
+      };
     },
   );
 
@@ -444,6 +451,8 @@ async function stubDirectory(page: Page, state: DirectoryState): Promise<FilterW
           env_keys: 0,
           recycle: null,
           awaiting_respawn: [],
+          roll_deferred: false,
+          roll_deferred_to: null,
           span_release_error: null,
           fanout: { mode: 'local-only', note: 'only this worker reloaded' },
         }),
@@ -670,6 +679,8 @@ test('a marketplace listing installs inside the flow and reaches Pick tools', as
               env_keys: 0,
               recycle: null,
               awaiting_respawn: [],
+              roll_deferred: false,
+              roll_deferred_to: null,
               fanout: { mode: 'local-only', note: 'only this worker reloaded' },
             },
           },

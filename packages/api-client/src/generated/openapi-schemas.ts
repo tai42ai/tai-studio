@@ -181,16 +181,16 @@ export type FanoutSummary = z.infer<typeof fanoutSummary>;
 export const freshLife = z.object({ "generation": z.number().int(), "kind": z.string(), "name": z.string() });
 export type FreshLife = z.infer<typeof freshLife>;
 
-export const recycleEntry = z.object({ "detail": z.string().nullable().default(null), "generation_before": z.number().int(), "kind": z.string(), "name": z.string(), "status": z.string() });
+export const recycleEntry = z.object({ "detail": z.string().nullable().default(null), "generation_before": z.number().int(), "keys": z.array(z.string()), "kind": z.string(), "name": z.string(), "status": z.string() });
 export type RecycleEntry = z.infer<typeof recycleEntry>;
 
 export const recycleStop = z.object({ "detail": z.string(), "kind": z.string(), "name": z.string().nullable() });
 export type RecycleStop = z.infer<typeof recycleStop>;
 
-export const recycleRoll = z.object({ "fresh": z.array(freshLife), "recycle": z.array(recycleEntry), "recycle_stopped": recycleStop.nullable().default(null) });
+export const recycleRoll = z.object({ "fresh": z.array(freshLife), "recycle": z.array(recycleEntry), "recycle_stopped": recycleStop.nullable().default(null), "skipped": z.array(z.string()) });
 export type RecycleRoll = z.infer<typeof recycleRoll>;
 
-export const applyResponse = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "env_keys": z.number().int(), "fanout": fanoutSummary, "recycle": recycleRoll.nullable().default(null), "span_release_error": z.string().nullable().default(null), "status": z.string() });
+export const applyResponse = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "env_keys": z.number().int(), "fanout": fanoutSummary, "recycle": recycleRoll.nullable().default(null), "roll_deferred": z.boolean().default(false), "roll_deferred_to": z.string().nullable().default(null), "span_release_error": z.string().nullable().default(null), "status": z.string() });
 export type ApplyResponse = z.infer<typeof applyResponse>;
 
 export const applyResult = z.object({ "applied": z.boolean(), "data": z.record(z.string(), z.unknown()).nullable().default(null), "seq": z.number().nullable().default(null), "skipped": z.array(z.record(z.string(), z.unknown())).default([]) }).strict();
@@ -238,7 +238,7 @@ export type BackupExportDocument = z.infer<typeof backupExportDocument>;
 export const backupImport = z.object({ "document": z.record(z.string(), z.unknown()), "mode": z.enum(["skip","overwrite"]).default("skip"), "sections": z.array(z.string()) });
 export type BackupImport = z.infer<typeof backupImport>;
 
-export const backupSectionReport = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "created": z.number().int().default(0), "details": z.record(z.string(), z.unknown()).default({}), "errors": z.array(z.string()).default([]), "fanout": fanoutSummary.nullable().default(null), "recycle": recycleRoll.nullable().default(null), "skipped": z.number().int().default(0), "span_release_error": z.string().nullable().default(null), "updated": z.number().int().default(0) }).strict();
+export const backupSectionReport = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "created": z.number().int().default(0), "details": z.record(z.string(), z.unknown()).default({}), "errors": z.array(z.string()).default([]), "fanout": fanoutSummary.nullable().default(null), "recycle": recycleRoll.nullable().default(null), "roll_deferred": z.boolean().default(false), "roll_deferred_to": z.string().nullable().default(null), "skipped": z.number().int().default(0), "span_release_error": z.string().nullable().default(null), "updated": z.number().int().default(0) }).strict();
 export type BackupSectionReport = z.infer<typeof backupSectionReport>;
 
 export const backupImportResult = z.object({ "ok": z.boolean(), "sections": z.record(z.string(), backupSectionReport) });
@@ -424,6 +424,9 @@ export type OpOutcome = z.infer<typeof opOutcome>;
 export const workerResult = z.object({ "detail": z.string().nullable().default(null), "error": z.string().nullable().default(null), "name": z.string(), "outcome": opOutcome, "payload": z.unknown().nullable().default(null) });
 export type WorkerResult = z.infer<typeof workerResult>;
 
+export const fleetReloadResponse = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "error": z.string().nullable().default(null), "local_only": z.boolean().default(false), "ok": z.boolean().readonly(), "op": z.string(), "reachable": z.boolean().default(true), "recycle": recycleRoll.nullable().default(null), "results": z.array(workerResult).default([]), "roll_deferred": z.boolean().default(false), "roll_deferred_to": z.string().nullable().default(null) });
+export type FleetReloadResponse = z.infer<typeof fleetReloadResponse>;
+
 export const fleetResult = z.object({ "error": z.string().nullable().default(null), "local_only": z.boolean().default(false), "ok": z.boolean().readonly(), "op": z.string(), "reachable": z.boolean().default(true), "results": z.array(workerResult).default([]) });
 export type FleetResult = z.infer<typeof fleetResult>;
 
@@ -568,7 +571,7 @@ export type LoginMethodsListing = z.infer<typeof loginMethodsListing>;
 export const logoutResult = z.object({ "end_session_url": z.string().nullable().default(null), "revoked": z.boolean() });
 export type LogoutResult = z.infer<typeof logoutResult>;
 
-export const mCPConfig = z.object({ "args": z.array(z.string()).default([]), "command": z.string().nullable().default(null), "env": z.record(z.string(), z.string()).default({}), "headers": z.record(z.string(), z.string()).default({}), "type": z.string().nullable().default(null), "uds": z.string().nullable().default(null), "url": z.string().nullable().default(null) }).strict();
+export const mCPConfig = z.object({ "args": z.array(z.string()).default([]), "command": z.string().nullable().default(null), "env": z.record(z.string(), z.string()).default({}), "headers": z.record(z.string(), z.string()).default({}), "type": z.enum(["http","uds","stdio"]).nullable().default(null), "uds": z.string().nullable().default(null), "url": z.string().nullable().default(null) }).strict();
 export type MCPConfig = z.infer<typeof mCPConfig>;
 
 export const manifestExtensionMap = z.object({ "extensions": z.record(z.string(), z.array(z.array(z.union([z.string(), z.record(z.string(), z.unknown())])))), "title": z.string() });
@@ -814,7 +817,7 @@ export type PrincipalRef = z.infer<typeof principalRef>;
 export const principalUpdate = z.object({ "disabled": z.boolean().nullable().default(null), "display_name": z.string().min(1).nullable().default(null) });
 export type PrincipalUpdate = z.infer<typeof principalUpdate>;
 
-export const profileApplyResponse = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "fanout": fanoutSummary, "fresh": z.array(freshLife), "hot": z.array(z.string()), "recycle": z.array(recycleEntry), "recycle_stopped": recycleStop.nullable().default(null), "refused": z.array(z.string()), "span_release_error": z.string().nullable().default(null) });
+export const profileApplyResponse = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "fanout": fanoutSummary, "fresh": z.array(freshLife), "hot": z.array(z.string()), "recycle": z.array(recycleEntry), "recycle_stopped": recycleStop.nullable().default(null), "refused": z.array(z.string()), "roll_deferred": z.boolean().default(false), "roll_deferred_to": z.string().nullable().default(null), "skipped": z.array(z.string()), "span_release_error": z.string().nullable().default(null) });
 export type ProfileApplyResponse = z.infer<typeof profileApplyResponse>;
 
 export const profileDiffChange = z.object({ "key": z.string(), "new": z.string(), "old": z.string() });
@@ -1354,13 +1357,13 @@ export type TriggerLinkView = z.infer<typeof triggerLinkView>;
 export const triggerLinkListView = z.object({ "items": z.array(triggerLinkView), "total": z.number().int() });
 export type TriggerLinkListView = z.infer<typeof triggerLinkListView>;
 
-export const uninstallResult = z.object({ "notes": z.array(z.string()), "ref": z.string(), "reload": applyResponse.nullable(), "uninstalled": z.boolean() });
+export const uninstallResult = z.object({ "manifest_written": z.boolean(), "notes": z.array(z.string()), "ref": z.string(), "reload": applyResponse.nullable(), "uninstalled": z.boolean() });
 export type UninstallResult = z.infer<typeof uninstallResult>;
 
 export const upgradeRow = z.object({ "detail": z.string(), "outcome": z.enum(["upgraded","up-to-date","no-compatible-version","failed"]), "ref": z.string(), "span_release_error": z.string().nullable() });
 export type UpgradeRow = z.infer<typeof upgradeRow>;
 
-export const upgradeAllResult = z.object({ "results": z.array(upgradeRow) });
+export const upgradeAllResult = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "recycle": recycleRoll.nullable().default(null), "results": z.array(upgradeRow), "roll_deferred": z.boolean().default(false), "roll_deferred_to": z.string().nullable().default(null) });
 export type UpgradeAllResult = z.infer<typeof upgradeAllResult>;
 
 export const urlAck = z.object({ "url": z.string() });
@@ -1555,7 +1558,7 @@ export const responseSchemas = {
   post_api_config_profiles_name_apply: profileApplyResponse,
   post_api_config_profiles_name_diff: profileDiff,
   post_api_config_profiles_name_rollback: profileWriteResult,
-  post_api_config_reload: fleetResult,
+  post_api_config_reload: fleetReloadResponse,
   post_api_connectors_connections_connection_id_reconnect: startConnectResponse,
   post_api_connectors_connections_start: startConnectOutcome,
   post_api_connectors_oauth_complete: oAuthCompletionResult,
@@ -1568,7 +1571,7 @@ export const responseSchemas = {
   post_api_conversations_route_name_thread_messages: threadMessageAck,
   post_api_delete_template: templateDeleteResult,
   post_api_delete_template_dir: templateDeleteResult,
-  post_api_fleet_reload_config: fleetResult,
+  post_api_fleet_reload_config: fleetReloadResponse,
   post_api_hook_runs_id_retry: hookRunView,
   post_api_hooks: hookRegisterResult,
   post_api_hooks_trigger_links: triggerLinkCreated,
