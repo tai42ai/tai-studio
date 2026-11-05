@@ -140,6 +140,7 @@ function NonRouteInstall({
       pendingLabel="Installing"
       isPending={action.state.status === 'pending'}
       error={storeOffNote(failure) === undefined ? failure : null}
+      errorScope="install"
       disabledNote={previewNote(previewState) ?? storeOffNote(failure)}
       onSubmit={submit}
       onDismiss={onDismiss}
@@ -178,7 +179,8 @@ function NonRouteInstall({
 /** What the preview puts in the failure slot: a skeleton while it loads, its failure after. */
 function previewNote(state: InstallPreviewState): ReactNode {
   if (state.status === 'loading') return <Skeleton height={48} />;
-  if (state.status === 'failed') return <InstallFailure error={state.error} />;
+  if (state.status === 'failed')
+    return <InstallFailure error={state.error} scope="install preview" />;
   return undefined;
 }
 

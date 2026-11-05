@@ -11,6 +11,8 @@ export type UninstallMutation = UseMutationResult<MarketplaceUninstallResult, Er
 /** The last completed action's receipt, rendered as an inline success line. */
 export interface ActionResult {
   readonly verb: string;
+  // The write the receipt's fleet report names, as a failure of the same write names it.
+  readonly write: 'install' | 'update' | 'uninstall';
   readonly ref: string;
   readonly version: string | null;
   readonly notes: readonly string[];

@@ -12,10 +12,19 @@ import { FleetOutcomeReport } from './fleet-outcome-report';
 export interface FailedReplyOutcomeProps {
   /** The rejected value of the write. */
   readonly error: unknown;
+  /** The name of the write that failed. */
+  readonly scope: string;
 }
 
-export function FailedReplyOutcome({ error }: FailedReplyOutcomeProps): ReactNode {
+export function FailedReplyOutcome({ error, scope }: FailedReplyOutcomeProps): ReactNode {
   const roll = useApi().failedReplyRoll(error);
   if (roll === null) return null;
-  return <FleetOutcomeReport summary={roll.summary} recycle={roll.recycle} action="failed" />;
+  return (
+    <FleetOutcomeReport
+      summary={roll.summary}
+      recycle={roll.recycle}
+      action="failed"
+      scope={scope}
+    />
+  );
 }

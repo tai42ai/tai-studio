@@ -16,9 +16,11 @@ import { ErrorState } from './primitives';
 export interface WriteFailureProps {
   /** The rejected value of the write. */
   readonly error: unknown;
+  /** The name of the write that failed. */
+  readonly scope: string;
 }
 
-export function WriteFailure({ error }: WriteFailureProps): ReactNode {
+export function WriteFailure({ error, scope }: WriteFailureProps): ReactNode {
   const api = useApi();
   const message = errorMessage(error);
   const refusal = mcpListingRefusalOf(api, error);
@@ -26,7 +28,7 @@ export function WriteFailure({ error }: WriteFailureProps): ReactNode {
   return (
     <div className="tai-stack tai-stack-3">
       <ErrorState message={message} />
-      <FailedReplyOutcome error={error} />
+      <FailedReplyOutcome error={error} scope={scope} />
     </div>
   );
 }

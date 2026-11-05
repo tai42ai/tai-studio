@@ -30,7 +30,7 @@ export function RevokeKeyDialog({
       confirmLabel="Revoke"
       pendingLabel="Revoking"
       isPending={mutation.isPending}
-      error={mutation.error}
+      failure={{ error: mutation.error, scope: 'revoke API key' }}
       onConfirm={() => {
         mutation.mutate();
       }}

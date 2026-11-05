@@ -1,3 +1,4 @@
+import { failureWithRoll, reportHeading, ROLL_FAILURE_HEADING } from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -135,6 +136,30 @@ describe('McpServersSection — mounted + failed status', () => {
     expect(deregisterMcp).toHaveBeenCalledWith('bad');
   });
 
+  it('names a failed deregister in the report its reply carries', async () => {
+    const user = userEvent.setup();
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      listFailedMcps: vi
+        .fn()
+        .mockResolvedValue(failedReport([{ title: 'bad', status: 'timeout' }])),
+      deregisterMcp: vi.fn().mockRejectedValue(failureWithRoll()),
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByText('Unbound servers');
+    await user.click(screen.getByRole('button', { name: 'Deregister bad' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Deregister' }));
+
+    expect(
+      await within(dialog).findByText(reportHeading(`${ROLL_FAILURE_HEADING} — deregister`)),
+    ).toBeVisible();
+  });
+
   it('surfaces a non-converged deregister as a fleet report naming the stranded worker', async () => {
     const user = userEvent.setup();
     // A partial fan-out: detached on serve-a but serve-b never finished — the tools are
@@ -173,7 +198,7 @@ describe('McpServersSection — mounted + failed status', () => {
     // The detach broadcast is reported loudly INSIDE the dialog — a partial fan-out is
     // never swallowed, and the report lives beside the confirm it came from.
     const alert = await within(openDialog).findByRole('alert');
-    expect(within(alert).getByText(/1 worker did not converge/)).toBeInTheDocument();
+    expect(alert).toHaveTextContent('1 worker did not converge — deregister');
     expect(within(alert).getByText('serve-b')).toBeInTheDocument();
     // Nothing was "saved" — a detach is never a config save.
     expect(within(alert).queryByText(/Change saved/)).not.toBeInTheDocument();
@@ -459,5 +484,73 @@ describe('McpServersSection — failed-mount detail', () => {
     const row = screen.getByText('bad').closest('tr') as HTMLElement;
     expect(within(row).getByText('error')).toBeInTheDocument();
     expect(row.querySelector('.tai-muted')).toBeNull();
+  });
+
+  it('names the reload of a bound server in its unconverged report', async () => {
+    const user = userEvent.setup();
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      reloadMcp: vi.fn().mockResolvedValue({
+        ok: true,
+        op: 'mcp_reload',
+        reachable: true,
+        local_only: false,
+        results: [
+          { name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
+          { name: 'serve-b', outcome: 'timed_out', payload: null, error: null, detail: null },
+        ],
+        error: null,
+      }),
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByText('srv');
+    const [firstReload] = screen.getAllByRole('button', { name: /Reload/ });
+    if (firstReload === undefined) throw new Error('expected a reload button');
+    await user.click(firstReload);
+
+    expect(
+      await screen.findByText(reportHeading('1 worker did not converge — reload bound server')),
+    ).toBeVisible();
+  });
+
+  it('names the reload and the reload-all whose unconverged reports stack', async () => {
+    const user = userEvent.setup();
+    const unconverged = {
+      ok: true,
+      op: 'mcp_reload',
+      reachable: true,
+      local_only: false,
+      results: [
+        { name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
+        { name: 'serve-b', outcome: 'timed_out', payload: null, error: null, detail: null },
+      ],
+      error: null,
+    };
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      listFailedMcps: vi
+        .fn()
+        .mockResolvedValue(failedReport([{ title: 'bad', status: 'timeout' }])),
+      reloadMcp: vi.fn().mockResolvedValue(unconverged),
+      reloadFailedMcps: vi.fn().mockResolvedValue(unconverged),
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByText('Unbound servers');
+    const heading = (scope: string) => reportHeading(`1 worker did not converge — ${scope}`);
+    await user.click(screen.getByRole('button', { name: 'Reload all unbound' }));
+    await screen.findByText(heading('reload all unbound'));
+
+    await user.click(screen.getByRole('button', { name: 'Reload' }));
+
+    expect(await screen.findByText(heading('reload unbound server'))).toBeVisible();
+    expect(screen.getByText(heading('reload all unbound'))).toBeVisible();
   });
 });

@@ -12,7 +12,12 @@ import type {
   FleetWorkerResult,
   RecycleRoll,
 } from '@tai42/api-client';
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -31,6 +36,9 @@ const RELOAD_ROUTE = '/api/config/reload';
 function worker(overrides: Partial<FleetWorkerResult>): FleetWorkerResult {
   return { name: 'w1', outcome: 'applied', payload: null, error: null, detail: null, ...overrides };
 }
+
+/** The success line, whichever scope the reply reads as. */
+const SUCCESS_LINE = /Reload converged|Only this worker reloaded/;
 
 function fleetResult(overrides: Partial<FleetReloadResult> = {}): FleetReloadResult {
   return {
@@ -106,7 +114,11 @@ describe('ReloadConfigButton — reload flow', () => {
     await waitFor(() => {
       expect(reloadConfig).toHaveBeenCalledWith(null);
     });
-    expect(await screen.findByText('Reload converged across the fleet.')).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        'Reload applied. Only this worker reloaded; no other worker was on the worker bus when it ran.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('says in the confirm dialog that the reload can restart workers', async () => {
@@ -145,10 +157,10 @@ describe('ReloadConfigButton — reload flow', () => {
 
     expect(
       await screen.findByText(
-        'The reload was applied. The worker restarts stopped before they finished.',
+        "The worker restarts stopped before they finished. This reload's report has a row only for w1. The sections below cover w2.",
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Reload converged across the fleet.')).toBeNull();
+    expect(screen.queryByText(SUCCESS_LINE)).toBeNull();
     expect(screen.getByTestId('recycle-stopped')).toHaveTextContent(
       'The recycle stopped at w2 (serve workers)',
     );
@@ -173,7 +185,7 @@ describe('ReloadConfigButton — reload flow', () => {
     // success note.
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('w2');
-    expect(screen.queryByText('Reload converged across the fleet.')).not.toBeInTheDocument();
+    expect(screen.queryByText(SUCCESS_LINE)).not.toBeInTheDocument();
   });
 
   it('lists the workers the reload verdict leaves awaiting a restart, not those its roll restarted', async () => {
@@ -196,7 +208,9 @@ describe('ReloadConfigButton — reload flow', () => {
     expect(
       await screen.findByText('The reload was applied. 1 worker still needs a restart.'),
     ).toBeInTheDocument();
-    const heading = await screen.findByText('1 worker needs a restart to apply some settings');
+    const heading = await screen.findByText(
+      reportHeading('1 worker needs a restart to apply some settings — reload'),
+    );
     const panel = heading.closest('[role="status"]');
     if (!(panel instanceof HTMLElement))
       throw new Error('the restart list is not in a status region');
@@ -221,6 +235,48 @@ describe('ReloadConfigButton — reload flow', () => {
   });
 });
 
+describe('ReloadConfigButton — one row, with the bus not shown to hold only that worker', () => {
+  async function reload(reply: FleetReloadResult): Promise<void> {
+    const user = userEvent.setup();
+    const reloadConfig = vi.fn().mockResolvedValue(reply);
+    renderWithProviders(<ReloadConfigButton />, {
+      client: stubClient({ reloadConfig }),
+      projection: fullProjection(),
+    });
+    await user.click(await findEnabledButton());
+    const dialog = await screen.findByRole('dialog');
+    await clickWhenInteractable(
+      user,
+      within(dialog).getByRole('button', { name: 'Reload config' }),
+    );
+  }
+
+  it('reads a roll stopped on no named worker as the one row, not as a lone worker', async () => {
+    await reload(
+      fleetResult({
+        recycle: {
+          recycle: [],
+          skipped: [],
+          fresh: [],
+          recycle_stopped: { kind: 'backend', name: null, detail: 'bus unreachable' },
+        },
+      }),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      /^The worker restarts stopped before they finished\. This reload's report has a row only for w1\.$/,
+    );
+    expect(screen.queryByText(/no other worker/)).toBeNull();
+  });
+
+  it('names the worker a deferred roll was handed to, not a lone worker', async () => {
+    await reload(fleetResult({ roll_deferred: true, roll_deferred_to: 'w2' }));
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      /^This reload's report has a row only for w1\. w2 takes over the worker restarts after this reply, so this report cannot state their outcome; w2's log holds it\.$/,
+    );
+    expect(screen.queryByText(/no other worker/)).toBeNull();
+  });
+});
+
 describe('ReloadConfigButton — a failed reload that carries a recycle roll', () => {
   it('shows the roll beside the error and no reload headline', async () => {
     const user = userEvent.setup();
@@ -234,10 +290,12 @@ describe('ReloadConfigButton — a failed reload that carries a recycle roll', (
       within(dialog).getByRole('button', { name: 'Reload config' }),
     );
 
-    expect(await within(dialog).findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText(reportHeading(`${ROLL_FAILURE_HEADING} — reload`)),
+    ).toBeInTheDocument();
     expect(within(dialog).getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
     expect(within(dialog).queryByText('The reload was applied.')).toBeNull();
-    expect(within(dialog).queryByText('Reload converged across the fleet.')).toBeNull();
+    expect(within(dialog).queryByText(SUCCESS_LINE)).toBeNull();
   });
 });
 
@@ -265,7 +323,7 @@ describe('ReloadConfigButton — a worker the roll settled after its reload did 
       user,
       within(dialog).getByRole('button', { name: 'Reload config' }),
     );
-    await screen.findByRole('region', { name: 'Worker recycle' });
+    await screen.findByRole('region', { name: 'Worker recycle — reload' });
   }
 
   it('reads converged for a worker recycled to a new life, its row beside its life', async () => {
@@ -275,7 +333,11 @@ describe('ReloadConfigButton — a worker the roll settled after its reload did 
       fresh: [{ name: 'backend-1', kind: 'backend', generation: 4 }],
       recycle_stopped: null,
     });
-    expect(screen.getByText('Reload converged across the fleet.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Reload applied. Only this worker reloaded; no other worker was on the worker bus when it ran.',
+      ),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/did not converge/)).toBeNull();
     expect(screen.queryByText(/may still be running/)).toBeNull();
     const row = screen.getByTestId('apply-recycle');
@@ -292,12 +354,12 @@ describe('ReloadConfigButton — a worker the roll settled after its reload did 
     });
     expect(
       screen.getByText(
-        '1 worker restarts once its own in-flight change has replied, which this report cannot confirm.',
+        '1 worker restarts once its own in-flight change has replied, which this report cannot confirm. This reload reached only this worker; no other worker was on the worker bus when it ran.',
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/did not converge/)).toBeNull();
     expect(screen.queryByText(/The reload was applied/)).toBeNull();
-    expect(screen.queryByText('Reload converged across the fleet.')).toBeNull();
+    expect(screen.queryByText(SUCCESS_LINE)).toBeNull();
   });
 
   it('states a deferred restart beside an applied reload', async () => {
@@ -307,7 +369,7 @@ describe('ReloadConfigButton — a worker the roll settled after its reload did 
     );
     expect(
       screen.getByText(
-        'The reload was applied. 1 worker restarts once its own in-flight change has replied, which this report cannot confirm.',
+        'The reload was applied. 1 worker restarts once its own in-flight change has replied, which this report cannot confirm. This reload reached only this worker; no other worker was on the worker bus when it ran.',
       ),
     ).toBeInTheDocument();
   });
@@ -321,12 +383,12 @@ describe('ReloadConfigButton — a worker the roll settled after its reload did 
     });
     expect(
       screen.getByText(
-        '1 worker did not confirm the reload at first, then confirmed it needs no restart.',
+        '1 worker did not confirm the reload at first, then confirmed it needs no restart. This reload reached only this worker; no other worker was on the worker bus when it ran.',
       ),
     ).toBeInTheDocument();
     expect(screen.getByText('No worker was recycled.')).toBeInTheDocument();
     expect(screen.queryByText(/did not converge/)).toBeNull();
-    expect(screen.queryByText('Reload converged across the fleet.')).toBeNull();
+    expect(screen.queryByText(SUCCESS_LINE)).toBeNull();
   });
 
   it('keeps a worker the roll stopped at in the failure panel', async () => {
@@ -336,7 +398,9 @@ describe('ReloadConfigButton — a worker the roll settled after its reload did 
       fresh: [],
       recycle_stopped: { kind: 'backend', name: 'backend-1', detail: 'old life still present' },
     });
-    expect(screen.getByText('1 worker did not converge')).toBeInTheDocument();
-    expect(screen.queryByText('Reload converged across the fleet.')).toBeNull();
+    expect(
+      screen.getByText(reportHeading('1 worker did not converge — reload')),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(SUCCESS_LINE)).toBeNull();
   });
 });

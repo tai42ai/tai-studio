@@ -12,6 +12,7 @@ import {
   type MarketplaceSearchRow,
   type MeProjection,
 } from '@tai42/api-client';
+import { failureWithRoll, reportHeading, ROLL_FAILURE_HEADING } from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -22,6 +23,7 @@ import {
   listing,
   listingDetail,
   mcpEntry,
+  NON_CONVERGED_FANOUT,
   preservedManifest,
   provider,
   providerCatalog,
@@ -381,6 +383,66 @@ describe('A configured server by the grants', () => {
     const menu = await screen.findByRole('menu', { name: 'Actions for relay' });
     expect(within(menu).getByRole('menuitem', { name: 'Reload' })).toBeVisible();
     expect(within(menu).queryByRole('menuitem', { name: 'Deregister' })).toBeNull();
+  });
+
+  it('names the reload started from an entry in its unconverged report', async () => {
+    const user = userEvent.setup();
+    renderPage(
+      {
+        getManifestPreserved: vi.fn().mockResolvedValue(preservedManifest([mcpEntry('relay')])),
+        getMcpStatus: vi.fn().mockResolvedValue({
+          bound: {},
+          failed: [{ title: 'relay', category: 'transport', message: 'refused' }],
+        }),
+        reloadMcp: vi.fn().mockResolvedValue(NON_CONVERGED_FANOUT),
+      },
+      editorProjection([START_ROUTE, RELOAD_ROUTE]),
+    );
+    const row = await findRow('server:relay');
+    await user.click(await within(row).findByRole('button', { name: 'Actions for relay' }));
+    const menu = await screen.findByRole('menu', { name: 'Actions for relay' });
+    await user.click(within(menu).getByRole('menuitem', { name: 'Reload' }));
+    expect(
+      await screen.findByText(reportHeading('1 worker did not converge — reload')),
+    ).toBeVisible();
+  });
+
+  describe('a deregister started from an entry', () => {
+    async function deregister(deregisterMcp: ApiClient['deregisterMcp']): Promise<HTMLElement> {
+      const user = userEvent.setup();
+      renderPage(
+        {
+          getManifestPreserved: vi.fn().mockResolvedValue(preservedManifest([mcpEntry('relay')])),
+          getMcpStatus: vi.fn().mockResolvedValue({
+            bound: {},
+            failed: [{ title: 'relay', category: 'transport', message: 'refused' }],
+          }),
+          deregisterMcp,
+        },
+        fullProjection(),
+      );
+      const row = await findRow('server:relay');
+      await user.click(await within(row).findByRole('button', { name: 'Actions for relay' }));
+      const menu = await screen.findByRole('menu', { name: 'Actions for relay' });
+      await user.click(within(menu).getByRole('menuitem', { name: 'Deregister' }));
+      const dialog = await screen.findByRole('dialog');
+      await user.click(within(dialog).getByRole('button', { name: 'Deregister' }));
+      return dialog;
+    }
+
+    it('names a landed deregister in its unconverged report', async () => {
+      const dialog = await deregister(vi.fn().mockResolvedValue(NON_CONVERGED_FANOUT));
+      expect(
+        await within(dialog).findByText(reportHeading('1 worker did not converge — deregister')),
+      ).toBeVisible();
+    });
+
+    it('names a failed deregister in the report its reply carries', async () => {
+      const dialog = await deregister(vi.fn().mockRejectedValue(failureWithRoll()));
+      expect(
+        await within(dialog).findByText(reportHeading(`${ROLL_FAILURE_HEADING} — deregister`)),
+      ).toBeVisible();
+    });
   });
 
   it('offers Reload and Deregister in the overflow of an administrator', async () => {

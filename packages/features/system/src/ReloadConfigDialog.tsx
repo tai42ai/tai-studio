@@ -2,8 +2,9 @@
  * The reload-config confirmation. A self-contained dialog that owns its own mutation
  * and is mounted only while the operator is confirming, so any close discards the
  * mutation's error state — a reopened dialog always starts clean. On success it
- * invalidates the census and hands the per-worker fleet report back through
- * `onReloaded` so the card can render it after this (now-unmounted) dialog closes.
+ * invalidates the census and hands the per-worker fleet report, with the targets it was
+ * sent for, back through `onReloaded` so the card can render it after this
+ * (now-unmounted) dialog closes.
  */
 import type { FleetReloadResult } from '@tai42/api-client';
 import { ConfirmDialog, useApi } from '@tai42/studio-sdk';
@@ -14,7 +15,7 @@ import { fleetWorkersKey } from './keys';
 
 export interface ReloadConfigDialogProps {
   readonly targets: string[] | null;
-  readonly onReloaded: (result: FleetReloadResult) => void;
+  readonly onReloaded: (result: FleetReloadResult, sentTargets: string[] | null) => void;
   readonly onClose: () => void;
 }
 
@@ -26,10 +27,10 @@ export function ReloadConfigDialog({
   const api = useApi();
   const queryClient = useQueryClient();
   const reload = useMutation({
-    mutationFn: () => api.reloadFleetConfig(targets),
-    onSuccess: (result) => {
+    mutationFn: (sentTargets: string[] | null) => api.reloadFleetConfig(sentTargets),
+    onSuccess: (result, sentTargets) => {
       void queryClient.invalidateQueries({ queryKey: fleetWorkersKey });
-      onReloaded(result);
+      onReloaded(result, sentTargets);
     },
   });
 
@@ -40,9 +41,9 @@ export function ReloadConfigDialog({
       pendingLabel="Reloading config"
       confirmVariant="primary"
       isPending={reload.isPending}
-      error={reload.error}
+      failure={{ error: reload.error, scope: 'reload' }}
       onConfirm={() => {
-        reload.mutate();
+        reload.mutate(targets);
       }}
       onClose={onClose}
     >

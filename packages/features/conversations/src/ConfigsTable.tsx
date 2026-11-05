@@ -46,6 +46,46 @@ const headerStyle: CSSProperties = {
   marginBottom: 'var(--tai-space-4)',
 };
 
+/** The confirm behind a row's Delete door, holding the delete write and its failure. */
+function DeleteConfigDialog({
+  config,
+  onClose,
+}: {
+  readonly config: TargetConversationConfig;
+  readonly onClose: () => void;
+}): ReactNode {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deleteConversationConfig(config.target_kind, config.target_name),
+    onSuccess: () => {
+      onClose();
+      void queryClient.invalidateQueries({ queryKey: conversationConfigsKey });
+    },
+  });
+  return (
+    <ConfirmDialog
+      title="Delete config"
+      confirmLabel="Delete config"
+      pendingLabel="Deleting"
+      isPending={deleteMutation.isPending}
+      failure={{
+        error: deleteMutation.isError ? errorMessage(deleteMutation.error) : null,
+        scope: 'delete config',
+      }}
+      onConfirm={() => {
+        deleteMutation.mutate();
+      }}
+      onClose={onClose}
+    >
+      <p style={{ margin: 0 }}>
+        Delete the config for <strong>{`${config.target_kind}: ${config.target_name}`}</strong>? The
+        target falls back to the default greeting and linking behaviour. It cannot be undone.
+      </p>
+    </ConfirmDialog>
+  );
+}
+
 export function ConfigsTable({
   highlight,
 }: {
@@ -53,7 +93,6 @@ export function ConfigsTable({
   readonly highlight?: string;
 } = {}): ReactNode {
   const api = useApi();
-  const queryClient = useQueryClient();
   const configs = useQuery({
     queryKey: conversationConfigsKey,
     queryFn: ({ signal }) => api.listConversationConfigs(signal),
@@ -78,15 +117,6 @@ export function ConfigsTable({
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<TargetConversationConfig | null>(null);
   const [pendingDelete, setPendingDelete] = useState<TargetConversationConfig | null>(null);
-
-  const deleteMutation = useMutation({
-    mutationFn: (config: TargetConversationConfig) =>
-      api.deleteConversationConfig(config.target_kind, config.target_name),
-    onSuccess: () => {
-      setPendingDelete(null);
-      void queryClient.invalidateQueries({ queryKey: conversationConfigsKey });
-    },
-  });
 
   let body: ReactNode;
   if (configs.isPending) {
@@ -131,9 +161,6 @@ export function ConfigsTable({
                   setEditing(config);
                 }}
                 onDelete={() => {
-                  // Clear any prior delete failure so this confirm opens clean, never
-                  // carrying a stale error from a different config's attempt.
-                  deleteMutation.reset();
                   setPendingDelete(config);
                 }}
               />
@@ -187,25 +214,12 @@ export function ConfigsTable({
         />
       ) : null}
       {pendingDelete !== null ? (
-        <ConfirmDialog
-          title="Delete config"
-          confirmLabel="Delete config"
-          pendingLabel="Deleting"
-          isPending={deleteMutation.isPending}
-          error={deleteMutation.isError ? errorMessage(deleteMutation.error) : null}
-          onConfirm={() => {
-            deleteMutation.mutate(pendingDelete);
-          }}
+        <DeleteConfigDialog
+          config={pendingDelete}
           onClose={() => {
             setPendingDelete(null);
           }}
-        >
-          <p style={{ margin: 0 }}>
-            Delete the config for{' '}
-            <strong>{`${pendingDelete.target_kind}: ${pendingDelete.target_name}`}</strong>? The
-            target falls back to the default greeting and linking behaviour. It cannot be undone.
-          </p>
-        </ConfirmDialog>
+        />
       ) : null}
     </div>
   );

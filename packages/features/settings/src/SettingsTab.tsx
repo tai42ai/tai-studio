@@ -149,7 +149,7 @@ export function SettingsTab({ readOnly }: SettingsTabProps): ReactNode {
 
       {mutation.isError ? (
         <div>
-          <WriteFailure error={mutation.error} />
+          <WriteFailure error={mutation.error} scope="settings" />
         </div>
       ) : null}
 
@@ -157,6 +157,7 @@ export function SettingsTab({ readOnly }: SettingsTabProps): ReactNode {
         <FleetOutcomeReport
           summary={summarizeFleetFanout(mutation.data)}
           recycle={mutation.data.recycle}
+          scope="settings"
         />
       ) : null}
 

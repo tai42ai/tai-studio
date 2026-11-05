@@ -303,7 +303,7 @@ function PendingSaveRow({ row }: { readonly row: PendingSave }): ReactNode {
           pendingLabel="Discarding"
           confirmVariant="danger"
           isPending={discard.isPending}
-          error={discard.error}
+          failure={{ error: discard.error, scope: 'discard pending save' }}
           onConfirm={() => {
             discard.mutate();
           }}

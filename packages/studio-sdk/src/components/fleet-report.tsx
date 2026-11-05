@@ -57,6 +57,7 @@ import type {
 import type { ReactNode } from 'react';
 
 import { AlertTriangleIcon, type IconComponent, PendingIcon, XCircleIcon } from './icons';
+import { ReportScope } from './report-scope';
 
 /** Human labels for the per-worker non-applied outcomes. */
 const OUTCOME_LABEL: Record<FleetFailureOutcome, string> = {
@@ -106,6 +107,8 @@ export interface FleetReportProps {
    * same detach, since a reload would re-attach the detached server or tool.
    */
   readonly action?: 'save' | 'reload' | 'deregister' | 'remove' | 'failed';
+  /** The write each panel's heading names as its scope. */
+  readonly scope: string;
 }
 
 type FleetAction = NonNullable<FleetReportProps['action']>;
@@ -148,11 +151,13 @@ function UnreachableReport({
   savedFraming,
   staleness,
   remediation,
+  scope,
 }: {
   readonly error: string | null;
   readonly savedFraming: boolean;
   readonly staleness: string;
   readonly remediation: string;
+  readonly scope: string;
 }): ReactNode {
   return (
     <div role="alert" className="tai-error-state tai-stack tai-stack-2">
@@ -161,6 +166,7 @@ function UnreachableReport({
         {savedFraming
           ? 'Change saved, but the worker fleet was not reached'
           : 'The worker fleet was not reached'}
+        <ReportScope scope={scope} />
       </strong>
       <p>{`The worker bus was unreachable, so other workers ${staleness}. ${remediation}`}</p>
       {/* The bus error is a message, not a listing: it wraps rather than scrolls. */}
@@ -196,11 +202,13 @@ function DegradedReport({
   savedFraming,
   staleness,
   remediation,
+  scope,
 }: {
   readonly failures: readonly FleetWorkerFailure[];
   readonly savedFraming: boolean;
   readonly staleness: string;
   readonly remediation: string;
+  readonly scope: string;
 }): ReactNode {
   // A count and its noun agree. `worker(s)` is machine output at the one moment an
   // operator is being told something went wrong, and a single unconverged worker
@@ -216,6 +224,7 @@ function DegradedReport({
         {savedFraming
           ? `Change saved, but ${workers} did not converge`
           : `${workers} did not converge`}
+        <ReportScope scope={scope} />
       </strong>
       {retryable.length > 0 ? (
         <>
@@ -334,8 +343,10 @@ function AwaitingWorkerRow({
  */
 function AwaitingRespawnReport({
   awaiting,
+  scope,
 }: {
   readonly awaiting: readonly FleetWorkerAwaitingRespawn[];
+  readonly scope: string;
 }): ReactNode {
   return AWAITING_GROUPS.map(([reading, copy]) => {
     const workers = awaiting.filter((worker) => worker.reading === reading);
@@ -345,6 +356,7 @@ function AwaitingRespawnReport({
         <strong className="tai-status tai-status-warn">
           <AlertTriangleIcon />
           {copy.heading(workers.length)}
+          <ReportScope scope={scope} />
         </strong>
         <p>{workers.length === 1 ? copy.guidance.one : copy.guidance.many}</p>
         <ul className="tai-stack tai-stack-2">
@@ -361,12 +373,19 @@ function AwaitingRespawnReport({
  * The loud panel for a write span the config store did not release: the change landed,
  * but the store may hold the span until the writer process exits.
  */
-function SpanReleaseReport({ error }: { readonly error: string }): ReactNode {
+function SpanReleaseReport({
+  error,
+  scope,
+}: {
+  readonly error: string;
+  readonly scope: string;
+}): ReactNode {
   return (
     <div role="alert" className="tai-error-state tai-stack tai-stack-2">
       <strong className="tai-status tai-status-err">
         <XCircleIcon />
         The config store did not release its write lock
+        <ReportScope scope={scope} />
       </strong>
       <p>
         The write landed, but the store may hold its write lock until the server process that wrote
@@ -380,9 +399,11 @@ function SpanReleaseReport({ error }: { readonly error: string }): ReactNode {
 function FailureReport({
   summary,
   action,
+  scope,
 }: {
   readonly summary: FleetReportSummary;
   readonly action: FleetAction;
+  readonly scope: string;
 }): ReactNode {
   if (summary.status === 'converged') return null;
 
@@ -397,6 +418,7 @@ function FailureReport({
         savedFraming={savedFraming}
         staleness={stalenessText(action)}
         remediation={remediationText(action, 'unreachable')}
+        scope={scope}
       />
     );
   }
@@ -407,6 +429,7 @@ function FailureReport({
       savedFraming={savedFraming}
       staleness={stalenessText(action)}
       remediation={remediationText(action, 'degraded')}
+      scope={scope}
     />
   );
 }
@@ -417,7 +440,7 @@ function FailureReport({
  * unreleased span and no worker awaiting a respawn (nothing to warn about), so callers can
  * always mount it unconditionally beside their own success line.
  */
-export function FleetReport({ summary, action = 'save' }: FleetReportProps): ReactNode {
+export function FleetReport({ summary, action = 'save', scope }: FleetReportProps): ReactNode {
   if (summary === null) return null;
   if (
     summary.status === 'converged' &&
@@ -428,11 +451,11 @@ export function FleetReport({ summary, action = 'save' }: FleetReportProps): Rea
   }
   return (
     <div className="tai-stack tai-stack-3">
-      <FailureReport summary={summary} action={action} />
+      <FailureReport summary={summary} action={action} scope={scope} />
       {summary.spanReleaseError !== null ? (
-        <SpanReleaseReport error={summary.spanReleaseError} />
+        <SpanReleaseReport error={summary.spanReleaseError} scope={scope} />
       ) : null}
-      <AwaitingRespawnReport awaiting={summary.awaiting} />
+      <AwaitingRespawnReport awaiting={summary.awaiting} scope={scope} />
     </div>
   );
 }

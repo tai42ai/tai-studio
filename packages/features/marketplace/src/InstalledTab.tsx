@@ -85,6 +85,7 @@ function UpgradeAllReadout({
             span_release_error: unreleasedSpans(result.results),
           })}
           recycle={result.recycle}
+          scope="upgrade all"
         />
       </div>
     </Card>
@@ -226,7 +227,7 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
             message={featureDisabledMessage(upgradeAllMutation.error)}
           />
         ) : (
-          <WriteFailure error={upgradeAllMutation.error} />
+          <WriteFailure error={upgradeAllMutation.error} scope="upgrade all" />
         )
       ) : null}
       {upgradeAllMutation.data !== undefined ? (

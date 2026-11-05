@@ -14,7 +14,7 @@ function statusFor(alert: HTMLElement, label: RegExp): HTMLElement {
 
 describe('FleetReport', () => {
   it('renders nothing for an absent report', () => {
-    const { container } = render(<FleetReport summary={null} />);
+    const { container } = render(<FleetReport scope="save" summary={null} />);
     expect(container).toBeEmptyDOMElement();
   });
 
@@ -29,7 +29,7 @@ describe('FleetReport', () => {
       failures: [],
       error: null,
     };
-    const { container } = render(<FleetReport summary={summary} />);
+    const { container } = render(<FleetReport scope="save" summary={summary} />);
     expect(container).toBeEmptyDOMElement();
   });
 
@@ -49,7 +49,7 @@ describe('FleetReport', () => {
       ],
       error: null,
     };
-    render(<FleetReport summary={summary} />);
+    render(<FleetReport scope="save" summary={summary} />);
     const alert = screen.getByRole('alert');
     expect(within(alert).getByText(/4 workers did not converge/)).toBeInTheDocument();
     expect(within(alert).getByText('serve-a')).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe('FleetReport', () => {
       ],
       error: null,
     };
-    render(<FleetReport summary={summary} />);
+    render(<FleetReport scope="save" summary={summary} />);
     const alert = screen.getByRole('alert');
     // Each gap outcome carries its own honest label; `stale` makes NO convergence promise.
     expect(statusFor(alert, /^resyncing — will converge on resync$/)).toHaveClass(
@@ -110,7 +110,7 @@ describe('FleetReport', () => {
       ],
       error: null,
     };
-    render(<FleetReport summary={summary} />);
+    render(<FleetReport scope="save" summary={summary} />);
     const alert = screen.getByRole('alert');
 
     // The headline: a degraded fleet is a warning.
@@ -137,7 +137,7 @@ describe('FleetReport', () => {
       failures: [],
       error: 'RedisConnectionError: connection refused',
     };
-    render(<FleetReport summary={summary} />);
+    render(<FleetReport scope="save" summary={summary} />);
     const alert = screen.getByRole('alert');
     expect(alert).toHaveClass('tai-error-state');
     expect(statusFor(alert, /was not reached/)).toHaveClass('tai-status-err');
@@ -158,7 +158,7 @@ describe('FleetReport', () => {
       failures: [],
       error: 'RedisConnectionError: connection refused',
     };
-    render(<FleetReport summary={summary} />);
+    render(<FleetReport scope="save" summary={summary} />);
     const alert = screen.getByRole('alert');
     expect(within(alert).getByText(/was not reached/)).toBeInTheDocument();
     expect(within(alert).getByText('RedisConnectionError: connection refused')).toBeInTheDocument();
@@ -175,7 +175,7 @@ describe('FleetReport', () => {
       failures: [],
       error: null,
     };
-    render(<FleetReport summary={summary} />);
+    render(<FleetReport scope="save" summary={summary} />);
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 
@@ -193,7 +193,7 @@ describe('FleetReport', () => {
       ],
       error: null,
     };
-    render(<FleetReport summary={summary} action="reload" />);
+    render(<FleetReport scope="save" summary={summary} action="reload" />);
     const alert = screen.getByRole('alert');
     // Nothing was saved on the reload surface, so the heading must not claim a save.
     expect(within(alert).getByText(/2 workers did not converge/)).toBeInTheDocument();
@@ -218,7 +218,7 @@ describe('FleetReport', () => {
       failures: [],
       error: 'RedisConnectionError: connection refused',
     };
-    render(<FleetReport summary={summary} action="reload" />);
+    render(<FleetReport scope="save" summary={summary} action="reload" />);
     const alert = screen.getByRole('alert');
     expect(within(alert).getByText(/The worker fleet was not reached/)).toBeInTheDocument();
     expect(within(alert).queryByText(/Change saved/)).not.toBeInTheDocument();
@@ -238,7 +238,7 @@ describe('FleetReport', () => {
       failures: [{ name: 'serve-b', outcome: 'timed_out', message: null, withheld: false }],
       error: null,
     };
-    render(<FleetReport summary={summary} action="remove" />);
+    render(<FleetReport scope="save" summary={summary} action="remove" />);
     const alert = screen.getByRole('alert');
     // Nothing was saved on a live-registry removal, so the heading must not claim a save.
     expect(within(alert).getByText(/1 worker did not converge/)).toBeInTheDocument();
@@ -260,7 +260,7 @@ describe('FleetReport', () => {
       failures: [],
       error: 'RedisConnectionError: connection refused',
     };
-    render(<FleetReport summary={summary} action="remove" />);
+    render(<FleetReport scope="save" summary={summary} action="remove" />);
     const alert = screen.getByRole('alert');
     expect(within(alert).getByText(/The worker fleet was not reached/)).toBeInTheDocument();
     expect(within(alert).getByText(/Re-run the remove once the bus is back/)).toBeInTheDocument();
@@ -278,7 +278,7 @@ describe('FleetReport', () => {
       failures: [{ name: 'serve-b', outcome: 'timed_out', message: null, withheld: false }],
       error: null,
     };
-    render(<FleetReport summary={summary} action="deregister" />);
+    render(<FleetReport scope="save" summary={summary} action="deregister" />);
     const alert = screen.getByRole('alert');
     // Nothing was saved on a detach, so the heading must not claim a save.
     expect(within(alert).getByText(/1 worker did not converge/)).toBeInTheDocument();
@@ -301,7 +301,7 @@ describe('FleetReport', () => {
       failures: [],
       error: 'RedisConnectionError: connection refused',
     };
-    render(<FleetReport summary={summary} action="deregister" />);
+    render(<FleetReport scope="save" summary={summary} action="deregister" />);
     const alert = screen.getByRole('alert');
     expect(within(alert).getByText(/The worker fleet was not reached/)).toBeInTheDocument();
     expect(within(alert).queryByText(/Change saved/)).not.toBeInTheDocument();
@@ -323,7 +323,7 @@ describe('FleetReport', () => {
       failures: [{ name: 'serve-a', outcome: 'failed', message: null, withheld: false }],
       error: null,
     };
-    render(<FleetReport summary={summary} />);
+    render(<FleetReport scope="save" summary={summary} />);
     const alert = screen.getByRole('alert');
     // A degraded fleet is a WARNING: panel and headline state one severity.
     expect(alert).toHaveClass('tai-warn-state');
@@ -349,13 +349,13 @@ describe('FleetReport', () => {
       error: null,
     });
 
-    const { rerender } = render(<FleetReport summary={degraded(['serve-a'])} />);
+    const { rerender } = render(<FleetReport scope="save" summary={degraded(['serve-a'])} />);
     let alert = screen.getByRole('alert');
     expect(within(alert).getByText(/1 worker did not converge/)).toBeInTheDocument();
     expect(within(alert).getByText(/This worker may still be running/)).toBeInTheDocument();
     expect(within(alert).getByText(/to converge it\./)).toBeInTheDocument();
 
-    rerender(<FleetReport summary={degraded(['serve-a', 'serve-b'])} />);
+    rerender(<FleetReport scope="save" summary={degraded(['serve-a', 'serve-b'])} />);
     alert = screen.getByRole('alert');
     expect(within(alert).getByText(/2 workers did not converge/)).toBeInTheDocument();
     expect(within(alert).getByText(/These workers may still be running/)).toBeInTheDocument();
@@ -363,7 +363,7 @@ describe('FleetReport', () => {
 
     // Neither reading may reach the screen as a parenthesised suffix.
     for (const names of [['serve-a'], ['serve-a', 'serve-b']]) {
-      rerender(<FleetReport summary={degraded(names)} />);
+      rerender(<FleetReport scope="save" summary={degraded(names)} />);
       expect(screen.getByRole('alert').textContent).not.toContain('worker(s)');
     }
   });
@@ -391,13 +391,13 @@ describe('FleetReport — workers awaiting a respawn', () => {
 
   /** The status panel holding the given heading, read through its role. */
   function panelOf(heading: string): HTMLElement {
-    const panel = screen.getByText(heading).closest<HTMLElement>('[role="status"]');
+    const panel = screen.getByText(`${heading} —`).closest<HTMLElement>('[role="status"]');
     if (panel === null) throw new Error(`no status panel for ${heading}`);
     return panel;
   }
 
   it('names each worker and the keys that take effect only when it restarts', () => {
-    render(<FleetReport summary={awaiting} action="reload" />);
+    render(<FleetReport scope="save" summary={awaiting} action="reload" />);
     const panel = panelOf('2 workers need a restart to apply some settings');
     expect(
       within(panel).getByText(
@@ -418,6 +418,7 @@ describe('FleetReport — workers awaiting a respawn', () => {
   it('agrees the words with a single restartable worker', () => {
     render(
       <FleetReport
+        scope="save"
         summary={{
           ...awaiting,
           awaiting: [{ name: 'serve-1', keys: ['K'], reading: 'restartable' }],
@@ -432,9 +433,26 @@ describe('FleetReport — workers awaiting a respawn', () => {
     ).toBeInTheDocument();
   });
 
+  it.each([
+    ['restartable', '1 worker needs a restart to apply some settings'],
+    ['withheld', '1 worker could not build the stored configuration'],
+    ['unstated', '1 worker has settings it has not applied'],
+  ] as const)('names a %s worker’s panel by its scope', (reading, heading) => {
+    render(
+      <FleetReport
+        summary={{ ...awaiting, awaiting: [{ name: 'serve-1', keys: ['K'], reading }] }}
+        scope="env key K"
+      />,
+    );
+    const line = screen.getByText(new RegExp(`^${heading} —`));
+    expect(line).toHaveTextContent(`${heading} — env key K`);
+    expect(within(line).getByText('env key K')).toHaveClass('tai-mono');
+  });
+
   it('shows the restart list beside a degraded report', () => {
     render(
       <FleetReport
+        scope="save"
         summary={{
           ...awaiting,
           status: 'degraded',
@@ -449,6 +467,7 @@ describe('FleetReport — workers awaiting a respawn', () => {
   it('counts each group apart, with its own heading, guidance and rows', () => {
     render(
       <FleetReport
+        scope="save"
         summary={{
           ...awaiting,
           status: 'degraded',
@@ -485,6 +504,7 @@ describe('FleetReport — workers awaiting a respawn', () => {
   it('never tells a withheld worker that it needs or waits for a restart', () => {
     render(
       <FleetReport
+        scope="save"
         summary={{
           ...awaiting,
           awaiting: [{ name: 'backend-1', keys: ['K'], reading: 'withheld' }],
@@ -506,6 +526,7 @@ describe('FleetReport — workers awaiting a respawn', () => {
   it('gives a worker the reply does not place the guidance that holds either way', () => {
     render(
       <FleetReport
+        scope="save"
         summary={{
           ...awaiting,
           awaiting: [{ name: 'backend-1', keys: ['K'], reading: 'unstated' }],
@@ -524,6 +545,7 @@ describe('FleetReport — workers awaiting a respawn', () => {
   it('agrees the words with several workers the reply does not place', () => {
     render(
       <FleetReport
+        scope="save"
         summary={{
           ...awaiting,
           awaiting: [
@@ -559,7 +581,7 @@ describe('FleetReport — a worker whose reload was refused at its epoch build',
     ({ name, outcome: 'failed', message: 'epoch build refused', withheld: true }) as const;
 
   it('tells a withheld worker to fix the configuration, never to reload again', () => {
-    render(<FleetReport summary={summary([held('serve-a')])} />);
+    render(<FleetReport scope="save" summary={summary([held('serve-a')])} />);
     const alert = screen.getByRole('alert');
     expect(within(alert).getByText(WITHHELD_ONE)).toBeInTheDocument();
     expect(within(alert).getByText('serve-a')).toBeInTheDocument();
@@ -567,7 +589,7 @@ describe('FleetReport — a worker whose reload was refused at its epoch build',
   });
 
   it('words the advice for several withheld workers', () => {
-    render(<FleetReport summary={summary([held('serve-a'), held('serve-b')])} />);
+    render(<FleetReport scope="save" summary={summary([held('serve-a'), held('serve-b')])} />);
     expect(
       within(screen.getByRole('alert')).getByText(
         'The stored configuration did not build on these workers, so they keep running their current configuration. Trying again may be refused the same way: first fix the stored configuration, or the cause the build error names.',
@@ -578,6 +600,7 @@ describe('FleetReport — a worker whose reload was refused at its epoch build',
   it('gives each worker of a mix its own next step', () => {
     render(
       <FleetReport
+        scope="save"
         summary={summary([
           held('serve-a'),
           { name: 'serve-b', outcome: 'timed_out', message: null, withheld: false },
@@ -601,6 +624,7 @@ describe('FleetReport — an unreleased write span', () => {
   it('says the write landed and what the held lock can do, with the store error', () => {
     render(
       <FleetReport
+        scope="save"
         summary={{
           restartsPending: [],
           reloadsUnconfirmed: [],
@@ -621,5 +645,49 @@ describe('FleetReport — an unreleased write span', () => {
       ),
     ).toBeInTheDocument();
     expect(within(alert).getByText('tai42/toolbox: OSError: release failed')).toBeInTheDocument();
+  });
+
+  describe('a report named by its write', () => {
+    /** The scope sits in its own element, so the heading's own text ends at the dash. */
+    const expectNamedHeading = (text: string, scope: string): void => {
+      expect(screen.getByText(`${text} —`)).toHaveTextContent(`${text} — ${scope}`);
+    };
+    const base: FleetReportSummary = {
+      status: 'converged',
+      note: null,
+      failures: [],
+      error: null,
+      awaiting: [],
+      restartsPending: [],
+      reloadsUnconfirmed: [],
+      spanReleaseError: null,
+    };
+    const degraded: FleetReportSummary = {
+      ...base,
+      status: 'degraded',
+      failures: [{ name: 'serve-b', outcome: 'timed_out', message: null, withheld: false }],
+    };
+    const unreachable: FleetReportSummary = { ...base, status: 'unreachable', error: 'bus down' };
+
+    it('names the did-not-converge panel, with and without the saved framing', () => {
+      const { rerender } = render(<FleetReport summary={degraded} scope="manifest" />);
+      expectNamedHeading('Change saved, but 1 worker did not converge', 'manifest');
+
+      rerender(<FleetReport summary={degraded} action="reload" scope="reload" />);
+      expectNamedHeading('1 worker did not converge', 'reload');
+    });
+
+    it('names the unreachable panel, with and without the saved framing', () => {
+      const { rerender } = render(<FleetReport summary={unreachable} scope="manifest" />);
+      expectNamedHeading('Change saved, but the worker fleet was not reached', 'manifest');
+
+      rerender(<FleetReport summary={unreachable} action="reload" scope="reload" />);
+      expectNamedHeading('The worker fleet was not reached', 'reload');
+    });
+
+    it('names the span-release panel', () => {
+      render(<FleetReport summary={{ ...base, spanReleaseError: 'held' }} scope="manifest" />);
+      expectNamedHeading('The config store did not release its write lock', 'manifest');
+    });
   });
 });

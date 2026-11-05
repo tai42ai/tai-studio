@@ -1,6 +1,11 @@
 import { type ApiClient, ApiError, type SettingsSchema } from '@tai42/api-client';
 import { GuardedTabs } from '@tai42/studio-sdk';
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -616,7 +621,7 @@ describe('EnvironmentTab — a save that rolls a worker recycle', () => {
     await screen.findByLabelText('Name of variable OPENAI_API_KEY');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    const section = await screen.findByRole('region', { name: 'Worker recycle' });
+    const section = await screen.findByRole('region', { name: 'Worker recycle — environment' });
     expect(section).toHaveTextContent(
       'Some changed settings take effect only in a fresh worker process, so the fleet restarts the workers that need it, one at a time.',
     );
@@ -660,7 +665,7 @@ describe('EnvironmentTab — a save that rolls a worker recycle', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
     });
-    expect(screen.queryByRole('region', { name: 'Worker recycle' })).toBeNull();
+    expect(screen.queryByRole('region', { name: /^Worker recycle/ })).toBeNull();
   });
 });
 
@@ -675,7 +680,9 @@ describe('EnvironmentTab — a failed save that carries a recycle roll', () => {
     await user.click(within(row as HTMLElement).getByRole('checkbox', { name: 'Secret' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await screen.findByText(reportHeading(`${ROLL_FAILURE_HEADING} — environment`)),
+    ).toBeInTheDocument();
     expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

@@ -4,6 +4,7 @@
  * house confirm. A stub client records each call; the capability projection gates
  * whether the card renders at all.
  */
+import { reportHeading } from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -87,6 +88,41 @@ describe('ToolAdminCard', () => {
     const alert = await screen.findByRole('alert');
     expect(within(alert).getByText(/re-run the remove to converge it/)).toBeInTheDocument();
     expect(within(alert).queryByText(/re-run the reload/)).not.toBeInTheDocument();
+  });
+
+  it('names the reload and the remove whose unconverged reports stack', async () => {
+    const user = userEvent.setup();
+    const unconverged = {
+      ok: true,
+      reachable: true,
+      local_only: false,
+      results: [
+        { name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
+        { name: 'serve-b', outcome: 'timed_out', payload: null, error: null, detail: null },
+      ],
+      error: null,
+    };
+    renderWithProviders(<ToolAdminCard />, {
+      client: {
+        reloadTool: vi.fn().mockResolvedValue({ ...unconverged, op: 'reload_tool' }),
+        removeTool: vi.fn().mockResolvedValue({ ...unconverged, op: 'remove_tool' }),
+      },
+      projection: fullProjection(),
+    });
+
+    await screen.findByText('App tool administration');
+    await user.type(screen.getByLabelText('Kind'), 'example_tool');
+    await user.type(screen.getByLabelText('Name'), 'echo');
+    await user.click(screen.getByRole('button', { name: 'Reload tool' }));
+    const heading = (scope: string) => reportHeading(`1 worker did not converge — ${scope}`);
+    await screen.findByText(heading('reload'));
+
+    await user.click(screen.getByRole('button', { name: 'Remove tool' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Remove tool' }));
+
+    expect(await screen.findByText(heading('remove'))).toBeVisible();
+    expect(screen.getByText(heading('reload'))).toBeVisible();
   });
 
   it('disables both actions until kind AND name are filled', async () => {

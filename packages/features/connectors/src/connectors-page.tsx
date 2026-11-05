@@ -45,7 +45,7 @@ import {
 import { type DirectoryActions, useDirectoryGrants } from './entry-status';
 import { connectionKey } from './keys';
 import { Notice } from './notice';
-import { useOAuthRedirectResume } from './oauth';
+import { OAUTH_WRITE, useOAuthRedirectResume } from './oauth';
 import { RemoveProviderDialog } from './provider-controls';
 import { directoryRows, useDirectoryReads } from './use-directory';
 import { useMcpServerActions } from './use-mcp-server-actions';
@@ -80,7 +80,7 @@ function DeregisterDialog({
       }}
       onClose={onClose}
       isPending={serverActions.deregister.isPending}
-      error={serverActions.deregister.error}
+      failure={{ error: serverActions.deregister.error, scope: 'deregister' }}
       confirmVariant="danger"
     >
       <p style={{ margin: 0 }}>
@@ -90,7 +90,11 @@ function DeregisterDialog({
       </p>
       {serverActions.deregisterReport !== null ? (
         <div style={{ marginTop: 'var(--tai-space-3)' }}>
-          <FleetReport summary={serverActions.deregisterReport} action="deregister" />
+          <FleetReport
+            summary={serverActions.deregisterReport}
+            action="deregister"
+            scope="deregister"
+          />
         </div>
       ) : null}
     </ConfirmDialog>
@@ -105,7 +109,7 @@ function ReloadOutcome({ serverActions }: { readonly serverActions: ServerAction
         <ErrorState message={errorMessage(serverActions.reload.error)} />
       ) : null}
       {serverActions.reloadReport !== null ? (
-        <FleetReport summary={serverActions.reloadReport} action="reload" />
+        <FleetReport summary={serverActions.reloadReport} action="reload" scope="reload" />
       ) : null}
     </>
   );
@@ -283,9 +287,9 @@ export function ConnectorsPage(props: PageProps<'connectors'>): ReactNode {
   return (
     <Stack gap={4}>
       {resume.notice !== null ? (
-        <Notice notice={resume.notice} onDismiss={resume.clearNotice} />
+        <Notice notice={resume.notice} onDismiss={resume.clearNotice} scope={OAUTH_WRITE} />
       ) : null}
-      {resumeFleet !== null ? <FleetReport summary={resumeFleet} /> : null}
+      {resumeFleet !== null ? <FleetReport summary={resumeFleet} scope={OAUTH_WRITE} /> : null}
       {detailId !== null ? (
         <ConnectionDetail connectionId={detailId} />
       ) : (

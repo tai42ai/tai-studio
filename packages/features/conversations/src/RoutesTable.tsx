@@ -179,7 +179,10 @@ export function RoutesTable({
           confirmLabel="Delete route"
           pendingLabel="Deleting"
           isPending={deleteMutation.isPending}
-          error={deleteMutation.isError ? errorMessage(deleteMutation.error) : null}
+          failure={{
+            error: deleteMutation.isError ? errorMessage(deleteMutation.error) : null,
+            scope: 'delete route',
+          }}
           onConfirm={() => {
             deleteMutation.mutate(pendingDelete);
           }}

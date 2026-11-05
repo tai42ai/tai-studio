@@ -19,6 +19,7 @@ import {
   pending,
   previewFixture,
   renderWithApi,
+  rollOnFailure,
   storeOffError,
 } from './test-install-fixtures';
 
@@ -446,6 +447,51 @@ describe('An install refused because an MCP server holds no tool listing', () =>
 });
 
 describe('PluginInstallPanel — a failed install that carries a recycle roll', () => {
+  it('heads the dialog report with the install', async () => {
+    const user = userEvent.setup();
+    const failure = new Error('Internal Server Error');
+    renderWithApi(
+      <PluginInstallDialog
+        refValue="acme/relay"
+        version="1.0.0"
+        detail={detail()}
+        onInstalled={noop}
+        onDismiss={noop}
+      />,
+      {
+        previewMarketplaceInstall: vi.fn().mockResolvedValue(envPreview([])),
+        installMarketplacePlugin: vi.fn().mockRejectedValue(failure),
+        ...rollOnFailure(failure),
+      },
+    );
+    const dialog = await screen.findByRole('dialog');
+    await within(dialog).findByText(/The app will pip-install the package and reload\./);
+    await user.click(within(dialog).getByRole('button', { name: 'Install' }));
+    expect(await screen.findByText('1 worker has settings it has not applied —')).toHaveTextContent(
+      '1 worker has settings it has not applied — install',
+    );
+  });
+
+  it('names a failed preview apart from the install', async () => {
+    const failure = new Error('boom: preview');
+    renderWithApi(
+      <PluginInstallPanel
+        refValue="acme/relay"
+        version="1.0.0"
+        detail={detail()}
+        onInstalled={noop}
+        onDismiss={noop}
+      />,
+      {
+        previewMarketplaceInstall: vi.fn().mockRejectedValue(failure),
+        ...rollOnFailure(failure),
+      },
+    );
+    expect(await screen.findByText('1 worker has settings it has not applied —')).toHaveTextContent(
+      '1 worker has settings it has not applied — install preview',
+    );
+  });
+
   it('shows the roll beside the error', async () => {
     const user = userEvent.setup();
     const failure = new Error('Internal Server Error');
@@ -483,7 +529,9 @@ describe('PluginInstallPanel — a failed install that carries a recycle roll', 
     await within(form).findByText(/The app will pip-install the package and reload\./);
     await user.click(within(form).getByRole('button', { name: 'Install' }));
 
-    expect(await screen.findByText('1 worker has settings it has not applied')).toBeInTheDocument();
+    expect(await screen.findByText('1 worker has settings it has not applied —')).toHaveTextContent(
+      '1 worker has settings it has not applied — install',
+    );
     expect(screen.getByText('Internal Server Error')).toBeInTheDocument();
   });
 });

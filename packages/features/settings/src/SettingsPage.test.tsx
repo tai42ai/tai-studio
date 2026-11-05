@@ -2,13 +2,19 @@ import type { ApiClient, SettingsSchema } from '@tai42/api-client';
 import type { SettingsTabProps } from '@tai42/studio-sdk';
 import { loadPlugin, type PluginLoaderState, setPluginHostState } from '@tai42/studio-sdk/host';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
-import { screen, waitFor } from '@testing-library/react';
+import { reportHeading } from '@tai42/test-support';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SettingsPage } from './SettingsPage';
-import { fullProjection, renderWithProviders, scopedProjection } from './test-utils';
+import {
+  clickWhenInteractable,
+  fullProjection,
+  renderWithProviders,
+  scopedProjection,
+} from './test-utils';
 
 /** No route mounts and no declared route panels: the host inputs of a plugin that contributes none. */
 const NO_HOST_INPUTS = { mounts: {}, declaredRoutePanels: [] };
@@ -128,6 +134,63 @@ describe('SettingsPage', () => {
     await waitFor(() => {
       expect(screen.queryByRole('tab')).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('SettingsPage — the reports of several writes', () => {
+  const AWAITING_HEADING = '1 worker has settings it has not applied';
+  const awaiting = [{ name: 'worker-2', keys: ['K'] }];
+
+  it('names the reload and the environment save whose reports stack', async () => {
+    const user = userEvent.setup();
+    const client = {
+      getConfigMode: vi.fn().mockResolvedValue({ config_mode: 'env-file', read_only: false }),
+      getSettingsSchema: vi.fn(emptySchema),
+      getEnvConfig: vi.fn(() => Promise.resolve({ env: { KEY: 'value' }, secret_keys: [] })),
+      reloadConfig: vi.fn().mockResolvedValue({
+        ok: true,
+        op: 'reload_config',
+        reachable: true,
+        local_only: false,
+        results: [],
+        error: null,
+        awaiting_respawn: awaiting,
+        recycle: null,
+        roll_deferred: false,
+        roll_deferred_to: null,
+      }),
+      setEnvConfig: vi.fn().mockResolvedValue({
+        status: 'ok',
+        env_keys: 1,
+        fanout: null,
+        span_release_error: null,
+        awaiting_respawn: awaiting,
+        recycle: null,
+      }),
+    } as unknown as ApiClient;
+    renderWithProviders(<SettingsPage search={{}} />, { client, projection: fullProjection() });
+
+    await user.click(await screen.findByRole('tab', { name: 'Environment' }));
+    await screen.findByLabelText('Name of variable KEY');
+
+    const reload = await screen.findByRole('button', { name: 'Reload configuration' });
+    await waitFor(() => {
+      expect(reload).toBeEnabled();
+    });
+    await user.click(reload);
+    const dialog = await screen.findByRole('dialog');
+    await clickWhenInteractable(
+      user,
+      within(dialog).getByRole('button', { name: 'Reload config' }),
+    );
+    await screen.findByText(reportHeading(`${AWAITING_HEADING} — reload`));
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(
+      await screen.findByText(reportHeading(`${AWAITING_HEADING} — environment`)),
+    ).toBeVisible();
+    expect(screen.getByText(reportHeading(`${AWAITING_HEADING} — reload`))).toBeVisible();
   });
 });
 

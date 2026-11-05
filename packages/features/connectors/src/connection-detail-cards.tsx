@@ -18,7 +18,7 @@ import {
 import type { ReactNode } from 'react';
 
 import { ConnectorRefusalNotice, Notice, readConnectorRefusal } from './notice';
-import type { OAuthNotice } from './oauth';
+import { OAUTH_WRITE, type OAuthNotice } from './oauth';
 
 export interface SubServiceChoice {
   readonly id: string;
@@ -152,7 +152,7 @@ export function ConnectionNotices({
   readonly unreachableLabels: readonly string[];
   readonly consentBlocked: boolean;
   readonly refusal: ReturnType<typeof readConnectorRefusal>;
-  readonly mutationFailure: unknown;
+  readonly mutationFailure: { readonly write: string; readonly error: unknown } | null;
   readonly patchFleet: FleetReportSummary | null;
   readonly oauthNotice: OAuthNotice | null;
   readonly onClearOauthNotice: () => void;
@@ -204,16 +204,18 @@ export function ConnectionNotices({
       {refusal !== null ? (
         <ConnectorRefusalNotice refusal={refusal} />
       ) : mutationFailure !== null ? (
-        <WriteFailure error={mutationFailure} />
+        <WriteFailure error={mutationFailure.error} scope={mutationFailure.write} />
       ) : null}
       {/* A sub-service change that writes the manifest broadcasts a reload to the
           fleet; surface any failed propagation honestly (nothing on a converged
           save or a consent-only toggle that wrote nothing). */}
-      {patchFleet !== null ? <FleetReport summary={patchFleet} /> : null}
-      {oauthNotice !== null ? <Notice notice={oauthNotice} onDismiss={onClearOauthNotice} /> : null}
+      {patchFleet !== null ? <FleetReport summary={patchFleet} scope="sub-services" /> : null}
+      {oauthNotice !== null ? (
+        <Notice notice={oauthNotice} onDismiss={onClearOauthNotice} scope={OAUTH_WRITE} />
+      ) : null}
       {/* A reconnect / consent OAuth completion whose reload did not converge surfaces
           the stranded origins here instead of closing behind a bare success notice. */}
-      {oauthFleet !== null ? <FleetReport summary={oauthFleet} /> : null}
+      {oauthFleet !== null ? <FleetReport summary={oauthFleet} scope={OAUTH_WRITE} /> : null}
     </>
   );
 }

@@ -8,9 +8,11 @@ const SUPERVISOR = 'Restart them through your deployment’s supervisor.';
 
 describe('RecycleRollSection', () => {
   it('states that no worker was recycled for an empty roll', () => {
-    render(<RecycleRollSection roll={{ recycle: [], fresh: [], recycle_stopped: null }} />);
-    expect(screen.getByRole('region', { name: 'Worker recycle' })).toHaveTextContent(
-      'Worker recycleNo worker was recycled.',
+    render(
+      <RecycleRollSection scope="save" roll={{ recycle: [], fresh: [], recycle_stopped: null }} />,
+    );
+    expect(screen.getByRole('region', { name: 'Worker recycle — save' })).toHaveTextContent(
+      'Worker recycle — saveNo worker was recycled.',
     );
   });
 
@@ -24,6 +26,7 @@ describe('RecycleRollSection', () => {
   it('explains the restarts and notes a self-deferred line, joining a fresh life', () => {
     render(
       <RecycleRollSection
+        scope="save"
         roll={{
           recycle: [
             {
@@ -48,7 +51,7 @@ describe('RecycleRollSection', () => {
         }}
       />,
     );
-    const section = screen.getByRole('region', { name: 'Worker recycle' });
+    const section = screen.getByRole('region', { name: 'Worker recycle — save' });
     expect(
       within(section).getByText(
         'Some changed settings take effect only in a fresh worker process, so the fleet restarts the workers that need it, one at a time.',
@@ -66,6 +69,7 @@ describe('RecycleRollSection — a stopped roll', () => {
   it('names the target the roll stopped at and the workers it did not recycle', () => {
     render(
       <RecycleRollSection
+        scope="save"
         roll={{
           recycle: [
             {
@@ -92,6 +96,7 @@ describe('RecycleRollSection — a stopped roll', () => {
   it('names no worker when the roll stopped with no target in hand', () => {
     render(
       <RecycleRollSection
+        scope="save"
         roll={{
           recycle: [],
           fresh: [],

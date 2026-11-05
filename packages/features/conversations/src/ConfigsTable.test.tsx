@@ -216,6 +216,9 @@ describe('ConfigsTable — CRUD', () => {
     await waitFor(() => {
       expect(list.mock.calls.length).toBeGreaterThan(1);
     });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
   });
 
   it('surfaces a delete failure loudly and keeps the confirm open', async () => {

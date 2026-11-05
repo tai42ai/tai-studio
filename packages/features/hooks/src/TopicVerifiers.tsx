@@ -98,7 +98,10 @@ export function TopicVerifiers({
             setPendingUnbind(null);
           }}
           isPending={unbindMutation.isPending}
-          error={unbindMutation.isError ? unbindMutation.error : null}
+          failure={{
+            error: unbindMutation.isError ? unbindMutation.error : null,
+            scope: 'unbind topic verifier',
+          }}
         >
           <p style={{ margin: 0 }}>
             Unbind the verifier from &ldquo;{pendingUnbind}&rdquo;? Its webhook ingress becomes OPEN

@@ -16,6 +16,7 @@ import { type CSSProperties, type ReactNode, useId } from 'react';
 
 import { Badge } from './badge';
 import { AlertTriangleIcon } from './icons';
+import { ReportScope } from './report-scope';
 
 const titleStyle: CSSProperties = {
   margin: '0 0 var(--tai-space-2)',
@@ -90,8 +91,8 @@ function StoppedPanel({ stopped }: { readonly stopped: RecycleStop }): ReactNode
 export interface RecycleRollSectionProps {
   /** The roll, read from a reply that nests it or one that carries its fields flat. */
   readonly roll: Pick<RecycleRoll, 'recycle' | 'fresh' | 'recycle_stopped'>;
-  /** The part of the operation the roll belongs to, named after the heading. */
-  readonly scope?: string;
+  /** The write the roll belongs to, named after the heading. */
+  readonly scope: string;
 }
 
 export function RecycleRollSection({ roll, scope }: RecycleRollSectionProps): ReactNode {
@@ -102,12 +103,7 @@ export function RecycleRollSection({ roll, scope }: RecycleRollSectionProps): Re
     <section aria-labelledby={headingId}>
       <h4 id={headingId} style={titleStyle}>
         Worker recycle
-        {scope !== undefined ? (
-          <>
-            {' — '}
-            <span className="tai-mono">{scope}</span>
-          </>
-        ) : null}
+        <ReportScope scope={scope} />
       </h4>
       {ran ? (
         <p style={noteStyle}>

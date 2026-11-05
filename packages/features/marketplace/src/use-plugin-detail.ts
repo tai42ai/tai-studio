@@ -30,11 +30,16 @@ function usePluginActions(
   const queryClient = useQueryClient();
   const [installFailure, setInstallFailure] = useState<unknown>(null);
 
-  const onInstallSuccess = (receipt: MarketplaceInstallResult, verb: string): void => {
+  const onInstallSuccess = (
+    receipt: MarketplaceInstallResult,
+    verb: string,
+    write: ActionResult['write'],
+  ): void => {
     setActiveAction(null);
     setInstallFailure(null);
     setResult({
       verb,
+      write,
       ref: receipt.ref,
       version: receipt.version,
       notes: receipt.notes,
@@ -51,6 +56,7 @@ function usePluginActions(
       setActiveAction(null);
       setResult({
         verb: 'Uninstalled',
+        write: 'uninstall',
         ref: receipt.ref,
         version: null,
         notes: receipt.notes,
@@ -71,10 +77,10 @@ function usePluginActions(
 
   return {
     onInstalled: (receipt: MarketplaceInstallResult) => {
-      onInstallSuccess(receipt, 'Installed');
+      onInstallSuccess(receipt, 'Installed', 'install');
     },
     onUpdated: (receipt: MarketplaceInstallResult) => {
-      onInstallSuccess(receipt, 'Updated');
+      onInstallSuccess(receipt, 'Updated', 'update');
     },
     onInstallFailed: setInstallFailure,
     /** Forget the failures a dialog recorded, on its close. */

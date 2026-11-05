@@ -2,7 +2,12 @@
 // manifest save, the orphan sweep after it, and the combined secret paste. Each mounts the
 // full editor, so userEvent runs without its inter-key delay.
 import { ApiError } from '@tai42/api-client';
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -84,7 +89,13 @@ function expectStoppedRoll(): void {
     'The recycle stopped at backend-2 (backend workers)',
   );
   expect(screen.getByTestId('recycle-stopped')).toHaveTextContent('old life still present');
-  expect(screen.getByText('1 worker needs a restart to apply some settings')).toBeVisible();
+}
+
+/** The restart banner one write's report names, read as the heading a person reads. */
+function restartBanner(write: string): HTMLElement {
+  return screen.getByText(
+    reportHeading(`1 worker needs a restart to apply some settings — ${write}`),
+  );
 }
 
 function editorClient(overrides: Record<string, unknown>) {
@@ -140,6 +151,7 @@ describe('McpServersSection — the recycle roll of each write', () => {
 
     await screen.findByText(/Saved \(/, undefined, { timeout: 5000 });
     expectStoppedRoll();
+    expect(restartBanner('manifest')).toBeVisible();
   });
 
   it('reports the roll the orphan sweep ran', async () => {
@@ -151,6 +163,7 @@ describe('McpServersSection — the recycle roll of each write', () => {
 
     await screen.findByText(/Saved \(/, undefined, { timeout: 5000 });
     expectStoppedRoll();
+    expect(restartBanner('env key SECRET_1')).toBeVisible();
   });
 
   it('keeps the roll the manifest save ran when the sweep after it fails', async () => {
@@ -165,6 +178,7 @@ describe('McpServersSection — the recycle roll of each write', () => {
 
     expect(await screen.findByText(/sweep refused/)).toBeVisible();
     expectStoppedRoll();
+    expect(restartBanner('manifest')).toBeVisible();
   });
 
   it('reports the roll the secret paste ran', async () => {
@@ -179,6 +193,7 @@ describe('McpServersSection — the recycle roll of each write', () => {
       expect(screen.getByRole('button', { name: /Save config/ })).toBeEnabled();
     });
     expectStoppedRoll();
+    expect(restartBanner('manifest and secret')).toBeVisible();
   });
 
   it('keeps the roll the secret paste ran when its confirmation read fails', async () => {
@@ -196,6 +211,7 @@ describe('McpServersSection — the recycle roll of each write', () => {
 
     expect((await screen.findAllByText(/config is reloading/)).length).toBeGreaterThan(0);
     expectStoppedRoll();
+    expect(restartBanner('manifest and secret')).toBeVisible();
   });
 });
 
@@ -218,6 +234,36 @@ describe('McpServersSection — the name of the write each roll belongs to', () 
     const sweep = screen.getByRole('region', { name: 'Worker recycle — env key SECRET_1' });
     expect(within(sweep).getByText('recycled')).toBeInTheDocument();
     expect(within(sweep).queryByTestId('recycle-stopped')).toBeNull();
+  });
+
+  it('keeps the restart banner of the write that left a worker waiting, named by that write', async () => {
+    const user = userEvent.setup({ delay: null });
+    const client = editorClient({
+      setMcpConfig: vi.fn().mockResolvedValue(stoppedRoll),
+      setEnvConfig: vi.fn().mockResolvedValue(recycledRoll),
+    });
+    renderWithProviders(<McpServersSection />, { client });
+
+    await saveWithGeneratedKeyOrphaned(user);
+    await screen.findByText(/Saved \(/, undefined, { timeout: 5000 });
+
+    expect(restartBanner('manifest')).toBeVisible();
+    expect(screen.getAllByText(/needs a restart to apply some settings/)).toHaveLength(1);
+  });
+
+  it('names each write that left a worker waiting with its own banner', async () => {
+    const user = userEvent.setup({ delay: null });
+    const client = editorClient({
+      setMcpConfig: vi.fn().mockResolvedValue(stoppedRoll),
+      setEnvConfig: vi.fn().mockResolvedValue(stoppedRoll),
+    });
+    renderWithProviders(<McpServersSection />, { client });
+
+    await saveWithGeneratedKeyOrphaned(user);
+    await screen.findByText(/Saved \(/, undefined, { timeout: 5000 });
+
+    expect(restartBanner('manifest')).toBeVisible();
+    expect(restartBanner('env key SECRET_1')).toBeVisible();
   });
 
   it('heads a save that made one write with that write', async () => {
@@ -250,6 +296,20 @@ describe('McpServersSection — the name of the write each roll belongs to', () 
 });
 
 describe('McpServersSection — a failed write that carries a recycle roll', () => {
+  const failedBanner = new RegExp(`^${ROLL_FAILURE_HEADING} —`);
+
+  /** A failed reply whose write ran a roll, the roll stopped. */
+  function failureCarryingRoll(): ApiError {
+    return new ApiError(ROLL_FAILURE_MESSAGE, 500, undefined, undefined, {
+      error: ROLL_FAILURE_MESSAGE,
+      error_id: 'err-1',
+      recycle: stoppedRoll.recycle,
+      awaiting_respawn: [],
+      roll_deferred: false,
+      roll_deferred_to: null,
+    });
+  }
+
   it('shows the roll beside the error of a failed manifest save', async () => {
     const user = userEvent.setup({ delay: null });
     const client = editorClient({
@@ -262,8 +322,93 @@ describe('McpServersSection — a failed write that carries a recycle roll', () 
     await user.click(screen.getByRole('button', { name: 'Remove entry 1' }));
     await user.click(screen.getByRole('button', { name: /Save config/ }));
 
-    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    const banner = await screen.findByText(failedBanner);
+    expect(banner).toHaveTextContent(`${ROLL_FAILURE_HEADING} — manifest`);
     expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
+  });
+
+  it('names the failed sweep, not the manifest save that landed before it', async () => {
+    const user = userEvent.setup({ delay: null });
+    const client = editorClient({
+      setMcpConfig: vi.fn().mockResolvedValue(stoppedRoll),
+      setEnvConfig: vi.fn().mockRejectedValue(failureWithRoll()),
+    });
+    renderWithProviders(<McpServersSection />, { client });
+
+    await saveWithGeneratedKeyOrphaned(user);
+
+    const banner = await screen.findByText(failedBanner);
+    expect(banner).toHaveTextContent(`${ROLL_FAILURE_HEADING} — env key SECRET_1`);
+    expect(restartBanner('manifest')).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Worker recycle — manifest' })).toBeVisible();
+  });
+
+  it('names a retried manifest save that failed after its sweep failed', async () => {
+    const user = userEvent.setup({ delay: null });
+    const client = editorClient({
+      setMcpConfig: vi
+        .fn()
+        .mockResolvedValueOnce(stoppedRoll)
+        .mockRejectedValue(failureCarryingRoll()),
+      setEnvConfig: vi.fn().mockRejectedValue(failureCarryingRoll()),
+    });
+    renderWithProviders(<McpServersSection />, { client });
+
+    await saveWithGeneratedKeyOrphaned(user);
+    await screen.findByRole('region', { name: 'Worker recycle — env key SECRET_1' });
+    await user.click(screen.getByRole('button', { name: /Save config/ }));
+
+    expect(await screen.findByRole('region', { name: 'Worker recycle — manifest' })).toBeVisible();
+    expect(screen.queryByRole('region', { name: 'Worker recycle — env key SECRET_1' })).toBeNull();
+  });
+
+  it('names the did-not-converge panel of the manifest save and of the sweep', async () => {
+    const user = userEvent.setup({ delay: null });
+    const unconfirmed = {
+      status: 'ok',
+      env_keys: 0,
+      awaiting_respawn: [],
+      recycle: null,
+      span_release_error: null,
+      fanout: {
+        mode: 'fleet',
+        op: 'reload_config',
+        reachable: true,
+        local_only: false,
+        results: [
+          { name: 'serve-b', outcome: 'timed_out', payload: null, error: null, detail: null },
+        ],
+        error: null,
+      },
+    };
+    const client = editorClient({
+      setMcpConfig: vi.fn().mockResolvedValue(unconfirmed),
+      setEnvConfig: vi.fn().mockResolvedValue(unconfirmed),
+    });
+    renderWithProviders(<McpServersSection />, { client });
+
+    await saveWithGeneratedKeyOrphaned(user);
+
+    const heading = (scope: string) =>
+      reportHeading(`Change saved, but 1 worker did not converge — ${scope}`);
+    expect(await screen.findByText(heading('env key SECRET_1'))).toBeVisible();
+    expect(screen.getByText(heading('manifest'))).toBeVisible();
+  });
+
+  it('heads the roll of a failed sweep with the sweep, next to the manifest save’s', async () => {
+    const user = userEvent.setup({ delay: null });
+    const client = editorClient({
+      setMcpConfig: vi.fn().mockResolvedValue(stoppedRoll),
+      setEnvConfig: vi.fn().mockRejectedValue(failureCarryingRoll()),
+    });
+    renderWithProviders(<McpServersSection />, { client });
+
+    await saveWithGeneratedKeyOrphaned(user);
+
+    expect(
+      await screen.findByRole('region', { name: 'Worker recycle — env key SECRET_1' }),
+    ).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Worker recycle — manifest' })).toBeVisible();
   });
 
   it('shows the roll beside the error of a failed secret paste', async () => {
@@ -275,7 +420,8 @@ describe('McpServersSection — a failed write that carries a recycle roll', () 
 
     await pasteSecret(user);
 
-    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    const banner = await screen.findByText(failedBanner);
+    expect(banner).toHaveTextContent(`${ROLL_FAILURE_HEADING} — manifest and secret`);
     expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

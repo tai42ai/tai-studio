@@ -4,7 +4,12 @@
  * adds the server. Every server refusal is shown with the server's message.
  */
 import { ApiError } from '@tai42/api-client';
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -260,7 +265,11 @@ describe('AddServerDialog — step 2, the review', () => {
     const user = await lookUp();
     await user.click(await screen.findByRole('button', { name: 'Add server' }));
     const alert = await screen.findByRole('alert');
-    expect(within(alert).getByText(/did not converge/)).toBeInTheDocument();
+    expect(
+      within(alert).getByText(
+        reportHeading('Change saved, but 1 worker did not converge — add server'),
+      ),
+    ).toBeInTheDocument();
     expect(within(alert).getByText('serve-b')).toBeInTheDocument();
     expect(onAdded).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -280,7 +289,9 @@ describe('AddServerDialog — a failed add that carries a recycle roll', () => {
     const user = await lookUp();
     await user.click(await screen.findByRole('button', { name: 'Add server' }));
 
-    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await screen.findByText(reportHeading(`${ROLL_FAILURE_HEADING} — add server`)),
+    ).toBeInTheDocument();
     expect(screen.getByText('The server could not be added')).toBeInTheDocument();
     expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });

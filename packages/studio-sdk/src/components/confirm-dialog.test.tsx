@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { listingRefusal, renderWithRefusalReaders } from '../test-listing-refusals';
-import { ConfirmDialog } from './confirm-dialog';
+import { ConfirmDialog, type ConfirmDialogProps } from './confirm-dialog';
 
 /** The required props, so each test states only what it is exercising. */
-function renderConfirm(overrides: Partial<Parameters<typeof ConfirmDialog>[0]> = {}) {
+function renderConfirm(overrides: Partial<ConfirmDialogProps> = {}) {
   const onConfirm = vi.fn();
   const onClose = vi.fn();
   renderWithRefusalReaders(
@@ -60,6 +60,14 @@ describe('ConfirmDialog', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('shows no failure when none is given or the one given holds no error', () => {
+    renderConfirm();
+    expect(screen.queryByRole('alert')).toBeNull();
+    cleanup();
+    renderConfirm({ failure: { error: null, scope: 'delete scope' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('shows the pending spinner and disables the confirm while the action runs', () => {
     renderConfirm({ isPending: true });
     expect(screen.getByRole('button', { name: /Delete scope/ })).toBeDisabled();
@@ -67,13 +75,17 @@ describe('ConfirmDialog', () => {
   });
 
   it('renders a failed action loudly', () => {
-    renderConfirm({ error: new Error('scope is referenced by 3 agents') });
+    renderConfirm({
+      failure: { error: new Error('scope is referenced by 3 agents'), scope: 'delete scope' },
+    });
     expect(screen.getByRole('alert')).toHaveTextContent('scope is referenced by 3 agents');
   });
 
   it('shows a failure refused because an MCP server is still starting as that refusal', () => {
     const message = "MCP server 'relay' start still in progress after 10s";
-    renderConfirm({ error: listingRefusal('mcp-server-starting', message) });
+    renderConfirm({
+      failure: { error: listingRefusal('mcp-server-starting', message), scope: 'delete scope' },
+    });
     const refusal = screen.getByRole('alert');
     expect(refusal).toHaveClass('tai-warn-state');
     expect(refusal).toHaveTextContent('An MCP server is still starting');
@@ -81,7 +93,7 @@ describe('ConfirmDialog', () => {
   });
 
   it('renders a bare message string as loudly as a thrown Error', () => {
-    renderConfirm({ error: 'scope is referenced by 3 agents' });
+    renderConfirm({ failure: { error: 'scope is referenced by 3 agents', scope: 'delete scope' } });
     expect(screen.getByRole('alert')).toHaveTextContent('scope is referenced by 3 agents');
   });
 
@@ -89,7 +101,7 @@ describe('ConfirmDialog', () => {
     // The OFF (disabled-feature) case: the note takes the error slot, no red alert
     // renders even when an error is also present, and the confirm cannot re-fire.
     renderConfirm({
-      error: new Error('marketplace not configured'),
+      failure: { error: new Error('marketplace not configured'), scope: 'delete scope' },
       disabledNote: <p data-testid="off-note">Marketplace is not configured.</p>,
     });
     expect(screen.getByTestId('off-note')).toBeInTheDocument();
@@ -136,5 +148,46 @@ describe('ConfirmDialog', () => {
     expect(confirm).toBeDisabled();
     await user.click(confirm);
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('names a failure that carries a recycle roll with the scope the caller gives it', () => {
+    const failed = new Error('boom');
+    renderWithRefusalReaders(
+      <ConfirmDialog
+        title="Delete scope"
+        confirmLabel="Delete scope"
+        pendingLabel="Deleting"
+        onConfirm={vi.fn()}
+        onClose={vi.fn()}
+        isPending={false}
+        failure={{ error: failed, scope: 'remove entry' }}
+      >
+        Body
+      </ConfirmDialog>,
+      {
+        failedReplyRoll: (error: unknown) =>
+          error === failed
+            ? {
+                summary: {
+                  status: 'converged',
+                  note: null,
+                  failures: [],
+                  error: null,
+                  awaiting: [],
+                  restartsPending: [],
+                  reloadsUnconfirmed: [],
+                  spanReleaseError: null,
+                },
+                recycle: {
+                  recycle: [],
+                  skipped: [],
+                  fresh: [],
+                  recycle_stopped: { kind: 'backend', name: 'w1', detail: 'stopped' },
+                },
+              }
+            : null,
+      },
+    );
+    expect(screen.getByRole('region', { name: 'Worker recycle — remove entry' })).toBeVisible();
   });
 });

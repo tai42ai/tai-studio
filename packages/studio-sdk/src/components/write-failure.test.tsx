@@ -1,8 +1,10 @@
 import type { ApiClient, FailedReplyRoll } from '@tai42/api-client';
 import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import { ApiProvider } from '../hooks/useApi';
+import { FailedReplyOutcome } from './failed-reply-outcome';
 import { WriteFailure } from './write-failure';
 
 const STARTING_MESSAGE =
@@ -25,7 +27,7 @@ const client = {
 function renderFailure(error: unknown): void {
   render(
     <ApiProvider value={client}>
-      <WriteFailure error={error} />
+      <WriteFailure scope="save" error={error} />
     </ApiProvider>,
   );
 }
@@ -122,7 +124,7 @@ describe('WriteFailure on a reply that carries a recycle roll', () => {
     } as unknown as ApiClient;
     render(
       <ApiProvider value={reading}>
-        <WriteFailure error={FAILED} />
+        <WriteFailure scope="save" error={FAILED} />
       </ApiProvider>,
     );
   }
@@ -130,7 +132,7 @@ describe('WriteFailure on a reply that carries a recycle roll', () => {
   it('shows the discarded build the operator-facing body states, with no saved framing', () => {
     renderRoll(withheld);
     expect(screen.getByText('Internal Server Error')).toBeInTheDocument();
-    expect(screen.getByText('1 worker did not converge')).toBeInTheDocument();
+    expect(screen.getByText('1 worker did not converge —')).toBeInTheDocument();
     expect(
       screen.getByText(
         /^The stored configuration did not build on this worker, so it keeps running its current configuration\. Trying again may be refused the same way: first fix the stored configuration, or the cause the build error names\.$/,
@@ -138,14 +140,14 @@ describe('WriteFailure on a reply that carries a recycle roll', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('build refused')).toBeInTheDocument();
     expect(
-      screen.getByText('1 worker could not build the stored configuration'),
+      screen.getByText('1 worker could not build the stored configuration —'),
     ).toBeInTheDocument();
   });
 
   it('shows the masked body with no report: the worker reads unstated and no headline shows', () => {
     renderRoll(masked);
     expect(screen.getByText('Internal Server Error')).toBeInTheDocument();
-    expect(screen.getByText('1 worker has settings it has not applied')).toBeInTheDocument();
+    expect(screen.getByText('1 worker has settings it has not applied —')).toBeInTheDocument();
     expect(
       screen.getByText(
         'These settings take effect only when this worker restarts. If its new build failed, fix the stored configuration first, since a restart may fail the same way. Then restart it through your deployment’s supervisor (on a bare server, restart the server).',
@@ -158,7 +160,7 @@ describe('WriteFailure on a reply that carries a recycle roll', () => {
 
   it('frames an unreachable bus without saying the change was saved', () => {
     renderRoll(unreachable);
-    expect(screen.getByText('The worker fleet was not reached')).toBeInTheDocument();
+    expect(screen.getByText('The worker fleet was not reached —')).toBeInTheDocument();
     expect(
       screen.getByText(
         'The worker bus was unreachable, so other workers may not be running the stored configuration. Re-run the reload from the System page once the bus is back.',
@@ -180,7 +182,7 @@ describe('WriteFailure on a reply that carries a recycle roll', () => {
     });
     expect(
       screen.getByText(
-        'This worker may not be running the stored configuration \u2014 reload the fleet from the System page to converge it.',
+        'This worker may not be running the stored configuration — reload the fleet from the System page to converge it.',
       ),
     ).toBeInTheDocument();
   });
@@ -191,14 +193,39 @@ describe('WriteFailure on a reply that carries a recycle roll', () => {
     expect(screen.getByText('The recycle stopped at serve-a (serve workers)')).toBeInTheDocument();
   });
 
+  function renderScoped(roll: FailedReplyRoll, ui: ReactNode): void {
+    const reading = {
+      ...client,
+      failedReplyRoll: (error: unknown) => (error === FAILED ? roll : null),
+    } as unknown as ApiClient;
+    render(<ApiProvider value={reading}>{ui}</ApiProvider>);
+  }
+
+  it('heads the roll of a named write with that write', () => {
+    renderScoped(stopped, <WriteFailure error={FAILED} scope="env key K" />);
+    expect(screen.getByRole('region', { name: 'Worker recycle — env key K' })).toBeVisible();
+  });
+
+  it('names the banner of a named write with that write', () => {
+    renderScoped(masked, <WriteFailure error={FAILED} scope="env key K" />);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '1 worker has settings it has not applied — env key K',
+    );
+  });
+
+  it('heads the roll the outcome shows alone with its scope', () => {
+    renderScoped(stopped, <FailedReplyOutcome error={FAILED} scope="env key K" />);
+    expect(screen.getByRole('region', { name: 'Worker recycle — env key K' })).toBeVisible();
+  });
+
   it('keeps a listing refusal as it renders, whatever else the client reads', () => {
     const reading = { ...client, failedReplyRoll: () => masked } as unknown as ApiClient;
     render(
       <ApiProvider value={reading}>
-        <WriteFailure error={STARTING} />
+        <WriteFailure scope="save" error={STARTING} />
       </ApiProvider>,
     );
     expect(screen.getByRole('alert')).toHaveClass('tai-warn-state');
-    expect(screen.queryByText('1 worker has settings it has not applied')).toBeNull();
+    expect(screen.queryByText('1 worker has settings it has not applied —')).toBeNull();
   });
 });

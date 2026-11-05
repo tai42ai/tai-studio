@@ -171,6 +171,7 @@ export function ClientCredentialsDialog({
       description="The ID and secret of the app you registered with this server's sign-in service."
       submitLabel="Save"
       pendingLabel="Saving"
+      errorScope="client credentials"
       submitDisabled={!ready || missingId || issuer === null}
       onSubmit={submit}
       onClose={onClose}

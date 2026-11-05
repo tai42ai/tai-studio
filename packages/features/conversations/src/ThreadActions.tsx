@@ -151,7 +151,10 @@ export function ThreadActions({
           confirmLabel="Delete thread"
           pendingLabel="Deleting"
           isPending={deleteThread.isPending}
-          error={deleteThread.isError ? errorMessage(deleteThread.error) : null}
+          failure={{
+            error: deleteThread.isError ? errorMessage(deleteThread.error) : null,
+            scope: 'delete thread',
+          }}
           onConfirm={() => {
             deleteThread.mutate();
           }}
@@ -172,7 +175,10 @@ export function ThreadActions({
           confirmLabel="Erase person"
           pendingLabel="Erasing"
           isPending={erasePerson.isPending}
-          error={erasePerson.isError ? errorMessage(erasePerson.error) : null}
+          failure={{
+            error: erasePerson.isError ? errorMessage(erasePerson.error) : null,
+            scope: 'erase person',
+          }}
           onConfirm={() => {
             erasePerson.mutate();
           }}

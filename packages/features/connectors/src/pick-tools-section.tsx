@@ -284,7 +284,7 @@ export function SectionRead({
           }
           onRetry={() => void query.refetch()}
         />
-        {justAdded && addFleet !== null ? <FleetReport summary={addFleet} /> : null}
+        {justAdded && addFleet !== null ? <FleetReport summary={addFleet} scope="connect" /> : null}
       </>
     );
   }
@@ -333,7 +333,7 @@ export function SectionOutcome({
             onNavigate={onLeave}
           />
         ) : null}
-        <FailedReplyOutcome error={result.error} />
+        <FailedReplyOutcome error={result.error} scope={title} />
       </div>
     );
   }
@@ -349,7 +349,11 @@ export function SectionOutcome({
         <CheckIcon />
         Saved
       </p>
-      <FleetOutcomeReport summary={result.summary ?? null} recycle={result.recycle ?? null} />
+      <FleetOutcomeReport
+        summary={result.summary ?? null}
+        recycle={result.recycle ?? null}
+        scope={title}
+      />
     </>
   );
 }

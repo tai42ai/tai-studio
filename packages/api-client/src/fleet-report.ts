@@ -123,6 +123,48 @@ export function summarizeFleetResult(result: Omit<FleetResult, 'ok'>): FleetRepo
 }
 
 /**
+ * What a reload's reply says of a worker it holds no broadcast row for:
+ *   - `recycled` — a roll line confirms its old life gone and new capacity up.
+ *   - `outcome-open` — a roll line of any other status, the roll's stop or the awaiting verdict
+ *     names it: the reply leaves its outcome open.
+ *   - `confirmed-clean` — `skipped` names it: it confirmed no restart is due and was left running.
+ *   - `new-life` — only `fresh` names it: a new ready life, which the reply ties to no restart.
+ *   - `roll-handed-off` — only `roll_deferred_to` names it: it carries out the roll after the reply.
+ */
+export type FleetReloadWorkerStatement =
+  'recycled' | 'outcome-open' | 'confirmed-clean' | 'new-life' | 'roll-handed-off';
+
+/** A worker a reload's reply names beyond its one row, with what the reply says of it. */
+export interface FleetReloadNamedWorker {
+  readonly name: string;
+  readonly statement: FleetReloadWorkerStatement;
+}
+
+/**
+ * The workers a fleet reload's report covers: every worker on the bus (`fleet`), the workers the
+ * request named (`selected`), only the answering worker, because the deployment has no worker bus
+ * (`no-bus`) or no other worker is on it (`alone-on-bus`), or one row with nothing to say the
+ * worker was alone (`one-row`): `others` holds the other workers the reply names, each with what it
+ * says of them, and is empty when the roll could not read the bus and so names none.
+ */
+export type FleetReloadReach =
+  | { readonly kind: 'fleet' }
+  | { readonly kind: 'selected'; readonly count: number }
+  | { readonly kind: 'no-bus' }
+  | { readonly kind: 'alone-on-bus' }
+  | {
+      readonly kind: 'one-row';
+      readonly worker: string;
+      readonly others: readonly FleetReloadNamedWorker[];
+    };
+
+/** A fleet reload's report, with the workers it covers. */
+export interface FleetReloadSummary extends FleetReportSummary {
+  /** The workers the report covers. */
+  readonly reach: FleetReloadReach;
+}
+
+/**
  * Interpret a fleet soft restart's {@link FleetReloadResult}: its per-worker report
  * judged as {@link summarizeFleetResult} judges it, with `awaiting` the operation's own
  * `awaiting_respawn` verdict. Each worker's reload payload states the keys that worker
@@ -130,9 +172,81 @@ export function summarizeFleetResult(result: Omit<FleetResult, 'ok'>): FleetRepo
  * so only the verdict says which still await a respawn. Its rows and its roll's lines
  * give the reading of each ({@link AwaitingRestartReading}), and the roll settles the
  * workers whose rows did not confirm ({@link settledWorkers}).
+ *
+ * `targets` is what the request named, `null` for the whole fleet: the reply does not echo it,
+ * and a reply naming one target has the same shape as a lone worker's.
  */
-export function summarizeFleetReload(reply: Omit<FleetReloadResult, 'ok'>): FleetReportSummary {
-  return summarizeWith(reply, reply.awaiting_respawn, reply.recycle ?? NO_ROLL, null);
+export function summarizeFleetReload(
+  reply: Omit<FleetReloadResult, 'ok'>,
+  targets: readonly string[] | null,
+): FleetReloadSummary {
+  return {
+    ...summarizeWith(reply, reply.awaiting_respawn, reply.recycle ?? NO_ROLL, null),
+    reach: reloadReach(reply, targets),
+  };
+}
+
+/**
+ * The workers a reload's report covers. A reachable reply holds one row per expected worker, the
+ * answering worker's own among them, plus the gap rows, and its roll and verdict can still name a
+ * worker with no row. So a single row means the worker was alone on the bus only when the
+ * reply names no one else and its roll read the bus: a roll that stopped on no named worker stopped
+ * reading the bus, so its reply names no one because it could not tell.
+ */
+function reloadReach(
+  reply: Omit<FleetReloadResult, 'ok'>,
+  targets: readonly string[] | null,
+): FleetReloadReach {
+  if (reply.local_only) return { kind: 'no-bus' };
+  if (targets !== null) return { kind: 'selected', count: targets.length };
+  const [row, ...otherRows] = reply.results;
+  if (row === undefined || otherRows.length > 0) return { kind: 'fleet' };
+  const others = workersNamedBeyondRow(reply, row.name);
+  const rollCouldNotReadBus = reply.recycle?.recycle_stopped?.name === null;
+  return others.length > 0 || rollCouldNotReadBus
+    ? { kind: 'one-row', worker: row.name, others }
+    : { kind: 'alone-on-bus' };
+}
+
+/**
+ * The workers a reload's reply names under each statement, the leading statement first: an open
+ * outcome leads a settled one, and what the roll states of a worker's restart leads what only the
+ * reply's lists state.
+ */
+function workersByStatement(
+  reply: Omit<FleetReloadResult, 'ok'>,
+): readonly (readonly [FleetReloadWorkerStatement, readonly string[]])[] {
+  const roll = reply.recycle;
+  const lines = roll?.recycle ?? [];
+  const stoppedAt = roll?.recycle_stopped?.name ?? null;
+  return [
+    [
+      'outcome-open',
+      [
+        ...lines.filter((line) => line.status !== 'recycled').map((line) => line.name),
+        ...(stoppedAt === null ? [] : [stoppedAt]),
+        ...reply.awaiting_respawn.map((worker) => worker.name),
+      ],
+    ],
+    ['recycled', lines.filter((line) => line.status === 'recycled').map((line) => line.name)],
+    ['confirmed-clean', roll?.skipped ?? []],
+    ['new-life', roll?.fresh.map((life) => life.name) ?? []],
+    ['roll-handed-off', reply.roll_deferred_to === null ? [] : [reply.roll_deferred_to]],
+  ];
+}
+
+/** Each worker a reload's reply names beyond its row, once, with the statement that leads for it. */
+function workersNamedBeyondRow(
+  reply: Omit<FleetReloadResult, 'ok'>,
+  rowWorker: string,
+): FleetReloadNamedWorker[] {
+  const statementOf = new Map<string, FleetReloadWorkerStatement>();
+  for (const [statement, names] of workersByStatement(reply)) {
+    for (const name of names) {
+      if (name !== rowWorker && !statementOf.has(name)) statementOf.set(name, statement);
+    }
+  }
+  return [...statementOf].map(([name, statement]) => ({ name, statement }));
 }
 
 /** What a roll states of each worker: its lines, and the workers it left running as clean. */

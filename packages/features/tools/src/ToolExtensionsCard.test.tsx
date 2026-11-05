@@ -6,7 +6,12 @@
  * for a presets-page hint when the selected tool is a preset.
  */
 import { ApiError, type Extension, type PresetRecord } from '@tai42/api-client';
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -243,7 +248,11 @@ describe('ToolExtensionsCard', () => {
     // The success line still shows, alongside the loud fleet-failure report.
     expect(await screen.findByText('Extensions applied.')).toBeInTheDocument();
     const alert = await screen.findByRole('alert');
-    expect(within(alert).getByText(/did not converge/)).toBeInTheDocument();
+    expect(
+      within(alert).getByText(
+        reportHeading('Change saved, but 1 worker did not converge — extensions'),
+      ),
+    ).toBeInTheDocument();
     expect(within(alert).getByText('serve-b')).toBeInTheDocument();
   });
 
@@ -379,7 +388,11 @@ describe('ToolExtensionsCard', () => {
       'The recycle stopped at backend-2 (backend workers)',
     );
     expect(screen.getByTestId('recycle-stopped')).toHaveTextContent('old life still present');
-    expect(screen.getByText('1 worker needs a restart to apply some settings')).toBeVisible();
+    expect(
+      screen.getByText(
+        reportHeading('1 worker needs a restart to apply some settings — extensions'),
+      ),
+    ).toBeVisible();
   });
 
   it('renders the flat apply-result success line after a single-process save', async () => {
@@ -462,7 +475,9 @@ describe('ToolExtensionsCard — a failed save that carries a recycle roll', () 
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 
-    expect(await within(dialog).findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText(reportHeading(`${ROLL_FAILURE_HEADING} — extensions`)),
+    ).toBeInTheDocument();
     expect(within(dialog).getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

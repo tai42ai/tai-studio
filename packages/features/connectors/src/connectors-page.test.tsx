@@ -6,7 +6,12 @@
  * completing a popup-blocked redirect on arrival.
  */
 import { ApiError } from '@tai42/api-client';
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -463,7 +468,7 @@ describe('ConnectorsPage — the provider door on a provider card', () => {
     const dialog = screen.getByRole('dialog', { name: 'Remove this server?' });
     await user.click(within(dialog).getByRole('button', { name: 'Remove' }));
     const alert = await within(dialog).findByRole('alert');
-    expect(alert).toHaveTextContent('Change saved, but 1 worker did not converge');
+    expect(alert).toHaveTextContent('Change saved, but 1 worker did not converge — remove server');
     expect(within(alert).getByText('serve-b')).toBeVisible();
     expect(within(dialog).getByRole('button', { name: 'Remove' })).toBeDisabled();
     await user.click(within(dialog).getByRole('button', { name: 'Close' }));
@@ -492,6 +497,53 @@ describe('ConnectorsPage — routes', () => {
     });
     renderWithProviders(<ConnectorsPage search={{ connection: 'conn-1' }} />, { client });
     expect(await screen.findByText('detail-alias')).toBeInTheDocument();
+  });
+
+  it('names the report of a redirected sign-in that returns to a connection', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      `/connectors?connection=conn-1&${OAUTH_RESUME_PARAMS.state}=st&${OAUTH_RESUME_PARAMS.code}=cd`,
+    );
+    renderWithProviders(<ConnectorsPage search={{ connection: 'conn-1' }} />, {
+      client: makeClient({
+        getConnection: vi.fn().mockResolvedValue(connection()),
+        listProviders: vi.fn().mockResolvedValue(providerCatalog([provider()])),
+        completeOAuth: vi.fn().mockResolvedValue({
+          kind: 'success',
+          connection_id: 'conn-1',
+          return_url: '/connectors',
+          span_release_error: null,
+          fanout: NON_CONVERGED_FANOUT,
+          awaiting_respawn: [{ name: 'serve-c', keys: ['K'] }],
+        }),
+      }),
+    });
+
+    expect(
+      await screen.findByText(
+        reportHeading('1 worker has settings it has not applied — OAuth consent'),
+      ),
+    ).toBeVisible();
+  });
+
+  it('names the report of a redirected sign-in whose completion failed', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      `/connectors?connection=conn-1&${OAUTH_RESUME_PARAMS.state}=st&${OAUTH_RESUME_PARAMS.code}=cd`,
+    );
+    renderWithProviders(<ConnectorsPage search={{ connection: 'conn-1' }} />, {
+      client: makeClient({
+        getConnection: vi.fn().mockResolvedValue(connection()),
+        listProviders: vi.fn().mockResolvedValue(providerCatalog([provider()])),
+        completeOAuth: vi.fn().mockRejectedValue(failureWithRoll()),
+      }),
+    });
+
+    expect(
+      await screen.findByText(reportHeading(`${ROLL_FAILURE_HEADING} — OAuth consent`)),
+    ).toBeVisible();
   });
 
   it('completes a redirected sign-in on arrival and opens the flow at Pick tools', async () => {
@@ -547,7 +599,9 @@ describe('ConnectorsPage — a failed provider removal that carries a recycle ro
     const dialog = screen.getByRole('dialog', { name: 'Remove this server?' });
     await user.click(within(dialog).getByRole('button', { name: 'Remove' }));
 
-    expect(await within(dialog).findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText(reportHeading(`${ROLL_FAILURE_HEADING} — remove server`)),
+    ).toBeInTheDocument();
     expect(within(dialog).getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

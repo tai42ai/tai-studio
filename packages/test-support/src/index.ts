@@ -49,3 +49,12 @@ export function failureWithRoll(status = 500): ApiError {
     roll_deferred_to: null,
   });
 }
+
+/**
+ * Matches the report heading whose whole text, its scope included, reads `text`. The scope sits in
+ * its own element, so the heading is read from its text content.
+ */
+export const reportHeading =
+  (text: string) =>
+  (_content: string, element: Element | null): boolean =>
+    element?.tagName === 'STRONG' && element.textContent === text;

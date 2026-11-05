@@ -66,6 +66,9 @@ function completionFailure(err: unknown): OAuthNotice {
   };
 }
 
+/** The name an OAuth completion's report carries. */
+export const OAUTH_WRITE = 'OAuth consent';
+
 export function useOAuthPopup(options: UseOAuthPopupOptions = {}): UseOAuthPopupResult {
   const { onSuccess } = options;
   const api = useApi();

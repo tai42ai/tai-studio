@@ -138,7 +138,7 @@ export function InteractionsPage(_props: PageProps<'interactions'>): ReactNode {
           confirmLabel="Withdraw question"
           pendingLabel="Cancelling"
           isPending={cancelMutation.isPending}
-          error={resolveCancelError(cancelMutation.error)}
+          failure={{ error: resolveCancelError(cancelMutation.error), scope: 'withdraw question' }}
           onConfirm={() => {
             cancelMutation.mutate(pendingCancel.interaction_id);
           }}

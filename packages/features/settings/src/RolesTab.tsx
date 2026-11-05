@@ -141,7 +141,7 @@ function RolesDialogs({
           confirmLabel="Delete role"
           pendingLabel="Deleting"
           isPending={remove.isPending}
-          error={remove.isError ? remove.error : undefined}
+          failure={{ error: remove.isError ? remove.error : undefined, scope: 'delete role' }}
           onConfirm={() => {
             remove.mutate(deleteName);
           }}

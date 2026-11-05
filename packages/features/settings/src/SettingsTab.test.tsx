@@ -1,5 +1,10 @@
 import { type ApiClient, ApiError, type SettingsSchema } from '@tai42/api-client';
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -222,7 +227,9 @@ describe('SettingsTab', () => {
       'The recycle stopped at backend-2 (backend workers)',
     );
     expect(screen.getByTestId('recycle-stopped')).toHaveTextContent('old life still present');
-    expect(screen.getByText('1 worker needs a restart to apply some settings')).toBeVisible();
+    expect(
+      screen.getByText(reportHeading('1 worker needs a restart to apply some settings — settings')),
+    ).toBeVisible();
   });
 
   it('shows a save refused while an MCP server is still starting as that start, not an error', async () => {
@@ -497,7 +504,9 @@ describe('SettingsTab — a failed save that carries a recycle roll', () => {
     await user.type(port, '123');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await screen.findByText(reportHeading(`${ROLL_FAILURE_HEADING} — settings`)),
+    ).toBeInTheDocument();
     expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

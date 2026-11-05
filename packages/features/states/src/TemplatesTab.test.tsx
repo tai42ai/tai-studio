@@ -5,6 +5,7 @@
  * template attached elsewhere cannot be deleted; a 501 shows FeatureDisabled.
  */
 import { ApiError, apiRoutes, type StateDetail } from '@tai42/api-client';
+import { failureWithRoll, reportHeading, ROLL_FAILURE_HEADING } from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -421,6 +422,29 @@ describe('TemplatesTab', () => {
       await screen.findByRole('button', { name: 'Replace template' }),
     );
     expect(await screen.findByText('replace denied')).toBeInTheDocument();
+  });
+
+  it('names the replace in the report a failed reply carries', async () => {
+    const user = userEvent.setup({ delay: null });
+    const putStateTemplate = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError('template_exists', 409))
+      .mockRejectedValueOnce(failureWithRoll());
+    const { container } = renderWithProviders(<TemplatesTab state={detail()} />, {
+      client: client({ putStateTemplate }),
+    });
+    await screen.findByText('State templates');
+    const file = new File([JSON.stringify({ name: 'notes', schema: {} })], 'notes.json', {
+      type: 'application/json',
+    });
+    await user.upload(lastFileInput(container), file);
+    await clickWhenInteractable(
+      user,
+      await screen.findByRole('button', { name: 'Replace template' }),
+    );
+    expect(
+      await screen.findByText(reportHeading(`${ROLL_FAILURE_HEADING} — replace template`)),
+    ).toBeVisible();
   });
 
   it('the attach form renders the template declaration schema up front', async () => {

@@ -48,7 +48,7 @@ function UpdatePluginDialog({
       pendingLabel="Updating"
       confirmVariant="primary"
       isPending={action.state.status === 'pending'}
-      error={disabled ? null : failure}
+      failure={{ error: disabled ? null : failure, scope: 'update' }}
       disabledNote={
         disabled ? (
           <FeatureDisabled
@@ -148,7 +148,7 @@ export function PluginDetailDialogs({
         confirmLabel="Uninstall"
         pendingLabel="Uninstalling"
         isPending={uninstallMutation.isPending}
-        error={uninstallMutation.error}
+        failure={{ error: uninstallMutation.error, scope: 'uninstall' }}
         onConfirm={() => {
           uninstallMutation.mutate();
         }}

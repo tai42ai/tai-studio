@@ -13,7 +13,12 @@ import {
   ThemeProvider,
 } from '@tai42/studio-sdk';
 import { refusalReaders } from '@tai42/test-support';
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -157,6 +162,9 @@ function worker(name: string, overrides: Partial<FleetWorker> = {}): FleetWorker
 function fleet(...names: string[]): { workers: FleetWorker[] } {
   return { workers: names.map((name, index) => worker(name, { pid: 100 + index })) };
 }
+
+/** The success line, whichever scope the reply reads as. */
+const SUCCESS_LINE = /Reload converged|Only this worker reloaded/;
 
 /** A CONVERGED fleet-reload report — every named worker applied. An empty list is the
  * trivially-converged case the assertion-only tests use. */
@@ -580,7 +588,7 @@ describe('SystemPage', () => {
     const client = stubClient({
       getBackendInfo: vi.fn().mockResolvedValue(PRESENT_BACKEND),
       listFleetWorkers,
-      reloadFleetConfig: vi.fn().mockResolvedValue(converged('w1')),
+      reloadFleetConfig: vi.fn().mockResolvedValue(converged('w1', 'w2')),
     });
     renderWithProviders(<SystemPage search={{}} />, { client });
 
@@ -595,6 +603,78 @@ describe('SystemPage', () => {
     await waitFor(() => {
       expect(listFleetWorkers).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('states the one worker when a whole-fleet reload finds it alone on the worker bus', async () => {
+    const client = stubClient({
+      getBackendInfo: vi.fn().mockResolvedValue(PRESENT_BACKEND),
+      listFleetWorkers: vi.fn().mockResolvedValue(fleet('w1')),
+      reloadFleetConfig: vi.fn().mockResolvedValue(converged('w1')),
+    });
+    renderWithProviders(<SystemPage search={{}} />, { client });
+
+    await userEvent.click(await findEnabledReload('Reload config (all)'));
+    await userEvent.click(screen.getByRole('button', { name: 'Reload config' }));
+
+    expect(
+      await screen.findByText(
+        'Reload applied. Only this worker reloaded; no other worker was on the worker bus when it ran.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('states the one worker when the deployment has no worker bus', async () => {
+    const client = stubClient({
+      getBackendInfo: vi.fn().mockResolvedValue(PRESENT_BACKEND),
+      listFleetWorkers: vi.fn().mockResolvedValue(fleet('w1')),
+      reloadFleetConfig: vi.fn().mockResolvedValue({ ...converged('w1'), local_only: true }),
+    });
+    renderWithProviders(<SystemPage search={{}} />, { client });
+
+    await userEvent.click(await findEnabledReload('Reload config (all)'));
+    await userEvent.click(screen.getByRole('button', { name: 'Reload config' }));
+
+    expect(
+      await screen.findByText(
+        'Reload applied. Only this worker reloaded; no worker bus is configured.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('names the selection on a reload that targeted one worker of a larger fleet, never lone', async () => {
+    const client = stubClient({
+      getBackendInfo: vi.fn().mockResolvedValue(PRESENT_BACKEND),
+      listFleetWorkers: vi.fn().mockResolvedValue(fleet('w1', 'w2')),
+      reloadFleetConfig: vi.fn().mockResolvedValue(converged('w1')),
+    });
+    renderWithProviders(<SystemPage search={{}} />, { client });
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Select w1' }));
+    await userEvent.click(await findEnabledReload('Reload config (1 selected)'));
+    await userEvent.click(screen.getByRole('button', { name: 'Reload config' }));
+
+    expect(await screen.findByText('Reload converged on the selected worker.')).toBeInTheDocument();
+    expect(screen.queryByText(/Only this worker reloaded/)).toBeNull();
+    expect(screen.queryByText(/across the fleet/)).toBeNull();
+  });
+
+  it('keeps the selection the reload was sent with when the selection changes afterwards', async () => {
+    const client = stubClient({
+      getBackendInfo: vi.fn().mockResolvedValue(PRESENT_BACKEND),
+      listFleetWorkers: vi.fn().mockResolvedValue(fleet('w1', 'w2')),
+      reloadFleetConfig: vi.fn().mockResolvedValue(converged('w1')),
+    });
+    renderWithProviders(<SystemPage search={{}} />, { client });
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Select w1' }));
+    await userEvent.click(await findEnabledReload('Reload config (1 selected)'));
+    await userEvent.click(screen.getByRole('button', { name: 'Reload config' }));
+    await screen.findByText('Reload converged on the selected worker.');
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select w1' }));
+
+    expect(screen.getByText('Reload converged on the selected worker.')).toBeInTheDocument();
+    expect(screen.queryByText(/Only this worker reloaded/)).toBeNull();
   });
 
   it('shows the roll a reload ran, and a warning instead of the converged note when it stopped', async () => {
@@ -619,14 +699,66 @@ describe('SystemPage', () => {
 
     expect(
       await screen.findByText(
-        'The reload was applied. The worker restarts stopped before they finished.',
+        "The worker restarts stopped before they finished. This reload's report has a row only for w1. The sections below cover w2.",
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Reload converged across the fleet.')).toBeNull();
+    expect(screen.queryByText(SUCCESS_LINE)).toBeNull();
+    expect(screen.getByRole('region', { name: 'Worker recycle — reload' })).toBeVisible();
     expect(screen.getByTestId('recycle-stopped')).toHaveTextContent(
       'The recycle stopped at w2 (serve workers)',
     );
   });
+
+  it.each<[string, Partial<FleetReloadResult>, string]>([
+    [
+      'a finished roll',
+      {
+        recycle: {
+          recycle: [
+            {
+              name: 'w2',
+              kind: 'serve',
+              status: 'recycled',
+              generation_before: 1,
+              keys: ['K'],
+              detail: null,
+            },
+          ],
+          skipped: [],
+          fresh: [],
+          recycle_stopped: null,
+        },
+      },
+      "This reload's report has a row only for w1. The sections below cover w2.",
+    ],
+    [
+      'a skipped worker',
+      { recycle: { recycle: [], skipped: ['w2'], fresh: [], recycle_stopped: null } },
+      "This reload's report has a row only for w1. w2 confirmed it needs no restart and was left running.",
+    ],
+    [
+      'an awaiting worker',
+      { awaiting_respawn: [{ name: 'w2', keys: ['K'] }] },
+      "1 worker has settings it has not applied. This reload's report has a row only for w1. The sections below cover w2.",
+    ],
+  ])(
+    'never reads one row beside %s naming another worker as alone',
+    async (_case, fields, text) => {
+      const reply: FleetReloadResult = { ...converged('w1'), ...fields };
+      const client = stubClient({
+        getBackendInfo: vi.fn().mockResolvedValue(PRESENT_BACKEND),
+        listFleetWorkers: vi.fn().mockResolvedValue(fleet('w1', 'w2')),
+        reloadFleetConfig: vi.fn().mockResolvedValue(reply),
+      });
+      renderWithProviders(<SystemPage search={{}} />, { client });
+
+      await userEvent.click(await findEnabledReload('Reload config (all)'));
+      await userEvent.click(screen.getByRole('button', { name: 'Reload config' }));
+
+      expect(await screen.findByText(text)).toBeInTheDocument();
+      expect(screen.queryByText(/no other worker/)).toBeNull();
+    },
+  );
 
   it('lists the workers the reload verdict leaves awaiting a restart under a warning, not a converged note', async () => {
     const moved = { status: 'ok', env_keys: 3, awaiting_respawn: ['BACKEND_MANIFEST_KEY'] };
@@ -654,8 +786,10 @@ describe('SystemPage', () => {
     expect(
       await screen.findByText('The reload was applied. 1 worker still needs a restart.'),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Reload converged across the fleet.')).toBeNull();
-    const heading = screen.getByText('1 worker needs a restart to apply some settings');
+    expect(screen.queryByText(SUCCESS_LINE)).toBeNull();
+    const heading = screen.getByText(
+      reportHeading('1 worker needs a restart to apply some settings — reload'),
+    );
     const panel = heading.closest('[role="status"]');
     if (!(panel instanceof HTMLElement))
       throw new Error('the restart list is not in a status region');
@@ -895,9 +1029,11 @@ describe('SystemPage — a failed fleet reload that carries a recycle roll', () 
     await userEvent.click(await findEnabledReload('Reload config (all)'));
     await userEvent.click(screen.getByRole('button', { name: 'Reload config' }));
 
-    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await screen.findByText(reportHeading(`${ROLL_FAILURE_HEADING} — reload`)),
+    ).toBeInTheDocument();
     expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
     expect(screen.queryByText('The reload was applied.')).toBeNull();
-    expect(screen.queryByText('Reload converged across the fleet.')).toBeNull();
+    expect(screen.queryByText(SUCCESS_LINE)).toBeNull();
   });
 });

@@ -19,6 +19,7 @@ import {
   pending,
   previewFixture,
   renderWithApi,
+  rollOnFailure,
   routeItems,
   storeOffError,
 } from './test-install-fixtures';
@@ -489,5 +490,59 @@ describe('MountInstallForm — the same fields in place', () => {
     const form = await screen.findByRole('form', { name: 'Install plugin' });
     await user.click(within(form).getByRole('button', { name: 'Cancel' }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('a failed mounted install names its write', () => {
+  const HEADING = '1 worker has settings it has not applied';
+
+  it.each([
+    ['Install', 'install'],
+    ['Update', 'update'],
+  ] as const)('heads the %s dialog report with %s', async (verb, scope) => {
+    const user = userEvent.setup();
+    const failure = new Error('boom');
+    renderWithApi(
+      <MountInstallDialog
+        refValue="acme/relay"
+        version="1.0.0"
+        verb={verb}
+        routeItems={routeItems()}
+        onDone={noop}
+        onDismiss={noop}
+      />,
+      {
+        previewMarketplaceInstall: vi.fn().mockResolvedValue(previewFixture()),
+        installMarketplacePlugin: vi.fn().mockRejectedValue(failure),
+        updateMarketplacePlugin: vi.fn().mockRejectedValue(failure),
+        ...rollOnFailure(failure),
+      },
+    );
+    await screen.findByText('/api/channels/web/inbound');
+    await user.click(screen.getByRole('button', { name: verb }));
+    expect(await screen.findByText(`${HEADING} —`)).toHaveTextContent(`${HEADING} — ${scope}`);
+  });
+
+  it('heads the form report with the install', async () => {
+    const user = userEvent.setup();
+    const failure = new Error('boom');
+    renderWithApi(
+      <MountInstallForm
+        refValue="acme/relay"
+        version="1.0.0"
+        verb="Install"
+        routeItems={routeItems()}
+        onDone={noop}
+        onDismiss={noop}
+      />,
+      {
+        previewMarketplaceInstall: vi.fn().mockResolvedValue(previewFixture()),
+        installMarketplacePlugin: vi.fn().mockRejectedValue(failure),
+        ...rollOnFailure(failure),
+      },
+    );
+    await screen.findByText('/api/channels/web/inbound');
+    await user.click(screen.getByRole('button', { name: 'Install' }));
+    expect(await screen.findByText(`${HEADING} —`)).toHaveTextContent(`${HEADING} — install`);
   });
 });

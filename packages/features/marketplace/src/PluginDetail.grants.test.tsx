@@ -120,8 +120,9 @@ describe('PluginDetail — the receipt reports the reload', () => {
     });
 
     const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('1 worker did not converge — install');
     expect(within(alert).getByText('serve-b')).toBeInTheDocument();
-    const roll = screen.getByRole('region', { name: 'Worker recycle' });
+    const roll = screen.getByRole('region', { name: 'Worker recycle — install' });
     expect(within(roll).getByText('serve-a')).toBeInTheDocument();
   });
 
@@ -136,6 +137,6 @@ describe('PluginDetail — the receipt reports the reload', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Install' }));
     expect(await screen.findByText(/Installed tai42\/toolbox/)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.queryByRole('region', { name: 'Worker recycle' })).toBeNull();
+    expect(screen.queryByRole('region', { name: /Worker recycle/ })).toBeNull();
   });
 });

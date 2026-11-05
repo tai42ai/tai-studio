@@ -35,7 +35,7 @@ export function DeleteHookDialog({ name, onClose }: DeleteHookDialogProps): Reac
       }}
       onClose={onClose}
       isPending={mutation.isPending}
-      error={mutation.isError ? mutation.error : null}
+      failure={{ error: mutation.isError ? mutation.error : null, scope: 'delete hook' }}
     >
       <p style={{ margin: 0 }}>Unregister the hook &ldquo;{name}&rdquo;? This cannot be undone.</p>
     </ConfirmDialog>

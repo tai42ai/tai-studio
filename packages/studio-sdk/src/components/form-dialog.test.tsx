@@ -39,6 +39,7 @@ function renderFormDialog(overrides: Partial<Parameters<typeof FormDialog>[0]> =
   const onClose = vi.fn();
   renderWithRefusalReaders(
     <FormDialog
+      errorScope="save"
       title="Create scope"
       submitLabel="Create scope"
       pendingLabel="Creating"
@@ -95,6 +96,7 @@ describe('FormDialog', () => {
     render(
       <StrictMode>
         <FormDialog
+          errorScope="save"
           title="Create scope"
           submitLabel="Create scope"
           pendingLabel="Creating"
@@ -165,6 +167,45 @@ describe('FormDialog', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
+  it('names the write in the report a rejected reply carries', async () => {
+    const user = userEvent.setup();
+    const failed = new Error('Internal Server Error');
+    renderWithRefusalReaders(
+      <FormDialog
+        errorScope="create scope"
+        title="Create scope"
+        submitLabel="Create scope"
+        pendingLabel="Creating"
+        onSubmit={() => Promise.reject(failed)}
+        onClose={vi.fn()}
+      >
+        <input aria-label="Name" name="name" />
+      </FormDialog>,
+      {
+        failedReplyRoll: (error: unknown) =>
+          error === failed
+            ? {
+                summary: {
+                  status: 'converged',
+                  note: null,
+                  failures: [],
+                  error: null,
+                  awaiting: [{ name: 'serve-a', keys: ['TAI_KEY'], reading: 'unstated' }],
+                  restartsPending: [],
+                  reloadsUnconfirmed: [],
+                  spanReleaseError: null,
+                },
+                recycle: null,
+              }
+            : null,
+      },
+    );
+    await user.click(screen.getByRole('button', { name: 'Create scope' }));
+    expect(await screen.findByText('1 worker has settings it has not applied —')).toHaveTextContent(
+      '1 worker has settings it has not applied — create scope',
+    );
+  });
+
   it('shows a rejection because the answering worker has not loaded an MCP server as that refusal', async () => {
     const user = userEvent.setup();
     const message = "MCP server 'relay' is not loaded on this worker; a reload binds it";
@@ -199,6 +240,7 @@ describe('FormDialog', () => {
     const onClose = vi.fn();
     renderWithRefusalReaders(
       <FormDialog
+        errorScope="save"
         title="Create scope"
         submitLabel="Create scope"
         pendingLabel="Creating"
@@ -248,6 +290,7 @@ describe('FormDialog', () => {
     const onClose = vi.fn();
     const { unmount } = render(
       <FormDialog
+        errorScope="save"
         title="Create scope"
         submitLabel="Create scope"
         pendingLabel="Creating"
@@ -281,6 +324,7 @@ describe('FormDialog', () => {
     function Parent({ show }: { show: boolean }): ReactNode {
       return show ? (
         <FormDialog
+          errorScope="save"
           title="Create scope"
           submitLabel="Create scope"
           pendingLabel="Creating"

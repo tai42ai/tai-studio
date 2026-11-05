@@ -54,16 +54,24 @@ const PALETTE: Record<OAuthNotice['kind'], NoticePalette> = {
   },
 };
 
-export function Notice({
-  notice,
-  onDismiss,
-  title,
-}: {
-  notice: OAuthNotice;
-  onDismiss: () => void;
+type NoticeProps = {
+  readonly onDismiss: () => void;
   /** The headline; defaults to the one of the notice's kind. */
-  title?: string;
-}): ReactNode {
+  readonly title?: string;
+} & (
+  | {
+      readonly notice: OAuthNotice;
+      /** The write the report of a failed completion names as its scope. */
+      readonly scope: string;
+    }
+  | {
+      /** A success has no failed completion, so it has no report to name. */
+      readonly notice: Extract<OAuthNotice, { kind: 'success' }>;
+      readonly scope?: undefined;
+    }
+);
+
+export function Notice({ notice, onDismiss, title, scope }: NoticeProps): ReactNode {
   const palette = PALETTE[notice.kind];
   const style: CSSProperties = {
     display: 'flex',
@@ -82,8 +90,8 @@ export function Notice({
       <div>
         <strong style={{ color: palette.fg }}>{title ?? palette.title}</strong>
         <p style={{ margin: 'var(--tai-space-1) 0 0', whiteSpace: 'pre-wrap' }}>{notice.message}</p>
-        {notice.kind === 'error' && notice.cause !== undefined ? (
-          <FailedReplyOutcome error={notice.cause} />
+        {scope !== undefined && notice.kind === 'error' && notice.cause !== undefined ? (
+          <FailedReplyOutcome error={notice.cause} scope={scope} />
         ) : null}
       </div>
       <Button onClick={onDismiss} aria-label="Dismiss notice">

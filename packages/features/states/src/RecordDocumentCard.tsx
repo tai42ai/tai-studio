@@ -119,7 +119,7 @@ export function RecordDocumentCard({ subject, rec }: RecordDocumentCardProps): R
           pendingLabel="Erasing"
           confirmVariant="danger"
           isPending={rec.eraseMutation.isPending}
-          error={rec.eraseMutation.error}
+          failure={{ error: rec.eraseMutation.error, scope: 'erase record' }}
           onConfirm={() => {
             rec.eraseMutation.mutate();
           }}

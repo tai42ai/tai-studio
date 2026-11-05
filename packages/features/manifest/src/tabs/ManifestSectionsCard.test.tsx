@@ -4,7 +4,13 @@
  * projection gates whether the card renders at all. Removes run only behind the house
  * confirm; a malformed add is a loud inline error that sends no request.
  */
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import { ApiError } from '@tai42/api-client';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -60,6 +66,18 @@ const stoppedRollResult = {
     recycle_stopped: { kind: 'backend', name: 'backend-2', detail: 'old life still present' },
   },
 };
+
+/** A failed write whose error body carries a recycle roll that stopped. */
+function failureCarryingRoll(): ApiError {
+  return new ApiError(ROLL_FAILURE_MESSAGE, 500, undefined, undefined, {
+    error: ROLL_FAILURE_MESSAGE,
+    error_id: 'err-1',
+    recycle: stoppedRollResult.recycle,
+    awaiting_respawn: [],
+    roll_deferred: false,
+    roll_deferred_to: null,
+  });
+}
 
 describe('ManifestSectionsCard', () => {
   it('adds tool entries from pasted JSON (single object, replace off by default)', async () => {
@@ -182,7 +200,11 @@ describe('ManifestSectionsCard', () => {
       'The recycle stopped at backend-2 (backend workers)',
     );
     expect(screen.getByTestId('recycle-stopped')).toHaveTextContent('old life still present');
-    expect(screen.getByText('1 worker needs a restart to apply some settings')).toBeVisible();
+    expect(
+      screen.getByText(
+        reportHeading('1 worker needs a restart to apply some settings — add tool entries'),
+      ),
+    ).toBeVisible();
   });
 
   it('reports the recycle roll an entry removal ran', async () => {
@@ -203,7 +225,11 @@ describe('ManifestSectionsCard', () => {
       'The recycle stopped at backend-2 (backend workers)',
     );
     expect(screen.getByTestId('recycle-stopped')).toHaveTextContent('old life still present');
-    expect(screen.getByText('1 worker needs a restart to apply some settings')).toBeVisible();
+    expect(
+      screen.getByText(
+        reportHeading('1 worker needs a restart to apply some settings — remove agent entry'),
+      ),
+    ).toBeVisible();
   });
 
   it('reports the recycle roll an api_tools edit ran', async () => {
@@ -222,7 +248,11 @@ describe('ManifestSectionsCard', () => {
       'The recycle stopped at backend-2 (backend workers)',
     );
     expect(screen.getByTestId('recycle-stopped')).toHaveTextContent('old life still present');
-    expect(screen.getByText('1 worker needs a restart to apply some settings')).toBeVisible();
+    expect(
+      screen.getByText(
+        reportHeading('1 worker needs a restart to apply some settings — api_tools'),
+      ),
+    ).toBeVisible();
   });
 
   it('withdraws the Tools remove affordance when the projection reaches add but not the DELETE door', async () => {
@@ -280,7 +310,9 @@ describe('ManifestSectionsCard — a failed write that carries a recycle roll', 
     });
     await user.click(screen.getByRole('button', { name: 'Add tool entries' }));
 
-    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await screen.findByText(reportHeading(`${ROLL_FAILURE_HEADING} — add tool entries`)),
+    ).toBeInTheDocument();
     expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 
@@ -295,7 +327,85 @@ describe('ManifestSectionsCard — a failed write that carries a recycle roll', 
     await user.type(screen.getByLabelText('Operation name'), 'weather');
     await user.click(screen.getByRole('button', { name: 'Add name' }));
 
-    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await screen.findByText(reportHeading(`${ROLL_FAILURE_HEADING} — api_tools`)),
+    ).toBeInTheDocument();
     expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
+  });
+
+  it('names a failed entry add on its roll', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ManifestSectionsCard />, {
+      client: { addToolsEntries: vi.fn().mockRejectedValue(failureCarryingRoll()) },
+      projection: fullProjection(),
+    });
+
+    await screen.findByText('Manifest sections');
+    fireEvent.change(screen.getByLabelText('Add tool entries'), {
+      target: { value: '{"title":"echo","module":"mod"}' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Add tool entries' }));
+
+    expect(
+      await screen.findByRole('region', { name: 'Worker recycle — add tool entries' }),
+    ).toBeVisible();
+  });
+
+  it('names a failed entry removal in its confirm', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ManifestSectionsCard />, {
+      client: { removeAgentsEntry: vi.fn().mockRejectedValue(failureCarryingRoll()) },
+      projection: fullProjection(),
+    });
+
+    await screen.findByText('Manifest sections');
+    await user.type(screen.getByLabelText('Remove agent entry'), 'helper');
+    await user.click(screen.getByRole('button', { name: 'Remove agent entry' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Remove agent entry' }));
+
+    expect(
+      await within(dialog).findByRole('region', { name: 'Worker recycle — remove agent entry' }),
+    ).toBeVisible();
+  });
+});
+
+describe('ManifestSectionsCard — the reports of several writes', () => {
+  it('names the add and the removal whose reports stack on one section', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ManifestSectionsCard />, {
+      client: {
+        addToolsEntries: vi.fn().mockResolvedValue(stoppedRollResult),
+        removeToolsEntry: vi.fn().mockResolvedValue(stoppedRollResult),
+      },
+      projection: fullProjection(),
+    });
+
+    await screen.findByText('Manifest sections');
+    fireEvent.change(screen.getByLabelText('Add tool entries'), {
+      target: { value: '{"title":"echo","module":"mod"}' },
+    });
+    await user.click(screen.getByRole('button', { name: 'Add tool entries' }));
+    await screen.findByRole('region', { name: 'Worker recycle — add tool entries' });
+
+    await user.type(screen.getByLabelText('Remove tool entry'), 'helper');
+    await user.click(screen.getByRole('button', { name: 'Remove tool entry' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Remove tool entry' }));
+
+    expect(
+      await screen.findByRole('region', { name: 'Worker recycle — remove tool entry' }),
+    ).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Worker recycle — add tool entries' })).toBeVisible();
+    expect(
+      screen.getByText(
+        reportHeading('1 worker needs a restart to apply some settings — add tool entries'),
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        reportHeading('1 worker needs a restart to apply some settings — remove tool entry'),
+      ),
+    ).toBeVisible();
   });
 });

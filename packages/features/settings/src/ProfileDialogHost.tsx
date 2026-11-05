@@ -91,7 +91,7 @@ export function ProfileDialogHost({
           confirmLabel="Delete profile"
           pendingLabel="Deleting"
           isPending={remove.isPending}
-          error={remove.isError ? remove.error : undefined}
+          failure={{ error: remove.isError ? remove.error : undefined, scope: 'delete profile' }}
           onConfirm={() => {
             remove.mutate(open.name);
           }}

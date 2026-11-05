@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  type FleetReloadWorkerStatement,
   isFleetReportFailure,
   summarizeFleetFanout,
   summarizeFleetReload,
@@ -271,6 +272,7 @@ describe('the workers awaiting a respawn', () => {
   it('lists the fleet reload operation verdict, never the workers its roll restarted', () => {
     const summary = summarizeFleetReload(
       reloadReply([{ name: 'serve-a', keys: ['BACKEND_MANIFEST_KEY'] }]),
+      null,
     );
     expect(summary.status).toBe('converged');
     expect(summary.awaiting).toEqual([
@@ -279,7 +281,7 @@ describe('the workers awaiting a respawn', () => {
   });
 
   it('lists nobody when the fleet reload roll restarted every worker that needed it', () => {
-    expect(summarizeFleetReload(reloadReply([])).awaiting).toEqual([]);
+    expect(summarizeFleetReload(reloadReply([]), null).awaiting).toEqual([]);
   });
 
   it('names nobody for a bare fleet report, which states no verdict', () => {
@@ -367,13 +369,16 @@ describe('the workers whose restart the operation withholds', () => {
   });
 
   it('marks the fleet reload verdict from its own rows and roll', () => {
-    const summary = summarizeFleetReload({
-      ...result({ results: [discardedRow, failedRow] }),
-      awaiting_respawn: verdict,
-      recycle: { recycle: [withheldLine], skipped: [], fresh: [], recycle_stopped: null },
-      roll_deferred: false,
-      roll_deferred_to: null,
-    });
+    const summary = summarizeFleetReload(
+      {
+        ...result({ results: [discardedRow, failedRow] }),
+        awaiting_respawn: verdict,
+        recycle: { recycle: [withheldLine], skipped: [], fresh: [], recycle_stopped: null },
+        roll_deferred: false,
+        roll_deferred_to: null,
+      },
+      null,
+    );
     expect(summary.awaiting.map((worker) => [worker.name, worker.reading])).toEqual([
       ['serve-b', 'withheld'],
       ['serve-c', 'restartable'],
@@ -563,7 +568,7 @@ describe('a worker the recycle roll settled', () => {
     const rows = [row('backend-1', 'timed_out')];
     for (const summary of [
       summarizeFleetFanout(withRoll(recycle, rows)),
-      summarizeFleetReload(reload(recycle, rows)),
+      summarizeFleetReload(reload(recycle, rows), null),
     ]) {
       expect(summary?.failures).toEqual([]);
       expect(summary?.status).toBe('converged');
@@ -582,7 +587,7 @@ describe('a worker the recycle roll settled', () => {
     const rows = [row('backend-1', 'timed_out')];
     for (const summary of [
       summarizeFleetFanout(withRoll(recycle, rows)),
-      summarizeFleetReload(reload(recycle, rows)),
+      summarizeFleetReload(reload(recycle, rows), null),
     ]) {
       expect(summary?.failures.map((failure) => failure.name)).toEqual(['backend-1']);
       expect(summary?.status).toBe('degraded');
@@ -594,6 +599,7 @@ describe('a worker the recycle roll settled', () => {
   it('keeps a discarded build listed: the roll skips it on that same row, no later statement', () => {
     const summary = summarizeFleetReload(
       reload(roll([], ['backend-1']), [row('backend-1', 'failed', { status: 'discarded' })]),
+      null,
     );
     expect(summary.status).toBe('degraded');
     expect(summary.failures).toEqual([
@@ -608,6 +614,7 @@ describe('a worker the recycle roll settled', () => {
         row('backend-1', 'timed_out'),
         row('backend-2', 'timed_out'),
       ]),
+      null,
     );
     expect(summary.failures.map((failure) => failure.name)).toEqual(['backend-2']);
   });
@@ -615,6 +622,7 @@ describe('a worker the recycle roll settled', () => {
   it('names a deferred restart whose reload row applied, leaving its reload confirmed', () => {
     const summary = summarizeFleetReload(
       reload(roll([line('backend-1', 'self-deferred')]), [row('backend-1', 'applied')]),
+      null,
     );
     expect(summary.restartsPending).toEqual(['backend-1']);
     expect(summary.reloadsUnconfirmed).toEqual([]);
@@ -635,5 +643,227 @@ describe('a worker the recycle roll settled', () => {
     expect(summary.status).toBe('degraded');
     expect(summary.restartsPending).toEqual([]);
     expect(summary.reloadsUnconfirmed).toEqual([]);
+  });
+});
+
+describe('the reach of a fleet reload', () => {
+  const applied = (name: string): FleetResult['results'][number] => ({
+    name,
+    outcome: 'applied',
+    payload: null,
+    error: null,
+    detail: null,
+  });
+
+  function reloadOf(overrides: Partial<FleetResult>): Omit<FleetReloadResult, 'ok'> {
+    return {
+      ...result(overrides),
+      awaiting_respawn: [],
+      recycle: null,
+      roll_deferred: false,
+      roll_deferred_to: null,
+    };
+  }
+
+  it('reads a whole-fleet reply with several rows as the fleet', () => {
+    const reply = reloadOf({ results: [applied('serve-1'), applied('serve-2')] });
+    expect(summarizeFleetReload(reply, null).reach).toEqual({ kind: 'fleet' });
+  });
+
+  it('reads a busless reply as no worker bus', () => {
+    const reply = reloadOf({ local_only: true, results: [applied('serve-1')] });
+    expect(summarizeFleetReload(reply, null).reach).toEqual({ kind: 'no-bus' });
+  });
+
+  it('reads a whole-fleet reply holding one row as a worker alone on the bus', () => {
+    const reply = reloadOf({ results: [applied('serve-1')] });
+    expect(summarizeFleetReload(reply, null).reach).toEqual({ kind: 'alone-on-bus' });
+  });
+
+  it("keeps the lone reading when the reply names only the row's own worker", () => {
+    const reply = {
+      ...reloadOf({ results: [applied('serve-1')] }),
+      awaiting_respawn: [{ name: 'serve-1', keys: ['K'] }],
+      recycle: { recycle: [], skipped: ['serve-1'], fresh: [], recycle_stopped: null },
+    };
+    expect(summarizeFleetReload(reply, null).reach).toEqual({ kind: 'alone-on-bus' });
+  });
+
+  const lineFor = (name: string) => ({
+    name,
+    kind: 'serve',
+    status: 'recycled' as const,
+    generation_before: 1,
+    keys: ['K'],
+    detail: null,
+  });
+  const noRoll = { recycle: [], skipped: [], fresh: [], recycle_stopped: null };
+
+  const newLife = { name: 'serve-2', kind: 'serve', generation: 2 };
+  const namedStop = { kind: 'serve', name: 'serve-2', detail: 'old life still present' };
+
+  it.each<[string, Partial<FleetReloadResult>, FleetReloadWorkerStatement]>([
+    ['a recycled line', { recycle: { ...noRoll, recycle: [lineFor('serve-2')] } }, 'recycled'],
+    ...['timed-out', 'failed', 'self-deferred', 'withheld'].map(
+      (status): [string, Partial<FleetReloadResult>, FleetReloadWorkerStatement] => [
+        `a ${status} line`,
+        { recycle: { ...noRoll, recycle: [{ ...lineFor('serve-2'), status }] } },
+        'outcome-open',
+      ],
+    ),
+    ['a skipped name', { recycle: { ...noRoll, skipped: ['serve-2'] } }, 'confirmed-clean'],
+    [
+      'the worker a roll stopped at',
+      { recycle: { ...noRoll, recycle_stopped: namedStop } },
+      'outcome-open',
+    ],
+    [
+      'an awaiting worker',
+      { awaiting_respawn: [{ name: 'serve-2', keys: ['K'] }] },
+      'outcome-open',
+    ],
+    ['a fresh life', { recycle: { ...noRoll, fresh: [newLife] } }, 'new-life'],
+    [
+      'the worker the roll was handed to',
+      { roll_deferred: true, roll_deferred_to: 'serve-2' },
+      'roll-handed-off',
+    ],
+  ])(
+    'reads one row beside %s naming another worker as what it says',
+    (_case, fields, statement) => {
+      const reply = { ...reloadOf({ results: [applied('serve-1')] }), ...fields };
+      expect(summarizeFleetReload(reply, null).reach).toEqual({
+        kind: 'one-row',
+        worker: 'serve-1',
+        others: [{ name: 'serve-2', statement }],
+      });
+    },
+  );
+
+  it.each<[string, Partial<FleetReloadResult>, FleetReloadWorkerStatement]>([
+    [
+      'its recycled line over its new life',
+      { recycle: { ...noRoll, recycle: [lineFor('serve-2')], fresh: [newLife] } },
+      'recycled',
+    ],
+    [
+      'a line that did not finish over the stop naming it',
+      {
+        recycle: {
+          ...noRoll,
+          recycle: [{ ...lineFor('serve-2'), status: 'timed-out' }],
+          recycle_stopped: namedStop,
+        },
+      },
+      'outcome-open',
+    ],
+    [
+      'the awaiting panel over a skipped name',
+      {
+        awaiting_respawn: [{ name: 'serve-2', keys: ['K'] }],
+        recycle: { ...noRoll, skipped: ['serve-2'] },
+      },
+      'outcome-open',
+    ],
+    [
+      'a skipped name over a new life',
+      { recycle: { ...noRoll, skipped: ['serve-2'], fresh: [newLife] } },
+      'confirmed-clean',
+    ],
+  ])('reads a worker named two ways by %s', (_case, fields, statement) => {
+    const reply = { ...reloadOf({ results: [applied('serve-1')] }), ...fields };
+    expect(summarizeFleetReload(reply, null).reach).toEqual({
+      kind: 'one-row',
+      worker: 'serve-1',
+      others: [{ name: 'serve-2', statement }],
+    });
+  });
+
+  const unreadStop = { kind: 'backend', name: null, detail: 'bus unreachable' };
+
+  it('reads one row beside a roll stopped on no named worker as that row alone', () => {
+    const reply = {
+      ...reloadOf({ results: [applied('serve-1')] }),
+      recycle: { ...noRoll, recycle_stopped: unreadStop },
+    };
+    expect(summarizeFleetReload(reply, null).reach).toEqual({
+      kind: 'one-row',
+      worker: 'serve-1',
+      others: [],
+    });
+  });
+
+  it('keeps the workers the reply names beside a roll stopped on no named worker', () => {
+    const reply = {
+      ...reloadOf({ results: [applied('serve-1')] }),
+      recycle: { ...noRoll, skipped: ['serve-2'], recycle_stopped: unreadStop },
+    };
+    expect(summarizeFleetReload(reply, null).reach).toEqual({
+      kind: 'one-row',
+      worker: 'serve-1',
+      others: [{ name: 'serve-2', statement: 'confirmed-clean' }],
+    });
+  });
+
+  it('names each other worker once', () => {
+    const reply = {
+      ...reloadOf({ results: [applied('serve-1')] }),
+      awaiting_respawn: [{ name: 'serve-3', keys: ['K'] }],
+      recycle: {
+        ...noRoll,
+        recycle: [lineFor('serve-2'), lineFor('serve-3')],
+        skipped: ['serve-1'],
+      },
+    };
+    expect(summarizeFleetReload(reply, null).reach).toEqual({
+      kind: 'one-row',
+      worker: 'serve-1',
+      others: [
+        { name: 'serve-3', statement: 'outcome-open' },
+        { name: 'serve-2', statement: 'recycled' },
+      ],
+    });
+  });
+
+  it('keeps a selection and a busless reply as they read, whatever else the reply names', () => {
+    const fields = { recycle: { ...noRoll, skipped: ['serve-2'] } };
+    const reply = { ...reloadOf({ results: [applied('serve-1')] }), ...fields };
+    expect(summarizeFleetReload(reply, ['serve-1']).reach).toEqual({ kind: 'selected', count: 1 });
+    expect(summarizeFleetReload({ ...reply, local_only: true }, null).reach).toEqual({
+      kind: 'no-bus',
+    });
+  });
+
+  it('keeps a sibling that did not answer out of the lone reading: it has its own row', () => {
+    const reply = reloadOf({
+      results: [
+        applied('serve-1'),
+        { name: 'serve-2', outcome: 'missing', payload: null, error: null, detail: 'no ack' },
+      ],
+    });
+    const summary = summarizeFleetReload(reply, null);
+    expect(summary.reach).toEqual({ kind: 'fleet' });
+    expect(summary.status).toBe('degraded');
+  });
+
+  it('reads one row of a reload that named its target as that selection, never as lone', () => {
+    const reply = reloadOf({ results: [applied('backend-1')] });
+    expect(summarizeFleetReload(reply, ['backend-1']).reach).toEqual({
+      kind: 'selected',
+      count: 1,
+    });
+  });
+
+  it('counts the workers a reload named', () => {
+    const reply = reloadOf({ results: [applied('serve-1'), applied('serve-2')] });
+    expect(summarizeFleetReload(reply, ['serve-1', 'serve-2']).reach).toEqual({
+      kind: 'selected',
+      count: 2,
+    });
+  });
+
+  it('reads a busless reply as no worker bus whatever the request named', () => {
+    const reply = reloadOf({ local_only: true, results: [applied('serve-1')] });
+    expect(summarizeFleetReload(reply, ['serve-1']).reach).toEqual({ kind: 'no-bus' });
   });
 });

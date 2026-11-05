@@ -84,7 +84,7 @@ export function TemplateCatalog({ templates, loading, error }: TemplateCatalogPr
           pendingLabel="Deleting"
           confirmVariant="danger"
           isPending={deleteMutation.isPending}
-          error={deleteMutation.error}
+          failure={{ error: deleteMutation.error, scope: 'delete template' }}
           onConfirm={() => {
             deleteMutation.mutate(deleteName);
           }}
@@ -100,6 +100,7 @@ export function TemplateCatalog({ templates, loading, error }: TemplateCatalogPr
         <ReplaceConfirmDialog
           title={`Replace template '${pendingReplace.name}'?`}
           confirmLabel="Replace template"
+          errorScope="replace template"
           onClose={() => {
             upload.setPendingReplace(null);
           }}

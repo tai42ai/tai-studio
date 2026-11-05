@@ -328,6 +328,7 @@ export function ActionResultCard({ result }: { readonly result: ActionResult }):
         <FleetOutcomeReport
           summary={summarizeFleetFanout(result.reload)}
           recycle={result.reload.recycle}
+          scope={result.write}
         />
       ) : null}
     </Card>

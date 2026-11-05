@@ -150,6 +150,9 @@ function SwitchViewConfirmDialog({
   );
 }
 
+/** The name the combined manifest-and-secret write's report carries. */
+const SECRET_PASTE_WRITE = 'manifest and secret';
+
 /**
  * A failed save. A refusal because the worker that answered holds no listing for a server
  * (its start still in progress, or the server not loaded there) says so on the warn
@@ -157,10 +160,16 @@ function SwitchViewConfirmDialog({
  * message's first line and the holders under it, so the draft can be edited and saved
  * again; any other failure shows its whole message.
  */
-function SaveFailure({ error }: { readonly error: unknown }): ReactNode {
+function SaveFailure({
+  error,
+  scope,
+}: {
+  readonly error: unknown;
+  readonly scope: string;
+}): ReactNode {
   const api = useApi();
   const holders = api.holdersFromError(error);
-  if (holders === null) return <WriteFailure error={error} />;
+  if (holders === null) return <WriteFailure error={error} scope={scope} />;
   return (
     <div>
       <ErrorState message={errorMessage(error).split('\n')[0] ?? ''} />
@@ -268,15 +277,17 @@ function McpConfigEditor(props: {
           scope={reply.write}
         />
       ))}
-      {save.isError ? <SaveFailure error={save.error} /> : null}
+      {save.isError ? <SaveFailure error={save.error} scope={save.latestWrite} /> : null}
       {/* The combined op is server-gated by the shared X-band + dangling-`!ENV`
           validator; a refusal (or any failure) surfaces loudly, never swallowed. */}
-      {draft.secretEnvError ? <SaveFailure error={draft.secretEnvErrorObj} /> : null}
+      {draft.secretEnvError ? (
+        <SaveFailure error={draft.secretEnvErrorObj} scope={SECRET_PASTE_WRITE} />
+      ) : null}
       {draft.secretEnvReply !== null ? (
         <FleetOutcomeReport
           summary={summarizeFleetFanout(draft.secretEnvReply)}
           recycle={draft.secretEnvReply.recycle}
-          scope="manifest and secret"
+          scope={SECRET_PASTE_WRITE}
         />
       ) : null}
 

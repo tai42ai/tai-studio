@@ -3,7 +3,12 @@ import {
   type MarketplaceInstalled,
   type MarketplaceInstallResult,
 } from '@tai42/api-client';
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -218,6 +223,64 @@ describe('PluginDetail — install flow', () => {
 });
 
 describe('PluginDetail — update and uninstall flows', () => {
+  const UNCONVERGED_FANOUT = {
+    mode: 'fleet',
+    op: 'reload',
+    reachable: true,
+    local_only: false,
+    error: null,
+    results: [
+      { name: 'serve-a', outcome: 'applied', error: null, detail: null, payload: null },
+      { name: 'serve-b', outcome: 'missing', error: null, detail: null, payload: null },
+    ],
+  } as const;
+
+  it('names a landed update in its report, as its failure is named', async () => {
+    const user = userEvent.setup();
+    const receipt = installReceipt('tai42/toolbox');
+    const client: StubApiClient = {
+      ...reads(detailFixture(), [installedRow({ update_available: true, latest: '2.0.0' })]),
+      updateMarketplacePlugin: vi.fn().mockResolvedValue({
+        ...receipt,
+        version: '2.0.0',
+        reload: { ...receipt.reload, fanout: UNCONVERGED_FANOUT },
+      }),
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Update' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Update' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '1 worker did not converge — update',
+    );
+  });
+
+  it('names a landed uninstall in its report, as its failure is named', async () => {
+    const user = userEvent.setup();
+    const receipt = installReceipt('tai42/toolbox');
+    const client: StubApiClient = {
+      ...reads(detailFixture(), [installedRow()]),
+      uninstallMarketplacePlugin: vi.fn().mockResolvedValue({
+        ref: 'tai42/toolbox',
+        uninstalled: true,
+        manifest_written: true,
+        notes: [],
+        reload: { ...receipt.reload, fanout: UNCONVERGED_FANOUT },
+      }),
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Uninstall' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Uninstall' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '1 worker did not converge — uninstall',
+    );
+  });
+
   it('updates behind a confirm dialog with the correct body', async () => {
     const user = userEvent.setup();
     const updateMarketplacePlugin = vi.fn().mockResolvedValue({
@@ -429,7 +492,9 @@ describe('PluginDetail — a failed write that carries a recycle roll', () => {
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Update' }));
 
-    expect(await within(dialog).findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText(reportHeading(`${ROLL_FAILURE_HEADING} — update`)),
+    ).toBeInTheDocument();
     expect(within(dialog).getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 
@@ -445,7 +510,9 @@ describe('PluginDetail — a failed write that carries a recycle roll', () => {
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Uninstall' }));
 
-    expect(await within(dialog).findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText(reportHeading(`${ROLL_FAILURE_HEADING} — uninstall`)),
+    ).toBeInTheDocument();
     expect(within(dialog).getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

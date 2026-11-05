@@ -50,7 +50,7 @@ function RequestRefusal({ failure }: { failure: RequestFailure | null }): ReactN
         </strong>
         <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{failure.message}</p>
       </div>
-      <FailedReplyOutcome error={failure.error} />
+      <FailedReplyOutcome error={failure.error} scope="add server" />
     </div>
   );
 }
@@ -218,7 +218,9 @@ function ReviewStep({ vm, found }: { vm: DialogModel; found: DiscoveredServer })
         </div>
       </ScrollRegion>
       <RequestRefusal failure={review.failure} />
-      {review.fleetFailure !== null ? <FleetReport summary={review.fleetFailure} /> : null}
+      {review.fleetFailure !== null ? (
+        <FleetReport summary={review.fleetFailure} scope="add server" />
+      ) : null}
       <div className="tai-dialog-actions">
         <Button type="button" onClick={vm.backToAddress} disabled={vm.pending}>
           Back

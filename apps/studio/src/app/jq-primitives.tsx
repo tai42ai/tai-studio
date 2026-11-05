@@ -8,14 +8,15 @@
  * the SDK's nine primitives onto jq-studio's primitive contracts and mounts the
  * provider ONCE at the composition root, so every `JqField` — a host feature's or a
  * plugin page's — inherits it from the single shared jq-studio instance the import
- * map serves. There is no per-site wiring: eight of the nine SDK primitives satisfy
+ * map serves. There is no per-site wiring: seven of the nine SDK primitives satisfy
  * jq-studio's contract directly and map as bare references (their prop surfaces
- * were cut from the same cloth). The ninth, `Badge`, is the one contract
- * TRANSLATION — jq-studio and the SDK label their tints with DIFFERENT variant
- * vocabularies (only `neutral` overlaps), so a bare reference would silently paint
- * jq-studio's `info` context chip neutral-gray. {@link JqBadge} translates the
- * vocabulary before rendering the SDK `Badge`; it is not a chrome wrapper, just the
- * word map the two contracts need to agree.
+ * were cut from the same cloth). The other two are contract TRANSLATIONS, neither a
+ * chrome wrapper. `Badge`: jq-studio and the SDK label their tints with DIFFERENT
+ * variant vocabularies (only `neutral` overlaps), so a bare reference would silently
+ * paint jq-studio's `info` context chip neutral-gray; {@link JqBadge} translates the
+ * vocabulary before rendering the SDK `Badge`. `ConfirmDialog`: the SDK's requires a
+ * failure to name its write and jq-studio's contract has no such name;
+ * {@link JqConfirmDialog} names it by the dialog's title.
  */
 import { type Primitives, PrimitivesProvider } from '@tai42/jq-studio';
 import {
@@ -75,13 +76,23 @@ export function JqBadge({ variant, children }: JqBadgeProps): ReactNode {
 }
 
 /**
+ * The SDK `ConfirmDialog` under jq-studio's contract: a failure's report names the write by the
+ * title of the dialog the operator confirmed, the one name that contract carries.
+ */
+export function JqConfirmDialog({
+  error,
+  ...frame
+}: ComponentProps<Primitives['ConfirmDialog']>): ReactNode {
+  return <ConfirmDialog {...frame} failure={{ error, scope: frame.title }} />;
+}
+
+/**
  * The SDK design-system components, mapped onto jq-studio's nine primitive
- * contracts. Eight are bare references: each SDK primitive satisfies the
+ * contracts. Seven are bare references: each SDK primitive satisfies the
  * corresponding jq-studio prop shape directly — same variants, same event/attribute
- * surface. (`ConfirmDialog` carries an extra optional `disabledNote` the SDK adds;
- * jq-studio ignores props it does not read, so the superset is compatible.) The
- * ninth, `Badge`, is the one VOCABULARY TRANSLATION: {@link JqBadge} maps
- * jq-studio's tint variant names onto the SDK's before rendering the SDK `Badge`.
+ * surface. The other two translate the contract: {@link JqBadge} maps jq-studio's
+ * tint variant names onto the SDK's, and {@link JqConfirmDialog} names a failure by
+ * the dialog's title.
  */
 const STUDIO_PRIMITIVES: Partial<Primitives> = {
   Button,
@@ -91,7 +102,7 @@ const STUDIO_PRIMITIVES: Partial<Primitives> = {
   Checkbox,
   Tooltip,
   Dialog,
-  ConfirmDialog,
+  ConfirmDialog: JqConfirmDialog,
   Badge: JqBadge,
 };
 

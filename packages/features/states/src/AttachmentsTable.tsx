@@ -223,7 +223,7 @@ export function AttachmentsTable({
           pendingLabel="Detaching"
           confirmVariant="danger"
           isPending={detachMutation.isPending}
-          error={detachError}
+          failure={{ error: detachError, scope: 'detach template' }}
           confirmDisabled={hasHolders}
           onConfirm={() => {
             detachMutation.mutate(detach);

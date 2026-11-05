@@ -101,6 +101,9 @@ export function StatesList({ selected }: { readonly selected: string | undefined
         <ReplaceConfirmDialog
           title={`Replace '${pendingReplace.name}'?`}
           confirmLabel="Replace"
+          errorScope={
+            pendingReplace.document === 'state-template' ? 'replace template' : 'replace state'
+          }
           onClose={() => {
             upload.setPendingReplace(null);
           }}

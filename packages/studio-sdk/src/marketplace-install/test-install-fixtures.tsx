@@ -116,3 +116,23 @@ export function storeOffError(): Error {
     code: 'marketplace-not-configured',
   });
 }
+
+/** A client reader giving `failure` a reply that carries a recycle roll report. */
+export const rollOnFailure = (failure: unknown) => ({
+  failedReplyRoll: (error: unknown) =>
+    error === failure
+      ? {
+          summary: {
+            status: 'converged' as const,
+            note: null,
+            failures: [],
+            error: null,
+            awaiting: [{ name: 'serve-a', keys: ['TAI_KEY'], reading: 'unstated' as const }],
+            restartsPending: [],
+            reloadsUnconfirmed: [],
+            spanReleaseError: null,
+          },
+          recycle: null,
+        }
+      : null,
+});

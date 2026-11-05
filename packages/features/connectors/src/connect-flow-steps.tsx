@@ -181,7 +181,7 @@ export function ServerConnectStep({
       <StatusReadNotice status={reads.status} />
       {actions.reload.isError ? <ErrorState message={errorMessage(actions.reload.error)} /> : null}
       {actions.reloadReport !== null && isFleetReportFailure(actions.reloadReport) ? (
-        <FleetReport summary={actions.reloadReport} action="reload" />
+        <FleetReport summary={actions.reloadReport} action="reload" scope="reload" />
       ) : null}
       {live.kind === 'bound' ? (
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -334,10 +334,12 @@ export function DoneStep({
       })}
       {saved.map((pick) =>
         pick.summary === null && pick.recycle === null ? null : (
-          <div key={pick.title}>
-            {saved.length > 1 ? <p style={{ margin: 0 }}>{pick.title}</p> : null}
-            <FleetOutcomeReport summary={pick.summary} recycle={pick.recycle} scope={pick.title} />
-          </div>
+          <FleetOutcomeReport
+            key={pick.title}
+            summary={pick.summary}
+            recycle={pick.recycle}
+            scope={pick.title}
+          />
         ),
       )}
       {canPick ? null : (

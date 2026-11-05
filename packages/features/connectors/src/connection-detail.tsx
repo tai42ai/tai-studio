@@ -162,7 +162,7 @@ function useConnectionMutations(connectionId: string, connection: ConnectionView
 
   // A sub-service change that requires consent but returns no authorization URL is a
   // silent no-op unless surfaced: the operator asked for access the change cannot grant
-  // without a reconnect. Loud inline alert, cleared when a fresh save/reconnect starts.
+  // without a reconnect. Loud inline alert, cleared when the next write starts.
   const [consentBlocked, setConsentBlocked] = useState(false);
 
   const patch = useMutation({
@@ -215,13 +215,27 @@ function useConnectionMutations(connectionId: string, connection: ConnectionView
     },
   });
 
+  // A write's outcome stands until the next write starts, which clears what the last one left in
+  // this view's state: its consent notice, its mutation failures, its disconnect outcome, and its
+  // OAuth report and notice. A save's OAuth consent is that save still running, so their reports
+  // show together.
+  const startWrite = (): void => {
+    setConsentBlocked(false);
+    patch.reset();
+    reconnect.reset();
+    disconnect.reset();
+    setDisconnectOutcome(null);
+    setOauthFleet(null);
+    oauth.clearNotice();
+  };
+
   return {
     oauth,
     oauthFleet,
     effectiveEnabled,
     toggle,
     consentBlocked,
-    setConsentBlocked,
+    startWrite,
     patch,
     reconnect,
     confirmOpen,
@@ -240,10 +254,14 @@ function useConnectionActions(connectionId: string) {
   // A mutation may refuse with a named 501 (store off, or this provider's OAuth
   // credentials unset) — surface that as the muted, actionable note, and reserve the
   // loud ErrorState for genuine errors (validation, upstream, 5xx).
-  const mutationErrorObj =
-    actions.patch.error ?? actions.reconnect.error ?? actions.disconnect.error;
-  const refusal = readConnectorRefusal(mutationErrorObj);
-  const mutationFailure = refusal === null ? mutationErrorObj : null;
+  const failedWrite =
+    [
+      { write: 'sub-services', error: actions.patch.error },
+      { write: 'reconnect', error: actions.reconnect.error },
+      { write: 'disconnect', error: actions.disconnect.error },
+    ].find(({ error }) => error !== null) ?? null;
+  const refusal = readConnectorRefusal(failedWrite?.error ?? null);
+  const mutationFailure = refusal === null ? failedWrite : null;
   const busy =
     actions.patch.isPending ||
     actions.reconnect.isPending ||
@@ -263,7 +281,7 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
     effectiveEnabled,
     toggle,
     consentBlocked,
-    setConsentBlocked,
+    startWrite,
     patch,
     reconnect,
     confirmOpen,
@@ -321,7 +339,7 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
           patchPending={patch.isPending}
           onToggle={toggle}
           onSave={() => {
-            setConsentBlocked(false);
+            startWrite();
             patch.mutate([...effectiveEnabled]);
           }}
         />
@@ -346,7 +364,7 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
           <Button
             disabled={busy}
             onClick={() => {
-              setConsentBlocked(false);
+              startWrite();
               reconnect.mutate([...effectiveEnabled]);
             }}
           >
@@ -361,6 +379,7 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
           busy={busy}
           disconnectPending={disconnect.isPending}
           onConfirm={() => {
+            startWrite();
             disconnect.mutate();
           }}
         />
@@ -377,7 +396,7 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
             status={disconnectOutcome.revokeStatus}
           />
           {disconnectOutcome.fleet !== null ? (
-            <FleetReport summary={disconnectOutcome.fleet} />
+            <FleetReport summary={disconnectOutcome.fleet} scope="disconnect" />
           ) : null}
         </>
       ) : null}

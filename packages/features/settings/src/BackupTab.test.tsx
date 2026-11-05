@@ -387,7 +387,8 @@ describe('BackupTab', () => {
         'Some changed settings take effect only in a fresh worker process, so the fleet restarts the workers that need it, one at a time.',
       ),
     ).toBeInTheDocument();
-    const awaiting = screen.getByText('2 workers need a restart to apply some settings');
+    const awaiting = screen.getByText(/^2 workers need a restart to apply some settings —/);
+    expect(awaiting).toHaveTextContent('2 workers need a restart to apply some settings — env');
     const panel = awaiting.closest('[role="status"]');
     expect(panel).not.toBeNull();
     expect(within(panel as HTMLElement).getByText('serve-1')).toBeInTheDocument();

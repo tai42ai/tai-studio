@@ -121,7 +121,7 @@ export function RemoveProviderDialog({
   const refusal = readConnectorRefusal(remove.error);
   const note =
     fleetFailure !== null ? (
-      <FleetReport summary={fleetFailure} />
+      <FleetReport summary={fleetFailure} scope="remove server" />
     ) : refusal !== null ? (
       <ConnectorRefusalNotice refusal={refusal} />
     ) : undefined;
@@ -136,7 +136,7 @@ export function RemoveProviderDialog({
       }}
       onClose={onClose}
       isPending={remove.isPending}
-      error={refusal === null ? remove.error : null}
+      failure={{ error: refusal === null ? remove.error : null, scope: 'remove server' }}
       disabledNote={note}
     >
       <p style={{ margin: 0 }}>

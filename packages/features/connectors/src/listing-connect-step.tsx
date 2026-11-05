@@ -371,7 +371,7 @@ export function ListingConnectStep({
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
-      <FleetOutcomeReport summary={summary} recycle={reload.recycle} />
+      <FleetOutcomeReport summary={summary} recycle={reload.recycle} scope="install" />
       {wait}
     </div>
   );

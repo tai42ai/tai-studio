@@ -43,6 +43,8 @@ export interface FormDialogProps {
   readonly submitVariant?: 'primary' | 'danger';
   /** The Cancel button's label. */
   readonly cancelLabel?: string;
+  /** The write the failure's report names as its scope. */
+  readonly errorScope: string;
   /** The form body — the caller's fields. */
   readonly children: ReactNode;
 }
@@ -57,6 +59,7 @@ export function FormDialog({
   submitDisabled = false,
   submitVariant = 'primary',
   cancelLabel = 'Cancel',
+  errorScope,
   children,
 }: FormDialogProps): ReactNode {
   const [isPending, setIsPending] = useState(false);
@@ -117,7 +120,7 @@ export function FormDialog({
     >
       <form onSubmit={handleSubmit}>
         {children}
-        {submitError != null ? <WriteFailure error={submitError} /> : null}
+        {submitError != null ? <WriteFailure error={submitError} scope={errorScope} /> : null}
         <div className="tai-dialog-actions">
           <Button type="button" onClick={close}>
             {cancelLabel}

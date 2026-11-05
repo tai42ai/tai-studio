@@ -73,6 +73,8 @@ function EntrySectionEditor({
     onAdd,
     trimmedRemove,
   } = useEntrySection(add, remove);
+  const addWrite = `add ${addLabel} entries`;
+  const removeWrite = `remove ${addLabel} entry`;
 
   return (
     <Stack>
@@ -111,11 +113,12 @@ function EntrySectionEditor({
         </Button>
         {addMutation.isSuccess ? <Badge variant="success">Added</Badge> : null}
       </div>
-      {addMutation.isError ? <WriteFailure error={addMutation.error} /> : null}
+      {addMutation.isError ? <WriteFailure error={addMutation.error} scope={addWrite} /> : null}
       {addMutation.isSuccess ? (
         <FleetOutcomeReport
           summary={summarizeFleetFanout(addMutation.data)}
           recycle={addMutation.data.recycle}
+          scope={addWrite}
         />
       ) : null}
 
@@ -150,6 +153,7 @@ function EntrySectionEditor({
             <FleetOutcomeReport
               summary={summarizeFleetFanout(removeMutation.data)}
               recycle={removeMutation.data.recycle}
+              scope={removeWrite}
             />
           ) : null}
 
@@ -165,7 +169,7 @@ function EntrySectionEditor({
                 setConfirmTitle(null);
               }}
               isPending={removeMutation.isPending}
-              error={removeMutation.error}
+              failure={{ error: removeMutation.error, scope: removeWrite }}
             >
               <p style={{ margin: 0 }}>
                 Remove the {addLabel} entry{' '}
@@ -182,6 +186,9 @@ function EntrySectionEditor({
 
 type ApiToolsList = 'include' | 'exclude';
 type ApiToolsAction = 'add' | 'remove';
+
+/** The name the api_tools edit's report and failure carry. */
+const API_TOOLS_WRITE = 'api_tools';
 
 /** The api_tools include/exclude list editor: add/remove one name on either list by
  *  delta (there is no read of the current lists, so this edits by name). */
@@ -261,9 +268,13 @@ function ApiToolsEditor({ api }: { readonly api: ApiClient }): ReactNode {
         </Button>
         {edit.isSuccess ? <Badge variant="success">Updated</Badge> : null}
       </div>
-      {edit.isError ? <WriteFailure error={edit.error} /> : null}
+      {edit.isError ? <WriteFailure error={edit.error} scope={API_TOOLS_WRITE} /> : null}
       {edit.isSuccess ? (
-        <FleetOutcomeReport summary={summarizeFleetFanout(edit.data)} recycle={edit.data.recycle} />
+        <FleetOutcomeReport
+          summary={summarizeFleetFanout(edit.data)}
+          recycle={edit.data.recycle}
+          scope={API_TOOLS_WRITE}
+        />
       ) : null}
     </Stack>
   );

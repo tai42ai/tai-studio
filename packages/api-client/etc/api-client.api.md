@@ -9983,6 +9983,30 @@ const fleetOutcome: z.ZodEnum<{
     stale: "stale";
 }>;
 
+// @public
+export interface FleetReloadNamedWorker {
+    // (undocumented)
+    readonly name: string;
+    // (undocumented)
+    readonly statement: FleetReloadWorkerStatement;
+}
+
+// @public
+export type FleetReloadReach = {
+    readonly kind: 'fleet';
+} | {
+    readonly kind: 'selected';
+    readonly count: number;
+} | {
+    readonly kind: 'no-bus';
+} | {
+    readonly kind: 'alone-on-bus';
+} | {
+    readonly kind: 'one-row';
+    readonly worker: string;
+    readonly others: readonly FleetReloadNamedWorker[];
+};
+
 // @public (undocumented)
 export type FleetReloadResult = z.infer<typeof fleetReloadResult>;
 
@@ -10037,6 +10061,14 @@ const fleetReloadResult: z.ZodObject<{
     roll_deferred: z.ZodDefault<z.ZodBoolean>;
     roll_deferred_to: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>;
+
+// @public
+export interface FleetReloadSummary extends FleetReportSummary {
+    readonly reach: FleetReloadReach;
+}
+
+// @public
+export type FleetReloadWorkerStatement = 'recycled' | 'outcome-open' | 'confirmed-clean' | 'new-life' | 'roll-handed-off';
 
 // @public (undocumented)
 export type FleetReportFanout = z.infer<typeof fleetReportFanout>;
@@ -23865,7 +23897,7 @@ const subServiceView: z.ZodObject<{
 export function summarizeFleetFanout(reply: FleetFanoutReply): FleetReportSummary | null;
 
 // @public
-export function summarizeFleetReload(reply: Omit<FleetReloadResult, 'ok'>): FleetReportSummary;
+export function summarizeFleetReload(reply: Omit<FleetReloadResult, 'ok'>, targets: readonly string[] | null): FleetReloadSummary;
 
 // @public
 export function summarizeFleetResult(result: Omit<FleetResult, 'ok'>): FleetReportSummary;

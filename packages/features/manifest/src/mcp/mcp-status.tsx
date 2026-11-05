@@ -108,7 +108,11 @@ function ServerStatusTable({ rows }: { rows: readonly ServerRow[] }): ReactNode 
           honestly (nothing on a converged reload). */}
       {reload.isSuccess ? (
         <div style={{ marginTop: 'var(--tai-space-3)' }}>
-          <FleetReport summary={summarizeFleetResult(reload.data)} action="reload" />
+          <FleetReport
+            summary={summarizeFleetResult(reload.data)}
+            action="reload"
+            scope="reload bound server"
+          />
         </div>
       ) : null}
     </>
@@ -310,7 +314,7 @@ function DeregisterConfirmDialog({
       onConfirm={onConfirm}
       onClose={onClose}
       isPending={isPending}
-      error={error}
+      failure={{ error, scope: 'deregister' }}
     >
       <p style={{ margin: 0 }}>
         Detach <strong style={{ fontFamily: 'var(--tai-font-mono)' }}>{target}</strong> and its
@@ -319,7 +323,7 @@ function DeregisterConfirmDialog({
       </p>
       {report !== null ? (
         <div style={{ marginTop: 'var(--tai-space-3)' }}>
-          <FleetReport summary={report} action="deregister" />
+          <FleetReport summary={report} action="deregister" scope="deregister" />
         </div>
       ) : null}
     </ConfirmDialog>
@@ -447,12 +451,20 @@ export function UnboundServersSection(): ReactNode {
           honestly (nothing on a converged / lone-worker op). */}
       {reload.isSuccess ? (
         <div style={{ marginTop: 'var(--tai-space-3)' }}>
-          <FleetReport summary={summarizeFleetResult(reload.data)} action="reload" />
+          <FleetReport
+            summary={summarizeFleetResult(reload.data)}
+            action="reload"
+            scope="reload unbound server"
+          />
         </div>
       ) : null}
       {reloadAll.isSuccess ? (
         <div style={{ marginTop: 'var(--tai-space-3)' }}>
-          <FleetReport summary={summarizeFleetResult(reloadAll.data)} action="reload" />
+          <FleetReport
+            summary={summarizeFleetResult(reloadAll.data)}
+            action="reload"
+            scope="reload all unbound"
+          />
         </div>
       ) : null}
       {deregisterTarget !== null ? (

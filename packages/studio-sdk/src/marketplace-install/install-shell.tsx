@@ -23,8 +23,14 @@ export function storeOffNote(error: unknown): ReactNode {
 }
 
 /** A failed call's surface: the store-off note, else the failure read as a `WriteFailure`. */
-export function InstallFailure({ error }: { readonly error: unknown }): ReactNode {
-  return storeOffNote(error) ?? <WriteFailure error={error} />;
+export function InstallFailure({
+  error,
+  scope,
+}: {
+  readonly error: unknown;
+  readonly scope: string;
+}): ReactNode {
+  return storeOffNote(error) ?? <WriteFailure error={error} scope={scope} />;
 }
 
 export interface InstallShellProps {
@@ -35,6 +41,8 @@ export interface InstallShellProps {
   readonly isPending: boolean;
   /** The loud failure; `null` while there is none. */
   readonly error: unknown;
+  /** The write the failure's report names as its scope. */
+  readonly errorScope: string;
   /** A muted note that takes the failure slot and blocks the submit. */
   readonly disabledNote?: ReactNode;
   readonly submitDisabled?: boolean;
@@ -50,6 +58,7 @@ export function InstallShell({
   pendingLabel,
   isPending,
   error,
+  errorScope,
   disabledNote,
   submitDisabled = false,
   onSubmit,
@@ -64,7 +73,7 @@ export function InstallShell({
         pendingLabel={pendingLabel}
         confirmVariant="primary"
         isPending={isPending}
-        error={error}
+        failure={{ error, scope: errorScope }}
         disabledNote={disabledNote}
         confirmDisabled={submitDisabled}
         onConfirm={onSubmit}
@@ -83,7 +92,7 @@ export function InstallShell({
   return (
     <form aria-label={title} className="tai-stack tai-stack-3" onSubmit={handleSubmit}>
       {children}
-      {disabledNote ?? (error != null ? <WriteFailure error={error} /> : null)}
+      {disabledNote ?? (error != null ? <WriteFailure error={error} scope={errorScope} /> : null)}
       <div className="tai-dialog-actions">
         <Button type="button" onClick={onDismiss}>
           Cancel

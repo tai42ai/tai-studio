@@ -244,7 +244,10 @@ function DeleteFolderDialog({ folder, onFoldersChanged, onClose }: FolderDialogP
       onConfirm={remove.run}
       onClose={onClose}
       isPending={remove.pending}
-      error={remove.error !== null && !off ? errorMessage(remove.error) : null}
+      failure={{
+        error: remove.error !== null && !off ? errorMessage(remove.error) : null,
+        scope: 'delete folder',
+      }}
       disabledNote={
         off ? (
           <FeatureDisabled feature="Tool metadata" message={featureDisabledMessage(remove.error)} />

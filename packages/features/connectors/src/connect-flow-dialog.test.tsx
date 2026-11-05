@@ -10,10 +10,16 @@ import {
   apiRoutes,
   type MarketplaceInstallPreview,
   type MeProjection,
+  summarizeFleetResult,
 } from '@tai42/api-client';
 import { mcpStatusKey } from '@tai42/studio-sdk';
 import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -248,6 +254,24 @@ describe('ConnectFlowDialog — the server Connect step', () => {
     });
   });
 
+  it('names the reload Try again ran in its unconverged report', async () => {
+    const user = userEvent.setup();
+    renderFlow(
+      { kind: 'server', title: 'acme' },
+      {
+        client: baseClient({ reloadMcp: vi.fn().mockResolvedValue(NON_CONVERGED_FANOUT) }),
+        projection: scopedProjection({ routes: [{ path: RELOAD, methods: ['POST'] }] }),
+        directory: reads({
+          status: { bound: {}, failed: [{ title: 'acme', category: 'auth', message: 'denied' }] },
+        }),
+      },
+    );
+    await user.click(await screen.findByRole('button', { name: 'Try again' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '1 worker did not converge — reload',
+    );
+  });
+
   it('shows a failed status read on the server step with its Retry, not a spinner', async () => {
     const user = userEvent.setup();
     const retry = vi.fn();
@@ -423,7 +447,47 @@ describe('ConnectFlowDialog — the Pick tools rows', () => {
       'The recycle stopped at backend-2 (backend workers)',
     );
     expect(screen.getByTestId('recycle-stopped')).toHaveTextContent('old life still present');
-    expect(screen.getByText('1 worker needs a restart to apply some settings')).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '1 worker needs a restart to apply some settings — acme',
+    );
+  });
+
+  it('names each saved pick on its heading alone, with no name line above it', async () => {
+    const user = userEvent.setup();
+    const setMcpToolFilter = vi.fn().mockResolvedValue({
+      status: 'ok',
+      span_release_error: null,
+      awaiting_respawn: [{ name: 'backend-2', keys: ['K'] }],
+      fanout: {
+        mode: 'fleet',
+        op: 'reload_config',
+        reachable: true,
+        local_only: false,
+        results: [],
+        error: null,
+      },
+      recycle: { recycle: [], skipped: [], fresh: [], recycle_stopped: null },
+    });
+    renderFlow(
+      { kind: 'pick', name: 'acme', titles: ['acme', 'relay'], connectionId: null },
+      {
+        client: baseClient({ setMcpToolFilter }),
+        projection: editorProjection(),
+        directory: reads({
+          manifest: [entry('acme'), entry('relay')],
+          status: { bound: { acme: ['acme_send'], relay: ['relay_send'] }, failed: [] },
+        }),
+      },
+    );
+    for (const checkbox of await screen.findAllByRole('checkbox', {
+      name: 'Mount every tool, including tools the server adds later',
+    })) {
+      await user.click(checkbox);
+    }
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByRole('region', { name: 'Worker recycle — acme' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Worker recycle — relay' })).toBeVisible();
   });
 
   it('shows a save refused while the server is still starting as that start, not a failure', async () => {
@@ -597,6 +661,27 @@ describe('ConnectFlowDialog — the Pick tools rows', () => {
     expect(failure).toHaveClass('tai-error-state');
     expect(within(failure as HTMLElement).getByRole('button', { name: 'Retry' })).toBeVisible();
     expect(screen.queryByText('Starting')).toBeNull();
+  });
+
+  it('names the connect in the report beside a tools read the answering worker cannot serve yet', async () => {
+    const listMcpAdvertisedTools = vi.fn().mockRejectedValue(new ApiError('no such server', 404));
+    renderFlow(
+      {
+        kind: 'resumed',
+        connectionId: 'conn-1',
+        fleet: summarizeFleetResult(NON_CONVERGED_FANOUT),
+      },
+      {
+        client: baseClient({ listMcpAdvertisedTools }),
+        directory: reads({ manifest: [entry('acme', 'conn-1')] }),
+      },
+    );
+    await screen.findByText(
+      'acme was just added, but the worker that answered has not loaded it yet.',
+    );
+    expect(
+      screen.getByText(reportHeading('Change saved, but 1 worker did not converge — connect')),
+    ).toBeVisible();
   });
 
   it('labels a mapped tool with its display name and the filter matches either name', async () => {
@@ -989,6 +1074,15 @@ describe('ConnectFlowDialog — a marketplace listing', () => {
     expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
   });
 
+  it('names the install in the report beside the wait for its provider', async () => {
+    const user = userEvent.setup();
+    renderFlow(LISTING, { client: listingClient({}) });
+    await install(user);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '1 worker did not converge — install',
+    );
+  });
+
   it('gives up after the settle timeout when the reload did not converge', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
@@ -1100,7 +1194,54 @@ describe('ConnectFlowDialog — a failed tool pick that carries a recycle roll',
     );
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(await screen.findByRole('status')).toHaveTextContent(`${ROLL_FAILURE_HEADING} — acme`);
     expect(screen.getByText(`Could not save acme: ${ROLL_FAILURE_MESSAGE}`)).toBeInTheDocument();
+  });
+
+  it('names each server of a pick with its own report when a later save fails', async () => {
+    const user = userEvent.setup();
+    const setMcpToolFilter = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: 'ok',
+        env_keys: 1,
+        awaiting_respawn: [{ name: 'backend-2', keys: ['K'] }],
+        span_release_error: null,
+        roll_deferred: false,
+        roll_deferred_to: null,
+        fanout: {
+          mode: 'fleet',
+          op: 'reload_config',
+          reachable: true,
+          local_only: false,
+          results: [],
+          error: null,
+        },
+        recycle: { recycle: [], skipped: [], fresh: [], recycle_stopped: null },
+      })
+      .mockRejectedValueOnce(failureWithRoll());
+    renderFlow(
+      { kind: 'pick', name: 'acme', titles: ['acme', 'relay'], connectionId: null },
+      {
+        client: baseClient({ setMcpToolFilter }),
+        projection: editorProjection(),
+        directory: reads({
+          manifest: [entry('acme'), entry('relay')],
+          status: { bound: { acme: ['acme_send'], relay: ['relay_send'] }, failed: [] },
+        }),
+      },
+    );
+    for (const checkbox of await screen.findAllByRole('checkbox', {
+      name: 'Mount every tool, including tools the server adds later',
+    })) {
+      await user.click(checkbox);
+    }
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    const heading = (text: string) => screen.getByText(reportHeading(text));
+    await screen.findByText(`Could not save relay: ${ROLL_FAILURE_MESSAGE}`);
+    expect(heading(`${ROLL_FAILURE_HEADING} — relay`)).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Worker recycle — acme' })).toBeVisible();
+    expect(heading(`${ROLL_FAILURE_HEADING} — acme`)).toBeVisible();
   });
 });

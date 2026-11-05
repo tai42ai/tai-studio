@@ -129,7 +129,7 @@ function EditExtensionsDialog({
           availableReady={availableReady}
         />
 
-        {save.isError ? <WriteFailure error={save.error} /> : null}
+        {save.isError ? <WriteFailure error={save.error} scope="extensions" /> : null}
 
         {ext.confirmingClear ? (
           <p role="alert" className="tai-status-err" style={{ margin: 0 }}>
@@ -227,6 +227,7 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
           <FleetOutcomeReport
             summary={summarizeFleetFanout(save.data)}
             recycle={save.data.recycle}
+            scope="extensions"
           />
         </>
       ) : null}

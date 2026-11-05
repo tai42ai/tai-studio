@@ -9,6 +9,8 @@ import { type ReactNode, useState } from 'react';
 export interface ReplaceConfirmDialogProps {
   readonly title: string;
   readonly confirmLabel: string;
+  /** The write the failure's report names as its scope. */
+  readonly errorScope: string;
   readonly pendingLabel?: string;
   readonly onClose: () => void;
   readonly onReplace: () => Promise<void>;
@@ -18,6 +20,7 @@ export interface ReplaceConfirmDialogProps {
 export function ReplaceConfirmDialog({
   title,
   confirmLabel,
+  errorScope,
   pendingLabel = 'Replacing',
   onClose,
   onReplace,
@@ -33,7 +36,7 @@ export function ReplaceConfirmDialog({
       cancelLabel="Keep existing"
       confirmVariant="danger"
       isPending={busy}
-      error={error}
+      failure={{ error, scope: errorScope }}
       onConfirm={() => {
         setBusy(true);
         setError(null);

@@ -11,6 +11,7 @@ import { Button, Field, Spinner, TextInput, WriteFailure } from '@tai42/studio-s
 import type { ReactNode } from 'react';
 
 import { ConnectorRefusalNotice, Notice } from './notice';
+import { OAUTH_WRITE } from './oauth';
 import { SubServicesFieldset } from './SubServicesFieldset';
 import { useConnectorAdmin } from './use-add-server-dialog';
 import { type OnConnected, useConnectForm } from './use-connect-form';
@@ -108,9 +109,11 @@ export function ConnectForm({
           }
         />
       ) : failure !== null ? (
-        <WriteFailure error={failure} />
+        <WriteFailure error={failure} scope="connect" />
       ) : null}
-      {oauthNotice !== null ? <Notice notice={oauthNotice} onDismiss={clearNotice} /> : null}
+      {oauthNotice !== null ? (
+        <Notice notice={oauthNotice} onDismiss={clearNotice} scope={OAUTH_WRITE} />
+      ) : null}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
         <Button onClick={onCancel}>Cancel</Button>

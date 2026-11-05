@@ -221,6 +221,7 @@ export function MountInstallForm(props: MountInstallDialogProps): ReactNode {
       pendingLabel={verb === 'Install' ? 'Installing' : 'Updating'}
       isPending={action.state.status === 'pending'}
       error={storeOffNote(failure) === undefined ? failure : null}
+      errorScope={verb.toLowerCase()}
       disabledNote={storeOffNote(failure)}
       submitDisabled={model.blocked}
       onSubmit={() => {
@@ -270,6 +271,7 @@ export function MountInstallDialog(props: MountInstallDialogProps): ReactNode {
       title={`${verb} plugin`}
       submitLabel={verb}
       pendingLabel={verb === 'Install' ? 'Installing' : 'Updating'}
+      errorScope={verb.toLowerCase()}
       submitDisabled={model.blocked}
       onSubmit={submit}
       onClose={() => {

@@ -1,5 +1,10 @@
 import { type ApiClient, ApiError, type SettingsSchema } from '@tai42/api-client';
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { QueryClient } from '@tanstack/react-query';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -623,6 +628,15 @@ describe('ProfilesTab — apply report restart panel', () => {
     return screen.findByTestId('apply-report');
   }
 
+  it('names the report of a landed apply', async () => {
+    const report = await applyWith([{ name: 'backend-2', keys: ['BACKEND_MANIFEST_KEY'] }]);
+    expect(
+      within(report).getByText(
+        reportHeading('1 worker needs a restart to apply some settings — apply profile'),
+      ),
+    ).toBeVisible();
+  });
+
   it('shows no restart panel for a converged roll, whatever the rows state', async () => {
     const report = await applyWith([]);
     expect(within(report).getByTestId('apply-recycle')).toHaveTextContent('recycled');
@@ -657,7 +671,9 @@ describe('ProfilesTab — a failed apply that carries a recycle roll', () => {
     });
     await user.click(apply);
 
-    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await screen.findByText(reportHeading(`${ROLL_FAILURE_HEADING} — apply profile`)),
+    ).toBeInTheDocument();
     expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

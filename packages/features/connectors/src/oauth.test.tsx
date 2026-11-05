@@ -3,7 +3,12 @@
  * message is acted on ONLY when origin + source + type all match; any failure is
  * ignored and `completeOAuth` is never called.
  */
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -439,7 +444,9 @@ describe('useOAuthRedirectResume — completing a redirect flow', () => {
 
 function ResumeNoticeHarness(): React.ReactNode {
   const resume = useOAuthRedirectResume();
-  return resume.notice === null ? null : <Notice notice={resume.notice} onDismiss={vi.fn()} />;
+  return resume.notice === null ? null : (
+    <Notice notice={resume.notice} onDismiss={vi.fn()} scope="OAuth consent" />
+  );
 }
 
 describe('a failed sign-in completion that carries a recycle roll', () => {
@@ -452,7 +459,9 @@ describe('a failed sign-in completion that carries a recycle roll', () => {
     const completeOAuth = vi.fn().mockRejectedValue(failureWithRoll());
     renderWithProviders(<ResumeNoticeHarness />, { client: makeClient({ completeOAuth }) });
 
-    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await screen.findByText(reportHeading(`${ROLL_FAILURE_HEADING} — OAuth consent`)),
+    ).toBeInTheDocument();
     expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

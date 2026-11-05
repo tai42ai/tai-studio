@@ -45,19 +45,19 @@ const roll: RecycleRoll = {
 
 describe('FleetOutcomeReport', () => {
   it('renders the fleet report and no recycle section without a roll', () => {
-    render(<FleetOutcomeReport summary={degraded} recycle={null} />);
+    render(<FleetOutcomeReport scope="save" summary={degraded} recycle={null} />);
     expect(within(screen.getByRole('alert')).getByText('serve-a')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Worker recycle' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Worker recycle — save' })).toBeNull();
   });
 
   it('renders nothing for a change with nothing to report', () => {
-    const { container } = render(<FleetOutcomeReport summary={null} recycle={null} />);
+    const { container } = render(<FleetOutcomeReport scope="save" summary={null} recycle={null} />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it('renders the recycle roll with its self-deferred note', () => {
-    render(<FleetOutcomeReport summary={null} recycle={roll} />);
-    const section = screen.getByRole('region', { name: 'Worker recycle' });
+    render(<FleetOutcomeReport scope="save" summary={null} recycle={roll} />);
+    const section = screen.getByRole('region', { name: 'Worker recycle — save' });
     expect(within(section).getByTestId('apply-recycle')).toBeInTheDocument();
     expect(
       within(section).getByText(
@@ -70,6 +70,28 @@ describe('FleetOutcomeReport', () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  const awaiting: FleetReportSummary = {
+    ...degraded,
+    status: 'converged',
+    failures: [],
+    awaiting: [{ name: 'serve-a', keys: ['K'], reading: 'restartable' }],
+  };
+
+  it('names the restart banner by its scope beside a roll', () => {
+    render(<FleetOutcomeReport summary={awaiting} recycle={roll} scope="manifest" />);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '1 worker needs a restart to apply some settings — manifest',
+    );
+    expect(screen.getByRole('region', { name: 'Worker recycle — manifest' })).toBeVisible();
+  });
+
+  it('names the restart banner by its scope when the write ran no roll', () => {
+    render(<FleetOutcomeReport summary={awaiting} recycle={null} scope="manifest" />);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '1 worker needs a restart to apply some settings — manifest',
+    );
   });
 
   it('passes the framing to the fleet report and the scope to the roll', () => {

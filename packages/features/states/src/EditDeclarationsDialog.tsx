@@ -60,6 +60,7 @@ export function EditDeclarationsDialog({
       title={`Edit declarations of '${attachment.template}'`}
       submitLabel={orphans !== null ? 'Close orphans and save' : 'Save changes'}
       pendingLabel="Saving"
+      errorScope="edit declarations"
       submitDisabled={orphans !== null && resolution.trim() === ''}
       onSubmit={onSubmit}
       onClose={onClose}

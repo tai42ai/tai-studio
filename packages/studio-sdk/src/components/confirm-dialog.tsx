@@ -6,7 +6,7 @@
  * MCP server holds no tool listing on the answering worker shows as that refusal, any
  * other failure in the loud `ErrorState`). The caller supplies
  * the prompt as `children` and drives the action through `onConfirm` /
- * `isPending` / `error`. When the failure is an OFF (disabled-feature) state
+ * `isPending` / `failure`. When the failure is an OFF (disabled-feature) state
  * rather than a real error, the caller passes `disabledNote` — a muted note that
  * takes the error slot and blocks the confirm button, so an unconfigured store
  * never shows a loud red alert or a retry loop.
@@ -34,12 +34,6 @@ export interface ConfirmDialogProps {
   readonly onClose: () => void;
   readonly isPending: boolean;
   /**
-   * The failed action's rejection, shown through `WriteFailure`; omit/`null` while there
-   * is none. Any rejected value is accepted as it was thrown (a message string shows as
-   * it is), so the client's refusal codes stay readable.
-   */
-  readonly error?: unknown;
-  /**
    * A muted node shown in the error slot INSTEAD of the failure, for the
    * OFF (disabled-feature) case: the action's store is not configured, so the
    * failure is a state, not an error. When set it takes the error slot AND disables
@@ -54,6 +48,13 @@ export interface ConfirmDialogProps {
   readonly cancelLabel?: string;
   /** The prompt body — what the operator is confirming. */
   readonly children: ReactNode;
+  /**
+   * The action's failure, for a confirm whose action can fail in this dialog: `error` is the
+   * rejection, shown through `WriteFailure`, or `null` while there is none, and any rejected value
+   * is accepted as it was thrown (a message string shows as it is), so the client's refusal codes
+   * stay readable; `scope` is what the failure's report names as its scope.
+   */
+  readonly failure?: { readonly error: unknown; readonly scope: string };
 }
 
 export function ConfirmDialog({
@@ -63,12 +64,12 @@ export function ConfirmDialog({
   onConfirm,
   onClose,
   isPending,
-  error,
   disabledNote,
   confirmDisabled = false,
   confirmVariant = 'danger',
   cancelLabel = 'Cancel',
   children,
+  failure,
 }: ConfirmDialogProps): ReactNode {
   return (
     <Dialog
@@ -79,7 +80,10 @@ export function ConfirmDialog({
       }}
     >
       {children}
-      {disabledNote ?? (error != null ? <WriteFailure error={error} /> : null)}
+      {disabledNote ??
+        (failure?.error != null ? (
+          <WriteFailure error={failure.error} scope={failure.scope} />
+        ) : null)}
       <div className="tai-dialog-actions">
         <Button type="button" onClick={onClose}>
           {cancelLabel}

@@ -14,7 +14,12 @@ import {
   type MarketplaceInstalledPlugin,
 } from '@tai42/api-client';
 import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -273,7 +278,10 @@ describe('InstalledTab — upgrade all', () => {
     expect(await screen.findByTestId('recycle-stopped')).toHaveTextContent(
       'The recycle stopped at serve-2 (serve workers)',
     );
-    expect(screen.getByText('1 worker has settings it has not applied')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Worker recycle — upgrade all' })).toBeVisible();
+    expect(
+      screen.getByText(reportHeading('1 worker has settings it has not applied — upgrade all')),
+    ).toBeInTheDocument();
     expect(
       screen.getByText('tai42/toolbox: OSError: span one; tai42/flaky: OSError: span two'),
     ).toBeInTheDocument();
@@ -303,7 +311,9 @@ describe('InstalledTab — upgrade all', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Upgrade all' }));
 
-    const heading = await screen.findByText('1 worker has settings it has not applied');
+    const heading = await screen.findByText(
+      reportHeading('1 worker has settings it has not applied — upgrade all'),
+    );
     const panel = heading.closest('[role="status"]');
     if (!(panel instanceof HTMLElement)) throw new Error('the panel is not a status region');
     expect(panel).toHaveTextContent(
@@ -485,7 +495,9 @@ describe('InstalledTab — a failed upgrade-all that carries a recycle roll', ()
 
     await user.click(await screen.findByRole('button', { name: 'Upgrade all' }));
 
-    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await screen.findByText(reportHeading(`${ROLL_FAILURE_HEADING} — upgrade all`)),
+    ).toBeInTheDocument();
     expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
   });
 });

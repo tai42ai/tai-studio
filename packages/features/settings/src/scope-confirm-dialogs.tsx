@@ -33,7 +33,7 @@ export function DeleteScopeDialog({
       confirmLabel="Delete scope"
       pendingLabel="Deleting"
       isPending={mutation.isPending}
-      error={mutation.error}
+      failure={{ error: mutation.error, scope: 'delete scope' }}
       onConfirm={() => {
         mutation.mutate();
       }}
@@ -72,7 +72,7 @@ export function RemoveLastUrlDialog({
       confirmLabel="Remove URL"
       pendingLabel="Removing"
       isPending={mutation.isPending}
-      error={mutation.error}
+      failure={{ error: mutation.error, scope: 'remove last URL' }}
       onConfirm={() => {
         mutation.mutate();
       }}
@@ -111,7 +111,7 @@ export function PinPublicDialog({
       confirmLabel="Pin public"
       pendingLabel="Pinning"
       isPending={mutation.isPending}
-      error={mutation.error}
+      failure={{ error: mutation.error, scope: 'pin route public' }}
       onConfirm={() => {
         mutation.mutate();
       }}
@@ -148,7 +148,7 @@ export function UnpinPublicDialog({
       confirmLabel="Unpin"
       pendingLabel="Unpinning"
       isPending={mutation.isPending}
-      error={mutation.error}
+      failure={{ error: mutation.error, scope: 'unpin public route' }}
       onConfirm={() => {
         mutation.mutate();
       }}

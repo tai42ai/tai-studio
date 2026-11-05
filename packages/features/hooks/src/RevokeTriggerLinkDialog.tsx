@@ -41,7 +41,7 @@ export function RevokeTriggerLinkDialog({
       }}
       onClose={onClose}
       isPending={mutation.isPending}
-      error={mutation.isError ? mutation.error : null}
+      failure={{ error: mutation.isError ? mutation.error : null, scope: 'revoke trigger link' }}
     >
       <p style={{ margin: 0 }}>
         Revoke &ldquo;{name}&rdquo;? Its URL stops working immediately and cannot be restored — a

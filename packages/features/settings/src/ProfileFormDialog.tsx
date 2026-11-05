@@ -211,6 +211,7 @@ function ProfileFormBody({
       title={editing ? `Edit profile — ${name}` : 'Create profile'}
       submitLabel={editing ? 'Save profile' : 'Create profile'}
       pendingLabel={editing ? 'Saving' : 'Creating'}
+      errorScope={editing ? 'edit profile' : 'create profile'}
       submitDisabled={!isValid}
       onSubmit={submit}
       onClose={onClose}

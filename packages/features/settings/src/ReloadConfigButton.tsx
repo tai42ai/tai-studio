@@ -70,7 +70,7 @@ function ReloadConfigDialog({
       pendingLabel="Reloading config"
       confirmVariant="primary"
       isPending={reload.isPending}
-      error={reload.error}
+      failure={{ error: reload.error, scope: 'reload' }}
       onConfirm={() => {
         reload.mutate();
       }}
@@ -120,8 +120,9 @@ export function ReloadConfigButton(): ReactNode {
 
       {lastReloaded !== null ? (
         <FleetReloadReport
-          summary={summarizeFleetReload(lastReloaded)}
+          summary={summarizeFleetReload(lastReloaded, null)}
           recycle={lastReloaded.recycle}
+          scope="reload"
         />
       ) : null}
 

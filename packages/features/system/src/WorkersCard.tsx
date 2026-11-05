@@ -52,7 +52,10 @@ export function WorkersCard(): ReactNode {
   const [confirming, setConfirming] = useState(false);
   // The last successful reload's per-worker report, kept so it persists after the
   // dialog closes; cleared when the operator opens a fresh reload.
-  const [lastReloaded, setLastReloaded] = useState<FleetReloadResult | null>(null);
+  const [lastReloaded, setLastReloaded] = useState<{
+    readonly reply: FleetReloadResult;
+    readonly targets: string[] | null;
+  } | null>(null);
 
   const rows = workers.data?.workers ?? [];
   const selection = useWorkerSelection(rows);
@@ -131,8 +134,9 @@ export function WorkersCard(): ReactNode {
       {lastReloaded !== null ? (
         <div style={{ marginBottom: 'var(--tai-space-4)' }}>
           <FleetReloadReport
-            summary={summarizeFleetReload(lastReloaded)}
-            recycle={lastReloaded.recycle}
+            summary={summarizeFleetReload(lastReloaded.reply, lastReloaded.targets)}
+            recycle={lastReloaded.reply.recycle}
+            scope="reload"
           />
         </div>
       ) : null}
@@ -142,8 +146,8 @@ export function WorkersCard(): ReactNode {
       {confirming ? (
         <ReloadConfigDialog
           targets={selection.targets}
-          onReloaded={(result) => {
-            setLastReloaded(result);
+          onReloaded={(reply, targets) => {
+            setLastReloaded({ reply, targets });
             setConfirming(false);
           }}
           onClose={() => {

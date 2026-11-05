@@ -99,6 +99,7 @@ export function AttachTemplateDialog({
       title={`Attach template to '${stateName}'`}
       submitLabel="Attach"
       pendingLabel="Attaching"
+      errorScope="attach template"
       submitDisabled={template === ''}
       onSubmit={onSubmit}
       onClose={onClose}

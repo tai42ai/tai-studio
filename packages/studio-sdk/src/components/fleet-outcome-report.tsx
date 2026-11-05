@@ -16,8 +16,8 @@ export interface FleetOutcomeReportProps {
   readonly recycle: RecycleRollSectionProps['roll'] | null;
   /** Whose framing the broadcast's report takes. */
   readonly action?: FleetReportProps['action'];
-  /** What the roll's heading names as its scope, where a report holds several rolls. */
-  readonly scope?: string;
+  /** The write the report's panels and roll name as their scope. */
+  readonly scope: string;
 }
 
 export function FleetOutcomeReport({
@@ -26,10 +26,10 @@ export function FleetOutcomeReport({
   action,
   scope,
 }: FleetOutcomeReportProps): ReactNode {
-  if (recycle === null) return <FleetReport summary={summary} action={action} />;
+  if (recycle === null) return <FleetReport summary={summary} action={action} scope={scope} />;
   return (
     <div className="tai-stack tai-stack-3">
-      <FleetReport summary={summary} action={action} />
+      <FleetReport summary={summary} action={action} scope={scope} />
       <RecycleRollSection roll={recycle} scope={scope} />
     </div>
   );

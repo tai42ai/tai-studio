@@ -5,7 +5,12 @@
  * before submit.
  */
 import { ApiError } from '@tai42/api-client';
-import { failureWithRoll, ROLL_FAILURE_HEADING, ROLL_FAILURE_MESSAGE } from '@tai42/test-support';
+import {
+  failureWithRoll,
+  reportHeading,
+  ROLL_FAILURE_HEADING,
+  ROLL_FAILURE_MESSAGE,
+} from '@tai42/test-support';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -378,7 +383,38 @@ describe('ConnectForm — a failed connect that carries a recycle roll', () => {
     await user.type(screen.getByLabelText('Alias'), 'work-account');
     fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
-    expect(await screen.findByText(ROLL_FAILURE_HEADING)).toBeInTheDocument();
+    expect(
+      await screen.findByText(reportHeading(`${ROLL_FAILURE_HEADING} — connect`)),
+    ).toBeInTheDocument();
     expect(screen.getByText(ROLL_FAILURE_MESSAGE)).toBeInTheDocument();
+  });
+
+  it('names the consent when the completion after the connect fails with a roll', async () => {
+    const user = userEvent.setup();
+    const popup = makeFakePopup();
+    vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window);
+    const startConnect = vi
+      .fn()
+      .mockResolvedValue({ flow_id: 'f1', authorize_url: 'https://provider/auth' });
+    renderWithProviders(
+      <ConnectForm provider={provider()} onConnected={vi.fn()} onCancel={vi.fn()} />,
+      {
+        client: makeClient({
+          startConnect,
+          completeOAuth: vi.fn().mockRejectedValue(failureWithRoll()),
+        }),
+      },
+    );
+
+    await user.type(screen.getByLabelText('Alias'), 'work-account');
+    fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+    await waitFor(() => {
+      expect(startConnect).toHaveBeenCalled();
+    });
+    postMessageFrom(popup, goodMessage);
+
+    expect(
+      await screen.findByText(reportHeading(`${ROLL_FAILURE_HEADING} — OAuth consent`)),
+    ).toBeInTheDocument();
   });
 });

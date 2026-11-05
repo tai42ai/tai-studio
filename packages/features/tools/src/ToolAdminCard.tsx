@@ -140,10 +140,10 @@ export function ToolAdminCard(): ReactNode {
         {/* Each op broadcasts a registry change to the fleet; surface any failed
             propagation honestly (nothing on a converged / lone-worker op). */}
         {reload.isSuccess ? (
-          <FleetReport summary={summarizeFleetResult(reload.data)} action="reload" />
+          <FleetReport summary={summarizeFleetResult(reload.data)} action="reload" scope="reload" />
         ) : null}
         {remove.isSuccess ? (
-          <FleetReport summary={summarizeFleetResult(remove.data)} action="remove" />
+          <FleetReport summary={summarizeFleetResult(remove.data)} action="remove" scope="remove" />
         ) : null}
       </Stack>
       {confirmRemove ? (
@@ -158,7 +158,7 @@ export function ToolAdminCard(): ReactNode {
             setConfirmRemove(false);
           }}
           isPending={remove.isPending}
-          error={remove.error}
+          failure={{ error: remove.error, scope: 'remove' }}
         >
           <p style={{ margin: 0 }}>
             Remove <strong style={{ fontFamily: 'var(--tai-font-mono)' }}>{trimmedName}</strong>{' '}

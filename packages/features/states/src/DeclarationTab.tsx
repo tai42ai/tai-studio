@@ -187,6 +187,7 @@ export function DeclareStateDialog({
       title="Declare a state"
       submitLabel="Declare"
       pendingLabel="Declaring"
+      errorScope="declare state"
       submitDisabled={!ready}
       onSubmit={submit}
       onClose={onClose}

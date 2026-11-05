@@ -116,6 +116,8 @@ export function useSecretPasteMutation(
   };
 }
 
+const MANIFEST_WRITE = 'manifest';
+
 /** The reply of one write a save made: the manifest's, or one swept key's env delete. */
 export interface McpSaveReply {
   /** The write's name, as the heading of its recycle roll reads it. */
@@ -129,20 +131,25 @@ export interface McpSaveReply {
  * hold an inert orphan key, never a dangling `!ENV`). A save moves both manifest views
  * (and the env config only when a generated key was swept), so it re-reads each. Each write
  * reloads the fleet and can run a recycle roll, so `replies` holds every reply of the latest
- * save, those of the writes that landed before one failed among them.
+ * save, those of the writes that landed before one failed among them, and `latestWrite` names
+ * the write the save reached last: the one that failed, when the save fails.
  */
 export function useMcpSaveMutation() {
   const api = useApi();
   const queryClient = useQueryClient();
   const [replies, setReplies] = useState<readonly McpSaveReply[]>([]);
+  const [latestWrite, setLatestWrite] = useState(MANIFEST_WRITE);
   const mutation = useMutation({
     mutationFn: async ({ mcp, orphanedKeys }: { mcp: unknown[]; orphanedKeys: string[] }) => {
+      setLatestWrite(MANIFEST_WRITE);
       const result = await api.setMcpConfig(mcp);
-      setReplies([{ write: 'manifest', result }]);
+      setReplies([{ write: MANIFEST_WRITE, result }]);
       for (const key of orphanedKeys) {
+        const write = `env key ${key}`;
+        setLatestWrite(write);
         // The delete rides the env editor's blank-value path.
         const swept = await api.setEnvConfig({ env: { [key]: '' } });
-        setReplies((current) => [...current, { write: `env key ${key}`, result: swept }]);
+        setReplies((current) => [...current, { write, result: swept }]);
       }
       return result;
     },
@@ -158,7 +165,7 @@ export function useMcpSaveMutation() {
       }
     },
   });
-  return { ...mutation, replies };
+  return { ...mutation, replies, latestWrite };
 }
 
 export interface ConfigDraft {

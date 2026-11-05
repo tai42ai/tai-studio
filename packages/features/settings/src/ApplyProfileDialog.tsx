@@ -99,6 +99,7 @@ function ApplyReport({ report }: { readonly report: ApplyResponse }): ReactNode 
       <FleetOutcomeReport
         summary={summarizeFleetFanout({ ...report, recycle: report })}
         recycle={report}
+        scope="apply profile"
       />
 
       <section>
@@ -224,7 +225,7 @@ export function ApplyProfileDialog({
               </p>
             ) : null}
 
-            {apply.isError ? <WriteFailure error={apply.error} /> : null}
+            {apply.isError ? <WriteFailure error={apply.error} scope="apply profile" /> : null}
           </>
         )}
 

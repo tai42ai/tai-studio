@@ -278,7 +278,7 @@ function EnvironmentEditor({
 
       {mutation.isError ? (
         <div style={{ marginTop: 'var(--tai-space-4)' }}>
-          <WriteFailure error={mutation.error} />
+          <WriteFailure error={mutation.error} scope="environment" />
         </div>
       ) : null}
 
@@ -287,6 +287,7 @@ function EnvironmentEditor({
           <FleetOutcomeReport
             summary={summarizeFleetFanout(mutation.data)}
             recycle={mutation.data.recycle}
+            scope="environment"
           />
         </div>
       ) : null}

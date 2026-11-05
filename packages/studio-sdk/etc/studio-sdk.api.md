@@ -6588,7 +6588,10 @@ export interface ConfirmDialogProps {
     // (undocumented)
     readonly confirmVariant?: 'primary' | 'danger';
     readonly disabledNote?: ReactNode;
-    readonly error?: unknown;
+    readonly failure?: {
+        readonly error: unknown;
+        readonly scope: string;
+    };
     // (undocumented)
     readonly isPending: boolean;
     // (undocumented)
@@ -15100,6 +15103,7 @@ export function FailedReplyOutcome(input: FailedReplyOutcomeProps): ReactNode;
 // @public (undocumented)
 export interface FailedReplyOutcomeProps {
     readonly error: unknown;
+    readonly scope: string;
 }
 
 // @public
@@ -15241,10 +15245,34 @@ export function FleetOutcomeReport(input: FleetOutcomeReportProps): ReactNode;
 export interface FleetOutcomeReportProps {
     readonly action?: FleetReportProps['action'];
     readonly recycle: RecycleRollSectionProps['roll'] | null;
-    readonly scope?: string;
+    readonly scope: string;
     // (undocumented)
     readonly summary: FleetReportSummary | null;
 }
+
+// @public
+interface FleetReloadNamedWorker {
+    // (undocumented)
+    readonly name: string;
+    // (undocumented)
+    readonly statement: FleetReloadWorkerStatement;
+}
+
+// @public
+type FleetReloadReach = {
+    readonly kind: 'fleet';
+} | {
+    readonly kind: 'selected';
+    readonly count: number;
+} | {
+    readonly kind: 'no-bus';
+} | {
+    readonly kind: 'alone-on-bus';
+} | {
+    readonly kind: 'one-row';
+    readonly worker: string;
+    readonly others: readonly FleetReloadNamedWorker[];
+};
 
 // @public (undocumented)
 export function FleetReloadReport(input: FleetReloadReportProps): ReactNode;
@@ -15252,7 +15280,8 @@ export function FleetReloadReport(input: FleetReloadReportProps): ReactNode;
 // @public (undocumented)
 export interface FleetReloadReportProps {
     readonly recycle: RecycleRoll | null;
-    readonly summary: FleetReportSummary;
+    readonly scope: string;
+    readonly summary: FleetReloadSummary;
 }
 
 // @public (undocumented)
@@ -15309,6 +15338,14 @@ const fleetReloadResult: z.ZodObject<{
     roll_deferred: z.ZodDefault<z.ZodBoolean>;
     roll_deferred_to: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>;
+
+// @public
+interface FleetReloadSummary extends FleetReportSummary {
+    readonly reach: FleetReloadReach;
+}
+
+// @public
+type FleetReloadWorkerStatement = 'recycled' | 'outcome-open' | 'confirmed-clean' | 'new-life' | 'roll-handed-off';
 
 // @public
 export function FleetReport(input: FleetReportProps): ReactNode;
@@ -15369,6 +15406,7 @@ const fleetReportFanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
 // @public (undocumented)
 export interface FleetReportProps {
     readonly action?: 'save' | 'reload' | 'deregister' | 'remove' | 'failed';
+    readonly scope: string;
     // (undocumented)
     readonly summary: FleetReportSummary | null;
 }
@@ -15634,6 +15672,7 @@ export interface FormDialogProps {
     readonly children: ReactNode;
     // (undocumented)
     readonly description?: string;
+    readonly errorScope: string;
     readonly onClose: () => void;
     readonly onSubmit: () => void | Promise<void>;
     readonly pendingLabel: string;
@@ -20167,7 +20206,7 @@ export function RecycleRollSection(input: RecycleRollSectionProps): ReactNode;
 // @public (undocumented)
 export interface RecycleRollSectionProps {
     readonly roll: Pick<RecycleRoll, 'recycle' | 'fresh' | 'recycle_stopped'>;
-    readonly scope?: string;
+    readonly scope: string;
 }
 
 // @public (undocumented)
@@ -30005,7 +30044,7 @@ export interface StructuredOutputProps {
 }
 
 // @public
-export const STUDIO_PLUGIN_API_VERSION = 3;
+export const STUDIO_PLUGIN_API_VERSION = 4;
 
 // @public (undocumented)
 type StudioPluginListingEntry = z.infer<typeof studioPluginListingEntry>;
@@ -31932,6 +31971,7 @@ export function WriteFailure(input: WriteFailureProps): ReactNode;
 // @public (undocumented)
 export interface WriteFailureProps {
     readonly error: unknown;
+    readonly scope: string;
 }
 
 // @public (undocumented)

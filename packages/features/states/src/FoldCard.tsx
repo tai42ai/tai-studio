@@ -105,7 +105,7 @@ export function FoldCard({ stateName, subject, kinds, disabled }: FoldCardProps)
           pendingLabel="Folding"
           confirmVariant="danger"
           isPending={mutation.isPending}
-          error={mutation.error}
+          failure={{ error: mutation.error, scope: 'fold subject' }}
           onConfirm={() => {
             mutation.mutate();
           }}
