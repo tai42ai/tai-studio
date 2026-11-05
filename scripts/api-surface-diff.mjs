@@ -72,10 +72,11 @@
 // - A keyword the diff does not know (`using`) fails closed: any change to or from it
 //   reads as breaking.
 //
-// Breaking classes: a removed symbol, an `export` dropped from a declaration, a
-// removed, added or NON-additively changed class constructor, a removed or
-// NON-additively changed interface/class member (named or an index/call/construct
-// signature), a NON-additive change to an interface or class declaration's own
+// Breaking classes: a whole report gone from the new side (removedReport: the entry point
+// it records is gone, so the report's symbols are not listed one by one), a removed symbol,
+// an `export` dropped from a declaration, a removed, added or NON-additively changed class
+// constructor, a removed or NON-additively changed interface/class member (named or an
+// index/call/construct signature), a NON-additive change to an interface or class declaration's own
 // modifiers (a class made or unmade `abstract`), type parameters or heritage
 // clauses (`extends`/`implements`), a member turned from optional to required, a
 // new REQUIRED member, a function or method overload removed or changed
@@ -596,4 +597,13 @@ function classify(reportName, oldEntries, newEntries) {
   return classifyEntries(`${reportName} :: `, oldEntries, newEntries, block);
 }
 
-export { classify };
+// The finding for a report held on the old side and gone from the new one, with the report
+// alone as its identity: equal for that report whichever old side it was found against.
+function removedReport(reportName, packageName) {
+  return {
+    identity: JSON.stringify([reportName, null]),
+    text: `${reportName}: report was removed from ${packageName}, so its public entry point is gone`,
+  };
+}
+
+export { classify, removedReport };

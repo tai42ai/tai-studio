@@ -3,8 +3,7 @@
 // version bump the release-please label produced.
 //
 // It compares the committed api-extractor reports of every published package
-// (packages/studio-sdk/etc/*.api.md and packages/api-client/etc/*.api.md) at the
-// version being released against a per-package baseline: the highest v* tag below
+// (packages/<package>/etc/*.api.md) at the version being released against a per-package baseline: the highest v* tag below
 // the release whose version is PUBLISHED on npm for that report's package. The
 // baseline is the newest surface a consumer can actually install; a tag whose
 // publish this gate itself refused is not one, so it is skipped in favour of the
@@ -27,33 +26,39 @@
 //
 // The surface diff itself lives in scripts/api-report-parse.mjs (reading a report into
 // its declarations and exports) and scripts/api-surface-diff.mjs (listing the breaking
-// changes between two of them), whose headers specify every rule they apply. Any
-// tooling failure — unreadable config, an unknown mode, a missing report at the
-// release, a git error that is not simply an absent path at the ref, a report the diff
-// cannot classify — throws; the gate never passes a release on a classification it
-// could not compute.
+// changes between two of them), whose headers specify every rule they apply.
+//
+// What a ref holds is its committed packages/<package>/etc/*.api.md files; the gates read no list
+// of reports. A report is its npm package name plus its report name, wherever its folder sits:
+//
+//   * held by the baseline and not the release, it is a removed entry point, a breaking change;
+//   * moved to another folder under the same npm name, it is diffed where it now sits, so a
+//     symbol dropped in the move is refused;
+//   * kept in a package renamed in place, it counts as a removal under the published name, which
+//     is what a consumer of that name sees.
+//
+// A report on the old side of a diff that no named package.json owns has no identity there, so it
+// is logged and not judged.
+//
+// Any tooling failure — unreadable config, an unknown mode, a git error that is not simply an
+// absent path at the ref, a report in the release no named package.json owns, two reports of one
+// identity on a side, a report the diff cannot classify — throws; the gate never passes a release
+// on a classification it could not compute.
 //
 // Usage: node scripts/api-gate.mjs --version <X.Y.Z>
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { dirname, posix, resolve } from 'node:path';
 
 import { parseReport } from './api-report-parse.mjs';
-import { classify } from './api-surface-diff.mjs';
+import { classify, removedReport } from './api-surface-diff.mjs';
 import { GateError, fail } from './gate-error.mjs';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-// Every committed report the published packages gate on, each with its own etc/
-// directory so the two packages' reports live under their own package folders.
-const REPORTS = [
-  { dir: 'packages/studio-sdk/etc', name: 'studio-sdk.api.md' },
-  { dir: 'packages/studio-sdk/etc', name: 'studio-sdk-host.api.md' },
-  { dir: 'packages/studio-sdk/etc', name: 'studio-sdk-testing.api.md' },
-  { dir: 'packages/studio-sdk/etc', name: 'studio-sdk-schema-form.api.md' },
-  { dir: 'packages/api-client/etc', name: 'api-client.api.md' },
-];
+// Where any package's committed report sits, as read from a ref's tree.
+const REPORT_PATH = /^packages\/[^/]+\/etc\/[^/]+\.api\.md$/;
 const MODE_NAMES = new Set(['label-honesty', 'strict']);
 
 function readMode() {
@@ -119,27 +124,30 @@ function gatePasses(mode, oldVersion, newVersion, hasBreaking) {
 const versionBelow = (a, b) =>
   a[0] < b[0] || (a[0] === b[0] && (a[1] < b[1] || (a[1] === b[1] && a[2] < b[2])));
 
+// The `v<major.minor.patch>` tags strictly below `newVersion`, newest first. Non-semver tags,
+// pre-releases among them, are ignored.
+function tagsBelow(newVersion, tags) {
+  const newKey = parseVersion(newVersion);
+  return tags
+    .map((tag) => ({ tag: tag.trim(), version: tag.trim().replace(/^v/, '') }))
+    .filter(({ version }) => /^\d+\.\d+\.\d+$/.test(version))
+    .map(({ tag, version }) => ({ tag, key: parseVersion(version) }))
+    .filter(({ key }) => versionBelow(key, newKey))
+    .sort((a, b) => b.key[0] - a.key[0] || b.key[1] - a.key[1] || b.key[2] - a.key[2])
+    .map(({ tag }) => tag);
+}
+
 // The baseline tag for a report: the highest `v<major.minor.patch>` tag strictly
 // below `newVersion` whose version is PUBLISHED on npm for that report's package,
 // or null when no published version sits below the release. A tag whose publish was
 // refused still exists in git, so it must NOT seed the next release's baseline —
 // the breaking items it carried would vanish from the diff. Pure over the tag list
 // and the published-version list so the whole selection is unit-testable without git
-// or npm; non-semver tags are ignored, and published versions at or above the target
-// never qualify.
+// or npm; published versions at or above the target never qualify.
 function previousPublishedTag(newVersion, tags, publishedVersions) {
-  const newKey = parseVersion(newVersion);
   const published = new Set(publishedVersions);
-  let best = null;
-  for (const tag of tags) {
-    const version = tag.trim().replace(/^v/, '');
-    if (!/^\d+\.\d+\.\d+$/.test(version)) continue;
-    if (!published.has(version)) continue;
-    const key = parseVersion(version);
-    if (versionBelow(key, newKey) && (best === null || versionBelow(best.key, key)))
-      best = { key, tag: tag.trim() };
-  }
-  return best ? best.tag : null;
+  const publishedTags = tags.filter((tag) => published.has(tag.trim().replace(/^v/, '')));
+  return tagsBelow(newVersion, publishedTags)[0] ?? null;
 }
 
 // The semver tags strictly between the chosen baseline and the release that are NOT
@@ -168,13 +176,11 @@ function gitTags() {
     .filter((t) => t !== '');
 }
 
-// The npm package name that owns a report, read from the package.json one level above
-// the report's etc/ directory.
-function packageNameForReport(dir) {
-  const pkgJsonPath = resolve(REPO_ROOT, dir, '..', 'package.json');
-  const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
-  if (!pkg.name) fail(`package.json at ${pkgJsonPath} has no name`);
-  return pkg.name;
+// The npm package name that owns a report, read from the package.json one level above the
+// report's directory at the ref holding it, or null when no named package.json is there.
+function packageNameForReport({ dir, ref }, root = REPO_ROOT) {
+  const text = fileAtRef(ref, `${posix.dirname(dir)}/package.json`, root);
+  return text === null ? null : (JSON.parse(text).name ?? null);
 }
 
 // The versions published on npm for a package, via `npm view`, which honours the
@@ -206,21 +212,26 @@ function npmPublishedVersions(packageName) {
   fail(`${cmd} returned an unexpected shape: ${res.stdout.trim()}`);
 }
 
-// The committed report at a git ref, or null when it does not exist there. The
-// path's absence at the ref is the expected "new report" case and maps to null;
-// any OTHER git failure (an invalid ref, not a repository) surfaces loudly rather
-// than being silently read as "new". `git ls-tree` distinguishes the two: a valid
-// ref with an absent path exits 0 with empty output, while a bad ref exits non-zero.
-function reportAtRef(ref, dir, name, root = REPO_ROOT) {
-  const path = `${dir}/${name}`;
-  const ls = spawnSync('git', ['ls-tree', '--name-only', ref, '--', path], {
+// The paths `git ls-tree` prints for a path at a ref, every git failure surfacing loudly.
+function lsTree(ref, path, root, flags = []) {
+  const ls = spawnSync('git', ['ls-tree', ...flags, '--name-only', ref, '--', path], {
     cwd: root,
     encoding: 'utf8',
+    maxBuffer: Infinity,
   });
   if (ls.error) fail(`git ls-tree failed for ${ref}:${path}: ${ls.error.message}`);
   if (ls.status !== 0) fail(`git ls-tree failed for ${ref}:${path}: ${ls.stderr.trim()}`);
-  if (ls.stdout.trim() === '') return null; // path absent at this ref — additive.
-  // A report is read whole whatever its size (execFileSync's default buffer is 1 MiB).
+  return ls.stdout;
+}
+
+// A committed file at a git ref, or null when it does not exist there. The path's
+// absence at the ref is an expected answer and maps to null; any OTHER git failure (an
+// invalid ref, not a repository) surfaces loudly rather than being silently read as
+// absent. `git ls-tree` distinguishes the two: a valid ref with an absent path exits 0
+// with empty output, while a bad ref exits non-zero.
+function fileAtRef(ref, path, root = REPO_ROOT) {
+  if (lsTree(ref, path, root).trim() === '') return null;
+  // A file is read whole whatever its size (execFileSync's default buffer is 1 MiB).
   return execFileSync('git', ['show', `${ref}:${path}`], {
     cwd: root,
     encoding: 'utf8',
@@ -228,85 +239,210 @@ function reportAtRef(ref, dir, name, root = REPO_ROOT) {
   });
 }
 
-function reportAtWorktree(dir, name) {
+// The committed report at a git ref, or null when the ref does not hold it: a report added
+// since, which breaks nothing.
+function reportAtRef(ref, dir, name, root = REPO_ROOT) {
+  return fileAtRef(ref, `${dir}/${name}`, root);
+}
+
+// Every report committed at a git ref, each carrying that ref. A ref holding none lists
+// nothing; a git failure surfaces loudly.
+function reportsAtRef(ref, root = REPO_ROOT) {
+  return lsTree(ref, 'packages', root, ['-r', '-z'])
+    .split('\0')
+    .filter((path) => REPORT_PATH.test(path))
+    .map((path) => ({ dir: posix.dirname(path), name: posix.basename(path), ref }));
+}
+
+// The report in the release's tree, or null when it is not there. Only an absent file
+// reads as null; any other read failure surfaces.
+function reportAtWorktree(dir, name, root = REPO_ROOT) {
   try {
-    return readFileSync(resolve(REPO_ROOT, dir, name), 'utf8');
-  } catch {
-    return null;
+    return readFileSync(resolve(root, dir, name), 'utf8');
+  } catch (err) {
+    if (err.code === 'ENOENT') return null;
+    throw err;
   }
 }
 
-// The release's baseline: for each report, the newest tag below `version` that is
-// PUBLISHED on npm for the report's package, or null on a first publish. Logs what it
-// decides. npm is queried once per package. The I/O seams are injectable through `deps`
-// (tag list, npm lookup, the report reader, the log sink), defaulting to production.
+// What each side holds, matched by a report's identity: its npm package name plus its report
+// name. `listedAt` is a ref's listing, each ref listed once; `heldAt` is that listing by identity,
+// refusing two paths of one identity. HEAD's texts come from the checkout. A report no named
+// package.json owns has a null package name and so no identity to collide on: reportsToJudge and
+// publishedBaseline's `forReport` decide what becomes of it.
+function reportSides(deps) {
+  const {
+    readReportAtRef = reportAtRef,
+    readReportAtWorktree = reportAtWorktree,
+    listReportsAtRef = reportsAtRef,
+    packageNameFor = packageNameForReport,
+  } = deps;
+  const identityOf = (report) => JSON.stringify([packageNameFor(report), report.name]);
+  const listings = new Map();
+  const listedAt = (ref) => {
+    if (!listings.has(ref)) listings.set(ref, listReportsAtRef(ref));
+    return listings.get(ref);
+  };
+  const sides = new Map();
+  const heldAt = (ref) => {
+    if (!sides.has(ref)) {
+      const held = new Map();
+      for (const report of listedAt(ref)) {
+        const identity = identityOf(report);
+        const holder = held.get(identity);
+        if (holder && packageNameFor(report) !== null)
+          fail(
+            `${holder.dir}/${holder.name} and ${report.dir}/${report.name} at ${ref} are one ` +
+              `report of ${packageNameFor(report)}; only one can hold it`,
+          );
+        held.set(identity, report);
+      }
+      sides.set(ref, held);
+    }
+    return sides.get(ref);
+  };
+  const textAt = (ref, report) => {
+    const held = heldAt(ref).get(identityOf(report));
+    if (!held) return null;
+    return ref === 'HEAD'
+      ? readReportAtWorktree(held.dir, held.name)
+      : readReportAtRef(ref, held.dir, held.name);
+  };
+  return { packageNameFor, identityOf, listedAt, heldAt, textAt };
+}
+
+// The release's baseline. `reports()` lists what the baseline tag of each package holds, the
+// packages being those named by the tags below `version`, walked newest first down to the first
+// tag that is itself a baseline. Tags that were never published are walked past, so whatever they
+// lost is judged on the release that lost it and on every later tag until one is published; a
+// package a published major dropped stays dropped, the walk stopping at that major. A report no
+// named package.json owns names no package. `forReport(report)` answers for one report: the newest tag below
+// `version` that is PUBLISHED on npm for the report's package, or null on a first publish, logging
+// what it decides. npm is queried once per package. `sides` is the run's one owner of what each
+// ref holds, and `deps` carries the I/O seams (tag list, npm lookup, the log sink and
+// reportSides' seams, or the `sides` already built from them), defaulting to production.
 function publishedBaseline(version, deps = {}) {
   const {
     tags = gitTags(),
     publishedVersionsFor = npmPublishedVersions,
-    readReportAtRef = reportAtRef,
     log = console.log,
+    sides = reportSides(deps),
   } = deps;
+  const { packageNameFor, listedAt, textAt } = sides;
 
   const publishedCache = new Map();
-  const publishedFor = (packageName) => {
+  const publishedVersionsOf = (packageName) => {
     if (!publishedCache.has(packageName))
       publishedCache.set(packageName, publishedVersionsFor(packageName));
     return publishedCache.get(packageName);
   };
+  const publishedFor = (report) => {
+    const packageName = packageNameFor(report);
+    if (packageName === null) fail(`no named package.json owns the report directory ${report.dir}`);
+    return { packageName, publishedVersions: publishedVersionsOf(packageName) };
+  };
 
-  return ({ dir, name }) => {
-    const packageName = packageNameForReport(dir);
-    const publishedVersions = publishedFor(packageName);
-    const baselineTag = previousPublishedTag(version, tags, publishedVersions);
-    if (baselineTag === null) {
-      log(`api-gate: ${name}: first publish, no published prior version to diff — passes`);
-      return null;
-    }
-    const skipped = skippedUnpublishedTags(baselineTag, version, tags, publishedVersions);
-    if (skipped.length)
-      log(
-        `api-gate: ${name}: skipping unpublished tag(s) ${skipped.join(', ')} — not on npm for ${packageName}`,
-      );
-    return {
-      oldVersion: baselineTag.replace(/^v/, ''),
-      breakingFindings: (diffFrom) => diffFrom(readReportAtRef(baselineTag, dir, name)),
-    };
+  const baselineTagsOfPackagesAt = (tag) => {
+    const packageNames = new Set(listedAt(tag).map((report) => packageNameFor(report)));
+    packageNames.delete(null);
+    const baselineTags = [...packageNames]
+      .map((name) => previousPublishedTag(version, tags, publishedVersionsOf(name)))
+      .filter((baselineTag) => baselineTag !== null);
+    return [...new Set(baselineTags)];
+  };
+
+  return {
+    sides,
+    reports: () => {
+      const baselineTags = new Set();
+      for (const tag of tagsBelow(version, tags)) {
+        for (const baselineTag of baselineTagsOfPackagesAt(tag)) baselineTags.add(baselineTag);
+        if (baselineTags.has(tag)) break;
+      }
+      return [...baselineTags].flatMap((baselineTag) => listedAt(baselineTag));
+    },
+    forReport: (report) => {
+      const { name } = report;
+      const { packageName, publishedVersions } = publishedFor(report);
+      const baselineTag = previousPublishedTag(version, tags, publishedVersions);
+      if (baselineTag === null) {
+        log(
+          `api-gate: ${name}: first publish, no published prior version of ${packageName} to diff — passes`,
+        );
+        return null;
+      }
+      const skipped = skippedUnpublishedTags(baselineTag, version, tags, publishedVersions);
+      if (skipped.length)
+        log(
+          `api-gate: ${name}: skipping unpublished tag(s) ${skipped.join(', ')} — not on npm for ${packageName}`,
+        );
+      return {
+        oldVersion: baselineTag.replace(/^v/, ''),
+        breakingFindings: (diffFrom) => diffFrom(textAt(baselineTag, report)),
+      };
+    },
   };
 }
 
-// The core gate over one new version: classify every committed report against the baseline
-// its caller supplies and collect the reasons a report's surface change exceeds the bump.
-// `baselineFor({ dir, name })` returns the report's `{ oldVersion, breakingFindings }`, or
-// null when the report has nothing to diff against and passes. `breakingFindings(diffFrom)`
-// returns the findings to judge, where `diffFrom(oldSource)` lists classify's findings
-// between an old report's text and the new report, and a null old report (absent there)
-// breaks nothing.
+// The reports a gate judges, each identity once: what the release holds, then what only the
+// baseline holds. A baseline report no named package.json owns has no identity on that side, so
+// it cannot be a removal: it is logged and left out. One the release holds comes to judgment,
+// which refuses it.
+function reportsToJudge(baseline, { identityOf, heldAt, packageNameFor }, log) {
+  const reports = new Map(heldAt('HEAD'));
+  for (const report of baseline.reports()) {
+    const identity = identityOf(report);
+    if (reports.has(identity)) continue;
+    if (packageNameFor(report) === null) {
+      log(
+        `api-gate: not judged, no named package.json owns ${report.dir}/${report.name} at ${report.ref}`,
+      );
+      continue;
+    }
+    reports.set(identity, report);
+  }
+  return [...reports.values()];
+}
+
+// The breaking findings between a report's old text and new text, either of them null when
+// the report is absent on that side. Absent on the old side breaks nothing; absent on the
+// new side alone is a removed entry point of its package.
+function findingsBetween(name, packageName, oldSource, newSource) {
+  if (oldSource === null) return [];
+  if (newSource === null) return [removedReport(name, packageName)];
+  return classify(name, parseReport(name, oldSource), parseReport(name, newSource));
+}
+
+// The core gate over one new version: classify every report against the baseline its
+// caller supplies and collect the reasons a report's surface change exceeds the bump.
+// `baseline.reports()` lists every report the baseline holds, and `baseline.forReport(report)`
+// returns the report's `{ oldVersion, breakingFindings }`, or null when the report has nothing to
+// diff against and passes. `breakingFindings(diffFrom)` returns the findings to judge, where
+// `diffFrom(oldSource)` lists findingsBetween an old report's text and the new report.
 // Its two callers each answer for their own baseline: the post-tag gate (`main` below,
 // called from release-npm.yml) passes publishedBaseline, and the pre-merge label check
-// (release-label-check.mjs) passes its two-sided rule over it. The remaining I/O seams are
-// injectable through `deps` (mode, the new report reader and the log sink), defaulting to
-// production, so the whole gate is unit-testable without git or the network. Returns the
-// list of failing reasons, empty when the bump is honest; a tooling error (bad config, a
-// missing report, an unclassifiable export) throws GateError.
-function runGate(version, baselineFor, deps = {}) {
-  const { mode = readMode(), readReportAtWorktree = reportAtWorktree, log = console.log } = deps;
+// (release-label-check.mjs) passes its two-sided rule over it. `baseline.sides` is the run's one
+// reportSides. The remaining I/O seams are injectable through `deps` (mode and the log sink),
+// defaulting to production, so the whole gate is unit-testable without git or the network.
+// Returns the list of failing reasons, empty when the bump is honest; a tooling error (bad
+// config, an unclassifiable export) throws GateError.
+function runGate(version, baseline, deps = {}) {
+  const { mode = readMode(), log = console.log } = deps;
+  const { sides } = baseline;
 
   const failReasons = [];
-  for (const { dir, name } of REPORTS) {
-    const baseline = baselineFor({ dir, name });
-    if (baseline === null) continue;
+  for (const report of reportsToJudge(baseline, sides, log)) {
+    const { name } = report;
+    const judged = baseline.forReport(report);
+    if (judged === null) continue;
 
-    const { oldVersion, breakingFindings } = baseline;
+    const { oldVersion, breakingFindings } = judged;
     const bump = bumpClass(oldVersion, version);
     const header = `api-gate: ${name}: ${oldVersion} -> ${version} (${bump} bump, mode=${mode})`;
 
-    const newSource = readReportAtWorktree(dir, name);
-    if (newSource === null) fail(`committed report ${dir}/${name} is missing at the release`);
+    const newSource = sides.textAt('HEAD', report);
     const reportFindings = breakingFindings((oldSource) =>
-      oldSource === null
-        ? []
-        : classify(name, parseReport(name, oldSource), parseReport(name, newSource)),
+      findingsBetween(name, sides.packageNameFor(report), oldSource, newSource),
     );
 
     const { passes, reason } = gatePasses(mode, oldVersion, version, reportFindings.length > 0);
@@ -339,8 +475,12 @@ export {
   allowedBumps,
   gatePasses,
   previousPublishedTag,
+  packageNameForReport,
   publishedBaseline,
   reportAtRef,
+  reportAtWorktree,
+  reportsAtRef,
+  reportSides,
   runGate,
 };
 

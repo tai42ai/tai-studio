@@ -30,7 +30,8 @@
 // and the checkout, so this pull request made it, matched per finding: report, symbol and
 // member. The SAME gate release-npm.yml runs on the tag (runGate from api-gate.mjs)
 // classifies each side's committed api-extractor report against the checkout's and judges
-// the items on both, with the manifest's current version as the old version and the
+// the items on both, a report gone from the checkout being one such item, with the
+// manifest's current version as the old version and the
 // projection as the new one; an item on one side alone is logged as not counted, with the
 // side it lacks. A counted item under a bump the label could not honestly carry fails the
 // check with the gate's own message, so the mislabel is caught before the tag rather than
@@ -49,7 +50,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-import { publishedBaseline, reportAtRef, runGate } from './api-gate.mjs';
+import { publishedBaseline, reportSides, runGate } from './api-gate.mjs';
 import { GateError, fail } from './gate-error.mjs';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -242,29 +243,37 @@ function countedFindings(published, own, log) {
 }
 
 // The gate's baseline for a pull request: the two-sided rule over the published baseline
-// and the base side of the checkout, judged from the manifest's current version. With no
-// published version the published side holds nothing, so nothing counts.
+// and the base side of the checkout, judged from the manifest's current version. Its reports
+// are those either side holds, so a report the pull request deleted still comes to judgment,
+// and each side is matched by the report's identity, so a move on either side changes nothing.
+// With no published version the published side holds nothing, so nothing counts.
 function twoSidedBaseline(current, next, deps) {
-  const { readReportAtRef = reportAtRef, log = console.log } = deps;
-  const publishedFor = publishedBaseline(next, deps);
-  return ({ dir, name }) => ({
-    oldVersion: current,
-    breakingFindings: (diffFrom) => {
-      const published = publishedFor({ dir, name });
-      return countedFindings(
-        published === null ? [] : published.breakingFindings(diffFrom),
-        diffFrom(readReportAtRef(BASE_REF, dir, name)),
-        log,
-      );
-    },
-  });
+  const { log = console.log } = deps;
+  const published = publishedBaseline(next, deps);
+  const { sides } = published;
+  const { listedAt, textAt } = sides;
+  return {
+    sides,
+    reports: () => [...published.reports(), ...listedAt(BASE_REF)],
+    forReport: (report) => ({
+      oldVersion: current,
+      breakingFindings: (diffFrom) => {
+        const publishedSide = published.forReport(report);
+        return countedFindings(
+          publishedSide === null ? [] : publishedSide.breakingFindings(diffFrom),
+          diffFrom(textAt(BASE_REF, report)),
+          log,
+        );
+      },
+    }),
+  };
 }
 
 // Gate every projected release against the public-API change the pull request carries;
 // throw with the gate's own message when any is dishonest. Prints the projection and the
 // gate's own per-report output. `deps` forwards the I/O seams (mode, tag list, npm lookup,
-// the two report readers and the log sink) so a test can drive it without git or the
-// network.
+// the package name, the report readers and listers and the log sink) so a test can drive it
+// without git or the network.
 function check(title, body, packages, manifest, deps = {}) {
   const log = deps.log ?? console.log;
   const { releases, label } = projectedReleases(title, body, packages, manifest);
@@ -272,9 +281,10 @@ function check(title, body, packages, manifest, deps = {}) {
     log(`release-label-check: ${label} projects no release — nothing to gate.`);
     return;
   }
+  const sides = reportSides(deps);
   for (const { current, next } of releases) {
     log(`release-label-check: projects ${next} (${label})`);
-    const failReasons = runGate(next, twoSidedBaseline(current, next, deps), deps);
+    const failReasons = runGate(next, twoSidedBaseline(current, next, { ...deps, sides }), deps);
     if (failReasons.length)
       fail(
         `the pull request's release (${label}) cannot honestly carry this API change: ` +

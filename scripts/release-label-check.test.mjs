@@ -223,17 +223,25 @@ const DROPPED = 'export const dropped: string;';
 const NOT_COUNTED_LACKS_PUBLISHED = 'not counted, not breaking against the published version';
 const NOT_COUNTED_LACKS_OWN = "not counted, not breaking in the pull request's own change";
 
+// The report every side lists unless a case says it is absent there.
+const LISTED = { dir: 'packages/sdk/etc', name: 'sdk.api.md' };
+
 // `published` and `base` are the reports at each side; null is a report absent there.
 const gateDeps = ({ published, base, head = fence(KEPT), lines = [] }) => ({
   mode: 'label-honesty',
   tags: ['v18.2.1'],
   publishedVersionsFor: () => ['18.2.1'],
+  packageNameFor: () => '@acme/sdk',
   readReportAtRef: (ref) => {
     if (ref === 'v18.2.1') return published;
     if (ref === 'HEAD^1') return base;
     return assert.fail(`unexpected report read at ${ref}`);
   },
   readReportAtWorktree: () => head,
+  listReportsAtRef: (ref) => {
+    const absent = (ref === 'v18.2.1' && published === null) || (ref === 'HEAD^1' && base === null);
+    return absent ? [] : [{ ...LISTED, ref }];
+  },
   log: (line) => lines.push(line),
 });
 
@@ -450,4 +458,109 @@ test('a non-releasing change is not gated at all', () => {
     readReportAtRef: () => assert.fail('gate must not run'),
   };
   assert.doesNotThrow(() => check('chore: tidy', '', rootPackages, manifest, deps));
+});
+
+// ------------------------------------------------- a report gone from the head
+// Each case states the refs holding GONE; the listed report stays the same on all sides.
+
+const GONE = { dir: 'packages/studio-sdk/etc', name: 'studio-sdk-gone.api.md' };
+const RENAMED_TO = { dir: GONE.dir, name: 'studio-sdk-next.api.md' };
+const GONE_FINDING = `${GONE.name}: report was removed`;
+
+const goneDeps = ({ heldAt = ['v18.2.1', 'HEAD^1'], head = null, lines = [] } = {}) => ({
+  ...gateDeps({ lines }),
+  readReportAtRef: () => fence(KEPT, DROPPED),
+  readReportAtWorktree: (_dir, name) => (name === GONE.name ? head : fence(KEPT, DROPPED)),
+  listReportsAtRef: (ref) => [
+    { ...LISTED, ref },
+    ...(heldAt.includes(ref) ? [{ ...GONE, ref }] : []),
+  ],
+});
+
+test('a fix deleting a published report is refused, naming the report', () => {
+  assert.throws(
+    () => check('fix: drop an entry point', '', rootPackages, manifest, goneDeps()),
+    (err) =>
+      err instanceof GateError &&
+      err.message.includes(
+        "the pull request's release (patch bump) cannot honestly carry this API change",
+      ) &&
+      err.message.includes(`${GONE_FINDING} from @acme/sdk, so its public entry point is gone`),
+  );
+});
+
+test('a feat deleting a published report is refused', () => {
+  assert.throws(
+    () => check('feat: drop an entry point', '', rootPackages, manifest, goneDeps()),
+    (err) => err instanceof GateError && err.message.includes(GONE_FINDING),
+  );
+});
+
+test('a breaking marker carries a published report deleted', () => {
+  const lines = [];
+  assert.doesNotThrow(() =>
+    check('feat!: drop an entry point', '', rootPackages, manifest, goneDeps({ lines })),
+  );
+  assert.ok(lines.some((line) => line.includes(GONE_FINDING)));
+});
+
+test('deleting a report with no published version passes, logged as not counted', () => {
+  const lines = [];
+  const deps = { ...goneDeps({ heldAt: ['HEAD^1'], lines }), publishedVersionsFor: () => [] };
+  assert.doesNotThrow(() => check('fix: drop an entry point', '', rootPackages, manifest, deps));
+  assert.ok(
+    lines.some((line) => line.includes(NOT_COUNTED_LACKS_PUBLISHED) && line.includes(GONE_FINDING)),
+  );
+});
+
+test('deleting a report the published tag never held passes, logged as not counted', () => {
+  const lines = [];
+  const deps = goneDeps({ heldAt: ['HEAD^1'], lines });
+  assert.doesNotThrow(() => check('fix: drop an addition', '', rootPackages, manifest, deps));
+  assert.ok(
+    lines.some((line) => line.includes(NOT_COUNTED_LACKS_PUBLISHED) && line.includes(GONE_FINDING)),
+  );
+});
+
+test('a report the base already lost does not count against an unrelated fix', () => {
+  const lines = [];
+  const deps = goneDeps({ heldAt: ['v18.2.1'], lines });
+  assert.doesNotThrow(() => check('fix: bump a dependency', '', rootPackages, manifest, deps));
+  assert.ok(
+    lines.some((line) => line.includes(NOT_COUNTED_LACKS_OWN) && line.includes(GONE_FINDING)),
+  );
+});
+
+// A release holding `added` as well as what `base` lists at the head.
+const listingAdded = (base, added) => (ref) => [
+  ...base.listReportsAtRef(ref),
+  ...(ref === 'HEAD' ? [{ ...added, ref }] : []),
+];
+
+test('a fix renaming a published report is refused for the old name alone', () => {
+  const gone = goneDeps();
+  const deps = { ...gone, listReportsAtRef: listingAdded(gone, RENAMED_TO) };
+  assert.throws(
+    () => check('fix: rename an entry point', '', rootPackages, manifest, deps),
+    (err) =>
+      err instanceof GateError &&
+      err.message.includes(GONE_FINDING) &&
+      !err.message.includes(RENAMED_TO.name),
+  );
+});
+
+test('a fix adding a report held by neither side passes', () => {
+  const kept = gateDeps({ published: fence(KEPT), base: fence(KEPT) });
+  const deps = { ...kept, listReportsAtRef: listingAdded(kept, RENAMED_TO) };
+  assert.doesNotThrow(() => check('fix: add an entry point', '', rootPackages, manifest, deps));
+});
+
+test('a report kept with a symbol dropped is refused', () => {
+  const deps = goneDeps({ heldAt: ['v18.2.1', 'HEAD^1', 'HEAD'], head: fence(KEPT) });
+  assert.throws(
+    () => check('fix: drop a surface', '', rootPackages, manifest, deps),
+    (err) =>
+      err instanceof GateError &&
+      err.message.includes(`${GONE.name} :: dropped: symbol was removed`),
+  );
 });

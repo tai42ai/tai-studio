@@ -134,15 +134,22 @@ merging that PR tags `v<version>` and publishes the packages, with the release
 notes generated onto the GitHub Release.
 
 Before it publishes, the release diffs the committed API reports
-(`packages/*/etc/*.api.md` — `@tai42/studio-sdk`'s three entry points and
-`@tai42/api-client`) against the previous release tag and fails when the surface
+(`packages/*/etc/*.api.md` — `@tai42/studio-sdk`'s four entry points and
+`@tai42/api-client`) against the newest published tag of each package and fails when the surface
 change outruns the version bump it rides; a breaking surface change must ride a
-breaking-marked commit, so a major at `>=1.0`. The `release-label` check runs the
-same gate before the merge: it projects the bump from the pull request's title and
-body and counts a surface item only when it is breaking both against the newest
-published version and between the pull request's base and its head, so a mislabelled
-release is refused on the pull request rather than after the tag, while a change no
-consumer could see or the pull request did not make is logged and not counted.
+breaking-marked commit, so a major at `>=1.0`. The two gates read no list of
+reports: they judge the committed files at that path. A report still has its
+api-extractor config and its `package.json` script. A report is its npm package name plus its report name. One the tag holds and the
+release does not is a removed entry point, which is a breaking change. A folder move
+diffs the report where it now sits, so a symbol dropped in the move is refused. A
+package renamed in place with its report kept counts as a removal under the published
+name, which is what a consumer of that name sees. The
+`release-label` check runs the same gate before the merge: it projects the bump
+from the pull request's title and body and counts a surface item only when it is
+breaking both against the newest published version and between the pull request's
+base and its head, so a mislabelled release is refused on the pull request rather
+than after the tag, while a change no consumer could see or the pull request did not
+make is logged and not counted.
 CI verifies the committed reports
 match the built surface on every pull request and push to `main`, and a change
 that moves a published

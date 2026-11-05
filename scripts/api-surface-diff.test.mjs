@@ -1,8 +1,8 @@
 // Unit tests for scripts/api-surface-diff.mjs — the breaking-change classifier — over
 // reports read by scripts/api-report-parse.mjs. Hermetic: each test parses small
 // in-memory api-extractor report fences and classifies them, then every committed
-// report is parsed and classified against itself. No git, no network, no build. The
-// reports the parser refuses have their own suite (api-report-parse.test.mjs).
+// report, as git lists them, is parsed and classified against itself. No network, no
+// build. The reports the parser refuses have their own suite (api-report-parse.test.mjs).
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,7 +10,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-import { gatePasses } from './api-gate.mjs';
+import { gatePasses, reportsAtRef } from './api-gate.mjs';
 import { parseReport } from './api-report-parse.mjs';
 import { classify } from './api-surface-diff.mjs';
 
@@ -1603,15 +1603,8 @@ test('function overloads share one name', () => {
 // fails the committed test suite immediately, not a future release run.
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const REAL_REPORTS = [
-  { dir: 'packages/studio-sdk/etc', name: 'studio-sdk.api.md' },
-  { dir: 'packages/studio-sdk/etc', name: 'studio-sdk-host.api.md' },
-  { dir: 'packages/studio-sdk/etc', name: 'studio-sdk-testing.api.md' },
-  { dir: 'packages/studio-sdk/etc', name: 'studio-sdk-schema-form.api.md' },
-  { dir: 'packages/api-client/etc', name: 'api-client.api.md' },
-];
 
-for (const { dir, name } of REAL_REPORTS) {
+for (const { dir, name } of reportsAtRef('HEAD')) {
   test(`real report ${name} parses and classifies clean against itself`, () => {
     const source = readFileSync(resolve(REPO_ROOT, dir, name), 'utf8');
     const entries = parseReport(name, source);
