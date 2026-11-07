@@ -364,8 +364,8 @@ jobs:
   # monitoring backend, a tool module — must also be present there, or a screen proven against the e2e
   # boot cannot render in the docs boot. The test compares through the real
   # tai42_contract manifest model (semantic, not textual). Runs on every PR
-  # (forks and Dependabot included), unlike the fork/Dependabot-gated e2e job, so
-  # a divergence is caught pre-merge rather than only as a screenshot-lane red.
+  # (forks included), unlike the fork-gated e2e job, so a divergence is caught
+  # pre-merge rather than only as a screenshot-lane red.
   # Self-contained (no siblings): no backend, no Docker, no cross-repo checkout,
   # and declares no dependency in any package manifest (``--with`` is ephemeral).
   manifest-parity:
@@ -436,11 +436,11 @@ jobs:
   # ``tai42/plugins/webhook-verifier-github`` (the "github" verifier) and
   # ``tai42/plugins/backend-rq`` into that venv. The monorepo is public, so the cross-repo checkout reads it with the
   # default GITHUB_TOKEN. This job is heavy (Docker + a full backend), so it is
-  # gated to pushes and same-repo, non-Dependabot pull requests; forks and
-  # Dependabot fall back to the ``check`` job only.
+  # gated to pushes and same-repo pull requests, Dependabot's included; a fork PR
+  # falls back to the ``check`` job only.
   e2e:
     needs: [reuse, changes]
-    if: needs.reuse.outputs.should_skip != 'true' && needs.changes.outputs.version_only != 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
+    if: needs.reuse.outputs.should_skip != 'true' && needs.changes.outputs.version_only != 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -521,18 +521,16 @@ jobs:
   # Fleet e2e gate. On push:main and on pull_request, after this repo's own
   # checks pass, dispatch the tai42 monorepo's fleet-e2e receiver for the tested
   # sha; it runs the browser suite against the monorepo harness and posts a
-  # `fleet-e2e` commit status back, which branch protection requires. GitHub
-  # scopes the dispatch secret away from Dependabot, so this job skips for that
-  # actor (see the job condition below); a fork PR has no secret either, so the
-  # guarded steps skip on the empty token and the required status stays unset for
-  # a maintainer to run.
+  # `fleet-e2e` commit status back, which branch protection requires. A
+  # Dependabot-triggered run reads the repository's Dependabot secrets instead of
+  # its Actions secrets, so the dispatch token is stored in both stores and a
+  # dependency bump is gated like any other change. A fork PR has no secret, so
+  # the guarded steps skip on the empty token and the required status stays unset
+  # for a maintainer to run.
   trigger-e2e:
     needs: [reuse, changes, check]
-    # Dependabot cannot access the fleet-e2e dispatch secret (GitHub scopes
-    # secrets away from dependabot), so this job would always red on a
-    # Bad-credentials dispatch. Dependabot dep bumps don't need fleet-e2e. A manual
-    # run exercises this repo's own suites and dispatches nothing.
-    if: needs.reuse.outputs.should_skip != 'true' && github.actor != 'dependabot[bot]' && github.event_name != 'workflow_dispatch'
+    # A manual run exercises this repo's own suites and dispatches nothing.
+    if: needs.reuse.outputs.should_skip != 'true' && github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       statuses: write # post the vacuous fleet-e2e status for a version-only change
@@ -544,8 +542,8 @@ jobs:
       # heavy fleet e2e suite is not dispatched. Branch protection still requires
       # the `fleet-e2e` status, so post it success directly: the tree the suite
       # would run is behaviourally identical to the code that already passed it.
-      # Only same-repo events can write statuses; a fork keeps the existing
-      # behaviour of leaving fleet-e2e unset for a maintainer.
+      # Only same-repo events can write statuses; a fork leaves fleet-e2e unset
+      # for a maintainer.
       - name: Mark fleet-e2e vacuously green (version-only change)
         if: needs.changes.outputs.version_only == 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
         env:

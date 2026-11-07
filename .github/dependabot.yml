@@ -8,6 +8,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # The Node type definitions track the Node major the project runs on
+      # (`engines.node` and the CI `node-version`); a newer major describes
+      # APIs that runtime does not have.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     groups:
       react:
         patterns:
