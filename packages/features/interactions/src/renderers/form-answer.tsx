@@ -1,15 +1,9 @@
-import type {
-  FormOption,
-  FormPage,
-  FormReactions,
-  FormUpdate,
-  ReactionEvent,
-} from '@tai42/api-client';
+import type { FormOption, FormPage, FormReactions, FormUpdate } from '@tai42/api-client';
 import { schemas } from '@tai42/api-client';
 import type { JsonSchema, SchemaFormErrors } from '@tai42/studio-sdk';
 import { Button, SchemaForm, validateAgainstSchema } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useFormReactor } from '../reaction-config';
 import type { AnswerRendererProps, FormFieldWords } from './answer-schema';
@@ -22,12 +16,7 @@ import {
   wordingOf,
 } from './answer-schema';
 import { DisplayBlocks, ReviewReadback } from './form-display';
-import {
-  FormStepStatus,
-  ReactionErrorNotice,
-  type ReactionFailure,
-  reactionFailure,
-} from './form-lines';
+import { FormStepStatus, ReactionErrorNotice, type ReactionFailure } from './form-lines';
 import { MalformedPayload } from './malformed-payload';
 import {
   answerStackStyle,
@@ -39,6 +28,7 @@ import {
   optionValuesStyle,
   stepNavStyle,
 } from './renderer-styles';
+import { useLatestReaction } from './use-latest-reaction';
 
 /** An inert reactions declaration — a static form that never calls a reaction handler. */
 const NO_REACTIONS: FormReactions = {
@@ -197,19 +187,10 @@ function SchemaFormAnswer({
   // reaction that returns no errors clears its own prior ones without wiping a live
   // client-validation error).
   const [reactionErrors, setReactionErrors] = useState<SchemaFormErrors>({});
-  // Display slots, seeded from the send data and overwritten by a reaction's `display`
-  // update — this is how a computed total (a display slot, not a special case) is shown.
-  const [slots, setSlots] = useState<Record<string, unknown>>(() => ({ ...values }));
+  // The reactions' `display` updates merged so far, keyed by slot — this is how a computed
+  // total (a display slot, not a special case) or a changed picture is shown.
+  const [reactionDisplay, setReactionDisplay] = useState<Record<string, unknown>>({});
   const [step, setStep] = useState(0);
-  const [reacting, setReacting] = useState(false);
-  const [reactionError, setReactionError] = useState<ReactionFailure | null>(null);
-  // Only the latest reaction's response is applied: a slow earlier round-trip must never
-  // overwrite a later one (field changes can fire several in flight).
-  const reactionSeq = useRef(0);
-
-  const objectValue = isPlainObject(value) ? value : {};
-  const errors: SchemaFormErrors = { ...validationErrors, ...reactionErrors };
-  const busy = disabled || reacting;
 
   const applyUpdate = (update: FormUpdate): void => {
     if (Object.keys(update.values).length > 0) {
@@ -223,33 +204,20 @@ function SchemaFormAnswer({
     }
     setReactionErrors(update.errors);
     if (Object.keys(update.display).length > 0) {
-      setSlots((current) => ({ ...current, ...update.display }));
+      setReactionDisplay((current) => ({ ...current, ...update.display }));
     }
   };
 
-  // Run one reaction round-trip for `event`, carrying the partial `values` filled so far,
-  // and apply the returned update. A handler error/timeout surfaces LOUDLY (the reaction
-  // banner) and never leaves a stale value behind — it returns null so the caller can
-  // hold a page/submit. Returns the applied update, or null on failure.
-  const fireReaction = async (
-    event: ReactionEvent,
-    partial: unknown,
-  ): Promise<FormUpdate | null> => {
-    const seq = ++reactionSeq.current;
-    setReacting(true);
-    setReactionError(null);
-    try {
-      const update = await react(event, partial);
-      if (seq !== reactionSeq.current) return update;
-      applyUpdate(update);
-      return update;
-    } catch (error) {
-      if (seq === reactionSeq.current) setReactionError(reactionFailure(error));
-      return null;
-    } finally {
-      if (seq === reactionSeq.current) setReacting(false);
-    }
-  };
+  const {
+    fire: fireReaction,
+    reacting,
+    failure: reactionError,
+    clearFailure,
+  } = useLatestReaction(react, applyUpdate);
+
+  const objectValue = isPlainObject(value) ? value : {};
+  const errors: SchemaFormErrors = { ...validationErrors, ...reactionErrors };
+  const busy = disabled || reacting;
 
   const handleChange = (next: unknown): void => {
     const changed = changedTopLevelKeys(value, next);
@@ -318,7 +286,7 @@ function SchemaFormAnswer({
   const back = (): void => {
     setValidationErrors({});
     setReactionErrors({});
-    setReactionError(null);
+    clearFailure();
     setStep(step - 1);
   };
 
@@ -334,7 +302,8 @@ function SchemaFormAnswer({
       value={value}
       errors={errors}
       options={options}
-      slots={slots}
+      sendValues={values}
+      reactionDisplay={reactionDisplay}
       backLabel={backLabel}
       stepProgressLabel={stepProgressLabel}
       updateFailedLabel={updateFailedLabel}
@@ -409,7 +378,8 @@ function SteppedForm({
   value,
   errors,
   options,
-  slots,
+  sendValues,
+  reactionDisplay,
   backLabel,
   stepProgressLabel,
   updateFailedLabel,
@@ -431,7 +401,8 @@ function SteppedForm({
   readonly value: unknown;
   readonly errors: SchemaFormErrors;
   readonly options: Record<string, readonly FormOption[]>;
-  readonly slots: Record<string, unknown>;
+  readonly sendValues: Record<string, unknown>;
+  readonly reactionDisplay: Record<string, unknown>;
   readonly backLabel: string | undefined;
   readonly stepProgressLabel: string | undefined;
   readonly updateFailedLabel: string | undefined;
@@ -447,7 +418,11 @@ function SteppedForm({
     <div style={answerStackStyle}>
       <FormStepStatus pages={pages} step={step} label={stepProgressLabel} />
       <ReactionErrorNotice failure={reactionError} label={updateFailedLabel} />
-      <DisplayBlocks blocks={currentPage.display} slots={slots} />
+      <DisplayBlocks
+        blocks={currentPage.display}
+        sendValues={sendValues}
+        reactionDisplay={reactionDisplay}
+      />
       {currentPage.kind === 'review' ? (
         <ReviewReadback schema={schema} value={objectValue} fieldWording={fieldWording} />
       ) : (

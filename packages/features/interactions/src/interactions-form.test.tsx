@@ -672,9 +672,112 @@ describe('InteractionsPage — form preview: reactions, conditionals, dates, bou
     expect(await screen.findByText(/at most 3 character/)).toBeInTheDocument();
     expect(answer).not.toHaveBeenCalled();
   });
+
+  it('applies a reaction that replaces a field choice list', async () => {
+    const user = userEvent.setup();
+    const react = vi.fn().mockResolvedValue({
+      values: {},
+      options: { topping: [{ value: 'olives' }, { value: 'basil' }] },
+      errors: {},
+      display: {},
+    });
+    const { channel } = renderInbox(undefined, undefined, '', react);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-react-opts',
+        format: 'form',
+        prompt: 'Build it',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: {
+              base: { type: 'string', enum: ['thin', 'thick'] },
+              topping: { type: 'string' },
+            },
+          },
+          reactions: { field_changed: ['base'], submitted: true, choices: ['topping'] },
+        },
+      }),
+    );
+
+    // topping starts as a free text box; after the reaction it is a choice of the
+    // reaction-supplied values.
+    expect(await screen.findByRole('textbox', { name: 'topping' })).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'thick' }));
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: 'olives' })).toBeInTheDocument();
+    });
+    expect(screen.getByRole('radio', { name: 'basil' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'topping' })).not.toBeInTheDocument();
+  });
+
+  it('fires a page-advanced reaction on Next and supports Back', async () => {
+    const user = userEvent.setup();
+    const react = vi.fn().mockResolvedValue({ values: {}, options: {}, errors: {}, display: {} });
+    const { channel } = renderInbox(undefined, undefined, '', react);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-advance',
+        format: 'form',
+        prompt: 'Steps',
+        format_payload: {
+          schema: { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } } },
+          pages: [
+            { title: 'One', fields: ['a'] },
+            { title: 'Two', fields: ['b'] },
+          ],
+          reactions: { page_advanced: ['One'] },
+        },
+      }),
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
+    await waitFor(() => {
+      expect(react).toHaveBeenCalledWith(
+        'q-advance',
+        { kind: 'page_advanced', page: 'One' },
+        expect.any(Object),
+      );
+    });
+    expect(screen.getByTestId('form-step-status')).toHaveTextContent('Step 2 of 2 — Two');
+
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByTestId('form-step-status')).toHaveTextContent('Step 1 of 2 — One');
+  });
+
+  it('accepts the answer when a submitted reaction returns no errors', async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn().mockResolvedValue(undefined);
+    const react = vi.fn().mockResolvedValue({ values: {}, options: {}, errors: {}, display: {} });
+    const { channel } = renderInbox(answer, undefined, '', react);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-submit-ok',
+        format: 'form',
+        prompt: 'Confirm',
+        format_payload: {
+          schema: { type: 'object', properties: { note: { type: 'string' } } },
+          reactions: { submitted: true },
+        },
+      }),
+    );
+
+    await user.type(await screen.findByLabelText('note'), 'ok');
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => {
+      expect(react).toHaveBeenCalledWith('q-submit-ok', { kind: 'submitted' }, expect.any(Object));
+      expect(answer).toHaveBeenCalledWith('q-submit-ok', { note: 'ok' });
+    });
+  });
 });
 
-describe('InteractionsPage — form preview: display blocks, review formatting, more reactions', () => {
+describe('InteractionsPage — form preview: display blocks, inherited-key field names, review formatting', () => {
   it('renders heading, body, image and seeded-slot display blocks in order', async () => {
     const { channel } = renderInbox();
     await emitFrame(
@@ -826,109 +929,6 @@ describe('InteractionsPage — form preview: display blocks, review formatting, 
     const review = await screen.findByTestId('form-review');
     expect(within(review).getByText('Yes')).toBeInTheDocument();
     expect(within(review).getByText('x, y')).toBeInTheDocument();
-  });
-
-  it('applies a reaction that replaces a field choice list', async () => {
-    const user = userEvent.setup();
-    const react = vi.fn().mockResolvedValue({
-      values: {},
-      options: { topping: [{ value: 'olives' }, { value: 'basil' }] },
-      errors: {},
-      display: {},
-    });
-    const { channel } = renderInbox(undefined, undefined, '', react);
-    await emitFrame(
-      channel,
-      'interaction.add',
-      interactionJson({
-        interaction_id: 'q-react-opts',
-        format: 'form',
-        prompt: 'Build it',
-        format_payload: {
-          schema: {
-            type: 'object',
-            properties: {
-              base: { type: 'string', enum: ['thin', 'thick'] },
-              topping: { type: 'string' },
-            },
-          },
-          reactions: { field_changed: ['base'], submitted: true, choices: ['topping'] },
-        },
-      }),
-    );
-
-    // topping starts as a free text box; after the reaction it is a choice of the
-    // reaction-supplied values.
-    expect(await screen.findByRole('textbox', { name: 'topping' })).toBeInTheDocument();
-    await user.click(screen.getByRole('radio', { name: 'thick' }));
-    await waitFor(() => {
-      expect(screen.getByRole('radio', { name: 'olives' })).toBeInTheDocument();
-    });
-    expect(screen.getByRole('radio', { name: 'basil' })).toBeInTheDocument();
-    expect(screen.queryByRole('textbox', { name: 'topping' })).not.toBeInTheDocument();
-  });
-
-  it('fires a page-advanced reaction on Next and supports Back', async () => {
-    const user = userEvent.setup();
-    const react = vi.fn().mockResolvedValue({ values: {}, options: {}, errors: {}, display: {} });
-    const { channel } = renderInbox(undefined, undefined, '', react);
-    await emitFrame(
-      channel,
-      'interaction.add',
-      interactionJson({
-        interaction_id: 'q-advance',
-        format: 'form',
-        prompt: 'Steps',
-        format_payload: {
-          schema: { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } } },
-          pages: [
-            { title: 'One', fields: ['a'] },
-            { title: 'Two', fields: ['b'] },
-          ],
-          reactions: { page_advanced: ['One'] },
-        },
-      }),
-    );
-
-    await user.click(await screen.findByRole('button', { name: 'Next' }));
-    await waitFor(() => {
-      expect(react).toHaveBeenCalledWith(
-        'q-advance',
-        { kind: 'page_advanced', page: 'One' },
-        expect.any(Object),
-      );
-    });
-    expect(screen.getByTestId('form-step-status')).toHaveTextContent('Step 2 of 2 — Two');
-
-    await user.click(screen.getByRole('button', { name: 'Back' }));
-    expect(screen.getByTestId('form-step-status')).toHaveTextContent('Step 1 of 2 — One');
-  });
-
-  it('accepts the answer when a submitted reaction returns no errors', async () => {
-    const user = userEvent.setup();
-    const answer = vi.fn().mockResolvedValue(undefined);
-    const react = vi.fn().mockResolvedValue({ values: {}, options: {}, errors: {}, display: {} });
-    const { channel } = renderInbox(answer, undefined, '', react);
-    await emitFrame(
-      channel,
-      'interaction.add',
-      interactionJson({
-        interaction_id: 'q-submit-ok',
-        format: 'form',
-        prompt: 'Confirm',
-        format_payload: {
-          schema: { type: 'object', properties: { note: { type: 'string' } } },
-          reactions: { submitted: true },
-        },
-      }),
-    );
-
-    await user.type(await screen.findByLabelText('note'), 'ok');
-    await user.click(screen.getByRole('button', { name: 'Submit' }));
-    await waitFor(() => {
-      expect(react).toHaveBeenCalledWith('q-submit-ok', { kind: 'submitted' }, expect.any(Object));
-      expect(answer).toHaveBeenCalledWith('q-submit-ok', { note: 'ok' });
-    });
   });
 });
 
@@ -1985,5 +1985,131 @@ describe("Form answer — the field's own words", () => {
     expect(screen.getByRole('textbox', { name: /^Tag 1/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Drop Tag 1' })).toBeInTheDocument();
     expect(screen.queryByText('No tags yet')).not.toBeInTheDocument();
+  });
+});
+
+describe("InteractionsPage — form preview: a reaction's picture in an image slot", () => {
+  /** A one-page form whose `size` change fires a reaction, showing one slotted image. */
+  async function emitSlottedImageForm(
+    channel: Parameters<typeof emitFrame>[0],
+    image: Record<string, unknown>,
+    data?: Record<string, unknown>,
+  ): Promise<void> {
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-slot-image',
+        format: 'form',
+        prompt: 'Size',
+        format_payload: {
+          schema: { type: 'object', properties: { size: { type: 'string', enum: ['s', 'l'] } } },
+          ...(data !== undefined ? { data } : {}),
+          pages: [
+            {
+              title: 'Size',
+              fields: ['size'],
+              display: [{ kind: 'image', slot: 'chart', ...image }],
+            },
+          ],
+          reactions: { field_changed: ['size'] },
+        },
+      }),
+    );
+  }
+
+  function pictureUpdate(chart: unknown): Record<string, unknown> {
+    return { values: {}, options: {}, errors: {}, display: { chart } };
+  }
+
+  it("replaces the block's own picture with the reaction's", async () => {
+    const user = userEvent.setup();
+    const react = vi.fn().mockResolvedValue(pictureUpdate('https://a.example/2.png'));
+    const { channel } = renderInbox(undefined, undefined, '', react);
+    await emitSlottedImageForm(channel, { src: 'https://a.example/1.png', alt: 'Chart' });
+
+    const slot = await screen.findByTestId('form-slot-chart');
+    expect(within(slot).getByRole('img', { name: 'Chart' })).toHaveAttribute(
+      'src',
+      'https://a.example/1.png',
+    );
+    await user.click(screen.getByRole('radio', { name: 'l' }));
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId('form-slot-chart')).getByRole('img', { name: 'Chart' }),
+      ).toHaveAttribute('src', 'https://a.example/2.png');
+    });
+  });
+
+  it('draws the reaction picture in a slot that starts with only its alt text', async () => {
+    const user = userEvent.setup();
+    const react = vi.fn().mockResolvedValue(pictureUpdate('https://a.example/2.png'));
+    const { channel } = renderInbox(undefined, undefined, '', react);
+    await emitSlottedImageForm(channel, { alt: 'Chart' });
+
+    const slot = await screen.findByTestId('form-slot-chart');
+    expect(within(slot).queryByRole('img')).not.toBeInTheDocument();
+    expect(slot).toHaveTextContent('Chart');
+    await user.click(screen.getByRole('radio', { name: 'l' }));
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId('form-slot-chart')).getByRole('img', { name: 'Chart' }),
+      ).toHaveAttribute('src', 'https://a.example/2.png');
+    });
+  });
+
+  it.each([null, ''])('clears the picture back to the alt text on a %j value', async (cleared) => {
+    const user = userEvent.setup();
+    const react = vi
+      .fn()
+      .mockResolvedValueOnce(pictureUpdate('https://a.example/2.png'))
+      .mockResolvedValueOnce(pictureUpdate(cleared));
+    const { channel } = renderInbox(undefined, undefined, '', react);
+    await emitSlottedImageForm(channel, { src: 'https://a.example/1.png', alt: 'Chart' });
+
+    await user.click(await screen.findByRole('radio', { name: 'l' }));
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId('form-slot-chart')).getByRole('img', { name: 'Chart' }),
+      ).toHaveAttribute('src', 'https://a.example/2.png');
+    });
+    await user.click(screen.getByRole('radio', { name: 's' }));
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId('form-slot-chart')).queryByRole('img'),
+      ).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId('form-slot-chart')).toHaveTextContent('Chart');
+  });
+
+  it('shows the Blocked image notice for a reaction value that is not https', async () => {
+    const user = userEvent.setup();
+    const react = vi.fn().mockResolvedValue(pictureUpdate('http://a.example/2.png'));
+    const { channel } = renderInbox(undefined, undefined, '', react);
+    await emitSlottedImageForm(channel, { src: 'https://a.example/1.png', alt: 'Chart' });
+
+    await user.click(await screen.findByRole('radio', { name: 'l' }));
+    const blocked = await within(screen.getByTestId('form-slot-chart')).findByTestId(
+      'media-item-blocked',
+    );
+    expect(blocked).toHaveAttribute('role', 'alert');
+    expect(blocked).toHaveTextContent('Blocked image');
+    expect(blocked).toHaveTextContent('http://a.example/2.png');
+    expect(
+      within(screen.getByTestId('form-slot-chart')).queryByRole('img'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('never draws a send-data value named like the image slot', async () => {
+    const { channel } = renderInbox();
+    await emitSlottedImageForm(
+      channel,
+      { alt: 'Chart' },
+      { values: { chart: 'https://a.example/2.png' } },
+    );
+
+    const slot = await screen.findByTestId('form-slot-chart');
+    expect(within(slot).queryByRole('img')).not.toBeInTheDocument();
+    expect(slot).toHaveTextContent('Chart');
   });
 });

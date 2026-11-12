@@ -67,9 +67,11 @@ export type DisplayBlockKind = z.infer<typeof displayBlockKind>;
  * One ordered, display-only block on a form page (never an input): a `heading` or
  * `body` text block, or an `image`. `text` carries a heading/body's words; `src`/`alt`
  * carry an image's source and alt text. An optional `slot` names a data key whose value
- * the block shows in place of static `text` — filled from `format_payload.data` at send
- * and/or by a reaction's `display` update (so a computed total is a display slot, not a
- * special case). Every text field is `.nullish()` (absent OR explicit `null` both parse
+ * a heading/body block shows in place of static `text` — filled from `format_payload.data`
+ * at send and/or by a reaction's `display` update (so a computed total is a display slot,
+ * not a special case). An image block's slot is filled by a reaction only: its value is
+ * the image source in place of `src`, and `null` or `""` leaves the block its alt text.
+ * Every text field is `.nullish()` (absent OR explicit `null` both parse
  * to absent) so a block that omits a key — or sends an explicit `null` — is not a
  * whole-page parse failure. Applied per block by the preview (safeParsed via its page),
  * so a malformed block is a loud notice, never silent.
