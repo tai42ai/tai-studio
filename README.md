@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/tai42ai/tai-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/tai42ai/tai-studio/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![tai-studio on StartupScores](https://startupscores.com/badge/tai-studio.svg?style=shield&v=combo&theme=dark)](https://startupscores.com/open-source/tai-studio)
 
 The Studio: a React 19 + TypeScript web UI — the platform's visual workbench for
 a `tai42-skeleton` MCP server. Browse and exercise tools, extensions, connectors,
