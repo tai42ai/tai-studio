@@ -29,8 +29,10 @@
  * a page-less `form` draws its terminal button (`wording.form.submit`) and a field's picker
  * placeholder (`wording.form.fields[name].choice_label`). A form field's caller sentence
  * (`wording.form.fields[name].invalid`) stands in for the surface's own word on a value of
- * the wrong shape, while a missing required value keeps its required message. Abstract
- * fixtures only. The form shot pair is captured in both themes, by tokens, for visual
+ * the wrong shape, while a missing required value keeps its required message. A reaction's
+ * `display` value for an image slot draws through the scheme-gated image: a safe source is
+ * drawn, `null` returns the block's alt text, and a source the gate refuses is not drawn.
+ * Abstract fixtures only. The form shot pair is captured in both themes, by tokens, for visual
  * review.
  */
 import { mkdir } from 'node:fs/promises';
@@ -40,6 +42,7 @@ import { expect, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
 import { seedCredential } from './helpers';
+import { placeholderPng } from './placeholder-png';
 
 needs();
 
@@ -792,4 +795,121 @@ test('a timed range draws each time under its date in the range group and stops 
         answer: { start: '2026-05-01', end: '2026-05-01', start_time: '10:00', end_time: '11:30' },
       },
     ]);
+});
+
+/** Where the slot's picture loads from; the stub below serves it. */
+const SLOT_PICTURE_URL = 'https://images.example.test/chart.png';
+
+/** One pending form whose `look` change fires a reaction; its page shows one image block
+ * with a `slot` and no source of its own, so it starts as its alt text. */
+const SLOT_IMAGE_PAGE = {
+  data: {
+    items: [
+      {
+        interaction_id: 'slot-image-1',
+        group_id: 'slot-image-1',
+        sensitive: false,
+        answer_format: 'form',
+        question: 'Pick a look',
+        created_at: '2026-08-01T00:00:00.000Z',
+        timeout_at: '2026-08-09T00:00:00.000Z',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: { look: { type: 'string', enum: ['picture', 'none', 'refused'] } },
+          },
+          pages: [
+            {
+              title: 'Look',
+              fields: ['look'],
+              display: [{ kind: 'image', slot: 'chart', alt: 'Chart' }],
+            },
+          ],
+          reactions: { field_changed: ['look'] },
+        },
+      },
+    ],
+    total: 1,
+    page: 1,
+    page_size: 50,
+    next_page: null,
+    truncated: false,
+  },
+};
+
+/** The slot value the reaction door returns per chosen `look`. */
+const SLOT_VALUE_BY_LOOK: Readonly<Record<string, string | null>> = {
+  picture: SLOT_PICTURE_URL,
+  none: null,
+  refused: 'http://images.example.test/chart.png',
+};
+
+/** Choose `look` and wait until the slot draws the loaded picture. */
+async function drawSlotPicture(card: ReturnType<Page['getByTestId']>): Promise<void> {
+  await card.getByRole('radio', { name: 'picture' }).click();
+  const picture = card.getByTestId('form-slot-chart').getByRole('img', { name: 'Chart' });
+  await expect(picture).toHaveAttribute('src', SLOT_PICTURE_URL);
+  await expect
+    .poll(() => picture.evaluate((element: HTMLImageElement) => element.naturalWidth))
+    .toBe(240);
+}
+
+test("a reaction's value draws in an image slot, clears to the alt text on null, and is not drawn when the image gate refuses it", async ({
+  page,
+}) => {
+  await stubInbox(page, SLOT_IMAGE_PAGE);
+  await page.route(
+    (url) => url.pathname === '/api/interactions/slot-image-1/react',
+    async (route) => {
+      const body = route.request().postDataJSON() as { values: { look?: string } };
+      const look = body.values.look ?? '';
+      await route.fulfill({
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            interaction_id: 'slot-image-1',
+            update: { display: { chart: SLOT_VALUE_BY_LOOK[look] ?? null } },
+          },
+        }),
+      });
+    },
+  );
+  await page.route(
+    (url) => url.href === SLOT_PICTURE_URL,
+    async (route) => {
+      await route.fulfill({ contentType: 'image/png', body: placeholderPng(240, 150) });
+    },
+  );
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto('/interactions');
+
+  const card = page.getByTestId('interaction-card').filter({ hasText: 'Pick a look' });
+  const slot = card.getByTestId('form-slot-chart');
+  await expect(slot).toHaveText('Chart');
+  await expect(slot.getByRole('img')).toHaveCount(0);
+
+  // A safe source is drawn in the slot.
+  await drawSlotPicture(card);
+  await mkdir(OUT_DIR, { recursive: true });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await card.screenshot({ path: `${OUT_DIR}/form-slot-image-light.png` });
+
+  // A null value returns the block's alt text.
+  await card.getByRole('radio', { name: 'none' }).click();
+  await expect(slot.getByRole('img')).toHaveCount(0);
+  await expect(slot).toHaveText('Chart');
+
+  // A source the image gate refuses is not drawn: its loud notice stands in its place.
+  await card.getByRole('radio', { name: 'refused' }).click();
+  await expect(slot.getByRole('alert')).toContainText('Blocked image');
+  await expect(slot.getByRole('img')).toHaveCount(0);
+
+  // The dark shot, a genuine first paint (see the form preview test for why a reload).
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.reload();
+  await expect(card).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await drawSlotPicture(card);
+  await card.screenshot({ path: `${OUT_DIR}/form-slot-image-dark.png` });
 });

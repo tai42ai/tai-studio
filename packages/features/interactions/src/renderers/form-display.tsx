@@ -4,9 +4,11 @@
  * entered values. Neither is an input control — they render alongside (or instead of, for
  * a review page) a page's fields.
  *
- * UNTRUSTED PAYLOADS: every block's `text`/`src`/`alt` arrives from the question source.
- * Text renders only as React-escaped text; an image `src` goes through the SDK's
- * scheme-gated {@link MediaImage} (loud block/failed notices), never a raw attribute.
+ * UNTRUSTED PAYLOADS: every block's `text`/`src`/`alt` and every reaction `display` value
+ * arrives from the question source or its reaction handler. Text renders only as
+ * React-escaped text; an image source (the block's `src` or a reaction's value for its
+ * slot) goes through the SDK's scheme-gated {@link MediaImage} (loud block/failed
+ * notices), never a raw attribute.
  */
 import type { DisplayBlock } from '@tai42/api-client';
 import type { JsonSchema } from '@tai42/studio-sdk';
@@ -24,19 +26,32 @@ import {
   reviewValueStyle,
 } from './renderer-styles';
 
-/** The ordered display-only blocks on a page (headings, body text, images, slots). */
+/**
+ * The ordered display-only blocks on a page (headings, body text, images, slots).
+ * `sendValues` is the send data; `reactionDisplay` the merged `display` updates of the
+ * reactions so far. A text slot shows the reaction's value when the reaction gave one,
+ * else the send value, and the block's own `text` when that value is absent or `null`. An
+ * image slot shows the reaction's value, else the block's own `src`, never the send value.
+ */
 export function DisplayBlocks({
   blocks,
-  slots,
+  sendValues,
+  reactionDisplay,
 }: {
   readonly blocks: readonly DisplayBlock[];
-  readonly slots: Record<string, unknown>;
+  readonly sendValues: Record<string, unknown>;
+  readonly reactionDisplay: Record<string, unknown>;
 }): ReactNode {
   if (blocks.length === 0) return null;
   return (
     <div style={displayStackStyle} data-testid="form-display">
       {blocks.map((block, index) => (
-        <DisplayBlockView key={index} block={block} slots={slots} />
+        <DisplayBlockView
+          key={index}
+          block={block}
+          sendValues={sendValues}
+          reactionDisplay={reactionDisplay}
+        />
       ))}
     </div>
   );
@@ -44,18 +59,22 @@ export function DisplayBlocks({
 
 function DisplayBlockView({
   block,
-  slots,
+  sendValues,
+  reactionDisplay,
 }: {
   readonly block: DisplayBlock;
-  readonly slots: Record<string, unknown>;
+  readonly sendValues: Record<string, unknown>;
+  readonly reactionDisplay: Record<string, unknown>;
 }): ReactNode {
-  // A `slot` names a data key whose current value the block shows in place of static text
-  // (filled from the send data and/or a reaction's `display` update).
-  const slotText = block.slot !== null ? slotValueText(slots[block.slot]) : undefined;
+  const reactionValue = slotEntry(reactionDisplay, block.slot);
 
-  if (block.kind === 'image') return renderDisplayImage(block);
+  if (block.kind === 'image') {
+    const image = renderDisplayImage(block, reactionValue);
+    return block.slot !== null ? <div data-testid={`form-slot-${block.slot}`}>{image}</div> : image;
+  }
 
-  const text = slotText ?? (typeof block.text === 'string' ? block.text : '');
+  const slotValue = reactionValue !== undefined ? reactionValue : slotEntry(sendValues, block.slot);
+  const text = slotValueText(slotValue) ?? (typeof block.text === 'string' ? block.text : '');
   if (text === '') return null;
   const style = block.kind === 'heading' ? displayHeadingStyle : displayBodyStyle;
   const testId = block.slot !== null ? `form-slot-${block.slot}` : undefined;
@@ -66,14 +85,30 @@ function DisplayBlockView({
   );
 }
 
-/** An image display block: the scheme-gated image, degrading to its alt text with no src. */
-function renderDisplayImage(block: DisplayBlock): ReactNode {
-  const src = typeof block.src === 'string' ? block.src : '';
+/**
+ * An image display block: the scheme-gated image, degrading to its alt text with no
+ * source. `reactionValue` is a reaction's value for the block's slot: absent keeps the
+ * block's `src`; `null` or `''` clears the picture; any other value is the source.
+ */
+function renderDisplayImage(block: DisplayBlock, reactionValue: unknown): ReactNode {
+  const src = imageSourceOf(block, reactionValue);
   const alt = typeof block.alt === 'string' && block.alt.trim() !== '' ? block.alt : undefined;
   // Web can draw images; `MediaImage` scheme-gates the src (loud block/failed notices).
   // A block with no source degrades to its alt text as body, never a broken image.
   if (src !== '') return <MediaImage url={src} caption={alt} altFallback={alt ?? 'Image'} />;
   return alt !== undefined ? <p style={displayBodyStyle}>{alt}</p> : null;
+}
+
+/** The source an image block draws; `''` when it has none. */
+function imageSourceOf(block: DisplayBlock, reactionValue: unknown): string {
+  if (reactionValue === undefined) return typeof block.src === 'string' ? block.src : '';
+  if (reactionValue === null) return '';
+  return toText(reactionValue);
+}
+
+/** The own entry for `slot` in `record`; no slot or no entry → undefined. */
+function slotEntry(record: Record<string, unknown>, slot: string | null): unknown {
+  return slot !== null && Object.hasOwn(record, slot) ? record[slot] : undefined;
 }
 
 /** A display slot's value as text (a computed total is a number); absent → undefined. */
