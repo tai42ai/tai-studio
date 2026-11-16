@@ -11,7 +11,7 @@ import {
   renderWithNavigation,
   type StubQuery,
   stubQuery,
-} from './named-list-test-utils';
+} from './test-named-list-utils';
 
 const REQUIRED = 'An agent is required.';
 

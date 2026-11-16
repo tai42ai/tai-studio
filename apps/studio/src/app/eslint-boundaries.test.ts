@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import config, {
   boundariesDependenciesRule,
-  boundariesElements,
+  boundariesSettings,
   TEST_GLOBS,
 } from '../../../../eslint.config.js';
 
@@ -14,7 +14,7 @@ import config, {
  * Two things are proven together:
  *  - the allowlist LOGIC rejects a deliberate cross-feature import and a
  *    deliberate arbitrary-external import (lint them through the exported
- *    `boundaries/elements` + `boundaries/dependencies` config via ESLint's Node
+ *    `boundariesSettings` + `boundaries/dependencies` config via ESLint's Node
  *    API, on a virtual feature file path);
  *  - the rule is actually WIRED into the applied eslint.config.js (a structural
  *    check on the default export), so removing it from the config — which the
@@ -24,10 +24,10 @@ import config, {
  * imports then pass, proving the assertions depend on the rule being strict.
  */
 
-// The repo root, derived from this file's URL without importing node:path (this
-// file is linted as app-layer source, which may not import Node core). The
-// trailing slash is stripped so `boundaries/root-path` matches element patterns.
-const repoRoot = new URL('../../../../', import.meta.url).pathname.replace(/\/+$/, '');
+// The repo root on disk, as the boundaries settings pin it. Imports in the virtual
+// files below resolve against it, so it must be the real directory: in the jsdom
+// environment this file's own `import.meta.url` is a dev-server URL, not a path.
+const repoRoot = boundariesSettings['boundaries/root-path'];
 
 // Virtual paths, one per layer the rules distinguish. No file is ever written to
 // disk — `lintText` lints the provided source, and boundaries classifies it by
@@ -52,11 +52,7 @@ function makeLinter(rule: Linter.RuleEntry) {
       files: ['**/*.{ts,tsx}'],
       plugins: { boundaries },
       languageOptions: { ecmaVersion: 'latest', sourceType: 'module' },
-      settings: {
-        'boundaries/root-path': repoRoot,
-        'boundaries/elements': boundariesElements,
-        'boundaries/legacy-templates': false,
-      },
+      settings: boundariesSettings,
       rules: { 'boundaries/dependencies': rule },
     },
   });
@@ -80,7 +76,8 @@ describe('eslint-plugin-boundaries allowlist', () => {
   it('rejects a cross-feature import from within a feature', async () => {
     const errors = await boundaryErrors("import '@tai42/feature-tools';\n", strictRule);
     expect(errors).toHaveLength(1);
-    expect(errors[0]?.message).toContain('@tai42/feature-tools');
+    expect(errors[0]?.message).toContain('to elements of type "feature"');
+    expect(errors[0]?.message).toContain('feature="tools"');
   });
 
   it('rejects an arbitrary third-party import the allowlist does not name', async () => {
@@ -99,7 +96,7 @@ describe('eslint-plugin-boundaries allowlist', () => {
 
   it('is sensitive to the rule: a relaxed rule stops reporting the same imports', async () => {
     // If the rule is gutted (default `allow`), the illegal imports no longer report.
-    const relaxedRule: Linter.RuleEntry = ['error', { default: 'allow', rules: [] }];
+    const relaxedRule: Linter.RuleEntry = ['error', { default: 'allow', policies: [] }];
     const errors = await boundaryErrors(
       "import '@tai42/feature-tools';\nimport 'zustand';\n",
       relaxedRule,
@@ -121,6 +118,86 @@ describe('eslint-plugin-boundaries allowlist', () => {
       return level === 'error' && files.includes('**/*.{ts,tsx}');
     });
     expect(sourceEnforced).toBe(true);
+  });
+});
+
+/**
+ * Imports that resolve to a file on disk.
+ *
+ * A workspace package and a relative path into another layer both resolve to a
+ * real source path, so the rule judges them by the element they land in; a
+ * third-party package installed in the importing package's own `node_modules`
+ * resolves too, and is still held to the layer's allowlist.
+ */
+describe('resolved imports', () => {
+  const strictRule = boundariesDependenciesRule(false);
+  // No policy at all: every dependency the rule evaluates is reported.
+  const noPolicyRule: Linter.RuleEntry = ['error', { default: 'disallow', policies: [] }];
+
+  it('withholds an installed test runner from feature production source', async () => {
+    const errors = await boundaryErrors("import 'vitest';\nimport 'jsdom';\n", strictRule);
+    expect(errors.map((error) => error.message)).toEqual([
+      expect.stringContaining('"vitest"'),
+      expect.stringContaining('"jsdom"'),
+    ]);
+  });
+
+  it('classifies a workspace package as the element it belongs to', async () => {
+    const errors = await boundaryErrors("import '@tai42/studio-sdk';\n", noPolicyRule);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain('to elements of type "sdk"');
+  });
+
+  it('rejects a relative import into another feature', async () => {
+    const errors = await boundaryErrors("import '../../tools/src/index';\n", strictRule);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain('to elements of type "feature"');
+    expect(errors[0]?.message).toContain('feature="tools"');
+  });
+
+  it('rejects a relative import from the SDK into a feature', async () => {
+    const errors = await boundaryErrorsAt(
+      sdkFile,
+      "import '../../../features/hooks/src/index';\n",
+      strictRule,
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain('to elements of type "feature"');
+  });
+
+  it('permits a relative import into a layer the feature may use', async () => {
+    const code = "import '../../../studio-sdk/src/index';\n";
+    expect(await boundaryErrors(code, strictRule)).toEqual([]);
+    // The same import is evaluated, not skipped: with no policy it is reported.
+    expect(await boundaryErrors(code, noPolicyRule)).toHaveLength(1);
+  });
+
+  it('resolves every workspace feature package to its source, never its build output', async () => {
+    // The feature packages on disk, by package name. A package resolved through its
+    // `node_modules` symlink to `dist/` instead of a tsconfig path to `src/` fails to
+    // resolve on a tree that has not been built, and is then judged as an unlisted
+    // third-party package.
+    const manifests = import.meta.glob<{ name: string }>(
+      '../../../../packages/features/*/package.json',
+      { eager: true, import: 'default' },
+    );
+    const featurePackages = Object.values(manifests).map((manifest) => manifest.name);
+    expect(featurePackages.length).toBeGreaterThan(0);
+    const sourceOnlyRule: Linter.RuleEntry = [
+      'error',
+      {
+        default: 'disallow',
+        policies: [
+          {
+            from: { element: { type: 'app' } },
+            allow: { to: { element: { type: 'feature', fileInternalPath: 'src/**' } } },
+          },
+        ],
+      },
+    ];
+    const code = featurePackages.map((name) => `import '${name}';\n`).join('');
+    const errors = await boundaryErrorsAt(appFile, code, sourceOnlyRule);
+    expect(errors.map((error) => error.message)).toEqual([]);
   });
 });
 
@@ -292,7 +369,7 @@ describe('@tai42/test-support confinement', () => {
   it('withholds the test support from feature production source', async () => {
     const errors = await boundaryErrorsAt(featureHooksFile, importTestSupport, strictRule);
     expect(errors).toHaveLength(1);
-    expect(errors[0]?.message).toContain('@tai42/test-support');
+    expect(errors[0]?.message).toContain('to elements of type "test-support"');
   });
 
   it('lets the test support import the API client and nothing else internal', async () => {
@@ -308,15 +385,14 @@ describe('@tai42/test-support confinement', () => {
       strictRule,
     );
     expect(refused).toHaveLength(1);
-    expect(refused[0]?.message).toContain('@tai42/studio-sdk');
+    expect(refused[0]?.message).toContain('to elements of type "sdk"');
   });
 });
 
 /**
- * Structural pins for the `no-restricted-imports` overrides. eslint-plugin-boundaries
- * matches external modules by package BASE name only, so it cannot confine a subpath
- * like `@tai42/studio-sdk/testing`; that confinement is done with `no-restricted-imports`
- * blocks instead. These assertions inspect the applied default-export config directly
+ * Structural pins for the `no-restricted-imports` overrides. The boundaries allowlist
+ * grants whole layers; confining a subpath like `@tai42/studio-sdk/testing` is done with
+ * `no-restricted-imports` blocks. These assertions inspect the applied default-export config directly
  * (rather than linting through the typed config), so deleting either override turns the
  * relevant test red.
  */

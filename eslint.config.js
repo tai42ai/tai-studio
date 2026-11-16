@@ -26,10 +26,9 @@ import tseslint from 'typescript-eslint';
  *   - the test support (`packages/test-support`, helpers shared by tests) imports
  *     only the API client, and a feature reaches it from TEST code alone.
  *
- * The SDK's dependency on the API client must be TYPE-ONLY at runtime.
- * eslint-plugin-boundaries cannot express the value-vs-type distinction, so the
+ * The SDK's dependency on the API client must be TYPE-ONLY at runtime: the
  * `@typescript-eslint/no-restricted-imports` rule further below enforces that
- * half of the boundary as its complement.
+ * half of the boundary, while the allowlist grants the SDK the API client layer.
  *
  * The allowlist is exercised by a fixture test
  * (apps/studio/src/app/eslint-boundaries.test.ts) that lints a deliberate
@@ -38,47 +37,30 @@ import tseslint from 'typescript-eslint';
  */
 
 /**
- * Layers, classified by source-file path relative to the repo root. The
- * `feature` layer captures the feature directory name; a feature importing a
- * DIFFERENT feature is rejected because `@tai42/feature-*` is not in the feature
- * allowlist (FEATURE_INTERNAL), while a feature's own same-package relative
- * imports resolve as intra-element and are allowed automatically.
+ * Layers, classified by source-file path relative to the repo root. An import is
+ * classified by the path it resolves to (see `import/resolver` below): a relative
+ * import and a workspace package (`@tai42/studio-sdk`, `@tai42/feature-*`) alike
+ * land on the layer that holds the file. The `feature` layer captures the feature
+ * directory name, so a feature importing a DIFFERENT feature is rejected — no
+ * policy lets a feature reach the feature layer — while a feature's own imports
+ * stay intra-element and are allowed automatically.
  */
-export const boundariesElements = [
-  { type: 'app', pattern: 'apps/studio', mode: 'folder' },
-  { type: 'sdk', pattern: 'packages/studio-sdk', mode: 'folder' },
-  { type: 'api-client', pattern: 'packages/api-client', mode: 'folder' },
-  { type: 'test-support', pattern: 'packages/test-support', mode: 'folder' },
+const boundariesElements = [
+  { type: 'app', pattern: 'apps/studio' },
+  { type: 'sdk', pattern: 'packages/studio-sdk' },
+  { type: 'api-client', pattern: 'packages/api-client' },
+  { type: 'test-support', pattern: 'packages/test-support' },
   {
     type: 'feature',
     pattern: 'packages/features/*',
-    mode: 'folder',
     capture: ['feature'],
   },
 ];
 
-// The internal workspace packages each layer may import, by package name. In a
-// pnpm workspace an internal package is imported through a `node_modules` symlink,
-// so eslint-plugin-boundaries resolves it as an EXTERNAL dependency rather than a
-// local element. Naming the allowed internal packages here enforces the boundary
-// independently of whether resolution de-references the symlink to a local
-// element (the `element-types` rules below cover that case too). Notably a
-// feature may reach the SDK and the API client but NOT `@tai42/feature-*`, so a
-// cross-feature import is rejected.
-//
-// boundaries matches an external module by its package BASE name, so a subpath
-// like `@tai42/studio-sdk/host` or `@tai42/studio-sdk/testing` cannot be allowed or
-// denied here independently of the bare `@tai42/studio-sdk` — listing `@tai42/studio-sdk`
-// already grants every subpath. Subpath-level confinement (keeping the test-only
-// `/testing` reset out of production code) is therefore enforced by the
-// `no-restricted-imports` override further below, not by this allowlist.
-const FEATURE_INTERNAL = ['@tai42/studio-sdk', '@tai42/api-client'];
-const APP_INTERNAL = ['@tai42/studio-sdk', '@tai42/api-client', '@tai42/feature-*'];
-const SDK_INTERNAL = ['@tai42/api-client'];
-const API_CLIENT_INTERNAL = [];
-const TEST_SUPPORT_INTERNAL = ['@tai42/api-client'];
-// The internal packages a feature may import in its test code alone.
-const FEATURE_TEST_INTERNAL = ['@tai42/test-support'];
+// The allowlist grants whole layers: allowing the SDK allows every file in it,
+// `@tai42/studio-sdk/testing` included. Subpath-level confinement (keeping the
+// test-only `/testing` reset out of production code) is enforced by the
+// `no-restricted-imports` override further below.
 
 // Third-party packages each layer may import in production code. Kept in sync
 // with the packages actually imported by each layer's source.
@@ -122,6 +104,21 @@ export const TEST_GLOBS = ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}', '**/test-
 // are excluded from the size/complexity block below.
 export const SIZE_COMPLEXITY_IGNORES = [...TEST_GLOBS, '**/*.stories.{ts,tsx}', 'e2e/**'];
 
+/** The eslint-plugin-boundaries settings every source file is linted with. */
+export const boundariesSettings = {
+  // Lint runs per package (cwd = each package dir), so pin path resolution to
+  // the repo root; the elements' patterns are relative to it.
+  'boundaries/root-path': import.meta.dirname,
+  'boundaries/elements': boundariesElements,
+  // Resolve imports the way TypeScript does: a `.ts`/`.tsx` target resolves to
+  // its file, a workspace package through the tsconfig `paths` to its source
+  // file, and a third-party package through `node_modules` to its real path.
+  // Each import is then classified by the path it resolves to.
+  'import/resolver': { typescript: { alwaysTryTypes: true } },
+  // Use the current (non-legacy) capture-template data shape.
+  'boundaries/legacy-templates': false,
+};
+
 /**
  * Builds the `boundaries/dependencies` allowlist. When `includeTestExternals` is
  * true the test-only packages AND Node core are added; it is enabled for
@@ -130,10 +127,12 @@ export const SIZE_COMPLEXITY_IGNORES = [...TEST_GLOBS, '**/*.stories.{ts,tsx}', 
  * @param {boolean} includeTestExternals
  */
 export function boundariesDependenciesRule(includeTestExternals) {
-  const external = (internal, runtime, test) => ({
-    to: { origin: 'external' },
-    dependency: {
-      module: [...internal, ...runtime, ...(includeTestExternals ? test : [])],
+  const external = (runtime, test) => ({
+    to: {
+      module: {
+        origin: 'external',
+        source: [...runtime, ...(includeTestExternals ? test : [])],
+      },
     },
   });
   // Node core (`node:fs` and friends) in the SDK, the shell app and the API client
@@ -147,14 +146,21 @@ export function boundariesDependenciesRule(includeTestExternals) {
   // exemption naming each scanner file, both goes stale and switches the whole
   // allowlist off for the files it names.
   const coreInTests = includeTestExternals
-    ? [{ from: { type: ['sdk', 'app', 'api-client'] }, allow: { to: { origin: 'core' } } }]
+    ? [
+        {
+          from: { element: { type: ['sdk', 'app', 'api-client'] } },
+          allow: { to: { module: { origin: 'core' } } },
+        },
+      ]
     : [];
   // The test support, a feature's in its TEST code alone: production feature source that
   // imports it is rejected, so a test helper never reaches a built feature.
   const featureTestSupport = includeTestExternals
     ? [
-        { from: { type: 'feature' }, allow: { to: { type: ['test-support'] } } },
-        { from: { type: 'feature' }, allow: external(FEATURE_TEST_INTERNAL, [], []) },
+        {
+          from: { element: { type: 'feature' } },
+          allow: { to: { element: { type: ['test-support'] } } },
+        },
       ]
     : [];
   return [
@@ -163,53 +169,54 @@ export function boundariesDependenciesRule(includeTestExternals) {
       default: 'disallow',
       // Also govern external and Node-core dependencies, not only local ones.
       checkAllOrigins: true,
-      rules: [
+      policies: [
         // A feature may import the SDK and the API client, plus its allowed
-        // third-party packages — never another feature (a cross-feature import is
-        // rejected because `@tai42/feature-*` is not in FEATURE_INTERNAL).
+        // third-party packages — never another feature.
         {
-          from: { type: 'feature' },
-          allow: { to: { type: ['sdk', 'api-client'] } },
+          from: { element: { type: 'feature' } },
+          allow: { to: { element: { type: ['sdk', 'api-client'] } } },
         },
         {
-          from: { type: 'feature' },
-          allow: external(FEATURE_INTERNAL, FEATURE_EXTERNAL, FEATURE_TEST_EXTERNAL),
+          from: { element: { type: 'feature' } },
+          allow: external(FEATURE_EXTERNAL, FEATURE_TEST_EXTERNAL),
         },
         ...featureTestSupport,
         // The visual jq editor, granted only to the features that render it — the
         // element's captured `feature` name selects them, so the rest of the feature
         // layer still cannot import it.
         {
-          from: { type: 'feature', captured: { feature: JQ_EDITOR_FEATURES } },
-          allow: external([], ['@tai42/jq-studio'], []),
+          from: { element: { type: 'feature', captured: { feature: JQ_EDITOR_FEATURES } } },
+          allow: external(['@tai42/jq-studio'], []),
         },
         // The shell app composes the features and the two libraries.
         {
-          from: { type: 'app' },
-          allow: { to: { type: ['feature', 'sdk', 'api-client'] } },
+          from: { element: { type: 'app' } },
+          allow: { to: { element: { type: ['feature', 'sdk', 'api-client'] } } },
         },
         {
-          from: { type: 'app' },
-          allow: external(APP_INTERNAL, APP_EXTERNAL, APP_TEST_EXTERNAL),
+          from: { element: { type: 'app' } },
+          allow: external(APP_EXTERNAL, APP_TEST_EXTERNAL),
         },
         // The SDK is the leaf UI library: internally it may reach only the API client.
-        { from: { type: 'sdk' }, allow: { to: { type: ['api-client'] } } },
         {
-          from: { type: 'sdk' },
-          allow: external(SDK_INTERNAL, SDK_EXTERNAL, SDK_TEST_EXTERNAL),
+          from: { element: { type: 'sdk' } },
+          allow: { to: { element: { type: ['api-client'] } } },
+        },
+        {
+          from: { element: { type: 'sdk' } },
+          allow: external(SDK_EXTERNAL, SDK_TEST_EXTERNAL),
         },
         // The API client imports nothing internal; only its externals. Node core
         // it gets in TESTS alone, through `coreInTests` below — a `node:` import in
         // its production source would break every browser consumer at bundle time.
         {
-          from: { type: 'api-client' },
-          allow: external(API_CLIENT_INTERNAL, API_CLIENT_EXTERNAL, API_CLIENT_TEST_EXTERNAL),
+          from: { element: { type: 'api-client' } },
+          allow: external(API_CLIENT_EXTERNAL, API_CLIENT_TEST_EXTERNAL),
         },
         // The test support imports only the API client, the source of the readers it hands out.
-        { from: { type: 'test-support' }, allow: { to: { type: ['api-client'] } } },
         {
-          from: { type: 'test-support' },
-          allow: external(TEST_SUPPORT_INTERNAL, [], []),
+          from: { element: { type: 'test-support' } },
+          allow: { to: { element: { type: ['api-client'] } } },
         },
         ...coreInTests,
       ],
@@ -313,14 +320,7 @@ export default tseslint.config(
   {
     files: ['**/*.{ts,tsx}'],
     plugins: { boundaries },
-    settings: {
-      // Lint runs per package (cwd = each package dir), so pin path resolution to
-      // the repo root; the elements' patterns are relative to it.
-      'boundaries/root-path': import.meta.dirname,
-      'boundaries/elements': boundariesElements,
-      // Use the current (non-legacy) capture-template data shape.
-      'boundaries/legacy-templates': false,
-    },
+    settings: boundariesSettings,
     rules: {
       'boundaries/dependencies': boundariesDependenciesRule(false),
     },
@@ -360,10 +360,10 @@ export default tseslint.config(
       ],
     },
   },
-  // Production confinement of the test-only registry reset. boundaries gates by
-  // package BASE name and cannot express subpaths, so `@tai42/studio-sdk/testing`
-  // (which exposes `__resetContributions`) would otherwise be importable by any
-  // production app/feature/SDK source already allowed the bare `@tai42/studio-sdk`.
+  // Production confinement of the test-only registry reset. The boundaries
+  // allowlist grants the whole SDK layer, so `@tai42/studio-sdk/testing` (which
+  // exposes `__resetContributions`) would otherwise be importable by any
+  // production app/feature/SDK source allowed the SDK.
   // Forbid it in every non-test source file; TEST_GLOBS are excluded (via
   // `ignores`) so tests keep their access.
   {

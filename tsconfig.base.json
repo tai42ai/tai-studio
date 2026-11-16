@@ -44,7 +44,11 @@
       "@tai42/feature-observability": ["./packages/features/observability/src/index.ts"],
       "@tai42/feature-marketplace": ["./packages/features/marketplace/src/index.ts"],
       "@tai42/feature-scheduling": ["./packages/features/scheduling/src/index.ts"],
-      "@tai42/feature-system": ["./packages/features/system/src/index.ts"]
+      "@tai42/feature-system": ["./packages/features/system/src/index.ts"],
+      "@tai42/feature-members": ["./packages/features/members/src/index.ts"],
+      "@tai42/feature-notifications": ["./packages/features/notifications/src/index.ts"],
+      "@tai42/feature-states": ["./packages/features/states/src/index.ts"],
+      "@tai42/feature-storage": ["./packages/features/storage/src/index.ts"]
     }
   }
 }

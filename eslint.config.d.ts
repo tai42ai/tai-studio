@@ -1,14 +1,10 @@
 import type { Linter } from 'eslint';
 
-/** A source-layer definition consumed by `boundaries/elements`. */
-export interface BoundaryElement {
-  readonly type: string;
-  readonly pattern: string;
-  readonly mode: string;
-  readonly capture?: readonly string[];
-}
-
-export const boundariesElements: readonly BoundaryElement[];
+/** The eslint-plugin-boundaries settings every source file is linted with. */
+export const boundariesSettings: Readonly<NonNullable<Linter.Config['settings']>> & {
+  /** The repo root on disk; the elements' patterns are relative to it. */
+  readonly 'boundaries/root-path': string;
+};
 
 /**
  * Builds the `boundaries/dependencies` allowlist rule entry. When
