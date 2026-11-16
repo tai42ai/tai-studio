@@ -189,7 +189,7 @@ function SchemaFormAnswer({
   const [reactionErrors, setReactionErrors] = useState<SchemaFormErrors>({});
   // The reactions' `display` updates merged so far, keyed by slot — this is how a computed
   // total (a display slot, not a special case) or a changed picture is shown.
-  const [reactionDisplay, setReactionDisplay] = useState<Record<string, unknown>>({});
+  const [reactionDisplay, setReactionDisplay] = useState<FormUpdate['display']>({});
   const [step, setStep] = useState(0);
 
   const applyUpdate = (update: FormUpdate): void => {
@@ -302,7 +302,6 @@ function SchemaFormAnswer({
       value={value}
       errors={errors}
       options={options}
-      sendValues={values}
       reactionDisplay={reactionDisplay}
       backLabel={backLabel}
       stepProgressLabel={stepProgressLabel}
@@ -378,7 +377,6 @@ function SteppedForm({
   value,
   errors,
   options,
-  sendValues,
   reactionDisplay,
   backLabel,
   stepProgressLabel,
@@ -401,8 +399,7 @@ function SteppedForm({
   readonly value: unknown;
   readonly errors: SchemaFormErrors;
   readonly options: Record<string, readonly FormOption[]>;
-  readonly sendValues: Record<string, unknown>;
-  readonly reactionDisplay: Record<string, unknown>;
+  readonly reactionDisplay: FormUpdate['display'];
   readonly backLabel: string | undefined;
   readonly stepProgressLabel: string | undefined;
   readonly updateFailedLabel: string | undefined;
@@ -418,11 +415,7 @@ function SteppedForm({
     <div style={answerStackStyle}>
       <FormStepStatus pages={pages} step={step} label={stepProgressLabel} />
       <ReactionErrorNotice failure={reactionError} label={updateFailedLabel} />
-      <DisplayBlocks
-        blocks={currentPage.display}
-        sendValues={sendValues}
-        reactionDisplay={reactionDisplay}
-      />
+      <DisplayBlocks blocks={currentPage.display} reactionDisplay={reactionDisplay} />
       {currentPage.kind === 'review' ? (
         <ReviewReadback schema={schema} value={objectValue} fieldWording={fieldWording} />
       ) : (

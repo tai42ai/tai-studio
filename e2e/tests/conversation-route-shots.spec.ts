@@ -54,9 +54,9 @@ import { fileURLToPath } from 'node:url';
 import { expect, type Locator, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
+import { placeholderPng } from '../scripts/placeholder-png.mjs';
 import { pickExecutionKey, seedCredential } from './helpers';
 import { deleteRoute, holdersApi } from './holders-fixtures';
-import { placeholderPng } from './placeholder-png';
 import {
   ACCOUNT_EMPTY_NOTE,
   accountSession,

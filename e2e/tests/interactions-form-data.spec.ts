@@ -41,8 +41,8 @@ import { fileURLToPath } from 'node:url';
 import { expect, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
+import { placeholderPng } from '../scripts/placeholder-png.mjs';
 import { seedCredential } from './helpers';
-import { placeholderPng } from './placeholder-png';
 
 needs();
 

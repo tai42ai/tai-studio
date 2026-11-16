@@ -778,7 +778,7 @@ describe('InteractionsPage — form preview: reactions, conditionals, dates, bou
 });
 
 describe('InteractionsPage — form preview: display blocks, inherited-key field names, review formatting', () => {
-  it('renders heading, body, image and seeded-slot display blocks in order', async () => {
+  it('renders heading, body, image and slot display blocks in order', async () => {
     const { channel } = renderInbox();
     await emitFrame(
       channel,
@@ -798,7 +798,7 @@ describe('InteractionsPage — form preview: display blocks, inherited-key field
                 { kind: 'heading', text: 'Summary' },
                 { kind: 'body', text: 'Please confirm' },
                 { kind: 'image', src: 'https://example.test/a.png', alt: 'A map' },
-                { kind: 'body', slot: 'total' },
+                { kind: 'body', slot: 'total', text: 'Total pending' },
               ],
             },
           ],
@@ -810,8 +810,8 @@ describe('InteractionsPage — form preview: display blocks, inherited-key field
     expect(within(display).getByText('Summary')).toBeInTheDocument();
     expect(within(display).getByText('Please confirm')).toBeInTheDocument();
     expect(within(display).getByRole('img', { name: 'A map' })).toBeInTheDocument();
-    // A slot seeded from the send data shows that value before any reaction.
-    expect(screen.getByTestId('form-slot-total')).toHaveTextContent('seed-total');
+    // Before any reaction a slot shows its block's own text, never a send value of its name.
+    expect(screen.getByTestId('form-slot-total')).toHaveTextContent('Total pending');
   });
 
   it('draws a paged field named __proto__ and holds Next on its required error', async () => {
@@ -2112,4 +2112,122 @@ describe("InteractionsPage — form preview: a reaction's picture in an image sl
     expect(within(slot).queryByRole('img')).not.toBeInTheDocument();
     expect(slot).toHaveTextContent('Chart');
   });
+
+  it('renders nothing for a slot with neither a picture nor alt text', async () => {
+    const { channel } = renderInbox();
+    await emitSlottedImageForm(channel, {});
+
+    await screen.findByRole('radio', { name: 'l' });
+    expect(screen.queryByTestId('form-slot-chart')).not.toBeInTheDocument();
+  });
+
+  it('draws the reaction picture in a slot that starts empty', async () => {
+    const user = userEvent.setup();
+    const react = vi.fn().mockResolvedValue(pictureUpdate('https://a.example/2.png'));
+    const { channel } = renderInbox(undefined, undefined, '', react);
+    await emitSlottedImageForm(channel, {});
+
+    await user.click(await screen.findByRole('radio', { name: 'l' }));
+    await waitFor(() => {
+      expect(within(screen.getByTestId('form-slot-chart')).getByRole('img')).toHaveAttribute(
+        'src',
+        'https://a.example/2.png',
+      );
+    });
+  });
+});
+
+describe("InteractionsPage — form preview: a text slot's value", () => {
+  /** A one-page form whose `size` change fires a reaction, showing one slotted body block. */
+  async function emitSlottedTextForm(
+    channel: Parameters<typeof emitFrame>[0],
+    block: Record<string, unknown>,
+    data?: Record<string, unknown>,
+  ): Promise<void> {
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-slot-text',
+        format: 'form',
+        prompt: 'Size',
+        format_payload: {
+          schema: { type: 'object', properties: { size: { type: 'string', enum: ['s', 'l'] } } },
+          ...(data !== undefined ? { data } : {}),
+          pages: [
+            {
+              title: 'Size',
+              fields: ['size'],
+              display: [{ kind: 'body', slot: 'total', ...block }],
+            },
+          ],
+          reactions: { field_changed: ['size'] },
+        },
+      }),
+    );
+  }
+
+  function totalUpdate(total: unknown): Record<string, unknown> {
+    return { values: {}, options: {}, errors: {}, display: { total } };
+  }
+
+  it("shows the block's own text, not a send value of the same name, until a reaction fills it", async () => {
+    const { channel } = renderInbox();
+    await emitSlottedTextForm(channel, { text: 'Pending' }, { values: { total: 'sent' } });
+
+    expect(await screen.findByTestId('form-slot-total')).toHaveTextContent('Pending');
+  });
+
+  it('shows nothing in a slot with no own text until a reaction fills it', async () => {
+    const { channel } = renderInbox();
+    await emitSlottedTextForm(channel, {});
+
+    await screen.findByRole('radio', { name: 'l' });
+    expect(screen.queryByTestId('form-slot-total')).not.toBeInTheDocument();
+  });
+
+  it("shows the reaction's value, and the block's own text again on a null value", async () => {
+    const user = userEvent.setup();
+    const react = vi
+      .fn()
+      .mockResolvedValueOnce(totalUpdate(12.5))
+      .mockResolvedValueOnce(totalUpdate(null));
+    const { channel } = renderInbox(undefined, undefined, '', react);
+    await emitSlottedTextForm(channel, { text: 'Pending' }, { values: { total: 'sent' } });
+
+    await user.click(await screen.findByRole('radio', { name: 'l' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('form-slot-total')).toHaveTextContent('12.5');
+    });
+    await user.click(screen.getByRole('radio', { name: 's' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('form-slot-total')).toHaveTextContent('Pending');
+    });
+  });
+
+  it.each([[{ amount: 12 }], [[12, 13]]])(
+    'refuses a host update whose text slot value is %j, leaving the slot on its own text',
+    async (value) => {
+      const user = userEvent.setup();
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ data: totalUpdate(value) }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+      try {
+        const { channel } = renderInbox(undefined, undefined, '', undefined, '/web/channel/react');
+        await emitSlottedTextForm(channel, { text: 'Pending' });
+
+        await user.click(await screen.findByRole('radio', { name: 'l' }));
+        expect(await screen.findByTestId('form-reaction-error')).toHaveTextContent(
+          'The form could not update',
+        );
+        expect(screen.getByTestId('form-slot-total')).toHaveTextContent(/^Pending$/);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    },
+  );
 });

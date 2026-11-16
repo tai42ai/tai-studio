@@ -216,7 +216,8 @@
  */
 import { chromium } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
-import { crc32, deflateSync } from 'node:zlib';
+
+import { placeholderPng } from './placeholder-png.mjs';
 
 const STUDIO_URL = process.env.STUDIO_URL ?? 'http://127.0.0.1:8765';
 const OUT_DIR = process.env.OUT_DIR;
@@ -723,43 +724,6 @@ const ATTACHMENT_TRANSCRIPT_THREAD = 'assistant-line-demo';
 const ATTACHMENT_TRANSCRIPT_ADDRESS = '+10000000000';
 const ATTACHMENT_IMAGE_URL = `/api/interactions/media/${'b'.repeat(43)}`;
 const ATTACHMENT_DOCUMENT_URL = `/api/interactions/media/${'c'.repeat(43)}`;
-// The stubbed served image: a small two-tone PNG encoded here (RGB, no filter) so the
-// thumbnail shows a visible picture rather than a black block or a broken-load notice.
-// Built from arithmetic only, so the bytes are identical on every run.
-function placeholderPng(width, height) {
-  const chunk = (type, data) => {
-    const len = Buffer.alloc(4);
-    len.writeUInt32BE(data.length);
-    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
-    const crc = Buffer.alloc(4);
-    crc.writeUInt32BE(crc32(body));
-    return Buffer.concat([len, body, crc]);
-  };
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width, 0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8; // bit depth
-  ihdr[9] = 2; // colour type: RGB
-  const raw = Buffer.alloc((width * 3 + 1) * height);
-  for (let y = 0; y < height; y += 1) {
-    const row = y * (width * 3 + 1);
-    raw[row] = 0; // filter: none
-    for (let x = 0; x < width; x += 1) {
-      const band = Math.floor(((x + y) / (width + height)) * 4) % 2 === 0;
-      const [r, g, b] = band ? [203, 213, 225] : [148, 163, 184];
-      const px = row + 1 + x * 3;
-      raw[px] = r;
-      raw[px + 1] = g;
-      raw[px + 2] = b;
-    }
-  }
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', deflateSync(raw)),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-}
 const ATTACHMENT_PNG = placeholderPng(240, 150);
 const ATTACHMENT_TRANSCRIPT_RECORD = {
   message_id: 'm-201',

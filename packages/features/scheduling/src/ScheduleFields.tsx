@@ -59,7 +59,7 @@ export function ScheduleFields({
         label="Tool"
         description={
           nothingSchedulable
-            ? "A tool can be scheduled when it carries the scheduling backend's schedule extension."
+            ? "A tool can be scheduled when the manifest names schedule_task in the tool's extensions map."
             : undefined
         }
         error={submitted && toolMissing ? 'A tool is required.' : undefined}

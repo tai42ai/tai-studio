@@ -67,10 +67,9 @@ export type DisplayBlockKind = z.infer<typeof displayBlockKind>;
  * One ordered, display-only block on a form page (never an input): a `heading` or
  * `body` text block, or an `image`. `text` carries a heading/body's words; `src`/`alt`
  * carry an image's source and alt text. An optional `slot` names a data key whose value
- * a heading/body block shows in place of static `text` — filled from `format_payload.data`
- * at send and/or by a reaction's `display` update (so a computed total is a display slot,
- * not a special case). An image block's slot is filled by a reaction only: its value is
- * the image source in place of `src`, and `null` or `""` leaves the block its alt text.
+ * a heading/body block shows in place of static `text` — filled by a reaction's `display`
+ * update while the form is open (so a computed total is a display slot, not a special
+ * case). An image block's slot value is the image source in place of `src`, and `null` or `""` leaves the block its alt text.
  * Every text field is `.nullish()` (absent OR explicit `null` both parse
  * to absent) so a block that omits a key — or sends an explicit `null` — is not a
  * whole-page parse failure. Applied per block by the preview (safeParsed via its page),
@@ -332,15 +331,19 @@ export type FormReactions = z.infer<typeof formReactions>;
  * `update`): the same kind of data a form is sent with, applied to the open form. `values`
  * sets field values; `options` replaces the per-send choice list of option-bearing fields;
  * `errors` shows per-field messages (keyed by field name); `display` fills display slots
- * (keyed by slot name) — a computed total among them. Every member defaults to empty, so a
- * reaction that touches only one of them returns only that one. The door response is safeParsed, so
- * a malformed update surfaces loudly rather than applying a half-understood change.
+ * (keyed by slot name) — a computed total among them. A slot value is a text, a number,
+ * true/false or `null` (the slot unfilled); an object or a list makes the whole update
+ * malformed. Every member defaults to empty, so a reaction that touches only one of them
+ * returns only that one. The door response is safeParsed, so a malformed update surfaces
+ * loudly rather than applying a half-understood change.
  */
 export const formUpdate = z.object({
   values: z.record(z.string(), z.unknown()).default({}),
   options: z.record(z.string(), z.array(formOption)).default({}),
   errors: z.record(z.string(), z.string()).default({}),
-  display: z.record(z.string(), z.unknown()).default({}),
+  display: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()]))
+    .default({}),
 });
 export type FormUpdate = z.infer<typeof formUpdate>;
 

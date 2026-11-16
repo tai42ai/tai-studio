@@ -2826,7 +2826,7 @@ label: string | null;
 value: string;
 }[]>;
 errors: Record<string, string>;
-display: Record<string, unknown>;
+display: Record<string, string | number | boolean | null>;
 }>;
 readonly cancelInteraction: (interactionId: string) => Promise<{
 interaction_id: string;
@@ -11582,7 +11582,7 @@ function createApiClient(config: ApiConfig): {
             value: string;
         }[]>;
         errors: Record<string, string>;
-        display: Record<string, unknown>;
+        display: Record<string, string | number | boolean | null>;
     }>;
     readonly cancelInteraction: (interactionId: string) => Promise<{
         interaction_id: string;
@@ -15810,7 +15810,7 @@ const formUpdate: z.ZodObject<{
         value: z.ZodString;
     }, z.core.$strict>>>>;
     errors: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
-    display: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    display: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean, z.ZodNull]>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -16457,7 +16457,7 @@ const interactionReaction: z.ZodObject<{
             value: z.ZodString;
         }, z.core.$strict>>>>;
         errors: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
-        display: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        display: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber, z.ZodBoolean, z.ZodNull]>>>;
     }, z.core.$strip>;
 }, z.core.$strip>;
 

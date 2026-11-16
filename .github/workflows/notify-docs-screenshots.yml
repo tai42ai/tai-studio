@@ -25,7 +25,9 @@ on:
       - 'packages/studio-sdk/**'
       - 'packages/api-client/**'
       - 'apps/studio/**'
+      # The capture script and its local imports.
       - 'e2e/scripts/docs-screenshots.mjs'
+      - 'e2e/scripts/placeholder-png.mjs'
       - 'e2e/docs-demo/**'
       # The lockfile pins the rendered typeface: the SDK depends on
       # `@fontsource-variable/*`, whose resolved version decides which webfont

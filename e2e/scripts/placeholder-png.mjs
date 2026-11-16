@@ -1,10 +1,16 @@
 import { crc32, deflateSync } from 'node:zlib';
 
-/** A stubbed served image: a small two-tone PNG (RGB, no filter) built from arithmetic
- * only, so the inline image loads to the same visible picture on every run rather than a
- * black block or a broken-load notice. */
-export function placeholderPng(width: number, height: number): Buffer {
-  const chunk = (type: string, data: Buffer): Buffer => {
+/**
+ * A stubbed served image: a small two-tone PNG (RGB, no filter) built from arithmetic
+ * only, so an inline image loads to the same visible picture on every run rather than a
+ * black block or a broken-load notice.
+ *
+ * @param {number} width
+ * @param {number} height
+ * @returns {Buffer}
+ */
+export function placeholderPng(width, height) {
+  const chunk = (type, data) => {
     const length = Buffer.alloc(4);
     length.writeUInt32BE(data.length);
     const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
@@ -17,6 +23,7 @@ export function placeholderPng(width: number, height: number): Buffer {
   header.writeUInt32BE(height, 4);
   header[8] = 8; // bit depth
   header[9] = 2; // colour type: RGB
+  // Each row is a filter byte (0: none, as `Buffer.alloc` zero-fills) then its pixels.
   const raw = Buffer.alloc((width * 3 + 1) * height);
   for (let y = 0; y < height; y += 1) {
     const row = y * (width * 3 + 1);

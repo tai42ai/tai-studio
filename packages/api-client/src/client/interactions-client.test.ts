@@ -11,7 +11,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-import { type ApiConfig, ApiConflictError, ApiError } from '../index';
+import { type ApiConfig, ApiConflictError, ApiError, ApiSchemaError } from '../index';
 import { createApiClient } from './index';
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -105,6 +105,27 @@ describe('interactions client transport', () => {
       display: { total: '$30' },
     });
   });
+
+  it('reactInteraction accepts a text, number, true/false or null display slot value', async () => {
+    const display = { a: 'twelve', b: 12.5, c: false, d: null };
+    const { client } = harness(() =>
+      jsonResponse({ data: { interaction_id: 'q', update: { display } } }),
+    );
+    const out = await client.reactInteraction('q', { kind: 'submitted' }, {});
+    expect(out.display).toEqual(display);
+  });
+
+  it.each([[{ amount: 12 }], [[12, 13]]])(
+    'reactInteraction throws ApiSchemaError LOUDLY on a %j display slot value',
+    async (value) => {
+      const { client } = harness(() =>
+        jsonResponse({ data: { interaction_id: 'q', update: { display: { total: value } } } }),
+      );
+      await expect(client.reactInteraction('q', { kind: 'submitted' }, {})).rejects.toBeInstanceOf(
+        ApiSchemaError,
+      );
+    },
+  );
 
   it('reactInteraction rejects an unsafe interaction id before any request', async () => {
     const { client, captured } = harness(() => jsonResponse({ data: {} }));

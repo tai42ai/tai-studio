@@ -28,8 +28,9 @@ const entryFile = resolve(srcDir, 'index.tsx');
 const outDir = resolve(pluginRoot, 'src', 'reference_plugin', 'studio');
 const sdkVersionFile = resolve(repoRoot, 'packages', 'studio-sdk', 'src', 'plugin', 'version.ts');
 
-/** The three shared modules the host provides through the import map. A
- * plugin that bundled its own copy would break the React singleton. */
+/** React, its JSX and DOM entry points, and the studio SDK: the shared modules
+ * the host provides through the import map. A plugin that bundled its own copy
+ * would break the React singleton. */
 const EXTERNAL = [
   'react',
   'react-dom',

@@ -461,7 +461,7 @@ describe('AddScheduleDialog — nothing schedulable', () => {
     expect(within(dialog).queryByRole('combobox', { name: 'Tool' })).toBeNull();
     expect(
       within(dialog).getByText(
-        "A tool can be scheduled when it carries the scheduling backend's schedule extension.",
+        "A tool can be scheduled when the manifest names schedule_task in the tool's extensions map.",
       ),
     ).toBeInTheDocument();
   });
