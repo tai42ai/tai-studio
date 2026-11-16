@@ -79,6 +79,11 @@ export const REPLY_TEXT_MEMBERS: readonly ReplyTextMember[] = [
     title: 'File not received',
     description: 'Sent for an inbound file the channel could not fetch.',
   },
+  {
+    name: 'rejected_unreadable',
+    title: 'Unreadable message',
+    description: 'Sent for an inbound message the channel could not read.',
+  },
 ];
 
 /** A reply-text member name. */

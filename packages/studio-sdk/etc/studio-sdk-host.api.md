@@ -68,6 +68,7 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
@@ -137,6 +138,7 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
