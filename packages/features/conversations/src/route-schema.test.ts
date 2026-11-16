@@ -33,6 +33,7 @@ const NO_REPLY_TEXTS = {
   rejected_unsupported_type: null,
   rejected_too_large: null,
   rejected_could_not_receive: null,
+  rejected_unreadable: null,
 };
 
 describe('routeFormSchema', () => {

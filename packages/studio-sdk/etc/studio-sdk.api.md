@@ -343,6 +343,7 @@ const apiConversationRouteCreate: z.ZodObject<{
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
@@ -1672,6 +1673,7 @@ pairing_unlink_unavailable: string | null;
 pairing_unlinked: string | null;
 rejected_could_not_receive: string | null;
 rejected_too_large: string | null;
+rejected_unreadable: string | null;
 rejected_unsupported_type: string | null;
 slow_down: string | null;
 } | null;
@@ -1729,6 +1731,7 @@ pairing_unlink_unavailable: string | null;
 pairing_unlinked: string | null;
 rejected_could_not_receive: string | null;
 rejected_too_large: string | null;
+rejected_unreadable: string | null;
 rejected_unsupported_type: string | null;
 slow_down: string | null;
 } | null;
@@ -1793,6 +1796,7 @@ pairing_unlink_unavailable: string | null;
 pairing_unlinked: string | null;
 rejected_could_not_receive: string | null;
 rejected_too_large: string | null;
+rejected_unreadable: string | null;
 rejected_unsupported_type: string | null;
 slow_down: string | null;
 } | null;
@@ -1850,6 +1854,7 @@ pairing_unlink_unavailable: string | null;
 pairing_unlinked: string | null;
 rejected_could_not_receive: string | null;
 rejected_too_large: string | null;
+rejected_unreadable: string | null;
 rejected_unsupported_type: string | null;
 slow_down: string | null;
 } | null;
@@ -6322,6 +6327,7 @@ const channelConversationRouteCreate: z.ZodObject<{
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
@@ -7929,6 +7935,7 @@ const conversationRoute: z.ZodDiscriminatedUnion<[z.ZodObject<{
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
@@ -7999,6 +8006,7 @@ const conversationRoute: z.ZodDiscriminatedUnion<[z.ZodObject<{
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
@@ -8073,6 +8081,7 @@ const conversationRouteCreate: z.ZodDiscriminatedUnion<[z.ZodObject<{
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
@@ -8141,6 +8150,7 @@ const conversationRouteCreate: z.ZodDiscriminatedUnion<[z.ZodObject<{
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
@@ -8226,6 +8236,7 @@ const conversationRoutes: z.ZodObject<{
             pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         }, z.core.$strict>>>;
@@ -8295,6 +8306,7 @@ const conversationRoutes: z.ZodObject<{
             pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         }, z.core.$strict>>>;
@@ -8373,6 +8385,7 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
@@ -8442,6 +8455,7 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     }, z.core.$strict>>>;
@@ -8520,6 +8534,7 @@ const conversationRouteWritten: z.ZodObject<{
             pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         }, z.core.$strict>>>;
@@ -8589,6 +8604,7 @@ const conversationRouteWritten: z.ZodObject<{
             pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         }, z.core.$strict>>>;
@@ -10413,6 +10429,7 @@ function createApiClient(config: ApiConfig): {
                 pairing_unlinked: string | null;
                 rejected_could_not_receive: string | null;
                 rejected_too_large: string | null;
+                rejected_unreadable: string | null;
                 rejected_unsupported_type: string | null;
                 slow_down: string | null;
             } | null;
@@ -10470,6 +10487,7 @@ function createApiClient(config: ApiConfig): {
                 pairing_unlinked: string | null;
                 rejected_could_not_receive: string | null;
                 rejected_too_large: string | null;
+                rejected_unreadable: string | null;
                 rejected_unsupported_type: string | null;
                 slow_down: string | null;
             } | null;
@@ -10534,6 +10552,7 @@ function createApiClient(config: ApiConfig): {
                 pairing_unlinked: string | null;
                 rejected_could_not_receive: string | null;
                 rejected_too_large: string | null;
+                rejected_unreadable: string | null;
                 rejected_unsupported_type: string | null;
                 slow_down: string | null;
             } | null;
@@ -10591,6 +10610,7 @@ function createApiClient(config: ApiConfig): {
                 pairing_unlinked: string | null;
                 rejected_could_not_receive: string | null;
                 rejected_too_large: string | null;
+                rejected_unreadable: string | null;
                 rejected_unsupported_type: string | null;
                 slow_down: string | null;
             } | null;
@@ -23160,7 +23180,7 @@ const servedDocumentsJson: {
             };
             readonly ReplyTexts: {
                 readonly additionalProperties: false;
-                readonly description: "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` are the notices for an inbound message the channel cannot\nbridge, a file over the cap, and a file the channel could not fetch. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.";
+                readonly description: "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` / ``rejected_unreadable`` are the notices for an inbound message the\nchannel cannot bridge, a file over the cap, a file the channel could not fetch, and an inbound\nmessage whose body the channel could not read. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.";
                 readonly properties: {
                     readonly error: {
                         readonly anyOf: readonly [{
@@ -23281,6 +23301,18 @@ const servedDocumentsJson: {
                         }];
                         readonly default: null;
                         readonly title: "Rejected Too Large";
+                    };
+                    readonly rejected_unreadable: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Rejected Unreadable";
                     };
                     readonly rejected_unsupported_type: {
                         readonly anyOf: readonly [{
@@ -24016,7 +24048,7 @@ const servedDocumentsJson: {
             };
             readonly ReplyTexts: {
                 readonly additionalProperties: false;
-                readonly description: "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` are the notices for an inbound message the channel cannot\nbridge, a file over the cap, and a file the channel could not fetch. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.";
+                readonly description: "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` / ``rejected_unreadable`` are the notices for an inbound message the\nchannel cannot bridge, a file over the cap, a file the channel could not fetch, and an inbound\nmessage whose body the channel could not read. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.";
                 readonly properties: {
                     readonly error: {
                         readonly anyOf: readonly [{
@@ -24137,6 +24169,18 @@ const servedDocumentsJson: {
                         }];
                         readonly default: null;
                         readonly title: "Rejected Too Large";
+                    };
+                    readonly rejected_unreadable: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Rejected Unreadable";
                     };
                     readonly rejected_unsupported_type: {
                         readonly anyOf: readonly [{
