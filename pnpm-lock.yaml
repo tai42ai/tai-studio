@@ -61,8 +61,8 @@ catalogs:
       specifier: ^8.3.5
       version: 8.3.5
     vitest:
-      specifier: ^5.0.5
-      version: 5.0.5
+      specifier: ^5.1.0
+      version: 5.1.0
 
 overrides:
   minimatch@10: '>=11.0.1 <12'
@@ -118,7 +118,7 @@ importers:
         version: 8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   apps/studio:
     dependencies:
@@ -203,7 +203,7 @@ importers:
         version: 4.3.2(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -224,7 +224,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       eslint:
         specifier: 'catalog:'
         version: 9.39.4(jiti@2.7.0)
@@ -242,7 +242,7 @@ importers:
         version: 4.3.2
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   e2e:
     devDependencies:
@@ -303,13 +303,13 @@ importers:
         version: 22.20.0
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       json-schema-to-zod:
         specifier: 2.8.1
         version: 2.8.1
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/agents:
     dependencies:
@@ -325,7 +325,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -343,7 +343,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -355,7 +355,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/connectors:
     dependencies:
@@ -374,7 +374,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -392,7 +392,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -404,7 +404,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/conversations:
     dependencies:
@@ -423,7 +423,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -441,7 +441,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -453,7 +453,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/hooks:
     dependencies:
@@ -478,7 +478,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -496,7 +496,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -508,7 +508,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/interactions:
     dependencies:
@@ -527,7 +527,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -545,7 +545,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -557,7 +557,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/manifest:
     dependencies:
@@ -576,7 +576,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -594,7 +594,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -606,7 +606,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/marketplace:
     dependencies:
@@ -625,7 +625,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -643,7 +643,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -655,7 +655,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/members:
     dependencies:
@@ -671,7 +671,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -689,7 +689,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -701,7 +701,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/notifications:
     dependencies:
@@ -717,7 +717,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -735,7 +735,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -747,7 +747,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/observability:
     dependencies:
@@ -763,7 +763,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -781,7 +781,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -793,7 +793,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/presets:
     dependencies:
@@ -809,7 +809,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -827,7 +827,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -839,7 +839,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/scheduling:
     dependencies:
@@ -858,7 +858,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -876,7 +876,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -888,7 +888,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/settings:
     dependencies:
@@ -916,7 +916,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -934,7 +934,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -946,7 +946,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/states:
     dependencies:
@@ -965,7 +965,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -983,7 +983,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -995,7 +995,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/storage:
     dependencies:
@@ -1011,7 +1011,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -1029,7 +1029,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -1041,7 +1041,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/system:
     dependencies:
@@ -1060,7 +1060,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -1078,7 +1078,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -1090,7 +1090,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/features/tools:
     dependencies:
@@ -1109,7 +1109,7 @@ importers:
         version: 5.103.1(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -1127,7 +1127,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -1139,7 +1139,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/studio-sdk:
     dependencies:
@@ -1182,7 +1182,7 @@ importers:
         version: 0.1.8(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@testing-library/jest-dom':
         specifier: 'catalog:'
-        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)
+        version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)
       '@testing-library/react':
         specifier: 'catalog:'
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -1203,7 +1203,7 @@ importers:
         version: 5.2.0(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 5.0.4(vitest@5.0.5)
+        version: 5.0.4(vitest@5.1.0)
       jsdom:
         specifier: 'catalog:'
         version: 30.0.1
@@ -1215,7 +1215,7 @@ importers:
         version: 19.3.1(react@19.3.1)
       vitest:
         specifier: 'catalog:'
-        version: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+        version: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   packages/test-support:
     dependencies:
@@ -2813,8 +2813,8 @@ packages:
     resolution: {integrity: sha512-gUsfXZJbzPamoIY5TvHFiMMoXESBrUMo+xqaj+rYrWI69+EnvRlYBlP96ZnHPY4vX8kyUpgAnFUCg5wZG/HkDQ==}
     engines: {node: '>=22'}
 
-  '@vitest/mocker@5.0.5':
-    resolution: {integrity: sha512-xLL3lkDegJZw+MGoGaCCsFayDZthGgpAtr3Vziyfc4p7xH89K7KRPcRBBh/kEYm0Aqkt5DtTmkYpBtRV/FrHZg==}
+  '@vitest/mocker@5.1.0':
+    resolution: {integrity: sha512-5umB9/jlWcqVS6fsrFmv5Gdnpu6wAUio/lEOwAmvB7v+lFo/IW2B9FhAD0p19GCULTgMzLCdUmuCDCnAzWgppQ==}
     peerDependencies:
       msw: ^2.4.9 || ^3.0.0
       vite: ^6.0.0 || ^7.0.0 || ^8.0.0
@@ -2824,8 +2824,8 @@ packages:
       vite:
         optional: true
 
-  '@vitest/spy@5.0.5':
-    resolution: {integrity: sha512-lwJRExuH417257Q5wv9QYugN9IMJkoxcrKrYxGPQkBzl7wlNpTUxD/5yNX4ESKVUIShKPgkGchYPFMWOOk0wzw==}
+  '@vitest/spy@5.1.0':
+    resolution: {integrity: sha512-2DPO5OMHWKrBngC+fCmTQqemNF0gidRhp3lxbBmRhW+M1XJrfgPpqNqWVevXtn2f2ufD5ZaR1B6B641aAlcX5A==}
 
   '@xyflow/react@12.12.1':
     resolution: {integrity: sha512-g41OHmP+GL5wDBQKpgYt8AF6RlB4CrABtiStXhCMqdItK6gPdSpsuDk8V0YtdyvIvMPTjDJvkuLkz0JbSYu5Cw==}
@@ -4687,20 +4687,20 @@ packages:
       yaml:
         optional: true
 
-  vitest@5.0.5:
-    resolution: {integrity: sha512-cPODOMF8YnkiiYtDdHo6n4wWmBrOBBbOIYH2d33M4l3CdNn72h+qMmO6uXffUN6A5AZFXNND/d+krS9mgkXRfg==}
+  vitest@5.1.0:
+    resolution: {integrity: sha512-MzmNFnrwa8v8lF1bLxw3UJ4EREwVOVb75VqJZmUDRjJ6EluK/x9th7qTbaeDk41WxE1GxWqmTXcdsfobfH5sOA==}
     engines: {node: ^22.12.0 || ^24.0.0 || >=26.0.0}
     hasBin: true
     peerDependencies:
       '@edge-runtime/vm': '*'
       '@opentelemetry/api': ^1.9.0
       '@types/node': ^22.0.0 || >=24.0.0
-      '@vitest/browser-playwright': 5.0.5
-      '@vitest/browser-preview': 5.0.5
+      '@vitest/browser-playwright': 5.1.0
+      '@vitest/browser-preview': 5.1.0
       '@vitest/browser-webdriverio': ^5.0.0-beta.5 || >=5.0.0
-      '@vitest/coverage-istanbul': 5.0.5
-      '@vitest/coverage-v8': 5.0.5
-      '@vitest/ui': 5.0.5
+      '@vitest/coverage-istanbul': 5.1.0
+      '@vitest/coverage-v8': 5.1.0
+      '@vitest/ui': 5.1.0
       happy-dom: '*'
       jsdom: '*'
       vite: ^6.4.0 || ^7.0.0 || ^8.0.0
@@ -6103,7 +6103,7 @@ snapshots:
       picocolors: 1.1.1
       pretty-format: 27.5.1
 
-  '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.5)':
+  '@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.1)(vitest@5.1.0)':
     dependencies:
       '@adobe/css-tools': 4.5.0
       '@testing-library/dom': 10.4.1
@@ -6113,7 +6113,7 @@ snapshots:
       picocolors: 1.1.1
       redent: 3.0.0
     optionalDependencies:
-      vitest: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+      vitest: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   '@testing-library/react@16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
@@ -6386,7 +6386,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/coverage-v8@5.0.4(vitest@5.0.5)':
+  '@vitest/coverage-v8@5.0.4(vitest@5.1.0)':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
       '@vitest/istanbul-lib-coverage': 1.0.2
@@ -6396,7 +6396,7 @@ snapshots:
       obug: 3.0.0
       std-env: 4.3.0
       tinyrainbow: 3.2.0
-      vitest: 5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+      vitest: 5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
 
   '@vitest/istanbul-lib-coverage@1.0.2': {}
 
@@ -6404,27 +6404,27 @@ snapshots:
     dependencies:
       '@vitest/istanbul-lib-coverage': 1.0.2
 
-  '@vitest/mocker@5.0.5(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))':
+  '@vitest/mocker@5.1.0(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
-      '@vitest/spy': 5.0.5
+      '@vitest/spy': 5.1.0
       estree-walker: 3.0.3
       magic-string: 1.4.3
     optionalDependencies:
       msw: 3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       vite: 8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)
 
-  '@vitest/mocker@5.0.5(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))':
+  '@vitest/mocker@5.1.0(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
-      '@vitest/spy': 5.0.5
+      '@vitest/spy': 5.1.0
       estree-walker: 3.0.3
       magic-string: 1.4.3
     optionalDependencies:
       msw: 3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       vite: 8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)
 
-  '@vitest/spy@5.0.5': {}
+  '@vitest/spy@5.1.0': {}
 
   '@xyflow/react@12.12.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
@@ -8317,10 +8317,10 @@ snapshots:
       jiti: 2.7.0
       yaml: 2.9.1
 
-  vitest@5.0.5(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)):
+  vitest@5.1.0(@types/node@22.20.0)(@vitest/coverage-v8@5.0.4)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.0.5(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+      '@vitest/mocker': 5.1.0(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.6(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       chai: 6.3.0
       es-module-lexer: 2.3.2
       expect-type: 1.4.0
@@ -8335,15 +8335,15 @@ snapshots:
       why-is-node-running: 3.2.1
     optionalDependencies:
       '@types/node': 22.20.0
-      '@vitest/coverage-v8': 5.0.4(vitest@5.0.5)
+      '@vitest/coverage-v8': 5.0.4(vitest@5.1.0)
       jsdom: 30.0.1
     transitivePeerDependencies:
       - msw
 
-  vitest@5.0.5(@types/node@22.20.0)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)):
+  vitest@5.1.0(@types/node@22.20.0)(jsdom@30.0.1)(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.0.5(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
+      '@vitest/mocker': 5.1.0(msw@3.0.3(@types/node@22.20.0)(graphql@16.14.2)(typescript@6.0.3)(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1)))(vite@8.3.5(@types/node@22.20.0)(jiti@2.7.0)(yaml@2.9.1))
       chai: 6.3.0
       es-module-lexer: 2.3.2
       expect-type: 1.4.0
