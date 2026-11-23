@@ -1,5 +1,6 @@
 /** Tool extension listing and authoring sub-client. */
 import { apiRoutes, buildPath } from '../generated/api-routes';
+import type { PresetExtensionElement } from '../schemas';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -18,7 +19,7 @@ export function toolExtensionsClient(t: Transport) {
     // clears). Returns the apply result: the local reload (`status` + `env_keys`) plus
     // the mode-wrapped fleet `fanout` of the reload it broadcast, from which the shared
     // fleet-report handler surfaces any failed propagation.
-    setToolExtensions: (name: string, combos: readonly s.PresetExtensionElement[][]) =>
+    setToolExtensions: (name: string, combos: readonly PresetExtensionElement[][]) =>
       req(
         buildPath(apiRoutes.post_api_tools_name_extensions.path, { name }),
         s.toolExtensionsApplyResult,

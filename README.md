@@ -83,7 +83,8 @@ lower ever imports something higher).
   version-compatibility gate, and ships the shared UI components, hooks, and
   schema-driven auto-form every feature and plugin builds on. The host-only
   registry lives behind the separate `@tai42/studio-sdk/host` entry so a served
-  plugin asset can never forge or enumerate it (see `SECURITY.md`).
+  plugin asset can never forge or enumerate it (see the package README's
+  [Entry points and the trust boundary](packages/studio-sdk/README.md#entry-points-and-the-trust-boundary)).
 - **`packages/api-client`** — the typed, zod-validated client for the skeleton's
   HTTP API. One schema per endpoint; every response is validated and every
   drift or failure throws. It holds no server state of its own.

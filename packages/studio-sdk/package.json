@@ -56,7 +56,6 @@
   "files": [
     "LICENSE",
     "NOTICE",
-    "SECURITY.md",
     "dist",
     "src",
     "!src/**/*.test.ts",
@@ -82,7 +81,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@microsoft/api-extractor": "7.59.2",
+    "@microsoft/api-extractor": "catalog:",
     "@tai42/jq-studio": "^0.1.8",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",

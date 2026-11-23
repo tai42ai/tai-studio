@@ -42,6 +42,7 @@ export type {
   AddUrlToScopeBody,
   ApiKeyBody,
   ClaimLinkBody,
+  InvokeMemberActionBody,
   PinRoutePublicBody,
   RoleCreateBody,
   RoleUpdateBody,
@@ -60,7 +61,7 @@ export type {
 } from './conversations-client';
 export type { TopicVerifierBody } from './hooks-client';
 export { isSafeApiPath } from './login-client';
-export type { ApiToolsListsBody, McpToolFilter } from './manifest-client';
+export type { ApiToolsListsBody, McpToolFilter, SetMcpSecretEnvBody } from './manifest-client';
 export type {
   MarketplaceInstallBody,
   MarketplaceInstallPreviewBody,

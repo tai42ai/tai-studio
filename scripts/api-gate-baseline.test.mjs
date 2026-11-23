@@ -29,6 +29,7 @@ import {
   gitCommitting,
   manifestOf,
   mergeCheckoutRemoving,
+  producedAsListed,
   writeFile,
 } from './api-gate-git-fixtures.mjs';
 import { GateError } from './gate-error.mjs';
@@ -94,6 +95,7 @@ test('the release gate diffs each report against its newest published tag', () =
     publishedVersionsFor: () => ['18.2.0'],
     packageNameFor: () => '@acme/sdk',
     listReportsAtRef: listedAt,
+    producedReports: producedAsListed(listedAt),
     readReportAtRef: (ref) => {
       reads.push(ref);
       return WITH_SYMBOL;
@@ -117,6 +119,7 @@ test('a first publish has no baseline to diff and passes', () => {
     publishedVersionsFor: () => [],
     packageNameFor: () => '@acme/sdk',
     listReportsAtRef: listedAt,
+    producedReports: producedAsListed(listedAt),
     readReportAtRef: () => assert.fail('a first publish reads no old report'),
     readReportAtWorktree: () => assert.fail('a first publish reads no new report'),
     log: (line) => lines.push(line),
@@ -130,6 +133,10 @@ test('a first publish has no baseline to diff and passes', () => {
 const GONE = { dir: 'packages/studio-sdk/etc', name: 'studio-sdk-gone.api.md' };
 
 function goneReportGate(version, { tags, published, heldAt, lines = [] }) {
+  const listReportsAtRef = (ref) => [
+    ...listedAt(ref),
+    ...(heldAt.includes(ref) ? [{ ...GONE, ref }] : []),
+  ];
   const deps = {
     mode: 'label-honesty',
     tags,
@@ -137,10 +144,8 @@ function goneReportGate(version, { tags, published, heldAt, lines = [] }) {
     packageNameFor: () => '@acme/sdk',
     readReportAtRef: () => KEPT_ONLY,
     readReportAtWorktree: () => KEPT_ONLY,
-    listReportsAtRef: (ref) => [
-      ...listedAt(ref),
-      ...(heldAt.includes(ref) ? [{ ...GONE, ref }] : []),
-    ],
+    listReportsAtRef,
+    producedReports: producedAsListed(listReportsAtRef),
     log: (line) => lines.push(line),
   };
   return runGate(version, publishedBaseline(version, deps), deps);
@@ -196,6 +201,10 @@ test('with no published version a lost report passes as a first publish', () => 
 test('a report added after the baseline tag does not fail', () => {
   const lines = [];
   const added = { dir: LISTED.dir, name: 'sdk-added.api.md' };
+  const listReportsAtRef = (ref) => [
+    ...listedAt(ref),
+    ...(ref === 'HEAD' ? [{ ...added, ref }] : []),
+  ];
   const deps = {
     mode: 'label-honesty',
     tags: ['v1.0.0'],
@@ -203,7 +212,8 @@ test('a report added after the baseline tag does not fail', () => {
     packageNameFor: () => '@acme/sdk',
     readReportAtRef: () => KEPT_ONLY,
     readReportAtWorktree: () => KEPT_ONLY,
-    listReportsAtRef: (ref) => [...listedAt(ref), ...(ref === 'HEAD' ? [{ ...added, ref }] : [])],
+    listReportsAtRef,
+    producedReports: producedAsListed(listReportsAtRef),
     log: (line) => lines.push(line),
   };
   assert.deepEqual(runGate('1.0.1', publishedBaseline('1.0.1', deps), deps), []);

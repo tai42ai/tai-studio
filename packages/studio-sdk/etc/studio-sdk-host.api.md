@@ -5,161 +5,17 @@
 ```ts
 
 import type { ComponentType } from 'react';
-import { z } from 'zod';
+import type { ConversationRouteView } from '@tai42/api-client';
+import type { MeProjection } from '@tai42/api-client';
+import type { ReferenceHolder } from '@tai42/api-client';
 
 // @public
-type ChannelConversationRoute = Extract<ConversationRouteView, {
+export type ChannelConversationRoute = Extract<ConversationRouteView, {
     readonly door: 'channel';
 }>;
 
 // @public
 export function contributionCovered(projection: MeProjection, required: RequiredCapabilities | undefined): boolean;
-
-// @public (undocumented)
-type ConversationRouteView = z.infer<typeof conversationRouteView>;
-
-// @public
-const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
-    callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
-        content: z.ZodOptional<z.ZodString>;
-        id: z.ZodOptional<z.ZodString>;
-        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>>>;
-    channel: z.ZodDefault<z.ZodNull>;
-    door: z.ZodLiteral<"api">;
-    execution_key: z.ZodString;
-    execution_key_fingerprint: z.ZodString;
-    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
-        content: z.ZodOptional<z.ZodString>;
-        id: z.ZodOptional<z.ZodString>;
-        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>>>;
-    initial_mode: z.ZodDefault<z.ZodEnum<{
-        agent: "agent";
-        manual: "manual";
-    }>>;
-    locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    our_identity: z.ZodDefault<z.ZodNull>;
-    overlap: z.ZodDefault<z.ZodObject<{
-        deliver: z.ZodDefault<z.ZodEnum<{
-            one: "one";
-            all: "all";
-        }>>;
-        running: z.ZodDefault<z.ZodEnum<{
-            continue: "continue";
-            cancel: "cancel";
-        }>>;
-        settle_seconds: z.ZodDefault<z.ZodNumber>;
-    }, z.core.$strip>>;
-    reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
-        content: z.ZodOptional<z.ZodString>;
-        id: z.ZodOptional<z.ZodString>;
-        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>>>;
-    reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
-        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    }, z.core.$strict>>>;
-    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
-        content: z.ZodOptional<z.ZodString>;
-        id: z.ZodOptional<z.ZodString>;
-        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>>>;
-    route_name: z.ZodString;
-    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
-        content: z.ZodOptional<z.ZodString>;
-        id: z.ZodOptional<z.ZodString>;
-        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>>>;
-    target_kind: z.ZodEnum<{
-        agent: "agent";
-        tool: "tool";
-    }>;
-    target_name: z.ZodString;
-    turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
-}, z.core.$strip>, z.ZodObject<{
-    callback_url: z.ZodDefault<z.ZodNull>;
-    cancel_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
-        content: z.ZodOptional<z.ZodString>;
-        id: z.ZodOptional<z.ZodString>;
-        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>>>;
-    channel: z.ZodString;
-    door: z.ZodLiteral<"channel">;
-    execution_key: z.ZodString;
-    execution_key_fingerprint: z.ZodString;
-    extras_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
-        content: z.ZodOptional<z.ZodString>;
-        id: z.ZodOptional<z.ZodString>;
-        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>>>;
-    initial_mode: z.ZodDefault<z.ZodEnum<{
-        agent: "agent";
-        manual: "manual";
-    }>>;
-    locale: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    our_identity: z.ZodString;
-    overlap: z.ZodDefault<z.ZodObject<{
-        deliver: z.ZodDefault<z.ZodEnum<{
-            one: "one";
-            all: "all";
-        }>>;
-        running: z.ZodDefault<z.ZodEnum<{
-            continue: "continue";
-            cancel: "cancel";
-        }>>;
-        settle_seconds: z.ZodDefault<z.ZodNumber>;
-    }, z.core.$strip>>;
-    reply_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
-        content: z.ZodOptional<z.ZodString>;
-        id: z.ZodOptional<z.ZodString>;
-        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>>>;
-    reply_texts: z.ZodDefault<z.ZodNullable<z.ZodObject<{
-        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        pairing_code: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        pairing_code_invalid: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        pairing_link_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        pairing_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        rejected_unsupported_type: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        slow_down: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    }, z.core.$strict>>>;
-    resume_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
-        content: z.ZodOptional<z.ZodString>;
-        id: z.ZodOptional<z.ZodString>;
-        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>>>;
-    route_name: z.ZodString;
-    start_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
-        content: z.ZodOptional<z.ZodString>;
-        id: z.ZodOptional<z.ZodString>;
-        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, z.core.$strict>>>;
-    target_kind: z.ZodEnum<{
-        agent: "agent";
-        tool: "tool";
-    }>;
-    target_name: z.ZodString;
-    turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
-}, z.core.$strip>], "door">;
 
 // @public
 export function getContributions(): PluginContributions;
@@ -168,7 +24,7 @@ export function getContributions(): PluginContributions;
 export function getPluginHostState(): PluginLoaderState;
 
 // @public
-interface HolderLinkContribution {
+export interface HolderLinkContribution {
     // (undocumented)
     readonly kind: string;
     // (undocumented)
@@ -176,7 +32,7 @@ interface HolderLinkContribution {
 }
 
 // @public
-interface HolderLinkTarget {
+export interface HolderLinkTarget {
     // (undocumented)
     readonly pagePath: string;
     // (undocumented)
@@ -197,47 +53,7 @@ export interface LoadedPlugin {
 export function loadPlugin(pluginId: string, entry: PluginEntry, host: PluginLoadInputs): Promise<void>;
 
 // @public (undocumented)
-type MeProjection = z.infer<typeof meProjection>;
-
-// @public
-const meProjection: z.ZodObject<{
-    access_control_enabled: z.ZodBoolean;
-    admin: z.ZodBoolean;
-    agents: z.ZodArray<z.ZodString>;
-    mintable: z.ZodBoolean;
-    owner_user_id: z.ZodNullable<z.ZodString>;
-    principal: z.ZodNullable<z.ZodObject<{
-        display_name: z.ZodString;
-        kind: z.ZodEnum<{
-            human: "human";
-            service: "service";
-        }>;
-        user_id: z.ZodString;
-    }, z.core.$strip>>;
-    public_resource_id: z.ZodString;
-    route_patterns: z.ZodArray<z.ZodObject<{
-        open_prefix: z.ZodNullable<z.ZodString>;
-        pattern: z.ZodString;
-        scope_id: z.ZodString;
-    }, z.core.$strip>>;
-    routes: z.ZodArray<z.ZodObject<{
-        methods: z.ZodArray<z.ZodString>;
-        path: z.ZodString;
-    }, z.core.$strip>>;
-    scopes: z.ZodArray<z.ZodString>;
-    sub_mcp: z.ZodArray<z.ZodObject<{
-        access_pattern: z.ZodString;
-        mount_url: z.ZodString;
-        slug: z.ZodString;
-        tools: z.ZodArray<z.ZodString>;
-        transport: z.ZodString;
-    }, z.core.$strip>>;
-    tools: z.ZodArray<z.ZodString>;
-    user_id: z.ZodString;
-}, z.core.$strip>;
-
-// @public (undocumented)
-interface NavEntryContribution {
+export interface NavEntryContribution {
     readonly icon?: ComponentType;
     readonly order?: number;
     readonly path: string;
@@ -248,10 +64,10 @@ interface NavEntryContribution {
 }
 
 // @public
-type NavEntrySection = 'Capabilities' | 'Connections' | 'Doors' | 'Activity' | 'Administration';
+export type NavEntrySection = 'Capabilities' | 'Connections' | 'Doors' | 'Activity' | 'Administration';
 
 // @public (undocumented)
-interface PageContribution {
+export interface PageContribution {
     // (undocumented)
     readonly component: ComponentType<PluginPageProps>;
     readonly params?: PluginPageParamsSchema;
@@ -262,7 +78,7 @@ interface PageContribution {
 }
 
 // @public
-interface PluginContext {
+export interface PluginContext {
     registerHolderLink(contribution: HolderLinkContribution): void;
     registerNavEntry(contribution: NavEntryContribution): void;
     registerPage(contribution: PageContribution): void;
@@ -273,7 +89,7 @@ interface PluginContext {
 }
 
 // @public
-interface PluginContributions {
+export interface PluginContributions {
     readonly holderLinks: ReadonlyMap<string, RegisteredHolderLink>;
     // (undocumented)
     readonly navEntries: readonly RegisteredNavEntry[];
@@ -293,7 +109,7 @@ export interface PluginContributionsSnapshot {
 }
 
 // @public
-type PluginEntry = (context: PluginContext) => void | Promise<void>;
+export type PluginEntry = (context: PluginContext) => void | Promise<void>;
 
 // @public
 export interface PluginLoaderState {
@@ -313,13 +129,13 @@ export interface PluginLoadInputs {
 }
 
 // @public
-interface PluginPageParamsSchema {
+export interface PluginPageParamsSchema {
     readonly parseParams?: (remainder: string) => Record<string, unknown>;
     readonly parseSearch?: (raw: Record<string, unknown>) => Record<string, unknown>;
 }
 
 // @public
-interface PluginPageProps {
+export interface PluginPageProps {
     readonly entryState?: unknown;
     readonly params?: Record<string, unknown>;
     // (undocumented)
@@ -328,58 +144,46 @@ interface PluginPageProps {
 }
 
 // @public
-type PluginSearch = Record<string, unknown>;
-
-// @public (undocumented)
-type ReferenceHolder = z.infer<typeof referenceHolder>;
+export type PluginSearch = Record<string, unknown>;
 
 // @public
-const referenceHolder: z.ZodObject<{
-    kind: z.ZodString;
-    locator: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>>;
-    name: z.ZodString;
-    summary: z.ZodString;
-    tag: z.ZodString;
-}, z.core.$strict>;
-
-// @public
-interface RegisteredHolderLink extends HolderLinkContribution {
+export interface RegisteredHolderLink extends HolderLinkContribution {
     // (undocumented)
     readonly pluginId: string;
 }
 
 // @public
-interface RegisteredNavEntry extends NavEntryContribution {
+export interface RegisteredNavEntry extends NavEntryContribution {
     // (undocumented)
     readonly pluginId: string;
 }
 
 // @public
-interface RegisteredPage extends PageContribution {
+export interface RegisteredPage extends PageContribution {
     // (undocumented)
     readonly pluginId: string;
 }
 
 // @public
-interface RegisteredRoutePanel extends RoutePanelContribution {
+export interface RegisteredRoutePanel extends RoutePanelContribution {
     // (undocumented)
     readonly pluginId: string;
 }
 
 // @public
-interface RegisteredSettingsTab extends SettingsTabContribution {
+export interface RegisteredSettingsTab extends SettingsTabContribution {
     // (undocumented)
     readonly pluginId: string;
 }
 
 // @public
-interface RequiredCapabilities {
+export interface RequiredCapabilities {
     // (undocumented)
     readonly routes: readonly string[];
 }
 
 // @public
-interface RoutePanelContribution {
+export interface RoutePanelContribution {
     readonly channel: string;
     // (undocumented)
     readonly component: ComponentType<RoutePanelProps>;
@@ -388,7 +192,7 @@ interface RoutePanelContribution {
 }
 
 // @public
-interface RoutePanelProps {
+export interface RoutePanelProps {
     // (undocumented)
     readonly pluginId: string;
     readonly route: ChannelConversationRoute;
@@ -398,7 +202,7 @@ interface RoutePanelProps {
 export function setPluginHostState(state: PluginLoaderState): void;
 
 // @public (undocumented)
-interface SettingsTabContribution {
+export interface SettingsTabContribution {
     // (undocumented)
     readonly component: ComponentType<SettingsTabProps>;
     // (undocumented)
@@ -409,7 +213,7 @@ interface SettingsTabContribution {
 }
 
 // @public
-interface SettingsTabProps {
+export interface SettingsTabProps {
     // (undocumented)
     readonly pluginId: string;
 }
@@ -418,7 +222,7 @@ interface SettingsTabProps {
 export function subscribePluginHost(listener: () => void): () => void;
 
 // @public (undocumented)
-interface ToolPanelContribution {
+export interface ToolPanelContribution {
     // (undocumented)
     readonly component: ComponentType<ToolPanelProps>;
     // (undocumented)
@@ -426,7 +230,7 @@ interface ToolPanelContribution {
 }
 
 // @public
-interface ToolPanelProps {
+export interface ToolPanelProps {
     readonly run: (args: Record<string, unknown>) => Promise<unknown>;
     readonly schema: Record<string, unknown>;
     readonly toolName: string;

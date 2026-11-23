@@ -4,6 +4,7 @@
  * the adapter mapping) or a custom jq over the tool output (its `.`, with the run input
  * bound as `$input` and the record as `$record`) that authors the whole op batch itself. An optional op-id expression carries idempotency.
  */
+import type { StateUpdate } from '@tai42/api-client';
 import type { ReactNode } from 'react';
 
 import { Badge } from '../components/badge';
@@ -16,7 +17,7 @@ import { AdapterMapping } from './AdapterMapping';
 import type { TemplateJqSuggestion } from './BindingJqField';
 import { BindingTemplatedJqField } from './BindingTemplatedJqField';
 import { findByRef, type ResolvedTemplateJq } from './catalog';
-import type { BindingSourceSchemas, StateUpdate, TemplatedTextCatalog } from './types';
+import type { BindingSourceSchemas, TemplatedTextCatalog } from './types';
 
 const CUSTOM = '__custom__';
 

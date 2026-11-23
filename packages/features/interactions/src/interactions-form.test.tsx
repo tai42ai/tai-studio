@@ -509,6 +509,92 @@ describe('InteractionsPage — form preview: reactions, conditionals, dates, bou
     expect(answer).not.toHaveBeenCalled();
   });
 
+  it('clears a required field a reaction nulls: the control empties and submit shows its required sentence', async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn().mockResolvedValue(undefined);
+    const react = vi.fn().mockResolvedValue({
+      values: { seats: null },
+      options: {},
+      errors: {},
+      display: {},
+    });
+    const { channel } = renderInbox(answer, undefined, '', react);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-react-clear-required',
+        format: 'form',
+        prompt: 'Pick a plan',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: {
+              plan: { type: 'string', enum: ['basic', 'pro'] },
+              seats: { type: 'integer' },
+            },
+            required: ['seats'],
+          },
+          reactions: { field_changed: ['plan'] },
+        },
+      }),
+    );
+
+    await user.type(await screen.findByLabelText('seats'), '4');
+    expect(screen.getByLabelText('seats')).toHaveValue(4);
+    await user.click(screen.getByRole('radio', { name: 'pro' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('seats')).toHaveValue(null);
+    });
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(await screen.findByText('"seats" is required')).toBeInTheDocument();
+    expect(screen.queryByText('must not be null')).not.toBeInTheDocument();
+    expect(answer).not.toHaveBeenCalled();
+  });
+
+  it('clears an optional field a reaction nulls: the answer carries no key for it', async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn().mockResolvedValue(undefined);
+    const react = vi.fn().mockResolvedValue({
+      values: { note: null },
+      options: {},
+      errors: {},
+      display: {},
+    });
+    const { channel } = renderInbox(answer, undefined, '', react);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-react-clear-optional',
+        format: 'form',
+        prompt: 'Pick a plan',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: {
+              plan: { type: 'string', enum: ['basic', 'pro'] },
+              note: { type: 'string' },
+            },
+          },
+          reactions: { field_changed: ['plan'] },
+        },
+      }),
+    );
+
+    await user.type(await screen.findByLabelText('note'), 'hello');
+    await user.click(screen.getByRole('radio', { name: 'pro' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('note')).toHaveValue('');
+    });
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => {
+      expect(answer).toHaveBeenCalledWith('q-react-clear-optional', { plan: 'pro' });
+    });
+  });
+
   it('runs a submitted reaction before acceptance and keeps the form open on per-field errors', async () => {
     const user = userEvent.setup();
     const answer = vi.fn().mockResolvedValue(undefined);
@@ -774,6 +860,143 @@ describe('InteractionsPage — form preview: reactions, conditionals, dates, bou
       expect(react).toHaveBeenCalledWith('q-submit-ok', { kind: 'submitted' }, expect.any(Object));
       expect(answer).toHaveBeenCalledWith('q-submit-ok', { note: 'ok' });
     });
+  });
+
+  it('records the answer without an optional field the submitted reaction cleared', async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn().mockResolvedValue(undefined);
+    const react = vi
+      .fn()
+      .mockResolvedValue({ values: { note: null }, options: {}, errors: {}, display: {} });
+    const { channel } = renderInbox(answer, undefined, '', react);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-submit-clear-optional',
+        format: 'form',
+        prompt: 'Confirm',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: { code: { type: 'string' }, note: { type: 'string' } },
+          },
+          data: { values: { code: 'x', note: 'hello' } },
+          reactions: { submitted: true },
+        },
+      }),
+    );
+
+    await screen.findByLabelText('note');
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => {
+      expect(answer).toHaveBeenCalledTimes(1);
+    });
+    expect(answer).toHaveBeenCalledWith('q-submit-clear-optional', { code: 'x' });
+  });
+
+  it('holds the form open with the required message when the submitted reaction clears a required field', async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn().mockResolvedValue(undefined);
+    const react = vi
+      .fn()
+      .mockResolvedValue({ values: { code: null }, options: {}, errors: {}, display: {} });
+    const { channel } = renderInbox(answer, undefined, '', react);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-submit-clear-required',
+        format: 'form',
+        prompt: 'Confirm',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: { code: { type: 'string' } },
+            required: ['code'],
+          },
+          data: { values: { code: 'x' } },
+          reactions: { submitted: true },
+        },
+      }),
+    );
+
+    await screen.findByLabelText(/code/);
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(await screen.findByText('"code" is required')).toBeInTheDocument();
+    expect(react).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText(/code/)).toHaveValue('');
+    expect(answer).not.toHaveBeenCalled();
+  });
+
+  it('turns back to the page of a required field the submitted reaction cleared', async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn().mockResolvedValue(undefined);
+    const react = vi
+      .fn()
+      .mockResolvedValue({ values: { a: null }, options: {}, errors: {}, display: {} });
+    const { channel } = renderInbox(answer, undefined, '', react);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-submit-clear-paged',
+        format: 'form',
+        prompt: 'Steps',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: { a: { type: 'string' }, b: { type: 'string' } },
+            required: ['a'],
+          },
+          data: { values: { a: 'x', b: 'y' } },
+          pages: [
+            { title: 'One', fields: ['a'] },
+            { title: 'Two', fields: ['b'] },
+          ],
+          reactions: { submitted: true },
+        },
+      }),
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Next' }));
+    expect(screen.getByTestId('form-step-status')).toHaveTextContent('Step 2 of 2 — Two');
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('form-step-status')).toHaveTextContent('Step 1 of 2 — One');
+    });
+    expect(screen.getByText('"a" is required')).toBeInTheDocument();
+    expect(answer).not.toHaveBeenCalled();
+  });
+
+  it('records the answer with a value the submitted reaction set', async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn().mockResolvedValue(undefined);
+    const react = vi
+      .fn()
+      .mockResolvedValue({ values: { note: 'normalised' }, options: {}, errors: {}, display: {} });
+    const { channel } = renderInbox(answer, undefined, '', react);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-submit-set',
+        format: 'form',
+        prompt: 'Confirm',
+        format_payload: {
+          schema: { type: 'object', properties: { note: { type: 'string' } } },
+          data: { values: { note: 'raw' } },
+          reactions: { submitted: true },
+        },
+      }),
+    );
+
+    await screen.findByLabelText('note');
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => {
+      expect(answer).toHaveBeenCalledTimes(1);
+    });
+    expect(answer).toHaveBeenCalledWith('q-submit-set', { note: 'normalised' });
   });
 });
 

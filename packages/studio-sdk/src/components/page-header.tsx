@@ -13,7 +13,7 @@
 import type { CSSProperties, ReactElement, ReactNode, Ref } from 'react';
 
 /** The wrapper props both layout primitives share, ref included. */
-interface LayoutElementProps {
+export interface LayoutElementProps {
   readonly className?: string;
   readonly style?: CSSProperties;
   /** A consumer ref for the wrapper element itself. */

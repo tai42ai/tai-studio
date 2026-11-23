@@ -8,9 +8,10 @@ import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { reportAtWorktree, reportsAtRef } from './api-gate.mjs';
+import { producedReportsAtWorktree, reportAtWorktree, reportsAtRef } from './api-gate.mjs';
 import {
   KEPT_ONLY,
+  REPORTS_AT_TAG,
   WITH_SYMBOL,
   commit,
   gateOverReports,
@@ -230,6 +231,74 @@ test('one label check run projecting two releases lists each ref once', (t) => {
   const deps = { ...gitBackedDeps(root), listReportsAtRef };
   check('fix: a fix', '', packages, manifest, deps);
   assertListedOnce(listed, ['v1.0.0', 'HEAD', 'HEAD^1']);
+});
+
+// ------------------------------------------------- a report no api-extractor config produces
+
+const ORPHAN = 'packages/studio-sdk/etc/studio-sdk-testing.api.md';
+const producedWithout = (path) => () =>
+  [
+    ...REPORTS_AT_TAG,
+    'packages/studio-sdk/etc/gone.api.md',
+    'packages/extra/etc/extra.api.md',
+  ].filter((produced) => produced !== path);
+
+test('a report the release holds that no config produces fails both gates, naming it', (t) => {
+  // The pull request touches nothing else: the report text is the same on every side.
+  const root = mergeCheckoutRemoving((checkout) =>
+    writeFile(checkout, 'unrelated-topic.txt', 'x\n'),
+  );
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const { tagGate, labelCheck } = gateOverReports(root, {
+    producedReports: producedWithout(ORPHAN),
+  });
+  const namesOrphan = (err) =>
+    err instanceof GateError &&
+    err.message.includes(`${ORPHAN}: no api-extractor config produces this report`);
+  assert.throws(() => tagGate('1.0.1'), namesOrphan);
+  assert.throws(() => labelCheck('fix: a fix'), namesOrphan);
+  assert.throws(() => labelCheck('chore: a chore'), namesOrphan);
+});
+
+test('a release whose every report a config produces passes both gates', (t) => {
+  const root = mergeCheckoutRemoving((checkout) =>
+    writeFile(checkout, 'unrelated-topic.txt', 'x\n'),
+  );
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const { tagGate, labelCheck } = gateOverReports(root, { producedReports: producedWithout(null) });
+  assert.deepEqual(tagGate('1.0.1'), []);
+  assert.doesNotThrow(() => labelCheck('fix: a fix'));
+});
+
+test('the produced reports are where api-extractor resolves each config to write them', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'api-gate-produced-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const config = (path, body) => writeFile(root, path, JSON.stringify(body));
+  writeFile(root, 'packages/sdk/package.json', manifestOf('@acme/sdk'));
+  writeFile(root, 'packages/sdk/config/tsconfig.api.json', '{}');
+  // A shared base no script runs: it names no entry point, so loading it alone would throw.
+  config('packages/sdk/config/api-extractor-base.json', {
+    projectFolder: '..',
+    compiler: { tsconfigFilePath: '<projectFolder>/config/tsconfig.api.json' },
+    apiReport: { enabled: true, reportFolder: '<projectFolder>/etc/' },
+    docModel: { enabled: false },
+    dtsRollup: { enabled: false },
+    tsdocMetadata: { enabled: false },
+  });
+  config('packages/sdk/config/api-extractor.json', {
+    extends: './api-extractor-base.json',
+    mainEntryPointFilePath: '<projectFolder>/dist/index.d.ts',
+  });
+  config('packages/sdk/config/api-extractor.extra.json', {
+    extends: './api-extractor-base.json',
+    mainEntryPointFilePath: '<projectFolder>/dist/extra.d.ts',
+    apiReport: { reportFileName: 'sdk-extra.api.md' },
+  });
+  mkdirSync(join(root, 'packages', 'no-config'));
+  assert.deepEqual(producedReportsAtWorktree(root).sort(), [
+    'packages/sdk/etc/sdk-extra.api.md',
+    'packages/sdk/etc/sdk.api.md',
+  ]);
 });
 
 // -------------------------------------------------------------- a report in the checkout

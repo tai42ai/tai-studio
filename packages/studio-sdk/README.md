@@ -9,7 +9,7 @@ hooks, and schema-driven auto-form that features and plugins build on.
 The host-only registry (`loadPlugin`/`getContributions`) is deliberately absent
 from the main entry so a served plugin asset cannot forge, wipe, or enumerate the
 registry; it lives only behind the `@tai42/studio-sdk/host` entry that the host
-bundle imports. See the repository `SECURITY.md` for the trust boundary.
+bundle imports. See [Entry points and the trust boundary](#entry-points-and-the-trust-boundary).
 
 ## Install
 
@@ -48,6 +48,67 @@ pnpm add @tai42/studio-sdk
 A host that bundles the SDK gets all three through the barrel's side-effect
 imports. A host that consumes the SDK as an external module (the Studio shell
 resolves it through the served import map) imports the three stylesheets itself.
+
+## Entry points and the trust boundary
+
+The four entry points split along a trust boundary:
+
+- **Plugin-facing** — `@tai42/studio-sdk`, the only SDK entry a Studio plugin may
+  import. It is the served vendor asset (`/vendor/studio-sdk.js`) every plugin
+  bundle binds through the import map.
+- **Bundling-only** — `@tai42/studio-sdk/schema-form`, the form-only `SchemaForm`
+  entry for a consumer that bundles the SDK. It is not served, so a plugin that
+  imported it would bundle a second copy whose contexts are not the ones the host
+  provides; a plugin takes `SchemaForm` from the main entry.
+- **Host-only** — `@tai42/studio-sdk/host`, the registry API: `loadPlugin` (the one
+  entry a plugin's `register` contributes through) and `getContributions` (what the
+  shell reads). It is served as `/vendor/studio-sdk-host.js` and imported only by
+  the host shell.
+- **Test-only** — `@tai42/studio-sdk/testing`, the registry reset and the test
+  helpers. It is never served to the browser.
+
+The SDK is not the only shared module the import map serves to plugins. The other
+is **`@tai42/jq-studio`** (`/vendor/jq-studio.js`), the standalone visual jq editor:
+a separately published package, not an SDK entry point (the SDK re-exports none of
+it), which a plugin rendering `JqField` imports directly. It sits on the plugin side
+of the boundary: it carries no registry, and being served as one module is what
+makes a plugin's editor share the host's single primitives context and evaluation
+worker, as the served react and `@tai42/studio-sdk` are shared.
+
+### Why the split
+
+The in-memory registry lives in one module and is a singleton across the plugin
+boundary. If a plugin could import `loadPlugin`/`getContributions`, a compromised
+bundle could forge, wipe, or enumerate every plugin's contributions. Keeping the
+registry API on `@tai42/studio-sdk/host` means the served plugin asset carries no
+registry at all: the registry state exists in exactly one served asset
+(`/vendor/studio-sdk-host.js`).
+
+### How the boundary is enforced
+
+- **At plugin ingest** — the server refuses a plugin bundle that imports a host-only
+  subpath (`@tai42/studio-sdk/host` or `@tai42/studio-sdk/testing`). This is the
+  enforcement.
+- **At development time** — an ESLint `no-restricted-imports` rule forbids plugin
+  source from importing `@tai42/studio-sdk/host` or `@tai42/studio-sdk/testing`, so
+  an author meets the rule before publishing.
+
+### Threat model
+
+Installed plugins are trusted: they come from a curated registry, are SRI-pinned,
+and are reviewed before install. Under that model the split above is sufficient.
+
+The marketplace surface stays inside that model. It browses one curated registry,
+and every install, update, and uninstall runs on the host backend through its
+authenticated `/api/marketplace/*` routes; the browser never fetches or installs a
+bundle itself. The backend resolves the listing to a pinned version, refuses a
+non-withdrawn critical advisory, downloads the registry-named artifact, and
+verifies its sha256 against the digest the registry captured at release before
+anything is installed.
+
+An open submission model, where anyone could publish a plugin that installs
+without review, is outside this model: it would need per-plugin iframe or worker
+sandboxing, so that a hostile bundle could not reach shared page state at all.
 
 ## Expression fields
 

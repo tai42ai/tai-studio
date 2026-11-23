@@ -84,6 +84,11 @@ export const REPLY_TEXT_MEMBERS: readonly ReplyTextMember[] = [
     title: 'Unreadable message',
     description: 'Sent for an inbound message the channel could not read.',
   },
+  {
+    name: 'rejected_choice_unavailable',
+    title: 'Choice unavailable',
+    description: 'Sent for a tap on a choice the channel can no longer read.',
+  },
 ];
 
 /** A reply-text member name. */

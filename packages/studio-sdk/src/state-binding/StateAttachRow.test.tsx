@@ -1,10 +1,11 @@
+import type { StateAttach } from '@tai42/api-client';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { StateAttachRow } from './StateAttachRow';
-import type { BindingStateOption, BindingTemplateOption, StateAttach } from './types';
+import type { BindingStateOption, BindingTemplateOption } from './types';
 
 const STATES: BindingStateOption[] = [
   {

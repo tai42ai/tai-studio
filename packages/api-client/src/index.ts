@@ -12,7 +12,13 @@ export type {
   ParsedAgentEvent,
   UnknownAgentEvent,
 } from './agents';
-export { agentEventSchema, parseAgentFrame, parseAgentTranscript } from './agents';
+export {
+  agentEventSchema,
+  agentList,
+  agentSummary,
+  parseAgentFrame,
+  parseAgentTranscript,
+} from './agents';
 export type {
   AddServerArgs,
   AddUrlToScopeBody,
@@ -26,6 +32,7 @@ export type {
   ConversationTranscriptQuery,
   CreatePresetBody,
   DiscoverServerTarget,
+  InvokeMemberActionBody,
   MarketplaceInstallBody,
   MarketplaceInstallPreviewBody,
   MarketplaceSearchQuery,
@@ -38,6 +45,7 @@ export type {
   RunsQuery,
   RunToolArgs,
   SavePresetVersionBody,
+  SetMcpSecretEnvBody,
   SetProviderClientArgs,
   StartConnectArgs,
   StateAttachmentBody,

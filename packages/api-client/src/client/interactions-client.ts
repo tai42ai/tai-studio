@@ -3,6 +3,7 @@ import { ApiError, ApiUnauthorizedError } from '../errors';
 import { apiRoutes, buildPath } from '../generated/api-routes';
 import { API_KEY_HEADER } from '../headers';
 import { extractError } from '../http';
+import type { ReactionEvent } from '../schemas';
 import * as s from '../schemas';
 import { readSseFrames, sseOpenToken } from '../sse';
 import type { Transport } from './transport';
@@ -38,7 +39,7 @@ export function interactionsClient(t: Transport) {
     // on the server — it records no answer and resolves no interaction — so it never
     // substitutes for the answer door. A handler error/timeout surfaces as the shared
     // `apiRequest` status handling (loud), never a stale value.
-    reactInteraction: (interactionId: string, event: s.ReactionEvent, values: unknown) =>
+    reactInteraction: (interactionId: string, event: ReactionEvent, values: unknown) =>
       req(
         buildPath(apiRoutes.post_api_interactions_interaction_id_react.path, {
           interaction_id: interactionId,

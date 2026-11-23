@@ -222,7 +222,7 @@ function resolveHref(href: string): ResolvedHref {
  * APPENDED to it rather than replacing it, so a surface can never lose its paint
  * by being positioned.
  */
-interface SurfaceProps {
+export interface SurfaceProps {
   readonly className?: string;
   readonly style?: CSSProperties;
 }
@@ -246,13 +246,8 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
   danger: 'tai-btn tai-btn-danger',
 };
 
-/**
- * The one prop both forms share. Deliberately NOT on the public surface: it is a
- * shared base, and declaration emit keeps it visible inside `primitives.d.ts`
- * where `ButtonProps`/`LinkButtonProps` reference it, so consumers still see
- * `variant` and can still `extends` either interface.
- */
-interface ButtonVariantProps {
+/** The one prop both forms share: the base `ButtonProps` and `LinkButtonProps` extend. */
+export interface ButtonVariantProps {
   readonly variant?: ButtonVariant;
 }
 
@@ -279,13 +274,10 @@ export interface ButtonProps extends ButtonVariantProps, ButtonHTMLAttributes<HT
 
 /**
  * The action form as `Button` ACCEPTS it: `ButtonProps` plus the absent-`href`
- * discriminant, which is what lets the body narrow `props.href` without a cast.
- *
- * Like `ButtonVariantProps` this is deliberately off the public surface — a
- * plugin extends `ButtonProps` — and declaration emit keeps it visible inside
- * `primitives.d.ts`, where `Button`'s signature references it.
+ * discriminant, which is what lets the body narrow `props.href` without a cast. A
+ * plugin extends `ButtonProps`; this type is what `Button`'s signature names.
  */
-interface ButtonActionProps extends ButtonProps {
+export interface ButtonActionProps extends ButtonProps {
   readonly href?: undefined;
 }
 

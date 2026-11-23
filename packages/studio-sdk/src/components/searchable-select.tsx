@@ -59,7 +59,7 @@ import {
 } from './searchable-select-model';
 
 /** Everything the two option shapes have in common. */
-interface SearchableSelectSharedProps {
+export interface SearchableSelectSharedProps {
   /**
    * The chosen option's value; `''` for none (the placeholder shows). A value no option
    * carries shows as itself on the trigger.
@@ -89,7 +89,8 @@ export interface SearchableSelectGroupsProps extends SearchableSelectSharedProps
   readonly groups: readonly SearchableSelectGroup[];
 }
 
-type SearchableSelectArgs =
+/** What `SearchableSelect` ACCEPTS: exactly one of the two shapes, never both. */
+export type SearchableSelectArgs =
   | (SearchableSelectProps & { readonly groups?: undefined })
   | (SearchableSelectGroupsProps & { readonly options?: undefined });
 

@@ -8,6 +8,7 @@
  * (the jq fields render through the host's ambient expression door, else a plain
  * textarea) and paints from SDK tokens only.
  */
+import type { StateAttach, StateBinding } from '@tai42/api-client';
 import type { ReactNode } from 'react';
 
 import { Button, EmptyState, ErrorState, Skeleton } from '../components/primitives';
@@ -16,8 +17,6 @@ import type {
   BindingSourceSchemas,
   BindingStateOption,
   BindingTemplateOption,
-  StateAttach,
-  StateBinding,
   TemplatedTextCatalog,
 } from './types';
 

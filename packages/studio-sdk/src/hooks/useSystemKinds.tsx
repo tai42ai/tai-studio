@@ -37,7 +37,7 @@ export type SystemKindsState =
   | { readonly status: 'ready'; readonly kinds: readonly KindStatus[] }
   | { readonly status: 'failed'; readonly error: unknown };
 
-interface SystemKindsContextValue {
+export interface SystemKindsContextValue {
   readonly state: SystemKindsState;
   /** Kinds a write refusal revealed OFF, each with the refusal's message. */
   readonly refusedOff: ReadonlyMap<string, string>;

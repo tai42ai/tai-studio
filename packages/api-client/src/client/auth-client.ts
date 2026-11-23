@@ -1,5 +1,6 @@
 /** Auth scopes, routes, roles and API-key sub-client. */
 import { apiRoutes, buildPath } from '../generated/api-routes';
+import type { GrantLevel, PrincipalKind, TemplatedText } from '../schemas';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -16,7 +17,7 @@ export interface ApiKeyBody {
   readonly policy_data?: Record<string, unknown> | null;
   // The access-control condition: an authored templated-text value (inline content
   // or a stored template id), or `null` to explicitly clear it on edit.
-  readonly condition?: s.TemplatedText | null;
+  readonly condition?: TemplatedText | null;
 }
 
 /**
@@ -48,7 +49,7 @@ export interface RoleCreateBody {
   readonly name: string;
   readonly description?: string;
   readonly base_tier: string;
-  readonly grants?: Record<string, s.GrantLevel>;
+  readonly grants?: Record<string, GrantLevel>;
 }
 
 /**
@@ -58,7 +59,7 @@ export interface RoleCreateBody {
  * is seed-fixed and not editable here.
  */
 export interface RoleUpdateBody {
-  readonly grants?: Record<string, s.GrantLevel>;
+  readonly grants?: Record<string, GrantLevel>;
   readonly description?: string;
 }
 
@@ -239,7 +240,7 @@ function principalMethods(t: Transport) {
     // A duplicate id is a loud 409; an unknown role a loud 400.
     createPrincipal: (body: {
       user_id?: string;
-      kind: s.PrincipalKind;
+      kind: PrincipalKind;
       display_name: string;
       role: string;
     }) => req(apiRoutes.post_api_auth_principals.path, s.principal, { method: 'POST', body }),

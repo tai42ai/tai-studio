@@ -528,6 +528,21 @@ test('adding a non-exported schema const is non-breaking (additive)', () => {
   assert.deepEqual(found, []);
 });
 
+test('a non-exported declaration gone from the new side is no finding', () => {
+  // No consumer imports a non-exported entry; the exported declarations that named it are
+  // judged on their own text.
+  assert.deepEqual(
+    findings('export type A = B;\ninterface B {\n  a: string;\n}', 'export type A = B;'),
+    [],
+  );
+});
+
+test('an exported declaration gone from the new side is a removed symbol', () => {
+  assert.deepEqual(findings('export interface B {\n  a: string;\n}', ''), [
+    'r :: B: symbol was removed',
+  ]);
+});
+
 test('a forgotten-export (non-exported) interface gaining a required member is breaking', () => {
   const found = findings(
     'interface SetX {\n  readonly a: string;\n}',

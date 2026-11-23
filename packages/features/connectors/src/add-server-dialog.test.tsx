@@ -60,11 +60,22 @@ describe('AddServerDialog — step 1, the address', () => {
     ).toBeInTheDocument();
   });
 
-  it('refuses an address that is not https before any request', async () => {
+  it('refuses an address that is not an http or https URL before any request', async () => {
     const { client } = renderDialog();
-    await lookUp('http://mcp.example.com/mcp');
-    expect(screen.getByText('Enter an https address.')).toBeInTheDocument();
+    await lookUp('mcp.example.com');
+    expect(screen.getByText('Enter an http or https address.')).toBeInTheDocument();
     expect(client.discoverServer).not.toHaveBeenCalled();
+  });
+
+  it("looks up a public http address and shows the server's refusal", async () => {
+    const message = 'the server address must be an https URL (http only on a loopback host)';
+    const { client } = renderDialog({
+      discoverServer: vi.fn().mockRejectedValue(new ApiError(message, 400)),
+    });
+    await lookUp('http://mcp.example.com/mcp');
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText(message)).toBeInTheDocument();
+    expect(client.discoverServer).toHaveBeenCalledWith({ url: 'http://mcp.example.com/mcp' });
   });
 
   it('accepts http on localhost and looks it up', async () => {

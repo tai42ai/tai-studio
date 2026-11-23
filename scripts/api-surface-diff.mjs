@@ -73,8 +73,8 @@
 //   reads as breaking.
 //
 // Breaking classes: a whole report gone from the new side (removedReport: the entry point
-// it records is gone, so the report's symbols are not listed one by one), a removed symbol,
-// an `export` dropped from a declaration, a removed, added or NON-additively changed class
+// it records is gone, so the report's symbols are not listed one by one), a removed exported
+// symbol, an `export` dropped from a declaration, a removed, added or NON-additively changed class
 // constructor, a removed or NON-additively changed interface/class member (named or an
 // index/call/construct signature), a NON-additive change to an interface or class declaration's own
 // modifiers (a class made or unmade `abstract`), type parameters or heritage
@@ -87,7 +87,9 @@
 // re-pointed at a different local symbol, source module or namespace (or narrowed
 // to type-only), a default export dropped or re-pointed, a type alias's type
 // parameters changed NON-additively, and a non-additive change to a type alias.
-// Non-breaking changes — a new export (a new declaration, or `export` added to an
+// Non-breaking changes — a non-exported declaration gone from the new side (no consumer
+// imports it; the exported declarations that named it are judged on their own text, an
+// unchanged one now naming the type through a dependency's import included), a new export (a new declaration, or `export` added to an
 // existing one), `const` dropped from an enum (a plain enum allows every use a
 // `const enum` did), a variable keyword change that breaks no consumer in its
 // block, a new optional member, a member added to a variable/type object or an
@@ -483,7 +485,7 @@ function classifyEntries(scope, oldEntries, newEntries, block = 'module') {
   for (const [name, oldEntry] of oldEntries) {
     const newEntry = newEntries.get(name);
     if (!newEntry) {
-      add(name, 'symbol was removed');
+      if (oldEntry.exported) add(name, 'symbol was removed');
       continue;
     }
     // Export status, for every kind and at every depth: a declaration that lost its

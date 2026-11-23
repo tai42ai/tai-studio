@@ -9,7 +9,7 @@
  * This module reads the contribution registry ({@link getContributions}), so it is
  * part of the HOST-ONLY surface (`@tai42/studio-sdk/host`), never the plugin surface:
  * a served plugin bundle can neither drive this store nor enumerate the registry
- * through it. See SECURITY.md for the trust boundary.
+ * through it. See README.md, Entry points and the trust boundary.
  */
 import { useSyncExternalStore } from 'react';
 

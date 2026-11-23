@@ -9,7 +9,7 @@
  * The host registry (`loadPlugin`/`getContributions`) is DELIBERATELY absent here
  * so the served plugin asset cannot forge, wipe, or enumerate the registry; it is
  * exported only from `@tai42/studio-sdk/host`, which the host bundle imports. See
- * SECURITY.md for the trust boundary.
+ * README.md, Entry points and the trust boundary.
  *
  * The shared modules (react, react-dom, @tai42/studio-sdk, @tai42/jq-studio) are
  * singletons across the plugin boundary; this package imports nothing internal at
@@ -67,8 +67,6 @@ export type {
 } from './plugin/types';
 export type { VersionGateResult } from './plugin/version';
 export { checkPluginApiVersion, STUDIO_PLUGIN_API_VERSION } from './plugin/version';
-/** What `useApi().runTool` resolves with: the run-tool door's answer, read by its `kind`. */
-export type { ReferenceHolder, RunAnswer } from '@tai42/api-client';
 
 // -- Hooks -------------------------------------------------------------------
 export type { ApiClient } from './hooks/useApi';
@@ -100,7 +98,7 @@ export type {
   StreamInteraction,
 } from './hooks/useSse';
 export { useInteractionsStream } from './hooks/useSse';
-export type { SystemKindsState } from './hooks/useSystemKinds';
+export type { SystemKindsContextValue, SystemKindsState } from './hooks/useSystemKinds';
 export {
   SystemKindsProvider,
   useFeatureOff,
@@ -174,226 +172,11 @@ export { isBlankSearch, matchesSearch } from './search-match';
 // -- Run results -------------------------------------------------------------
 export { isEmptyResult } from './empty-result';
 
-// -- Design system -----------------------------------------------------------
-export type { ActionMenuItem, ActionMenuProps } from './components/action-menu';
-export { ActionMenu } from './components/action-menu';
-export type { AgentListQuery, AgentPickerProps } from './components/agent-picker';
-export { AgentPicker } from './components/agent-picker';
-export type { BadgeProps } from './components/badge';
-export { Badge } from './components/badge';
-export type { ChannelListQuery, ChannelPickerProps } from './components/channel-picker';
-export { channelIdentityHint, ChannelPicker } from './components/channel-picker';
-export type { CheckboxProps } from './components/checkbox';
-export { Checkbox } from './components/checkbox';
-export type { ChipGroupProps, ChipOption } from './components/chip-group';
-export { ChipGroup } from './components/chip-group';
-export type { CodeBlockProps } from './components/code-block';
-export { CodeBlock } from './components/code-block';
-export type { ConfirmDialogProps } from './components/confirm-dialog';
-export { ConfirmDialog } from './components/confirm-dialog';
-export type { CopyFieldProps } from './components/copy-field';
-export { CopyField } from './components/copy-field';
-export type {
-  DateRangePickerProps,
-  DateRangePreset,
-  DateRangeValue,
-} from './components/date-range-picker';
-export {
-  DateRangePicker,
-  DEFAULT_DATE_RANGE_PRESETS,
-  formatRangeLabel,
-  normalizeCustomRange,
-} from './components/date-range-picker';
-export type { DialogProps } from './components/dialog';
-export { Dialog } from './components/dialog';
-export { DirtyGuardBoundary, GuardedTabs, useRegisterDirty } from './components/dirty-guard';
-export type { DrawerProps } from './components/drawer';
-export { Drawer } from './components/drawer';
-export type { EntityCardGridProps } from './components/entity-card-grid';
-export { EntityCardGrid } from './components/entity-card-grid';
-export type { ErrorBoundaryProps } from './components/error-boundary';
-export { ErrorBoundary } from './components/error-boundary';
-export type { ExecutionKeyPickerProps, ExecutionKeyQuery } from './components/execution-key-picker';
-export {
-  canHoldExecutionKey,
-  ExecutionKeyPicker,
-  isExecutionKeyListEmpty,
-} from './components/execution-key-picker';
-export type {
-  ExplorerColumn,
-  ExplorerEmptyState,
-  ExplorerEmptyStates,
-  ExplorerSearch,
-  ExplorerTags,
-  ExplorerViewProps,
-  TagVocabularyEntry,
-} from './components/explorer-view';
-export {
-  buildTagVocabulary,
-  ExplorerView,
-  matchesSelectedTags,
-  UNTAGGED_TOKEN,
-} from './components/explorer-view';
-export type { ExtensionComboBuilderProps } from './components/extension-combo-builder';
-export { ExtensionComboBuilder } from './components/extension-combo-builder';
-export type { ExtensionKindGroup } from './components/extension-grouping';
-export { groupByKind } from './components/extension-grouping';
-export type { ExtensionPickerProps } from './components/extension-picker';
-export { ExtensionPicker } from './components/extension-picker';
-export type { ExternalLinkButtonProps } from './components/external-link';
-export { ExternalLinkButton, isSafeHttpUrl } from './components/external-link';
-export type { FailedReplyOutcomeProps } from './components/failed-reply-outcome';
-export { FailedReplyOutcome } from './components/failed-reply-outcome';
-export type { FieldControlProps, FieldProps } from './components/field';
-export { Field, useFieldControl } from './components/field';
-export type { FleetOutcomeReportProps } from './components/fleet-outcome-report';
-export { FleetOutcomeReport } from './components/fleet-outcome-report';
-export type { FleetReloadReportProps } from './components/fleet-reload-report';
-export { FleetReloadReport } from './components/fleet-reload-report';
-export type { FleetReportProps } from './components/fleet-report';
-export { FleetReport } from './components/fleet-report';
-export type { FormDialogProps } from './components/form-dialog';
-export { FormDialog } from './components/form-dialog';
-export type {
-  HolderHref,
-  HolderListProps,
-  HolderPreviewProps,
-  HolderPreviewState,
-} from './components/holder-list';
-export { HolderList, HolderPreview, previewHolders, useHolderHref } from './components/holder-list';
-export type { NumberInputProps, TextareaProps, TextInputProps } from './components/inputs';
-export { NumberInput, Textarea, TextInput } from './components/inputs';
-export type { JsonDiffProps, JsonDiffRow } from './components/json-diff';
-export { diffJson, JsonDiff } from './components/json-diff';
-export type { JsonTreeProps } from './components/json-tree';
-export { JsonTree } from './components/json-tree';
-export type { HeadingLevel, MarkdownBlock, MarkdownProps } from './components/markdown';
-export { Markdown, parseMarkdown } from './components/markdown';
-export type {
-  McpListingRefusalProps,
-  McpListingRefusalReason,
-} from './components/mcp-listing-refusal';
-export { McpListingRefusal, mcpListingRefusalOf } from './components/mcp-listing-refusal';
-export type { OpenTargetOptions, OpenTargetProps } from './components/open-target';
-export { openTargetProps } from './components/open-target';
-export type {
-  OverlayDetails,
-  OverlayDetailsFieldsProps,
-} from './components/overlay-details-fields';
-export { OverlayDetailsFields, overlayDetailsPatch } from './components/overlay-details-fields';
-export { PageFillProvider, useFillViewport, usePageFillActive } from './components/page-fill';
-export type { PageHeaderProps, PageLayoutProps, StackProps } from './components/page-header';
-export { Page, PageHeader, Stack } from './components/page-header';
-export type {
-  ButtonProps,
-  ButtonVariant,
-  CardProps,
-  EmptyStateProps,
-  ErrorStateProps,
-  LinkButtonProps,
-  SkeletonProps,
-  SpinnerProps,
-} from './components/primitives';
-export { Button, Card, EmptyState, ErrorState, Skeleton, Spinner } from './components/primitives';
-export { safeHttpUrl } from './components/primitives';
-export type { RadioGroupProps, RadioOption } from './components/radio-group';
-export { RadioGroup } from './components/radio-group';
-export type { RecycleRollSectionProps } from './components/recycle-roll';
-export { RecycleRollSection } from './components/recycle-roll';
-export type { RevealInputProps } from './components/reveal-input';
-export { RevealInput } from './components/reveal-input';
-export type {
-  OverflowAxis,
-  OverflowRegionAttributes,
-  ProseScrollLabels,
-  ScrollRegionProps,
-} from './components/scroll-region';
-export { ScrollRegion, useOverflowRegion, useProseScrollRegions } from './components/scroll-region';
-export type {
-  SearchableSelectGroupsProps,
-  SearchableSelectProps,
-} from './components/searchable-select';
-export { SearchableSelect } from './components/searchable-select';
-export type {
-  SearchableSelectGroup,
-  SearchableSelectOption,
-} from './components/searchable-select-model';
-export type {
-  SelectGroup,
-  SelectGroupsProps,
-  SelectOption,
-  SelectProps,
-} from './components/select';
-export { Select } from './components/select';
-export type {
-  MediaDocumentProps,
-  MediaImageProps,
-  MediaPlayerProps,
-  ServedMediaGrammar,
-} from './components/served-media';
-export {
-  isRenderableMediaSrc,
-  isServedMediaUrl,
-  MediaDocument,
-  MediaImage,
-  MediaPlayer,
-  resolveMediaSrc,
-} from './components/served-media';
-export type { StepperProps, StepperStatus, StepperStep } from './components/stepper';
-export { Stepper } from './components/stepper';
-export type {
-  SubjectSectionKeyFieldProps,
-  SubjectSectionProps,
-  SubjectSectionSharedProps,
-  SubjectSectionTextKeyProps,
-  SubjectTargetOption,
-} from './components/subject-section';
-export {
-  buildSubject,
-  SUBJECT_INCOMPLETE_MESSAGE,
-  SubjectSection,
-  toSubjectTargetOptions,
-  useSubjectFields,
-} from './components/subject-section';
-export type {
-  NumericColumnProps,
-  TableProps,
-  TableRowProps,
-  TableSectionProps,
-  TDProps,
-  THProps,
-} from './components/table';
-export { Table, TBody, TD, TH, THead, TR } from './components/table';
-export type { TabItem, TabsProps } from './components/tabs';
-export { Tabs } from './components/tabs';
-export type { TagChipsProps, TagsInputProps } from './components/tags';
-export { TagChips, TagsInput } from './components/tags';
-export type {
-  TemplatedTextFieldProps,
-  TemplatedTextInlineProps,
-  TemplatedTextTemplateOption,
-} from './components/templated-text-field';
-export { TemplatedTextField, templatedTextSummary } from './components/templated-text-field';
-export type { TokenName } from './components/tokens';
-export { TOKEN_NAMES } from './components/tokens';
-export type { ToolListQuery, ToolPickerProps } from './components/tool-picker';
-export {
-  BADGES_NOTE,
-  TOOL_SEARCH_NAMES_ONLY_NOTE,
-  ToolPicker,
-  toolSearchShown,
-} from './components/tool-picker';
-export type { TooltipProps } from './components/tooltip';
-export { Tooltip } from './components/tooltip';
-export type {
-  VersionHistoryEntry,
-  VersionHistoryPanelProps,
-} from './components/version-history-panel';
-export { VersionHistoryPanel } from './components/version-history-panel';
-export type { ViewMode, ViewToggleProps } from './components/view-toggle';
-export { useViewMode, ViewToggle } from './components/view-toggle';
-export type { WriteFailureProps } from './components/write-failure';
-export { WriteFailure } from './components/write-failure';
+// -- Design system (the components module lists its published names) ----------
+export * from './components';
+
+// -- Platform API types the SDK's own signatures name ------------------------
+export * from './api-client-types';
 
 // -- Whole-module re-exports (each module's own index lists its published names) --
 // The marketplace install UI, the navigation contract (shell ⇄ feature route tokens),
@@ -405,60 +188,6 @@ export * from './navigation';
 export * from './schema-editor';
 export * from './schema-form';
 export * from './tool-organization';
-// -- Iconography (the only sanctioned marks; Unicode glyphs are banned) -------
-export type { IconComponent, IconProps } from './components/icons';
-export {
-  AgentsIcon,
-  AlertTriangleIcon,
-  ArrowDownIcon,
-  ArrowLeftIcon,
-  ArrowUpIcon,
-  CheckCircleIcon,
-  CheckIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-  CloseIcon,
-  ConnectorsIcon,
-  ConversationsIcon,
-  CopyIcon,
-  DashboardIcon,
-  DatabaseIcon,
-  EditIcon,
-  ExternalLinkIcon,
-  EyeIcon,
-  EyeOffIcon,
-  FilterIcon,
-  FolderIcon,
-  GridIcon,
-  HooksIcon,
-  InteractionsIcon,
-  ManifestIcon,
-  MarketplaceIcon,
-  MembersIcon,
-  MenuIcon,
-  MinusIcon,
-  MonitorIcon,
-  MoonIcon,
-  NAV_ICONS,
-  NotificationsIcon,
-  PendingIcon,
-  PluginIcon,
-  PlusIcon,
-  PresetsIcon,
-  SchedulingIcon,
-  SearchIcon,
-  ServedEndpointsIcon,
-  SettingsIcon,
-  SignOutIcon,
-  SortAscIcon,
-  SortDescIcon,
-  StorageIcon,
-  SunIcon,
-  SystemIcon,
-  ToolsIcon,
-  UnplugIcon,
-  XCircleIcon,
-} from './components/icons';
 
 // -- State-binding editor (the one binding shape every door authors, plugin doors included) --
 export type {
@@ -485,7 +214,6 @@ export type {
   StateBindingSectionProps,
   StoragePresenceQueryLike,
   SubjectScopeFieldsProps,
-  TemplatedText,
   TemplatedTextCatalog,
   TemplateJqSuggestion,
   TemplateNamesQueryLike,
@@ -521,11 +249,7 @@ export {
   UpdateList,
 } from './state-binding';
 
-// -- MCP context widgets (elicitation / progress / completions / output) -----
-export type { CompletionInputProps } from './components/completion-input';
-export { CompletionInput } from './components/completion-input';
-export type { ProgressBarProps } from './components/progress-bar';
-export { ProgressBar } from './components/progress-bar';
+// -- MCP context widgets (elicitation / output) ------------------------------
 export type { ElicitationFormProps } from './elicitation/ElicitationForm';
 export { ElicitationForm } from './elicitation/ElicitationForm';
 export type { StructuredOutputProps } from './structured-output/StructuredOutput';

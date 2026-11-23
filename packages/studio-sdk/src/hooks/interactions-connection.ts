@@ -147,8 +147,24 @@ async function connectAndConsume(ctx: StreamContext, cursor: ResumeCursor): Prom
   }
 }
 
-/** Classify a connection error into whether the driver should stop or reconnect. */
-function handleConnectionError(ctx: StreamContext, err: unknown): 'stop' | 'retry' {
+/** The stream's code for a resume cursor older than the events it still holds. */
+const RESUME_EXPIRED_CODE = 'interactions-resume-expired';
+
+/** Whether `error` is the stream's 410: the resume cursor is gone and the client must re-list. */
+function isResumeExpired(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const { status, code } = error as { status?: unknown; code?: unknown };
+  if (code === RESUME_EXPIRED_CODE) return true;
+  return status === 410;
+}
+
+/**
+ * Classify a connection error: stop, reconnect after a backoff, or resync — reconnect at
+ * once without the cursor, so the next connect re-reads the paged base.
+ */
+function handleConnectionError(ctx: StreamContext, err: unknown): 'stop' | 'retry' | 'resync' {
+  // A lost resume is the server asking for a fresh list, not a failure the user reads.
+  if (isResumeExpired(err)) return 'resync';
   const error = err instanceof Error ? err : new Error(String(err));
   ctx.setConnectionState((prev) => ({ ...prev, connected: false, error }));
   if (error.name === 'ApiUnauthorizedError') {
@@ -196,7 +212,12 @@ async function runConnectionLoop(ctx: StreamContext): Promise<void> {
       if (aborted(ctx)) return;
     } catch (err) {
       if (aborted(ctx)) return;
-      if (handleConnectionError(ctx, err) === 'stop') return;
+      const verdict = handleConnectionError(ctx, err);
+      if (verdict === 'stop') return;
+      if (verdict === 'resync') {
+        cursor.lastEventId = undefined;
+        continue;
+      }
     }
     // A connection open at least HEALTHY_CONNECTION_MS proved healthy — clear the
     // backoff so the next drop reconnects promptly; an accept-then-drop flap does not.

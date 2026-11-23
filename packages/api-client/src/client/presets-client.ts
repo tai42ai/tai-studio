@@ -1,6 +1,11 @@
 /** Preset CRUD, versioning and validation sub-client. */
 import { apiRoutes, buildPath } from '../generated/api-routes';
-import type { PresetHolderAction } from '../schemas';
+import type {
+  PresetExtensionElement,
+  PresetHolderAction,
+  StateBinding,
+  TemplatedText,
+} from '../schemas';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -25,13 +30,13 @@ export interface CreatePresetBody {
   readonly base_tool: string;
   readonly description: string;
   readonly fixed_kwargs?: Record<string, unknown>;
-  readonly extensions?: readonly s.PresetExtensionElement[][];
+  readonly extensions?: readonly PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
   readonly input_schema?: Record<string, unknown> | null;
-  readonly input_map?: s.TemplatedText | string | null;
-  readonly output_map?: s.TemplatedText | string | null;
+  readonly input_map?: TemplatedText | string | null;
+  readonly output_map?: TemplatedText | string | null;
   // The optional door-layer state binding applied around every run of this preset.
-  readonly state_binding?: s.StateBinding | null;
+  readonly state_binding?: StateBinding | null;
 }
 
 /**
@@ -51,12 +56,12 @@ export interface CreatePresetBody {
 export interface SavePresetVersionBody {
   readonly fixed_kwargs?: Record<string, unknown>;
   readonly description?: string;
-  readonly extensions?: readonly s.PresetExtensionElement[][];
+  readonly extensions?: readonly PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
   readonly input_schema?: Record<string, unknown> | null;
-  readonly input_map?: s.TemplatedText | string | null;
-  readonly output_map?: s.TemplatedText | string | null;
-  readonly state_binding?: s.StateBinding | null;
+  readonly input_map?: TemplatedText | string | null;
+  readonly output_map?: TemplatedText | string | null;
+  readonly state_binding?: StateBinding | null;
 }
 
 /**
@@ -71,15 +76,15 @@ export interface ValidatePresetBody {
   readonly base_tool?: string;
   readonly description?: string;
   readonly fixed_kwargs?: Record<string, unknown>;
-  readonly extensions?: readonly s.PresetExtensionElement[][];
+  readonly extensions?: readonly PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
   readonly input_schema?: Record<string, unknown> | null;
-  readonly input_map?: s.TemplatedText | string | null;
-  readonly output_map?: s.TemplatedText | string | null;
+  readonly input_map?: TemplatedText | string | null;
+  readonly output_map?: TemplatedText | string | null;
   // The optional door-layer state binding to dry-run — validated (never mounted) by the
   // same checks the write would run. In VERSION mode it follows the save-version sentinel:
   // omitted carries the active binding forward, an explicit `null` clears it.
-  readonly state_binding?: s.StateBinding | null;
+  readonly state_binding?: StateBinding | null;
 }
 
 export function presetsClient(t: Transport) {

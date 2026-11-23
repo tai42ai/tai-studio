@@ -4,11 +4,12 @@
  * jq predicate — when it is false the state is skipped for the run. Each is an
  * authored templated-text value (inline jq or a stored template that renders to it).
  */
+import type { TemplatedText } from '@tai42/api-client';
 import type { ReactNode } from 'react';
 
 import type { TemplateJqSuggestion } from './BindingJqField';
 import { BindingTemplatedJqField } from './BindingTemplatedJqField';
-import type { TemplatedText, TemplatedTextCatalog } from './types';
+import type { TemplatedTextCatalog } from './types';
 
 export interface SubjectScopeFieldsProps {
   readonly subjectExpr: TemplatedText;

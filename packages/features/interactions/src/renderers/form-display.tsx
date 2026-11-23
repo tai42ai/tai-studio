@@ -12,7 +12,13 @@
  */
 import type { DisplayBlock, FormUpdate } from '@tai42/api-client';
 import type { JsonSchema } from '@tai42/studio-sdk';
-import { fieldDrawingOrder, isFieldVisible, MediaImage } from '@tai42/studio-sdk';
+import {
+  fieldDrawingOrder,
+  formatReadbackValue,
+  isFieldVisible,
+  MediaImage,
+  slotValueText,
+} from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
 import type { FormFieldWords } from './answer-schema';
@@ -105,12 +111,6 @@ function slotEntry(display: FormUpdate['display'], slot: string | null): SlotVal
   return slot !== null && Object.hasOwn(display, slot) ? display[slot] : undefined;
 }
 
-/** A display slot's value as text (a computed total is a number); absent or `null` → undefined. */
-function slotValueText(value: SlotValue | undefined): string | undefined {
-  if (value === undefined || value === null) return undefined;
-  return String(value);
-}
-
 /**
  * A review step's generic readback: each visible top-level field's label and the value
  * entered for it, in drawing order (each `timeOf` time right after its date). A field hidden by its `visibleWhen` predicate is absent from
@@ -149,30 +149,4 @@ export function ReviewReadback({
       ))}
     </dl>
   );
-}
-
-/**
- * One answered value rendered for the review readback; an empty value reads as "—", a
- * yes/no value as the field's own words, else "Yes" / "No".
- */
-function formatReadbackValue(value: unknown, words: FormFieldWords | undefined): string {
-  if (value === undefined || value === null || value === '') return '—';
-  if (Array.isArray(value)) return value.length === 0 ? '—' : value.map(toText).join(', ');
-  if (typeof value === 'boolean')
-    return value ? (words?.trueLabel ?? 'Yes') : (words?.falseLabel ?? 'No');
-  return toText(value);
-}
-
-/** An arbitrary value as display text: primitives direct, objects/arrays as JSON. */
-function toText(value: unknown): string {
-  switch (typeof value) {
-    case 'string':
-      return value;
-    case 'number':
-    case 'boolean':
-    case 'bigint':
-      return String(value);
-    default:
-      return JSON.stringify(value);
-  }
 }

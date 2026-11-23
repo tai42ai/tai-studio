@@ -25,10 +25,12 @@ describe('addressError', () => {
     expect(addressError('  https://mcp.example.com/mcp  ')).toBeNull();
   });
 
-  it('accepts http only on localhost and 127.0.0.1', () => {
+  it('passes every http address to the server, which alone decides the host', () => {
     expect(addressError('http://localhost:8080/mcp')).toBeNull();
-    expect(addressError('http://127.0.0.1:9000/mcp')).toBeNull();
-    expect(addressError('http://mcp.example.com/mcp')).toBe(ADDRESS_ERROR);
+    expect(addressError('http://127.0.0.2:9000/mcp')).toBeNull();
+    expect(addressError('http://[::1]:9000/mcp')).toBeNull();
+    expect(addressError('http://[::ffff:127.0.0.1]:9000/mcp')).toBeNull();
+    expect(addressError('http://mcp.example.com/mcp')).toBeNull();
   });
 
   it('refuses an unparseable address and any other scheme', () => {

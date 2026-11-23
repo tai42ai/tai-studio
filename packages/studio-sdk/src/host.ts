@@ -3,8 +3,9 @@
  * through which a plugin's `register` contributes) and `getContributions` (what the
  * shell reads) live here, apart from the plugin surface, so the served plugin asset
  * carries no way to forge, wipe, or enumerate the registry. Only the host bundle
- * imports this. See SECURITY.md for the trust boundary.
+ * imports this. See README.md, Entry points and the trust boundary.
  */
+export type { PluginSearch } from './navigation/types';
 export { contributionCovered } from './plugin/coverage';
 export type {
   LoadedPlugin,
@@ -19,3 +20,28 @@ export {
 } from './plugin/host-state';
 export type { PluginLoadInputs } from './plugin/registry';
 export { getContributions, loadPlugin } from './plugin/registry';
+export type {
+  ChannelConversationRoute,
+  HolderLinkContribution,
+  HolderLinkTarget,
+  NavEntryContribution,
+  NavEntrySection,
+  PageContribution,
+  PluginContext,
+  PluginContributions,
+  PluginEntry,
+  PluginPageParamsSchema,
+  PluginPageProps,
+  RegisteredHolderLink,
+  RegisteredNavEntry,
+  RegisteredPage,
+  RegisteredRoutePanel,
+  RegisteredSettingsTab,
+  RequiredCapabilities,
+  RoutePanelContribution,
+  RoutePanelProps,
+  SettingsTabContribution,
+  SettingsTabProps,
+  ToolPanelContribution,
+  ToolPanelProps,
+} from './plugin/types';

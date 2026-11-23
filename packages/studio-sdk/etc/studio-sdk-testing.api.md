@@ -44,14 +44,14 @@ export function StaticToolDisplayNamesProvider(input: {
 }): FunctionComponentElement<ProviderProps<ToolDisplayNamesContextValue | null>>;
 
 // @public (undocumented)
-interface ToolDisplayNamesContextValue {
+export interface ToolDisplayNamesContextValue {
     readonly reload: () => void;
     // (undocumented)
     readonly state: ToolDisplayNamesState;
 }
 
 // @public (undocumented)
-type ToolDisplayNamesState = {
+export type ToolDisplayNamesState = {
     readonly status: 'loading';
 } | {
     readonly status: 'ready';

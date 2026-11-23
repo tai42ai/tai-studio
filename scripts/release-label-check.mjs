@@ -35,7 +35,8 @@
 // projection as the new one; an item on one side alone is logged as not counted, with the
 // side it lacks. A counted item under a bump the label could not honestly carry fails the
 // check with the gate's own message, so the mislabel is caught before the tag rather than
-// after it.
+// after it. Every pull request is gated: a title that projects no release is judged as the
+// `none` bump, which passes only when it carries no breaking surface item.
 //
 // The package list, its directories and the pre-major flags come from
 // release-please-config.json; the current version from .release-please-manifest.json — org
@@ -209,8 +210,8 @@ function packageReleaseVersion(entry, current, bump, forced) {
 }
 
 // The releases the pull request would make across every declared package, each as its
-// current and next version. One entry for this repo's single root package; the gate runs
-// once per distinct pair.
+// current and next version, the next version null when the projection is no release. One
+// entry for this repo's single root package; the gate runs once per distinct pair.
 function projectedReleases(title, body, packages, manifest) {
   const bump = projectedBump(title, body);
   const forced = releaseAs(title, body);
@@ -220,7 +221,7 @@ function projectedReleases(title, body, packages, manifest) {
     if (current === undefined)
       fail(`package ${directory} has no entry in the release-please manifest`);
     const next = packageReleaseVersion(entry, current, bump, forced);
-    if (next !== null) releases.set(`${current} -> ${next}`, { current, next });
+    releases.set(`${current} -> ${next}`, { current, next });
   }
   const label = forced !== null ? `forced to ${forced} by Release-As` : `${BUMP_NAME[bump]} bump`;
   return { releases: [...releases.values()], label };
@@ -243,7 +244,8 @@ function countedFindings(published, own, log) {
 }
 
 // The gate's baseline for a pull request: the two-sided rule over the published baseline
-// and the base side of the checkout, judged from the manifest's current version. Its reports
+// and the base side of the checkout, judged from the manifest's current version. A null
+// `next` (no release) makes the published side the newest published version. Its reports
 // are those either side holds, so a report the pull request deleted still comes to judgment,
 // and each side is matched by the report's identity, so a move on either side changes nothing.
 // With no published version the published side holds nothing, so nothing counts.
@@ -277,21 +279,21 @@ function twoSidedBaseline(current, next, deps) {
 function check(title, body, packages, manifest, deps = {}) {
   const log = deps.log ?? console.log;
   const { releases, label } = projectedReleases(title, body, packages, manifest);
-  if (releases.length === 0) {
-    log(`release-label-check: ${label} projects no release — nothing to gate.`);
-    return;
-  }
   const sides = reportSides(deps);
   for (const { current, next } of releases) {
-    log(`release-label-check: projects ${next} (${label})`);
+    log(`release-label-check: projects ${next === null ? 'no release' : next} (${label})`);
     const failReasons = runGate(next, twoSidedBaseline(current, next, { ...deps, sides }), deps);
-    if (failReasons.length)
-      fail(
-        `the pull request's release (${label}) cannot honestly carry this API change: ` +
-          `${failReasons.join(' | ')}. Raise the release label to the bump the gate names above — a ` +
-          "breaking public-API change needs a major (add '!' to the commit type or a 'BREAKING " +
-          "CHANGE:' footer, or set 'Release-As: <next major>.0.0').",
-      );
+    if (failReasons.length === 0) continue;
+    const refusal =
+      next === null
+        ? `the pull request's title (${label}) projects no release, but it carries a breaking ` +
+          `public-API change: ${failReasons.join(' | ')}. Give the pull request a release title`
+        : `the pull request's release (${label}) cannot honestly carry this API change: ` +
+          `${failReasons.join(' | ')}. Raise the release label to the bump the gate names above`;
+    fail(
+      `${refusal} — a breaking public-API change needs a major (add '!' to the commit type or ` +
+        "a 'BREAKING CHANGE:' footer, or set 'Release-As: <next major>.0.0').",
+    );
   }
   log(`release-label-check: ${label} is honest for the public-API change it carries.`);
 }

@@ -1,5 +1,6 @@
 /** State declaration, record, template and consumer sub-client. */
 import { apiRoutes, buildPath } from '../generated/api-routes';
+import type { TemplatedText } from '../schemas';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -14,7 +15,7 @@ import type { Transport } from './transport';
 export interface StateDeclarationBody {
   readonly name: string;
   readonly description?: string;
-  readonly schema: s.TemplatedText | Record<string, unknown>;
+  readonly schema: TemplatedText | Record<string, unknown>;
   readonly subject_kinds: readonly string[];
   readonly default_subject_kind: string;
   readonly retention_days?: number | null;
@@ -29,7 +30,7 @@ export interface StateTemplateBody {
   readonly name: string;
   readonly description?: string;
   readonly parameters?: Record<string, unknown>;
-  readonly schema: s.TemplatedText | Record<string, unknown>;
+  readonly schema: TemplatedText | Record<string, unknown>;
   readonly regimes?: Record<string, unknown>[];
   readonly declarations?: Record<string, unknown> | null;
   readonly trace?: Record<string, unknown>;

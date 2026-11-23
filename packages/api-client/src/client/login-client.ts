@@ -6,6 +6,7 @@ import {
   ApiUnauthorizedError,
 } from '../errors';
 import { apiRoutes } from '../generated/api-routes';
+import type { SetupBody } from '../schemas';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -131,7 +132,7 @@ export function loginClient(t: Transport) {
     // already-initialized deployment, an unsupported setup door, or an invalid
     // body becomes an inline `ApiSetupFailedError`; any other failure rethrows
     // loudly.
-    submitSetup: async (body: s.SetupBody) => {
+    submitSetup: async (body: SetupBody) => {
       try {
         return await req(apiRoutes.post_api_setup.path, s.setupResult, { method: 'POST', body });
       } catch (error) {

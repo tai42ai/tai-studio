@@ -19,6 +19,7 @@ import {
   check,
   GateError,
 } from './release-label-check.mjs';
+import { producedAsListed } from './api-gate-git-fixtures.mjs';
 
 // ------------------------------------------------------ title/body -> bump
 
@@ -205,9 +206,10 @@ test('a Release-As footer forces the projected version regardless of the header 
   assert.equal(label, 'forced to 19.0.0 by Release-As');
 });
 
-test('a non-releasing change projects no version to gate', () => {
-  const { releases } = projectedReleases('chore: tidy', '', rootPackages, manifest);
-  assert.deepEqual(releases, []);
+test('a non-releasing change projects no release from the current version', () => {
+  const { releases, label } = projectedReleases('chore: tidy', '', rootPackages, manifest);
+  assert.deepEqual(releases, [{ current: '18.2.1', next: null }]);
+  assert.equal(label, 'none bump');
 });
 
 // ------------------------------------------------- the two-sided rule
@@ -226,24 +228,35 @@ const NOT_COUNTED_LACKS_OWN = "not counted, not breaking in the pull request's o
 // The report every side lists unless a case says it is absent there.
 const LISTED = { dir: 'packages/sdk/etc', name: 'sdk.api.md' };
 
-// `published` and `base` are the reports at each side; null is a report absent there.
-const gateDeps = ({ published, base, head = fence(KEPT), lines = [] }) => ({
-  mode: 'label-honesty',
-  tags: ['v18.2.1'],
-  publishedVersionsFor: () => ['18.2.1'],
-  packageNameFor: () => '@acme/sdk',
-  readReportAtRef: (ref) => {
-    if (ref === 'v18.2.1') return published;
-    if (ref === 'HEAD^1') return base;
-    return assert.fail(`unexpected report read at ${ref}`);
-  },
-  readReportAtWorktree: () => head,
-  listReportsAtRef: (ref) => {
-    const absent = (ref === 'v18.2.1' && published === null) || (ref === 'HEAD^1' && base === null);
-    return absent ? [] : [{ ...LISTED, ref }];
-  },
-  log: (line) => lines.push(line),
+// `deps` listing reports through `listReportsAtRef`, every report it lists at HEAD produced.
+const withListing = (deps, listReportsAtRef) => ({
+  ...deps,
+  listReportsAtRef,
+  producedReports: producedAsListed(listReportsAtRef),
 });
+
+// `published` and `base` are the reports at each side; null is a report absent there.
+const gateDeps = ({ published, base, head = fence(KEPT), lines = [] }) =>
+  withListing(
+    {
+      mode: 'label-honesty',
+      tags: ['v18.2.1'],
+      publishedVersionsFor: () => ['18.2.1'],
+      packageNameFor: () => '@acme/sdk',
+      readReportAtRef: (ref) => {
+        if (ref === 'v18.2.1') return published;
+        if (ref === 'HEAD^1') return base;
+        return assert.fail(`unexpected report read at ${ref}`);
+      },
+      readReportAtWorktree: () => head,
+      log: (line) => lines.push(line),
+    },
+    (ref) => {
+      const absent =
+        (ref === 'v18.2.1' && published === null) || (ref === 'HEAD^1' && base === null);
+      return absent ? [] : [{ ...LISTED, ref }];
+    },
+  );
 
 const inBothSides = () => ({ published: fence(KEPT, DROPPED), base: fence(KEPT, DROPPED) });
 
@@ -450,14 +463,44 @@ test('a Release-As that does not raise the manifest version fails loudly', () =>
   );
 });
 
-test('a non-releasing change is not gated at all', () => {
-  // No baseline read happens (the gate never runs); a report reader that would throw
-  // proves the gate is skipped when the projection is no release.
+test('a non-releasing change with no breaking surface item passes after reading the reports', () => {
+  const reads = [];
+  const lines = [];
+  const base = gateDeps({ published: fence(KEPT), base: fence(KEPT), lines });
   const deps = {
-    ...gateDeps({ published: fence(KEPT), base: fence(KEPT) }),
-    readReportAtRef: () => assert.fail('gate must not run'),
+    ...base,
+    readReportAtRef: (ref, dir, name) => {
+      reads.push(ref);
+      return base.readReportAtRef(ref, dir, name);
+    },
   };
   assert.doesNotThrow(() => check('chore: tidy', '', rootPackages, manifest, deps));
+  assert.deepEqual(reads.sort(), ['HEAD^1', 'v18.2.1']);
+  assert.ok(lines.some((line) => line.includes('18.2.1 -> no release (none bump')));
+});
+
+test('a non-releasing change removing a published symbol is refused', () => {
+  assert.throws(
+    () => check('chore: tidy', '', rootPackages, manifest, gateDeps(inBothSides())),
+    (err) =>
+      err instanceof GateError &&
+      /projects no release/.test(err.message) &&
+      /dropped: symbol was removed/.test(err.message),
+  );
+});
+
+test('a non-releasing change judges against the newest published version', () => {
+  // A symbol published in the current version and removed here is counted: the published
+  // side is the newest published tag, never the one below it.
+  const deps = {
+    ...gateDeps(inBothSides()),
+    tags: ['v18.2.0', 'v18.2.1'],
+    publishedVersionsFor: () => ['18.2.0', '18.2.1'],
+  };
+  assert.throws(
+    () => check('refactor: tidy', '', rootPackages, manifest, deps),
+    (err) => err instanceof GateError && /projects no release/.test(err.message),
+  );
 });
 
 // ------------------------------------------------- a report gone from the head
@@ -467,15 +510,15 @@ const GONE = { dir: 'packages/studio-sdk/etc', name: 'studio-sdk-gone.api.md' };
 const RENAMED_TO = { dir: GONE.dir, name: 'studio-sdk-next.api.md' };
 const GONE_FINDING = `${GONE.name}: report was removed`;
 
-const goneDeps = ({ heldAt = ['v18.2.1', 'HEAD^1'], head = null, lines = [] } = {}) => ({
-  ...gateDeps({ lines }),
-  readReportAtRef: () => fence(KEPT, DROPPED),
-  readReportAtWorktree: (_dir, name) => (name === GONE.name ? head : fence(KEPT, DROPPED)),
-  listReportsAtRef: (ref) => [
-    { ...LISTED, ref },
-    ...(heldAt.includes(ref) ? [{ ...GONE, ref }] : []),
-  ],
-});
+const goneDeps = ({ heldAt = ['v18.2.1', 'HEAD^1'], head = null, lines = [] } = {}) =>
+  withListing(
+    {
+      ...gateDeps({ lines }),
+      readReportAtRef: () => fence(KEPT, DROPPED),
+      readReportAtWorktree: (_dir, name) => (name === GONE.name ? head : fence(KEPT, DROPPED)),
+    },
+    (ref) => [{ ...LISTED, ref }, ...(heldAt.includes(ref) ? [{ ...GONE, ref }] : [])],
+  );
 
 test('a fix deleting a published report is refused, naming the report', () => {
   assert.throws(
@@ -539,7 +582,7 @@ const listingAdded = (base, added) => (ref) => [
 
 test('a fix renaming a published report is refused for the old name alone', () => {
   const gone = goneDeps();
-  const deps = { ...gone, listReportsAtRef: listingAdded(gone, RENAMED_TO) };
+  const deps = withListing(gone, listingAdded(gone, RENAMED_TO));
   assert.throws(
     () => check('fix: rename an entry point', '', rootPackages, manifest, deps),
     (err) =>
@@ -551,7 +594,7 @@ test('a fix renaming a published report is refused for the old name alone', () =
 
 test('a fix adding a report held by neither side passes', () => {
   const kept = gateDeps({ published: fence(KEPT), base: fence(KEPT) });
-  const deps = { ...kept, listReportsAtRef: listingAdded(kept, RENAMED_TO) };
+  const deps = withListing(kept, listingAdded(kept, RENAMED_TO));
   assert.doesNotThrow(() => check('fix: add an entry point', '', rootPackages, manifest, deps));
 });
 

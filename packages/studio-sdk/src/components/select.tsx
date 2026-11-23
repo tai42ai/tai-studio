@@ -28,7 +28,7 @@ export interface SelectGroup {
 }
 
 /** Everything the two listbox shapes have in common. */
-interface SelectSharedProps {
+export interface SelectSharedProps {
   readonly value?: string;
   readonly defaultValue?: string;
   readonly onValueChange?: (value: string) => void;
@@ -71,7 +71,7 @@ export interface SelectGroupsProps extends SelectSharedProps {
  * readonly SelectGroup[] }` a TS2430, and a union cannot be `extends`-ed at all
  * (TS2312).
  */
-type SelectArgs =
+export type SelectArgs =
   | (SelectProps & { readonly groups?: undefined })
   | (SelectGroupsProps & { readonly options?: undefined });
 

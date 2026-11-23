@@ -9,6 +9,9 @@ import { Context } from 'react';
 import type { ReactNode } from 'react';
 
 // @public
+export function changedTopLevelKeys(previous: unknown, next: unknown): string[];
+
+// @public
 export type CompletionProvider = (argName: string, partial: string) => Promise<string[]>;
 
 // @public
@@ -42,6 +45,9 @@ export interface Discriminator {
     // (undocumented)
     readonly propertyName: string;
 }
+
+// @public
+export function errorPathField(path: string): string;
 
 // @public
 export type ExpressionFieldComponent = ComponentType<ExpressionFieldProps>;
@@ -87,7 +93,7 @@ export interface ExpressionInputShape {
 }
 
 // @public
-interface ExpressionInputVariable {
+export interface ExpressionInputVariable {
     readonly blurb: string;
     readonly keys: readonly ExpressionInputKey[];
     readonly name: string;
@@ -116,10 +122,42 @@ export interface FieldWords {
 }
 
 // @public
+export function firstPageWithError(pages: readonly FormPageFields[], errors: SchemaFormErrors): number;
+
+// @public
+export function formatReadbackValue(value: unknown, words: ReadbackWords | undefined): string;
+
+// @public
+export interface FormChoice {
+    // (undocumented)
+    readonly value: unknown;
+}
+
+// @public
+export type FormChoiceLists = Readonly<Record<string, readonly FormChoice[]>>;
+
+// @public
 export type FormControl = 'chips' | 'textarea';
 
 // @public
 export type FormInputMode = 'text' | 'numeric' | 'decimal' | 'tel' | 'email' | 'url';
+
+// @public
+export interface FormPageFields {
+    // (undocumented)
+    readonly fields: readonly string[];
+}
+
+// @public
+export interface FormValueUpdate {
+    // (undocumented)
+    readonly options: FormChoiceLists;
+    // (undocumented)
+    readonly values: Readonly<Record<string, unknown>>;
+}
+
+// @public
+export function isArraySchema(schema: JsonSchema): boolean;
 
 // @public
 export function isFieldVisible(schema: JsonSchema, values: Record<string, unknown>): boolean;
@@ -209,6 +247,14 @@ export class NoFiniteValueError extends Error {
 }
 
 // @public
+export interface ReadbackWords {
+    // (undocumented)
+    readonly falseLabel?: string | null;
+    // (undocumented)
+    readonly trueLabel?: string | null;
+}
+
+// @public
 export interface RecordEntryContext {
     readonly defaultField: ReactNode;
     readonly keyName: string;
@@ -254,6 +300,9 @@ export interface SchemaFormProps {
 }
 
 // @public
+export function schemaWithSendOptions(schema: JsonSchema, options: FormChoiceLists): JsonSchema;
+
+// @public
 export type SecretRef = {
     readonly source: 'key';
     readonly key: string;
@@ -279,7 +328,10 @@ export interface SecretRefFieldProps {
 }
 
 // @public
-interface TemplatedTextCatalog {
+export function slotValueText(value: string | number | boolean | null | undefined): string | undefined;
+
+// @public
+export interface TemplatedTextCatalog {
     // (undocumented)
     readonly error?: string;
     // (undocumented)
@@ -296,7 +348,7 @@ interface TemplatedTextCatalog {
 export const TemplatedTextCatalogContext: Context<UseTemplatedTextCatalog>;
 
 // @public
-interface TemplatedTextTemplateOption {
+export interface TemplatedTextTemplateOption {
     // (undocumented)
     readonly id: string;
     readonly label?: string;
@@ -309,13 +361,13 @@ export type UseTemplatedTextCatalog = () => TemplatedTextCatalog | undefined;
 export function validateAgainstSchema(schema: JsonSchema, value: unknown, options?: ValidateOptions): SchemaFormErrors;
 
 // @public
-interface ValidateOptions {
+export interface ValidateOptions {
     readonly fieldWording?: Readonly<Record<string, FieldWords>>;
     readonly maxUploadBytes?: number;
 }
 
 // @public
-interface VisibleWhen {
+export interface VisibleWhen {
     // (undocumented)
     readonly equals?: unknown;
     // (undocumented)
@@ -325,6 +377,9 @@ interface VisibleWhen {
     // (undocumented)
     readonly notEmpty?: boolean;
 }
+
+// @public
+export function withFoldedUpdate(schema: JsonSchema, value: unknown, update: FormValueUpdate): Record<string, unknown>;
 
 // (No @packageDocumentation comment for this package)
 
