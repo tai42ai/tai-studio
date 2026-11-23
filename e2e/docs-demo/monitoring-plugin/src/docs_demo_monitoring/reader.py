@@ -17,6 +17,7 @@ from datetime import datetime
 from typing import Any, Literal
 
 from tai42_contract.monitoring import (
+    NON_STEP_ROLES,
     STEP_ROLE_METADATA_KEY,
     Dimension,
     ListCapability,
@@ -35,7 +36,6 @@ from tai42_contract.monitoring import (
     OrderBy,
     SpanKind,
     SpanWindowItem,
-    StepRole,
     TraceNotFoundError,
 )
 
@@ -48,9 +48,8 @@ _SUPPORTED_DIMENSIONS = frozenset({Dimension.MODEL})
 _SUPPORTED_GRANULARITY = frozenset({"hour", "day", "week"})
 # The largest ``limit`` one ``list_traces`` call accepts.
 _MAX_PAGE_SIZE = 100
-# The kinds a step can be, and the producer markers that make a record part of a step.
+# The kinds a step can be.
 _STEP_KINDS = frozenset({SpanKind.TOOL, SpanKind.CHAIN})
-_NOT_A_STEP = frozenset({StepRole.GROUPING.value, StepRole.SUB_STEP.value})
 
 
 def _sorted_missing_last[T](
@@ -375,8 +374,8 @@ class DemoReader:
         filter_: MonitoringFilter | None = None,
         order_by: OrderBy | None = None,
     ) -> list[SpanWindowItem]:
-        # One item per step: a TOOL or CHAIN record the producer did not mark as a
-        # grouping or a sub-step; generations and events are never items.
+        # One item per step: a TOOL or CHAIN record the producer did not mark with a
+        # non-step role; generations and events are never items.
         items: list[SpanWindowItem] = []
         for trace in self._store.all_traces():
             if run is not None and trace.id != run:
@@ -388,7 +387,7 @@ class DemoReader:
                     continue
                 if kind is not None and obs.kind is not kind:
                     continue
-                if (obs.metadata or {}).get(STEP_ROLE_METADATA_KEY) in _NOT_A_STEP:
+                if (obs.metadata or {}).get(STEP_ROLE_METADATA_KEY) in NON_STEP_ROLES:
                     continue
                 if not (t0 <= obs.start < t1):
                     continue
