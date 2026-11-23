@@ -48,9 +48,11 @@
 // Usage: node scripts/api-gate.mjs --version <X.Y.Z>
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, posix, resolve } from 'node:path';
+import { dirname, posix, relative, resolve, sep } from 'node:path';
+
+import { ExtractorConfig } from '@microsoft/api-extractor';
 
 import { parseReport } from './api-report-parse.mjs';
 import { classify, removedReport } from './api-surface-diff.mjs';
@@ -59,6 +61,9 @@ import { GateError, fail } from './gate-error.mjs';
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // Where any package's committed report sits, as read from a ref's tree.
 const REPORT_PATH = /^packages\/[^/]+\/etc\/[^/]+\.api\.md$/;
+// The api-extractor configs a package runs, in its config/ folder: api-extractor.json and
+// api-extractor.<entry point>.json. A shared base (api-extractor-base.json) is only extended.
+const EXTRACTOR_CONFIG = /^api-extractor(\.[^.]+)?\.json$/;
 const MODE_NAMES = new Set(['label-honesty', 'strict']);
 
 function readMode() {
@@ -104,8 +109,22 @@ function allowedBumps(mode, newMajor) {
 // The gate's pass/fail decision, factored out of the git/typescript I/O so the
 // whole mode x version x bump matrix is unit-testable. Returns { passes, reason };
 // a failing reason names mode, the version class, the computed allowed bump set
-// and the actual bump so it explains itself.
+// and the actual bump so it explains itself. A null `newVersion` is no release: its bump
+// class is `none`, which no allowed set holds, so it passes only without a breaking surface
+// change, and its reason names the bumps that version class allows for one.
 function gatePasses(mode, oldVersion, newVersion, hasBreaking) {
+  if (newVersion === null) {
+    if (!hasBreaking) return { passes: true, reason: 'no breaking surface changes and no release' };
+    const [oldMajor] = parseVersion(oldVersion);
+    const allowed = allowedBumps(mode, oldMajor);
+    return {
+      passes: false,
+      reason:
+        'projects no release but carries breaking surface changes (a breaking change needs a ' +
+        `release: mode=${mode}, version class=${versionClass(oldMajor)}, ` +
+        `computed allowed bump(s)=${[...allowed].sort().join(',')}, bump=none)`,
+    };
+  }
   const bump = bumpClass(oldVersion, newVersion);
   const [newMajor] = parseVersion(newVersion);
   const allowed = allowedBumps(mode, newMajor);
@@ -124,23 +143,25 @@ function gatePasses(mode, oldVersion, newVersion, hasBreaking) {
 const versionBelow = (a, b) =>
   a[0] < b[0] || (a[0] === b[0] && (a[1] < b[1] || (a[1] === b[1] && a[2] < b[2])));
 
-// The `v<major.minor.patch>` tags strictly below `newVersion`, newest first. Non-semver tags,
-// pre-releases among them, are ignored.
+// The `v<major.minor.patch>` tags strictly below `newVersion`, newest first; a null
+// `newVersion` (no release) sets no upper bound. Non-semver tags, pre-releases among them, are
+// ignored.
 function tagsBelow(newVersion, tags) {
-  const newKey = parseVersion(newVersion);
+  const newKey = newVersion === null ? null : parseVersion(newVersion);
   return tags
     .map((tag) => ({ tag: tag.trim(), version: tag.trim().replace(/^v/, '') }))
     .filter(({ version }) => /^\d+\.\d+\.\d+$/.test(version))
     .map(({ tag, version }) => ({ tag, key: parseVersion(version) }))
-    .filter(({ key }) => versionBelow(key, newKey))
+    .filter(({ key }) => newKey === null || versionBelow(key, newKey))
     .sort((a, b) => b.key[0] - a.key[0] || b.key[1] - a.key[1] || b.key[2] - a.key[2])
     .map(({ tag }) => tag);
 }
 
 // The baseline tag for a report: the highest `v<major.minor.patch>` tag strictly
 // below `newVersion` whose version is PUBLISHED on npm for that report's package,
-// or null when no published version sits below the release. A tag whose publish was
-// refused still exists in git, so it must NOT seed the next release's baseline —
+// or null when no published version sits below the release. A null `newVersion` (no
+// release) sets no upper bound: the baseline is the newest published tag. A tag whose publish
+// was refused still exists in git, so it must NOT seed the next release's baseline —
 // the breaking items it carried would vanish from the diff. Pure over the tag list
 // and the published-version list so the whole selection is unit-testable without git
 // or npm; published versions at or above the target never qualify.
@@ -150,11 +171,11 @@ function previousPublishedTag(newVersion, tags, publishedVersions) {
   return tagsBelow(newVersion, publishedTags)[0] ?? null;
 }
 
-// The semver tags strictly between the chosen baseline and the release that are NOT
-// published — the tags skipped to reach the baseline. Naming them explains why the
-// baseline is older than the newest tag.
+// The semver tags strictly between the chosen baseline and the release (above the baseline
+// when there is no release) that are NOT published — the tags skipped to reach the baseline.
+// Naming them explains why the baseline is older than the newest tag.
 function skippedUnpublishedTags(baselineTag, newVersion, tags, publishedVersions) {
-  const newKey = parseVersion(newVersion);
+  const newKey = newVersion === null ? null : parseVersion(newVersion);
   const baseKey = parseVersion(baselineTag.replace(/^v/, ''));
   const published = new Set(publishedVersions);
   const out = [];
@@ -162,8 +183,8 @@ function skippedUnpublishedTags(baselineTag, newVersion, tags, publishedVersions
     const version = tag.trim().replace(/^v/, '');
     if (!/^\d+\.\d+\.\d+$/.test(version)) continue;
     const key = parseVersion(version);
-    if (versionBelow(baseKey, key) && versionBelow(key, newKey) && !published.has(version))
-      out.push(tag.trim());
+    const belowRelease = newKey === null || versionBelow(key, newKey);
+    if (versionBelow(baseKey, key) && belowRelease && !published.has(version)) out.push(tag.trim());
   }
   return out;
 }
@@ -265,9 +286,35 @@ function reportAtWorktree(dir, name, root = REPO_ROOT) {
   }
 }
 
+// Every report an api-extractor config in the checkout produces, as a path from the repo root.
+// api-extractor resolves each config itself (its `extends` chain and path tokens), and the
+// entry point need not be built: only where the report is written is asked for.
+function producedReportsAtWorktree(root = REPO_ROOT) {
+  const produced = [];
+  for (const entry of readdirSync(resolve(root, 'packages'), { withFileTypes: true })) {
+    const packageFolder = resolve(root, 'packages', entry.name);
+    const configFolder = resolve(packageFolder, 'config');
+    if (!entry.isDirectory() || !existsSync(configFolder)) continue;
+    for (const file of readdirSync(configFolder).filter((name) => EXTRACTOR_CONFIG.test(name))) {
+      const configObjectFullPath = resolve(configFolder, file);
+      const config = ExtractorConfig.prepare({
+        configObject: ExtractorConfig.loadFile(configObjectFullPath),
+        configObjectFullPath,
+        packageJsonFullPath: resolve(packageFolder, 'package.json'),
+        ignoreMissingEntryPoint: true,
+      });
+      for (const { fileName } of config.reportConfigs)
+        produced.push(relative(root, resolve(config.reportFolder, fileName)).split(sep).join('/'));
+    }
+  }
+  return produced;
+}
+
 // What each side holds, matched by a report's identity: its npm package name plus its report
 // name. `listedAt` is a ref's listing, each ref listed once; `heldAt` is that listing by identity,
-// refusing two paths of one identity. HEAD's texts come from the checkout. A report no named
+// refusing two paths of one identity. HEAD's texts come from the checkout, and every report HEAD
+// lists must be one an api-extractor config produces: a report whose config is gone records an
+// entry point the package does not have, which no per-package report check visits. A report no named
 // package.json owns has a null package name and so no identity to collide on: reportsToJudge and
 // publishedBaseline's `forReport` decide what becomes of it.
 function reportSides(deps) {
@@ -276,6 +323,7 @@ function reportSides(deps) {
     readReportAtWorktree = reportAtWorktree,
     listReportsAtRef = reportsAtRef,
     packageNameFor = packageNameForReport,
+    producedReports = producedReportsAtWorktree,
   } = deps;
   const identityOf = (report) => JSON.stringify([packageNameFor(report), report.name]);
   const listings = new Map();
@@ -286,6 +334,15 @@ function reportSides(deps) {
   const sides = new Map();
   const heldAt = (ref) => {
     if (!sides.has(ref)) {
+      if (ref === 'HEAD') {
+        const produced = new Set(producedReports());
+        for (const report of listedAt(ref))
+          if (!produced.has(`${report.dir}/${report.name}`))
+            fail(
+              `${report.dir}/${report.name}: no api-extractor config produces this report — its ` +
+                'entry point is gone; delete the report or restore the config',
+            );
+      }
       const held = new Map();
       for (const report of listedAt(ref)) {
         const identity = identityOf(report);
@@ -311,7 +368,8 @@ function reportSides(deps) {
   return { packageNameFor, identityOf, listedAt, heldAt, textAt };
 }
 
-// The release's baseline. `reports()` lists what the baseline tag of each package holds, the
+// The release's baseline. A null `version` is no release, which sets no upper bound on the
+// tags walked. `reports()` lists what the baseline tag of each package holds, the
 // packages being those named by the tags below `version`, walked newest first down to the first
 // tag that is itself a baseline. Tags that were never published are walked past, so whatever they
 // lost is judged on the release that lost it and on every later tag until one is published; a
@@ -424,6 +482,8 @@ function findingsBetween(name, packageName, oldSource, newSource) {
 // (release-label-check.mjs) passes its two-sided rule over it. `baseline.sides` is the run's one
 // reportSides. The remaining I/O seams are injectable through `deps` (mode and the log sink),
 // defaulting to production, so the whole gate is unit-testable without git or the network.
+// A null `version` is no release (the label check's projection for a title that releases
+// nothing): its bump class is `none`, so any breaking surface item fails it.
 // Returns the list of failing reasons, empty when the bump is honest; a tooling error (bad
 // config, an unclassifiable export) throws GateError.
 function runGate(version, baseline, deps = {}) {
@@ -437,8 +497,9 @@ function runGate(version, baseline, deps = {}) {
     if (judged === null) continue;
 
     const { oldVersion, breakingFindings } = judged;
-    const bump = bumpClass(oldVersion, version);
-    const header = `api-gate: ${name}: ${oldVersion} -> ${version} (${bump} bump, mode=${mode})`;
+    const bump = version === null ? 'none' : bumpClass(oldVersion, version);
+    const target = version === null ? 'no release' : version;
+    const header = `api-gate: ${name}: ${oldVersion} -> ${target} (${bump} bump, mode=${mode})`;
 
     const newSource = sides.textAt('HEAD', report);
     const reportFindings = breakingFindings((oldSource) =>
@@ -476,6 +537,7 @@ export {
   gatePasses,
   previousPublishedTag,
   packageNameForReport,
+  producedReportsAtWorktree,
   publishedBaseline,
   reportAtRef,
   reportAtWorktree,

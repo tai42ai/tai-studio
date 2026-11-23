@@ -6,6 +6,9 @@ settings:
 
 catalogs:
   default:
+    '@microsoft/api-extractor':
+      specifier: 7.59.2
+      version: 7.59.2
     '@tanstack/react-query':
       specifier: ^5.103.1
       version: 5.103.1
@@ -83,6 +86,9 @@ importers:
       '@eslint/js':
         specifier: ^9.17.0
         version: 9.39.4
+      '@microsoft/api-extractor':
+        specifier: 'catalog:'
+        version: 7.59.2(@types/node@22.20.0)
       eslint:
         specifier: 'catalog:'
         version: 9.39.4(jiti@2.7.0)
@@ -296,7 +302,7 @@ importers:
         version: 4.6.7
     devDependencies:
       '@microsoft/api-extractor':
-        specifier: 7.59.2
+        specifier: 'catalog:'
         version: 7.59.2(@types/node@22.20.0)
       '@types/node':
         specifier: 'catalog:'
@@ -1175,7 +1181,7 @@ importers:
         version: link:../api-client
     devDependencies:
       '@microsoft/api-extractor':
-        specifier: 7.59.2
+        specifier: 'catalog:'
         version: 7.59.2(@types/node@22.20.0)
       '@tai42/jq-studio':
         specifier: ^0.1.8

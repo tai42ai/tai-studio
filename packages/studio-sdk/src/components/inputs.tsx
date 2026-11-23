@@ -75,7 +75,7 @@ function wireToField(
 }
 
 /** A consumer ref for the native control; the prop spread forwards it. */
-interface ControlRefProps<T> {
+export interface ControlRefProps<T> {
   readonly ref?: Ref<T>;
 }
 

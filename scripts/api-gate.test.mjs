@@ -53,6 +53,22 @@ test('gate decision matrix', () => {
   assert.equal(gatePasses('strict', '0.1.0', '0.1.1', false).passes, true);
 });
 
+test('no release passes only without a breaking surface change, in both modes', () => {
+  for (const mode of ['label-honesty', 'strict']) {
+    assert.equal(gatePasses(mode, '1.0.0', null, false).passes, true);
+    assert.equal(gatePasses(mode, '0.1.0', null, false).passes, true);
+    const { passes, reason } = gatePasses(mode, '1.0.0', null, true);
+    assert.equal(passes, false);
+    assert.match(reason, /projects no release/);
+    assert.match(reason, new RegExp(`mode=${mode}`));
+    assert.match(reason, /computed allowed bump\(s\)=major, bump=none/);
+  }
+  assert.match(
+    gatePasses('label-honesty', '0.1.0', null, true).reason,
+    /version class=0\.x, computed allowed bump\(s\)=major,minor, bump=none/,
+  );
+});
+
 test('a failing reason names mode, version class, computed class and bump', () => {
   const { reason } = gatePasses('label-honesty', '1.0.0', '1.1.0', true);
   assert.match(reason, /mode=label-honesty/);
@@ -92,6 +108,13 @@ test('published versions at or above the target are ignored', () => {
   const published = ['1.0.0', '2.0.0', '3.0.0'];
   // Choosing a baseline for 2.0.0 never picks 2.0.0 or 3.0.0, only the highest below.
   assert.equal(previousPublishedTag('2.0.0', tags, published), 'v1.0.0');
+});
+
+test('no release sets no upper bound: the newest published tag is the baseline', () => {
+  const tags = ['v1.0.0', 'v1.1.0', 'v1.2.0'];
+  assert.equal(previousPublishedTag(null, tags, ['1.0.0', '1.1.0', '1.2.0']), 'v1.2.0');
+  assert.equal(previousPublishedTag(null, tags, ['1.0.0', '1.1.0']), 'v1.1.0');
+  assert.equal(previousPublishedTag(null, tags, []), null);
 });
 
 test('non-semver tags are ignored', () => {

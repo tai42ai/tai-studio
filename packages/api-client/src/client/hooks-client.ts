@@ -1,5 +1,6 @@
 /** Hook listing, registration and topic-verifier sub-client. */
 import { apiRoutes, buildPath } from '../generated/api-routes';
+import type { HookRegister } from '../schemas';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -23,7 +24,7 @@ export function hooksClient(t: Transport) {
         signal,
         query: topic === undefined ? undefined : { topic },
       }),
-    registerHook: (params: s.HookRegister) =>
+    registerHook: (params: HookRegister) =>
       req(apiRoutes.post_api_hooks.path, s.hookRegistered, { method: 'POST', body: params }),
     unregisterHook: (name: string) =>
       req(buildPath(apiRoutes.delete_api_hooks_name.path, { name }), s.hookRemoved, {

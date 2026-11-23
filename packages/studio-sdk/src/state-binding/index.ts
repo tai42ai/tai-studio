@@ -56,11 +56,6 @@ export type {
   BindingTemplateJqOption,
   BindingTemplateOption,
   SchemaFieldPath,
-  StateAttach,
-  StateBinding,
-  StateInjection,
-  StateUpdate,
-  TemplatedText,
   TemplatedTextCatalog,
 } from './types';
 export type { UpdateListProps } from './UpdateRow';

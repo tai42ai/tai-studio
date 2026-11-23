@@ -3,6 +3,10 @@ export { __resetContributions } from './plugin/registry';
 /** Test-only plugin host-state reset, cleared between cases beside the registry reset. */
 export { __resetPluginHostState } from './plugin/host-state';
 /** Test-only injector: serves a fixed tool display-name map without a live fetch. */
+export type {
+  ToolDisplayNamesContextValue,
+  ToolDisplayNamesState,
+} from './hooks/useToolDisplayNames';
 export { StaticToolDisplayNamesProvider } from './hooks/useToolDisplayNames';
 /** The destructive-not-text rule over one source text, for a host's own source gate. */
 export { destructiveColorOffences } from './token-rules';

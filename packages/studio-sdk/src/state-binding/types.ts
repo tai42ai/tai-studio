@@ -1,26 +1,15 @@
 /**
- * The catalog + value types the state-binding editor is fed and edits.
+ * The catalog types the state-binding editor is fed.
  *
- * The VALUE is the `StateBinding` document (mirrored in `@tai42/api-client`,
- * imported type-only so this package keeps no runtime edge to the client). The
+ * The VALUE it edits is the `StateBinding` document of `@tai42/api-client`. The
  * CATALOGS are what the consumer resolves from the api-client and hands the editor:
  * the states it may bind, the templates each may attach, and — when a schema is
  * known — the fields a picker offers.
  */
-import type {
-  StateAttach,
-  StateBinding,
-  StateInjection,
-  StateUpdate,
-  TemplatedText,
-} from '@tai42/api-client';
-
 import type { TemplatedTextTemplateOption } from '../components/templated-text-field';
 
-export type { StateAttach, StateBinding, StateInjection, StateUpdate, TemplatedText };
-
 /**
- * The stored templates a {@link TemplatedText} field's id picker offers, with the
+ * The stored templates a `TemplatedText` field's id picker offers, with the
  * fetch's loading/error state — resolved by the door screen and passed to the
  * editor, which holds no data edge of its own. Absent leaves every templated-text
  * field with the inline source only.

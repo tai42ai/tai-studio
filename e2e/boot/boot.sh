@@ -309,11 +309,11 @@ export STUDIO_DIST_PATH="${STUDIO_DIST}"
 
 # Interactions (ask): its Redis defaults to loopback :6379 and always
 # connects (never in-memory), so it must be pointed at the compose Redis. The
-# public base URL is the skeleton's own origin — the external-question callback
-# URL is minted from it, so an ask_external question fails without it (http://
-# is accepted for a loopback host).
+# deployment's public address is the skeleton's own origin — the external-question
+# callback URL is minted from it, so an ask_external question fails without it
+# (http:// is accepted for a loopback host).
 export INTERACTIONS_REDIS_URL="${INTERACTIONS_REDIS_URL}"
-export INTERACTIONS_PUBLIC_BASE_URL="http://127.0.0.1:${STUDIO_PORT}"
+export TAI_PUBLIC_BASE_URL="http://127.0.0.1:${STUDIO_PORT}"
 
 # Background tool-runs (the `tool_runs` router in the manifest): its run store
 # defaults to loopback :6379 and always connects, so point it at the compose Redis

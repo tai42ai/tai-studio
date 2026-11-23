@@ -29,12 +29,16 @@
  * completion provider, the injected expression door — would be different objects
  * from the ones the host provides.
  */
+export type { TemplatedTextTemplateOption } from '../components/templated-text-field';
+export type { TemplatedTextCatalog } from '../state-binding/types';
+export { changedTopLevelKeys } from './changed-fields';
 export type { RecordEntryContext, RecordEntryRenderer } from './context';
 export type {
   ExpressionFieldComponent,
   ExpressionFieldProps,
   ExpressionInputKey,
   ExpressionInputShape,
+  ExpressionInputVariable,
   UseTemplatedTextCatalog,
 } from './context';
 export { RecordEntryRendererContext } from './context';
@@ -42,6 +46,10 @@ export { ExpressionFieldContext, TemplatedTextCatalogContext } from './context';
 export type { DateRangePair } from './date-range-field';
 export { dateRangePairs, fieldDrawingOrder } from './date-range-field';
 export { defaultValueForSchema, NoFiniteValueError } from './default-value';
+export type { FormPageFields } from './error-pages';
+export { errorPathField, firstPageWithError } from './error-pages';
+export type { FormChoice, FormChoiceLists, FormValueUpdate } from './offered-choices';
+export { isArraySchema, schemaWithSendOptions, withFoldedUpdate } from './offered-choices';
 export { resolveRef } from './resolve';
 export type { CompletionProvider, SchemaFormProps } from './SchemaForm';
 export { SchemaForm } from './SchemaForm';
@@ -55,6 +63,10 @@ export type {
   JsonSchema,
   JsonSchemaType,
   SchemaFormErrors,
+  VisibleWhen,
 } from './types';
+export type { ValidateOptions } from './validate';
 export { validateAgainstSchema } from './validate';
+export type { ReadbackWords } from './value-text';
+export { formatReadbackValue, slotValueText } from './value-text';
 export { isFieldVisible } from './visibility';

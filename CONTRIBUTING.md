@@ -138,14 +138,17 @@ Before it publishes, the release diffs the committed API reports
 `@tai42/api-client`) against the newest published tag of each package and fails when the surface
 change outruns the version bump it rides; a breaking surface change must ride a
 breaking-marked commit, so a major at `>=1.0`. The two gates read no list of
-reports: they judge the committed files at that path. A report still has its
-api-extractor config and its `package.json` script. A report is its npm package name plus its report name. One the tag holds and the
+reports: they judge the committed files at that path, and each one must be a report an
+api-extractor config under `packages/*/config/` produces — a report whose config is gone
+fails both gates until the report is deleted or the config restored. A report is its npm
+package name plus its report name. One the tag holds and the
 release does not is a removed entry point, which is a breaking change. A folder move
 diffs the report where it now sits, so a symbol dropped in the move is refused. A
 package renamed in place with its report kept counts as a removal under the published
 name, which is what a consumer of that name sees. The
-`release-label` check runs the same gate before the merge: it projects the bump
-from the pull request's title and body and counts a surface item only when it is
+`release-label` check runs the same gate on every pull request before the merge: it
+projects the bump from the pull request's title and body — a title that releases nothing
+is judged as no bump, which passes only without a breaking surface change — and counts a surface item only when it is
 breaking both against the newest published version and between the pull request's
 base and its head, so a mislabelled release is refused on the pull request rather
 than after the tag, while a change no consumer could see or the pull request did not

@@ -3,6 +3,7 @@
  * run input BEFORE the run: either a template `input` jq (picked by name) or a
  * custom jq over the record, placed under the `into` run-input field.
  */
+import type { StateInjection } from '@tai42/api-client';
 import type { ReactNode } from 'react';
 
 import { Field } from '../components/field';
@@ -13,7 +14,7 @@ import { Select } from '../components/select';
 import type { TemplateJqSuggestion } from './BindingJqField';
 import { BindingTemplatedJqField } from './BindingTemplatedJqField';
 import type { ResolvedTemplateJq } from './catalog';
-import type { StateInjection, TemplatedTextCatalog } from './types';
+import type { TemplatedTextCatalog } from './types';
 
 function optionLabel(entry: ResolvedTemplateJq): string {
   return entry.description !== undefined && entry.description !== ''

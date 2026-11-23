@@ -1,6 +1,7 @@
 import type { ApiClient, SseFrame } from '@tai42/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { isFeatureDisabled } from '../feature-disabled';
 import {
   add,
   addData,
@@ -409,6 +410,37 @@ describe('interactions-connection — resync, reconnect and terminal handling', 
     // Advancing far past any backoff ceiling must NOT open another stream.
     await flush(60000);
     expect(stream).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats a 410 resume-expired as a resync: reconnects at once without the cursor', async () => {
+    // The cursor sent on a reconnect is older than the events the server still holds, so
+    // it answers 410 `interactions-resume-expired`. The hook drops the cursor and reopens
+    // at once (no backoff), and the fresh connect re-reads the paged base; no error shows.
+    const expired = Object.assign(new Error("Last-Event-ID '1-0' is no longer in the stream"), {
+      name: 'ApiError',
+      status: 410,
+      code: 'interactions-resume-expired',
+    });
+    const stream =
+      vi.fn<(signal?: AbortSignal, lastEventId?: string) => Promise<AsyncGenerator<SseFrame>>>();
+    stream.mockResolvedValueOnce(
+      iterate([{ event: 'interaction.add', data: addData('a'), id: '1-0' }]),
+    );
+    stream.mockRejectedValueOnce(expired);
+    stream.mockImplementation(() => Promise.resolve(iterate([])));
+    const client = { streamInteractions: stream } as unknown as ApiClient;
+    const { result, onResync } = renderStream(client, {});
+
+    await flush(); // conn1: add('a'), remembers 1-0, drains → 750ms backoff
+    expect(onResync).toHaveBeenCalledTimes(1);
+
+    await flush(750); // conn2 resumes from 1-0 → 410 → conn3 opens at once, no cursor
+    expect(stream).toHaveBeenNthCalledWith(2, expect.anything(), '1-0');
+    expect(stream).toHaveBeenNthCalledWith(3, expect.anything(), undefined);
+    expect(onResync).toHaveBeenCalledTimes(2);
+    expect(result.current.error).toBeNull();
+    expect(result.current.disabled).toBe(false);
+    expect(isFeatureDisabled(expired)).toBe(false);
   });
 
   it('treats a -not-configured code as terminal even when the status is not 501', async () => {

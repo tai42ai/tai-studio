@@ -1,17 +1,12 @@
 {
-  // Compiler config for api-extractor only. It analyses the built .d.ts surface,
-  // so cross-package @tai42/* imports resolve to the sibling's BUILT declarations.
-  // The alias only covers symbols the sibling RE-EXPORTS from its built index
-  // (dist/index.d.ts); a symbol used from the sibling but not re-exported there
-  // resolves to that sibling's source and shows up with a source path in the
-  // report. No baseUrl (deprecated in TS6): the alias below resolves relative to
-  // this config's folder, so it stays unambiguous regardless of the inherited
-  // base config.
+  // Compiler config for api-extractor only: it analyses the built .d.ts surface in
+  // dist. `paths` is emptied so the base config's @tai42/* source aliases do not
+  // apply: a sibling package resolves through node_modules as it does for a
+  // consumer, so its declarations are external to this package's reports and appear
+  // there as import lines, owned by the sibling's own report.
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "paths": {
-      "@tai42/api-client": ["../../api-client/dist/index.d.ts"]
-    },
+    "paths": {},
     "disableSourceOfProjectReferenceRedirect": true
   },
   "include": ["../dist"]

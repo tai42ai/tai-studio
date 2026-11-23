@@ -1,5 +1,6 @@
 /** Prompt-template listing, render and mutation sub-client. */
 import { apiRoutes } from '../generated/api-routes';
+import type { TemplatedText } from '../schemas';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -34,7 +35,7 @@ export function templatesClient(t: Transport) {
     // Render one authored text — inline `content` OR a stored template `id`, plus its
     // render `kwargs` — and parse the rendered output. The value is the shared
     // `TemplatedText` (exactly one source); the route wraps it under `text`.
-    renderTemplate: (text: s.TemplatedText) =>
+    renderTemplate: (text: TemplatedText) =>
       req(apiRoutes.post_api_render_template.path, s.templateRendered, {
         method: 'POST',
         body: { text },

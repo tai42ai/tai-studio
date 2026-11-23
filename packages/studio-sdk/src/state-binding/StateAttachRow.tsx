@@ -3,6 +3,7 @@
  * (attach-on-use — a not-yet-attached pick shows the "attached on save" hint), the subject
  * and scope expressions, the input injections, and the updates.
  */
+import type { StateAttach, TemplatedText } from '@tai42/api-client';
 import { type ReactNode, useMemo } from 'react';
 
 import { Checkbox } from '../components/checkbox';
@@ -20,8 +21,6 @@ import type {
   BindingSourceSchemas,
   BindingStateOption,
   BindingTemplateOption,
-  StateAttach,
-  TemplatedText,
   TemplatedTextCatalog,
 } from './types';
 import { UpdateList } from './UpdateRow';

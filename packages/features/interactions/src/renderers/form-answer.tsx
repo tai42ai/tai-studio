@@ -1,7 +1,15 @@
 import type { FormOption, FormPage, FormReactions, FormUpdate } from '@tai42/api-client';
 import { schemas } from '@tai42/api-client';
 import type { JsonSchema, SchemaFormErrors } from '@tai42/studio-sdk';
-import { Button, SchemaForm, validateAgainstSchema } from '@tai42/studio-sdk';
+import {
+  Button,
+  changedTopLevelKeys,
+  firstPageWithError,
+  SchemaForm,
+  schemaWithSendOptions,
+  validateAgainstSchema,
+  withFoldedUpdate,
+} from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 
@@ -12,7 +20,6 @@ import {
   initialFormValue,
   isPlainObject,
   nonBlankString,
-  schemaWithSendOptions,
   wordingOf,
 } from './answer-schema';
 import { DisplayBlocks, ReviewReadback } from './form-display';
@@ -193,11 +200,8 @@ function SchemaFormAnswer({
   const [step, setStep] = useState(0);
 
   const applyUpdate = (update: FormUpdate): void => {
-    if (Object.keys(update.values).length > 0) {
-      setValue((current: unknown) => ({
-        ...(isPlainObject(current) ? current : {}),
-        ...update.values,
-      }));
+    if (Object.keys(update.values).length > 0 || Object.keys(update.options).length > 0) {
+      setValue((current: unknown) => withFoldedUpdate(schema, current, update));
     }
     if (Object.keys(update.options).length > 0) {
       setOptions((current) => ({ ...current, ...update.options }));
@@ -228,21 +232,33 @@ function SchemaFormAnswer({
     }
   };
 
-  const validateWhole = (): boolean => {
-    const found = validateAgainstSchema(effectiveSchema, value, { fieldWording });
+  /** Validate the whole answer against `answerSchema`; on errors show them (turning a
+   * stepped form to the first page carrying one) and report `false`. */
+  const validateWhole = (answer: unknown, answerSchema: JsonSchema): boolean => {
+    const found = validateAgainstSchema(answerSchema, answer, { fieldWording });
     setValidationErrors(found);
-    return Object.keys(found).length === 0;
+    if (Object.keys(found).length === 0) return true;
+    const target = firstPageWithError(pages, found);
+    if (target !== -1) setStep(target);
+    return false;
   };
 
   const submit = async (): Promise<void> => {
-    if (!validateWhole()) return;
-    if (reactions.submitted) {
-      const update = await fireReaction({ kind: 'submitted' }, value);
-      // The reaction failed loudly, or the consumer refused with per-field errors: keep
-      // the form open rather than accepting an unvetted answer.
-      if (update === null || Object.keys(update.errors).length > 0) return;
+    if (!validateWhole(value, effectiveSchema)) return;
+    if (!reactions.submitted) {
+      onSubmit(value);
+      return;
     }
-    onSubmit(value);
+    const update = await fireReaction({ kind: 'submitted' }, value);
+    // The reaction failed loudly, or the consumer refused with per-field errors: keep
+    // the form open rather than accepting an unvetted answer.
+    if (update === null || Object.keys(update.errors).length > 0) return;
+    // The answer is the vetted one with the reaction's update folded in (choices its returned
+    // lists no longer offer dropped, its values laid over), checked again against the schema
+    // those lists give: a cleared required field holds the form.
+    const answer = withFoldedUpdate(schema, value, update);
+    const answerSchema = schemaWithSendOptions(schema, { ...options, ...update.options });
+    if (validateWhole(answer, answerSchema)) onSubmit(answer);
   };
 
   // No declared pages: the whole form on one surface.
@@ -269,17 +285,27 @@ function SchemaFormAnswer({
     return <MalformedPayload message="This form question is malformed: it has no pages to show." />;
   }
 
-  const advance = async (): Promise<void> => {
-    const found = validateAgainstSchema(pageInputSchema(effectiveSchema, currentPage), value, {
+  /** Validate the current page of `answer` against `answerSchema`, show what it found, and
+   * report whether the page is clean. */
+  const validatePage = (answer: unknown, answerSchema: JsonSchema): boolean => {
+    const found = validateAgainstSchema(pageInputSchema(answerSchema, currentPage), answer, {
       fieldWording,
     });
     setValidationErrors(found);
-    if (Object.keys(found).length > 0) return;
+    return Object.keys(found).length === 0;
+  };
+
+  const advance = async (): Promise<void> => {
+    if (!validatePage(value, effectiveSchema)) return;
     if (reactions.page_advanced.includes(currentPage.title)) {
       const update = await fireReaction({ kind: 'page_advanced', page: currentPage.title }, value);
       if (update === null || Object.keys(update.errors).length > 0) return;
+      // The page is checked again with the reaction's update folded in: a replaced choice
+      // list can drop entries this page needs, which holds the form here.
+      const folded = withFoldedUpdate(schema, value, update);
+      const foldedSchema = schemaWithSendOptions(schema, { ...options, ...update.options });
+      if (!validatePage(folded, foldedSchema)) return;
     }
-    setValidationErrors({});
     setStep(step + 1);
   };
 
@@ -452,14 +478,6 @@ function SteppedForm({
       </div>
     </div>
   );
-}
-
-/** The top-level keys whose value differs between the previous and next form value. */
-function changedTopLevelKeys(previous: unknown, next: unknown): string[] {
-  const before = isPlainObject(previous) ? previous : {};
-  const after = isPlainObject(next) ? next : {};
-  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
-  return [...keys].filter((key) => before[key] !== after[key]);
 }
 
 /**

@@ -15,7 +15,7 @@ export type AccessPolicy = z.infer<typeof accessPolicy>;
 export const overlapPolicy = z.object({ "deliver": z.enum(["one","all"]).default("one"), "running": z.enum(["continue","cancel"]).default("continue"), "settle_seconds": z.number().int().gte(0).lte(30).default(0) });
 export type OverlapPolicy = z.infer<typeof overlapPolicy>;
 
-export const replyTexts = z.object({ "error": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_code": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_code_invalid": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_link_unavailable": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_linked": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_not_linked": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_unlink_unavailable": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_unlinked": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_could_not_receive": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_too_large": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_unreadable": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_unsupported_type": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "slow_down": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null) }).strict();
+export const replyTexts = z.object({ "error": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_code": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_code_invalid": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_link_unavailable": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_linked": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_not_linked": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_unlink_unavailable": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "pairing_unlinked": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_choice_unavailable": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_could_not_receive": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_too_large": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_unreadable": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "rejected_unsupported_type": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null), "slow_down": z.string().regex(new RegExp("\\S")).min(1).max(2000).nullable().default(null) }).strict();
 export type ReplyTexts = z.infer<typeof replyTexts>;
 
 export const apiConversationRoute = z.object({ "callback_secret": z.string().nullable().default(null), "callback_url": z.string().regex(new RegExp("^[hH][tT][tT][pP][sS]://[^/?#@]+(?:[/?#]|$)")).nullable().default(null), "cancel_expr": templatedText.nullable().default(null), "channel": z.null().default(null), "door": z.literal("api"), "execution_key": z.string().min(1), "execution_key_fingerprint": z.string().min(1), "extras_expr": templatedText.nullable().default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.string().nullable().default(null), "our_identity": z.null().default(null), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": templatedText.nullable().default(null), "reply_texts": replyTexts.nullable().default(null), "resume_expr": templatedText.nullable().default(null), "route_name": z.string().regex(new RegExp("^[a-z0-9-]+$")), "start_expr": templatedText.nullable().default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.number().int().gt(0).nullable().default(null) });
@@ -1366,7 +1366,7 @@ export const servedDocumentsJson = {
       },
       "ReplyTexts": {
         "additionalProperties": false,
-        "description": "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` / ``rejected_unreadable`` are the notices for an inbound message the\nchannel cannot bridge, a file over the cap, a file the channel could not fetch, and an inbound\nmessage whose body the channel could not read. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.",
+        "description": "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` / ``rejected_unreadable`` / ``rejected_choice_unavailable`` are the\nnotices for an inbound message the channel cannot bridge, a file over the cap, a file the channel\ncould not fetch, an inbound message whose body the channel could not read, and a tap on a choice\nthe channel can no longer read. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.",
         "properties": {
           "error": {
             "anyOf": [
@@ -1487,6 +1487,21 @@ export const servedDocumentsJson = {
             ],
             "default": null,
             "title": "Pairing Unlinked"
+          },
+          "rejected_choice_unavailable": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rejected Choice Unavailable"
           },
           "rejected_could_not_receive": {
             "anyOf": [
@@ -2471,7 +2486,7 @@ export const servedDocumentsJson = {
       },
       "ReplyTexts": {
         "additionalProperties": false,
-        "description": "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` / ``rejected_unreadable`` are the notices for an inbound message the\nchannel cannot bridge, a file over the cap, a file the channel could not fetch, and an inbound\nmessage whose body the channel could not read. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.",
+        "description": "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` / ``rejected_unreadable`` / ``rejected_choice_unavailable`` are the\nnotices for an inbound message the channel cannot bridge, a file over the cap, a file the channel\ncould not fetch, an inbound message whose body the channel could not read, and a tap on a choice\nthe channel can no longer read. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.",
         "properties": {
           "error": {
             "anyOf": [
@@ -2592,6 +2607,21 @@ export const servedDocumentsJson = {
             ],
             "default": null,
             "title": "Pairing Unlinked"
+          },
+          "rejected_choice_unavailable": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rejected Choice Unavailable"
           },
           "rejected_could_not_receive": {
             "anyOf": [

@@ -1,10 +1,11 @@
+import type { StateBinding } from '@tai42/api-client';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { StateBindingEditor } from './StateBindingEditor';
-import type { BindingStateOption, BindingTemplateOption, StateBinding } from './types';
+import type { BindingStateOption, BindingTemplateOption } from './types';
 
 const STATES: BindingStateOption[] = [{ name: 'counters' }, { name: 'notes' }];
 const TEMPLATES: BindingTemplateOption[] = [

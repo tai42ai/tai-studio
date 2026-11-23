@@ -53,6 +53,12 @@ export const writeFile = (root, path, text) => {
 
 export const manifestOf = (name) => JSON.stringify({ name });
 
+// The gate asks api-extractor which reports the checkout's configs produce; a synthetic tree
+// has no configs, so a case about something else stands in a producer of every report its
+// listing holds at HEAD.
+export const producedAsListed = (listReportsAtRef) => () =>
+  listReportsAtRef('HEAD').map(({ dir, name }) => `${dir}/${name}`);
+
 export const gitBackedDeps = (root, lines = []) => ({
   mode: 'label-honesty',
   tags: ['v1.0.0'],
@@ -61,6 +67,7 @@ export const gitBackedDeps = (root, lines = []) => ({
   readReportAtRef: (ref, dir, name) => reportAtRef(ref, dir, name, root),
   listReportsAtRef: (ref) => reportsAtRef(ref, root),
   readReportAtWorktree: (dir, name) => reportAtWorktree(dir, name, root),
+  producedReports: producedAsListed((ref) => reportsAtRef(ref, root)),
   log: (line) => lines.push(line),
 });
 

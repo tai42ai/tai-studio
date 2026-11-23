@@ -1,5 +1,13 @@
 /** Conversation route, thread, transcript, config and admin sub-client. */
 import { apiRoutes, buildPath } from '../generated/api-routes';
+import type {
+  ConversationDeliveryStatus,
+  ConversationRouteCreate,
+  ConversationTargetKind,
+  ConversationThreadMode,
+  TargetConversationConfig,
+  TranscriptOrder,
+} from '../schemas';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -10,7 +18,7 @@ import type { Transport } from './transport';
  * client address. Both omitted when undefined — an unfiltered listing.
  */
 export interface ConversationThreadFilters {
-  readonly status?: s.ConversationDeliveryStatus;
+  readonly status?: ConversationDeliveryStatus;
   readonly address?: string;
 }
 
@@ -26,7 +34,7 @@ export interface ConversationTranscriptQuery {
   readonly threadId: string;
   readonly page: number;
   readonly pageSize: number;
-  readonly order: s.TranscriptOrder;
+  readonly order: TranscriptOrder;
   readonly q?: string;
 }
 
@@ -68,7 +76,7 @@ function conversationRouteMethods(t: Transport) {
     // edit path). `route_name` rides the URL path AND the body; the door rejects a
     // disagreeing pair, so both come from the one create object. The reply carries
     // the freshly-minted `callback_secret` for an `api`-door row, returned ONCE.
-    createOrReplaceConversationRoute: (route: s.ConversationRouteCreate) =>
+    createOrReplaceConversationRoute: (route: ConversationRouteCreate) =>
       req(
         buildPath(apiRoutes.post_api_conversations_route_name.path, {
           route_name: route.route_name,
@@ -173,7 +181,7 @@ function conversationThreadMethods(t: Transport) {
     setConversationThreadMode: (
       routeName: string,
       threadId: string,
-      mode: s.ConversationThreadMode,
+      mode: ConversationThreadMode,
     ) =>
       req(
         buildPath(apiRoutes.put_api_conversations_route_name_thread_mode.path, {
@@ -195,7 +203,7 @@ function conversationConfigMethods(t: Transport) {
       req(apiRoutes.get_api_conversation_configs.path, s.conversationConfigs, { signal }),
     // One config by its `(target_kind, target_name)` key. 404 when unknown.
     getConversationConfig: (
-      targetKind: s.ConversationTargetKind,
+      targetKind: ConversationTargetKind,
       targetName: string,
       signal?: AbortSignal,
     ) =>
@@ -210,7 +218,7 @@ function conversationConfigMethods(t: Transport) {
     // Create or REPLACE a config (an UPSERT: the same door is the create and the
     // edit path). The `(target_kind, target_name)` key rides the URL path; the door
     // rejects a body whose key disagrees, so both come from the one config object.
-    setConversationConfig: (config: s.TargetConversationConfig) =>
+    setConversationConfig: (config: TargetConversationConfig) =>
       req(
         buildPath(apiRoutes.put_api_conversation_configs_target_kind_target_name.path, {
           target_kind: config.target_kind,
@@ -220,7 +228,7 @@ function conversationConfigMethods(t: Transport) {
         { method: 'PUT', body: config },
       ),
     // Delete a config by its key. 404 when the key is unknown.
-    deleteConversationConfig: (targetKind: s.ConversationTargetKind, targetName: string) =>
+    deleteConversationConfig: (targetKind: ConversationTargetKind, targetName: string) =>
       req(
         buildPath(apiRoutes.delete_api_conversation_configs_target_kind_target_name.path, {
           target_kind: targetKind,

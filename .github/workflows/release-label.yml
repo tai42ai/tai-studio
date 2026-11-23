@@ -6,7 +6,8 @@ name: release-label
 # request carries: a surface item counts only when it is breaking both against the newest
 # published version and between the pull request's base and the checkout. A counted item
 # under a bump its label could not honestly carry is refused here, before the merge,
-# never after the tag. The `edited` type is included so re-labelling the release by
+# never after the tag; a title that releases nothing is judged as no bump, which carries
+# no counted item. The `edited` type is included so re-labelling the release by
 # editing the pull request body (a `!`, a `BREAKING CHANGE:` footer, a `Release-As:` line)
 # re-runs the check.
 on:
@@ -38,9 +39,10 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      # The gate imports typescript to parse the reports; it reads the committed
-      # reports as checked out (the `check` job's api:check keeps them matching the
-      # built surface on every pull request), so no workspace build is needed here.
+      # The gate imports typescript to parse the reports and api-extractor to resolve
+      # which reports the checkout's configs produce; it reads the committed reports as
+      # checked out (the `check` job's api:check keeps them matching the built surface
+      # on every pull request), so no workspace build is needed here.
       - run: pnpm install --frozen-lockfile
       - name: Refuse a mislabelled release
         # The title and body reach the script through the environment, never

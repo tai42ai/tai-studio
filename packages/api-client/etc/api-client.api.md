@@ -106,7 +106,7 @@ export const agentEventSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
 }, z.core.$strip>], "type">;
 
 // @public (undocumented)
-const agentList: z.ZodObject<{
+export const agentList: z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         description: z.ZodDefault<z.ZodString>;
@@ -124,7 +124,7 @@ export type AgentListing = z.infer<typeof agentList>;
 export type AgentSummary = z.infer<typeof agentSummary>;
 
 // @public
-const agentSummary: z.ZodObject<{
+export const agentSummary: z.ZodObject<{
     name: z.ZodString;
     description: z.ZodDefault<z.ZodString>;
     tool_name: z.ZodString;
@@ -263,6 +263,7 @@ const apiConversationRouteCreate: z.ZodObject<{
         pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_choice_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -304,7 +305,7 @@ export class ApiError extends Error {
 // @public
 export interface ApiKeyBody {
     // (undocumented)
-    readonly condition?: s.TemplatedText | null;
+    readonly condition?: TemplatedText | null;
     // (undocumented)
     readonly description: string;
     // (undocumented)
@@ -1821,6 +1822,7 @@ const channelConversationRouteCreate: z.ZodObject<{
         pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_choice_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -1849,7 +1851,7 @@ const channelConversationRouteCreate: z.ZodObject<{
 // @public (undocumented)
 export type ChannelEntry = z.infer<typeof channelEntry>;
 
-// @public (undocumented)
+// @public
 const channelEntry: z.ZodObject<{
     identity_hint: z.ZodNullable<z.ZodString>;
     name: z.ZodString;
@@ -3259,6 +3261,7 @@ const conversationRoute: z.ZodDiscriminatedUnion<[z.ZodObject<{
         pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_choice_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -3330,6 +3333,7 @@ const conversationRoute: z.ZodDiscriminatedUnion<[z.ZodObject<{
         pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_choice_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -3405,6 +3409,7 @@ const conversationRouteCreate: z.ZodDiscriminatedUnion<[z.ZodObject<{
         pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_choice_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -3474,6 +3479,7 @@ const conversationRouteCreate: z.ZodDiscriminatedUnion<[z.ZodObject<{
         pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_choice_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -3560,6 +3566,7 @@ const conversationRoutes: z.ZodObject<{
             pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_choice_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -3630,6 +3637,7 @@ const conversationRoutes: z.ZodObject<{
             pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_choice_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -3709,6 +3717,7 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
         pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_choice_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -3779,6 +3788,7 @@ const conversationRouteView: z.ZodDiscriminatedUnion<[z.ZodObject<{
         pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        rejected_choice_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -3858,6 +3868,7 @@ const conversationRouteWritten: z.ZodObject<{
             pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_choice_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -3928,6 +3939,7 @@ const conversationRouteWritten: z.ZodObject<{
             pairing_not_linked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             pairing_unlink_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             pairing_unlinked: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            rejected_choice_unavailable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_could_not_receive: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_too_large: z.ZodDefault<z.ZodNullable<z.ZodString>>;
             rejected_unreadable: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -4004,7 +4016,7 @@ export interface ConversationThreadFilters {
     // (undocumented)
     readonly address?: string;
     // (undocumented)
-    readonly status?: s.ConversationDeliveryStatus;
+    readonly status?: ConversationDeliveryStatus;
 }
 
 // @public
@@ -4409,7 +4421,7 @@ const conversationTranscriptPage: z.ZodObject<{
 // @public
 export interface ConversationTranscriptQuery {
     // (undocumented)
-    readonly order: s.TranscriptOrder;
+    readonly order: TranscriptOrder;
     // (undocumented)
     readonly page: number;
     // (undocumented)
@@ -5723,6 +5735,7 @@ export function createApiClient(config: ApiConfig): {
                 pairing_not_linked: string | null;
                 pairing_unlink_unavailable: string | null;
                 pairing_unlinked: string | null;
+                rejected_choice_unavailable: string | null;
                 rejected_could_not_receive: string | null;
                 rejected_too_large: string | null;
                 rejected_unreadable: string | null;
@@ -5781,6 +5794,7 @@ export function createApiClient(config: ApiConfig): {
                 pairing_not_linked: string | null;
                 pairing_unlink_unavailable: string | null;
                 pairing_unlinked: string | null;
+                rejected_choice_unavailable: string | null;
                 rejected_could_not_receive: string | null;
                 rejected_too_large: string | null;
                 rejected_unreadable: string | null;
@@ -5846,6 +5860,7 @@ export function createApiClient(config: ApiConfig): {
                 pairing_not_linked: string | null;
                 pairing_unlink_unavailable: string | null;
                 pairing_unlinked: string | null;
+                rejected_choice_unavailable: string | null;
                 rejected_could_not_receive: string | null;
                 rejected_too_large: string | null;
                 rejected_unreadable: string | null;
@@ -5904,6 +5919,7 @@ export function createApiClient(config: ApiConfig): {
                 pairing_not_linked: string | null;
                 pairing_unlink_unavailable: string | null;
                 pairing_unlinked: string | null;
+                rejected_choice_unavailable: string | null;
                 rejected_could_not_receive: string | null;
                 rejected_too_large: string | null;
                 rejected_unreadable: string | null;
@@ -9729,21 +9745,21 @@ export interface CreatePresetBody {
     // (undocumented)
     readonly description: string;
     // (undocumented)
-    readonly extensions?: readonly s.PresetExtensionElement[][];
+    readonly extensions?: readonly PresetExtensionElement[][];
     // (undocumented)
     readonly fixed_kwargs?: Record<string, unknown>;
     // (undocumented)
-    readonly input_map?: s.TemplatedText | string | null;
+    readonly input_map?: TemplatedText | string | null;
     // (undocumented)
     readonly input_schema?: Record<string, unknown> | null;
     // (undocumented)
     readonly name: string;
     // (undocumented)
-    readonly output_map?: s.TemplatedText | string | null;
+    readonly output_map?: TemplatedText | string | null;
     // (undocumented)
     readonly output_schema?: Record<string, unknown> | null;
     // (undocumented)
-    readonly state_binding?: s.StateBinding | null;
+    readonly state_binding?: StateBinding | null;
 }
 
 // @public (undocumented)
@@ -10983,7 +10999,7 @@ const inviteRow: z.ZodObject<{
 }, z.core.$strict>;
 
 // @public
-interface InvokeMemberActionBody {
+export interface InvokeMemberActionBody {
     // (undocumented)
     readonly action_key: string;
     // (undocumented)
@@ -14183,7 +14199,7 @@ export interface RoleCreateBody {
     // (undocumented)
     readonly description?: string;
     // (undocumented)
-    readonly grants?: Record<string, s.GrantLevel>;
+    readonly grants?: Record<string, GrantLevel>;
     // (undocumented)
     readonly name: string;
 }
@@ -14228,7 +14244,7 @@ export interface RoleUpdateBody {
     // (undocumented)
     readonly description?: string;
     // (undocumented)
-    readonly grants?: Record<string, s.GrantLevel>;
+    readonly grants?: Record<string, GrantLevel>;
 }
 
 // @public (undocumented)
@@ -14665,674 +14681,24 @@ const runTraceOutline: z.ZodObject<{
     traceId: z.ZodString;
 }, z.core.$strip>;
 
-declare namespace s {
-    export {
-        toolRunList,
-        toolRunRecord,
-        toolRunSubmitResult,
-        jsonSchema,
-        jsonValue,
-        tokensPayload,
-        TokensPayload,
-        createdApiKey,
-        editApiKeyResult,
-        revokeApiKeyResult,
-        authScopes,
-        addUrlToScopeResult,
-        removeUrlFromScopeResult,
-        removeScopeResult,
-        authRoute,
-        AuthRoute,
-        authRoutes,
-        routeAction,
-        RouteAction,
-        routeRoleReach,
-        RouteRoleReach,
-        publicRoutes,
-        pinPublicResult,
-        unpinPublicResult,
-        backupSections,
-        backupExportDocument,
-        BackupExportDocument,
-        backupDocument,
-        BackupDocument,
-        backupNewApiKeys,
-        BackupNewApiKeys,
-        backupSectionReport,
-        BackupSectionReport,
-        backupImportReport,
-        BackupImportReport,
-        routeEntry,
-        RouteEntry,
-        patternEntry,
-        PatternEntry,
-        subMcpEntry,
-        SubMcpEntry,
-        meProjection,
-        MeProjection,
-        claimLinkCreated,
-        ClaimLinkCreated,
-        logoutResult,
-        LogoutResult,
-        authCapabilities,
-        AuthCapabilities,
-        channels,
-        Channels,
-        ChannelEntry,
-        envConfig,
-        configMode,
-        subServiceView,
-        configFieldView,
-        providerView,
-        ProviderView,
-        connectorCategoryView,
-        ConnectorCategoryView,
-        providers,
-        ProviderCatalogResponse,
-        connectionView,
-        ConnectionView,
-        connectionsList,
-        startConnectResult,
-        reconnectResult,
-        disconnectResult,
-        patchSubServicesResult,
-        oauthCompleteResult,
-        OAuthCompleteResult,
-        discoveredServer,
-        DiscoveredServer,
-        providerMutationResult,
-        ProviderMutationResult,
-        removeProviderResult,
-        RemoveProviderResult,
-        conversationDoor,
-        ConversationDoor,
-        conversationTargetKind,
-        ConversationTargetKind,
-        conversationMode,
-        ConversationMode,
-        conversationDeliveryStatus,
-        ConversationDeliveryStatus,
-        conversationAnswerStatus,
-        ConversationAnswerStatus,
-        conversationRecordOrigin,
-        ConversationRecordOrigin,
-        conversationRouteView,
-        ConversationRouteView,
-        conversationRoutes,
-        ConversationRoutes,
-        conversationRouteWritten,
-        ConversationRouteWritten,
-        conversationRouteDeleted,
-        ConversationRouteDeleted,
-        conversationThread,
-        ConversationThread,
-        conversationThreadsPage,
-        ConversationThreadsPage,
-        conversationMessage,
-        ConversationMessage,
-        transcriptOrder,
-        TranscriptOrder,
-        conversationTranscriptPage,
-        ConversationTranscriptPage,
-        conversationMessageSearchPage,
-        ConversationMessageSearchPage,
-        conversationThreadMode,
-        ConversationThreadMode,
-        conversationThreadModeState,
-        ConversationThreadModeState,
-        conversationThreadMessageSent,
-        ConversationThreadMessageSent,
-        conversationConfigs,
-        ConversationConfigs,
-        conversationConfigWritten,
-        ConversationConfigWritten,
-        conversationConfigDeleted,
-        ConversationConfigDeleted,
-        conversationFailedMessages,
-        ConversationFailedMessages,
-        conversationThreadDeleted,
-        ConversationThreadDeleted,
-        conversationPersonDeleted,
-        ConversationPersonDeleted,
-        extension,
-        extensions,
-        Extension,
-        presetExtensionElement,
-        PresetExtensionElement,
-        toolExtensions,
-        ToolExtensions,
-        backendInfo,
-        BackendInfo,
-        workerKind,
-        WorkerKind,
-        workerState,
-        WorkerState,
-        workerLastOp,
-        WorkerLastOp,
-        fleetWorker,
-        FleetWorker,
-        fleetWorkers,
-        FleetWorkers,
-        fleetOutcome,
-        FleetOutcome,
-        fleetWorkerResult,
-        FleetWorkerResult,
-        fleetResult,
-        FleetResult,
-        fleetReloadResult,
-        FleetReloadResult,
-        fleetReportFanout,
-        FleetReportFanout,
-        recycleEntry,
-        RecycleEntry,
-        freshLife,
-        FreshLife,
-        recycleStop,
-        RecycleStop,
-        recycleRoll,
-        RecycleRoll,
-        awaitingWorker,
-        AwaitingWorker,
-        triggerAuth,
-        TriggerAuth,
-        hookList,
-        HookList,
-        hookRegistered,
-        hookRemoved,
-        hookVerifiers,
-        topicVerifierSet,
-        topicVerifierRemoved,
-        answerFormat,
-        AnswerFormat,
-        mediaKind,
-        MediaKind,
-        interactionMediaItem,
-        InteractionMediaItem,
-        attachmentMediaKind,
-        AttachmentMediaKind,
-        attachmentMediaItem,
-        AttachmentMediaItem,
-        formOption,
-        FormOption,
-        formData,
-        FormData_2 as FormData,
-        displayBlockKind,
-        DisplayBlockKind,
-        displayBlock,
-        DisplayBlock,
-        formPageKind,
-        FormPageKind,
-        formPage,
-        FormPage,
-        formPages,
-        FormPages,
-        fieldWording,
-        FieldWording,
-        formWording,
-        FormWording,
-        choiceWording,
-        ChoiceWording,
-        answerWording,
-        AnswerWording,
-        lineWording,
-        LineWording,
-        pageCopy,
-        PageCopy,
-        formPageWording,
-        FormPageWording,
-        answerPageWording,
-        AnswerPageWording,
-        countdownWording,
-        CountdownWording,
-        statusWording,
-        StatusWording,
-        wording,
-        Wording,
-        formReactions,
-        FormReactions,
-        formUpdate,
-        FormUpdate,
-        reactionEvent,
-        ReactionEvent,
-        ReactionEventKind,
-        interactionReaction,
-        InteractionReaction,
-        interaction,
-        Interaction,
-        interactionAnswered,
-        InteractionAnswered,
-        interactionCancelled,
-        InteractionCancelled,
-        interactionsPage,
-        InteractionsPage,
-        loginFormField,
-        loginMethod,
-        loginMethods,
-        loginResult,
-        LoginFormField,
-        LoginMethod,
-        LoginMethods,
-        LoginResult,
-        connectorRef,
-        ConnectorRef,
-        manifestMcpEntry,
-        ManifestMcpEntry,
-        manifestExtensionSettings,
-        ManifestExtensionSettings,
-        manifestView,
-        mcpEnvRef,
-        McpEnvRef,
-        mcpEnvRefs,
-        McpEnvRefs,
-        reloadConfigResult,
-        ReloadConfigResult,
-        mcpAdvertisedTools,
-        McpAdvertisedTools,
-        McpAdvertisedTool,
-        routeMethod,
-        RouteMethod,
-        marketplaceDelivery,
-        MarketplaceDelivery,
-        marketplaceSource,
-        MarketplaceSource,
-        marketplaceRequiredEnvVar,
-        MarketplaceRequiredEnvVar,
-        marketplaceRouteDecl,
-        MarketplaceRouteDecl,
-        marketplaceRoutesDecl,
-        MarketplaceRoutesDecl,
-        marketplaceItem,
-        MarketplaceItem,
-        marketplaceSearchKind,
-        MarketplaceSearchKind,
-        marketplaceSearchGroup,
-        MarketplaceSearchGroup,
-        marketplaceSearchRow,
-        MarketplaceSearchRow,
-        marketplaceSearchPage,
-        MarketplaceSearchPage,
-        marketplaceVersion,
-        MarketplaceVersion,
-        marketplaceLatestVersion,
-        MarketplaceLatestVersion,
-        marketplaceAdvisory,
-        MarketplaceAdvisory,
-        marketplacePluginDetail,
-        MarketplacePluginDetail,
-        marketplaceInstalledCompat,
-        MarketplaceInstalledCompat,
-        marketplaceInstalledPlugin,
-        MarketplaceInstalledPlugin,
-        marketplaceInstalled,
-        MarketplaceInstalled,
-        marketplaceUpgradeAllRow,
-        MarketplaceUpgradeAllRow,
-        marketplaceUpgradeAllResult,
-        MarketplaceUpgradeAllResult,
-        marketplaceAdvisories,
-        marketplaceCategories,
-        marketplaceKinds,
-        marketplaceMountedRoute,
-        MarketplaceMountedRoute,
-        marketplaceInstallResult,
-        MarketplaceInstallResult,
-        marketplacePreviewRoute,
-        MarketplacePreviewRoute,
-        marketplacePreviewItem,
-        MarketplacePreviewItem,
-        marketplacePreviewCollision,
-        MarketplacePreviewCollision,
-        marketplacePreviewPublicRoute,
-        MarketplacePreviewPublicRoute,
-        marketplaceInstallPreview,
-        MarketplaceInstallPreview,
-        marketplaceUninstallResult,
-        MarketplaceUninstallResult,
-        memberActionScope,
-        MemberActionScope,
-        memberPrincipalState,
-        MemberPrincipalState,
-        memberRow,
-        MemberRow,
-        inviteRow,
-        InviteRow,
-        memberDirectory,
-        MemberDirectory,
-        memberActionDescriptor,
-        MemberActionDescriptor,
-        memberActionCatalog,
-        MemberActionCatalog,
-        invokeMemberActionResult,
-        InvokeMemberActionResult,
-        notification,
-        Notification_2 as Notification,
-        notifications,
-        Notifications,
-        dashboardMetrics,
-        DashboardMetrics,
-        run,
-        Run,
-        runsPage,
-        spanKind,
-        SpanKind,
-        runSpanOutline,
-        RunSpanOutline,
-        runSpan,
-        RunSpan,
-        runTraceOutline,
-        RunTraceOutline,
-        runTrace,
-        RunTrace,
-        observabilityCapabilities,
-        ObservabilityCapabilities,
-        resolvedSpanValue,
-        ResolvedSpanValue,
-        validateConditionResult,
-        ValidateConditionResult,
-        policyVersion,
-        PolicyVersion,
-        policyVersionList,
-        policyRollback,
-        presetExtensions,
-        presetRecord,
-        PresetRecord,
-        presetList,
-        presetDetail,
-        PresetDetail,
-        presetVersion,
-        PresetVersion,
-        presetVersionList,
-        presetRollback,
-        presetDeleted,
-        presetRenamed,
-        PresetRenamed,
-        holdersPreview,
-        HoldersPreview,
-        referenceHolder,
-        ReferenceHolder,
-        PresetHolderAction,
-        presetValidation,
-        PresetValidation,
-        presetVersionTags,
-        PresetVersionTags,
-        principalRef,
-        PrincipalRef,
-        principalKind,
-        PrincipalKind,
-        principal,
-        Principal,
-        principalList,
-        PrincipalList,
-        principalDeleted,
-        PrincipalDeleted,
-        settingsProfileSummary,
-        SettingsProfileSummary,
-        settingsProfileList,
-        settingsProfileBody,
-        SettingsProfileBody,
-        settingsProfileSaved,
-        SettingsProfileSaved,
-        settingsProfileDeleted,
-        settingsProfileRollback,
-        SettingsProfileRollback,
-        settingsProfileDiff,
-        SettingsProfileDiff,
-        profileApplyResponse,
-        ProfileApplyResponse,
-        settingsProfileVersionMeta,
-        SettingsProfileVersionMeta,
-        settingsProfileVersionList,
-        settingsProfileVersion,
-        SettingsProfileVersion,
-        grantLevel,
-        GrantLevel,
-        roleGrants,
-        RoleGrants,
-        roleList,
-        roleDeleted,
-        roleVersion,
-        RoleVersion,
-        roleAuditEvent,
-        RoleAuditEvent,
-        roleVersions,
-        RoleVersions,
-        scheduleList,
-        serverDateTime,
-        TemplatedText,
-        requiredTemplatedText,
-        templatedText,
-        stateInjection,
-        StateInjection,
-        stateUpdate,
-        StateUpdate,
-        stateAttach,
-        StateAttach,
-        stateBinding,
-        StateBinding,
-        presetBody,
-        PresetBody,
-        conversationRoute,
-        ConversationRoute,
-        apiConversationRouteCreate,
-        ApiConversationRouteCreate,
-        channelConversationRouteCreate,
-        ChannelConversationRouteCreate,
-        conversationRouteCreate,
-        ConversationRouteCreate,
-        targetConversationConfig,
-        TargetConversationConfig,
-        channelTemplate,
-        ChannelTemplate,
-        hookSubject,
-        HookSubject,
-        hookParams,
-        HookParams,
-        hookRegister,
-        HookRegister,
-        stateDeclaration,
-        StateDeclaration,
-        stateTemplateDocument,
-        StateTemplateDocument,
-        templateJq,
-        TemplateJq,
-        templateReconcile,
-        TemplateReconcile,
-        templateDeclarations,
-        TemplateDeclarations,
-        stateTemplateParameter,
-        StateTemplateParameter,
-        stateRegimeRule,
-        StateRegimeRule,
-        stateTemplateTrace,
-        StateTemplateTrace,
-        policyBody,
-        PolicyBody,
-        roleBody,
-        RoleBody,
-        settingsProfileName,
-        SettingsProfileName,
-        previousProfileName,
-        PreviousProfileName,
-        scheduleCreate,
-        ScheduleCreate,
-        scheduleListRow,
-        ScheduleListRow,
-        scheduleRecord,
-        ScheduleRecord,
-        servedConstants,
-        ServedConstants,
-        servedVectors,
-        servedDocumentsJson,
-        settingsSchema,
-        SettingsSchema,
-        setupResult,
-        SetupResult,
-        SetupBody,
-        stateSubject,
-        StateSubject,
-        stateRegime,
-        stateListItem,
-        StateListItem,
-        stateList,
-        heldPendingSave,
-        HeldPendingSave,
-        stateAttachment,
-        StateAttachment,
-        stateAttachmentList,
-        stateDetail,
-        StateDetail,
-        stateDeclarationSaved,
-        StateDeclarationSaved,
-        stateStats,
-        StateStats,
-        stateTemplateListItem,
-        StateTemplateListItem,
-        stateTemplateList,
-        stateRecord,
-        StateRecord,
-        applyResult,
-        ApplyResult,
-        templateJqResult,
-        TemplateJqResult,
-        templateJqApplyResult,
-        TemplateJqApplyResult,
-        subjectRow,
-        SubjectRow,
-        subjectPage,
-        SubjectPage,
-        recordSearchPage,
-        RecordSearchPage,
-        validationReason,
-        ValidationReason,
-        recordValidation,
-        RecordValidation,
-        recordCheckItem,
-        RecordCheckItem,
-        recordCheckPage,
-        RecordCheckPage,
-        completedOrigin,
-        CompletedOrigin,
-        writeEntry,
-        WriteEntry,
-        writesPage,
-        WritesPage,
-        consumerLink,
-        ConsumerLink,
-        consumerRow,
-        ConsumerRow,
-        stateConsumers,
-        StateConsumers,
-        stateDeleted,
-        stateAttached,
-        StateAttached,
-        stateAttachmentUpdated,
-        StateAttachmentUpdated,
-        stateDetached,
-        StateDetached,
-        stateFoldReport,
-        StateFoldReport,
-        stateTemplateDeleted,
-        recordErased,
-        stateRetentionPruned,
-        StateRetentionPruned,
-        pendingSaveStatus,
-        PendingSaveStatus,
-        pendingSave,
-        PendingSave,
-        pendingSavesPage,
-        PendingSavesPage,
-        pendingSaveRetried,
-        PendingSaveRetried,
-        pendingSaveDiscarded,
-        storageInfo,
-        StorageInfo,
-        storedEntry,
-        StoredEntry,
-        storageResourceList,
-        storageResourceStat,
-        StorageResourceStat,
-        storageResourceStored,
-        storageResourceDeleted,
-        storageDirDeleted,
-        studioPluginListingEntry,
-        studioPluginRegistry,
-        StudioPluginListingEntry,
-        subMcpMount,
-        SubMcpMount,
-        subMcpList,
-        subMcpCreated,
-        subMcpRemoved,
-        kindStatus,
-        kindStatusList,
-        KindStatus,
-        toolExtensionsApplyResult,
-        ToolExtensionsApplyResult,
-        mcpStatus,
-        mcpReloadResult,
-        McpReloadResult,
-        templateNames,
-        templateEntry,
-        TemplateEntry,
-        templateUploaded,
-        templateDeleted,
-        templateDirDeleted,
-        templateRendered,
-        templateCacheCleared,
-        folderRecord,
-        FolderRecord,
-        toolMetaRecord,
-        ToolMetaRecord,
-        toolMetaOverlay,
-        ToolMetaOverlay,
-        toolMetaDeleted,
-        folderDeleted,
-        toolNames,
-        toolSchema,
-        ToolSchema,
-        allToolSchemas,
-        runAnswer,
-        RunAnswer,
-        runToolResult,
-        parkedStatus,
-        ParkedStatus,
-        parkedCallerAsk,
-        ParkedCallerAsk,
-        visitOutcome,
-        VisitOutcome,
-        toolMediaResult,
-        ToolMediaResult,
-        toolTagEntry,
-        toolTags,
-        ToolTagEntry,
-        triggerLinkCreated,
-        TriggerLinkCreated,
-        triggerLinkRecord,
-        TriggerLinkRecord,
-        triggerLinkList,
-        TriggerLinkList,
-        triggerLinkDeleted,
-        TriggerLinkDeleted
-    }
-}
-
 // @public
 export interface SavePresetVersionBody {
     // (undocumented)
     readonly description?: string;
     // (undocumented)
-    readonly extensions?: readonly s.PresetExtensionElement[][];
+    readonly extensions?: readonly PresetExtensionElement[][];
     // (undocumented)
     readonly fixed_kwargs?: Record<string, unknown>;
     // (undocumented)
-    readonly input_map?: s.TemplatedText | string | null;
+    readonly input_map?: TemplatedText | string | null;
     // (undocumented)
     readonly input_schema?: Record<string, unknown> | null;
     // (undocumented)
-    readonly output_map?: s.TemplatedText | string | null;
+    readonly output_map?: TemplatedText | string | null;
     // (undocumented)
     readonly output_schema?: Record<string, unknown> | null;
     // (undocumented)
-    readonly state_binding?: s.StateBinding | null;
+    readonly state_binding?: StateBinding | null;
 }
 
 // @public (undocumented)
@@ -15560,6 +14926,7 @@ declare namespace schemas {
         AuthCapabilities,
         channels,
         Channels,
+        channelEntry,
         ChannelEntry,
         envConfig,
         configMode,
@@ -15770,6 +15137,7 @@ declare namespace schemas {
         ReloadConfigResult,
         mcpAdvertisedTools,
         McpAdvertisedTools,
+        mcpAdvertisedTool,
         McpAdvertisedTool,
         routeMethod,
         RouteMethod,
@@ -17058,7 +16426,7 @@ export const servedDocumentsJson: {
             };
             readonly ReplyTexts: {
                 readonly additionalProperties: false;
-                readonly description: "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` / ``rejected_unreadable`` are the notices for an inbound message the\nchannel cannot bridge, a file over the cap, a file the channel could not fetch, and an inbound\nmessage whose body the channel could not read. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.";
+                readonly description: "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` / ``rejected_unreadable`` / ``rejected_choice_unavailable`` are the\nnotices for an inbound message the channel cannot bridge, a file over the cap, a file the channel\ncould not fetch, an inbound message whose body the channel could not read, and a tap on a choice\nthe channel can no longer read. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.";
                 readonly properties: {
                     readonly error: {
                         readonly anyOf: readonly [{
@@ -17155,6 +16523,18 @@ export const servedDocumentsJson: {
                         }];
                         readonly default: null;
                         readonly title: "Pairing Unlinked";
+                    };
+                    readonly rejected_choice_unavailable: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Rejected Choice Unavailable";
                     };
                     readonly rejected_could_not_receive: {
                         readonly anyOf: readonly [{
@@ -17926,7 +17306,7 @@ export const servedDocumentsJson: {
             };
             readonly ReplyTexts: {
                 readonly additionalProperties: false;
-                readonly description: "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` / ``rejected_unreadable`` are the notices for an inbound message the\nchannel cannot bridge, a file over the cap, a file the channel could not fetch, and an inbound\nmessage whose body the channel could not read. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.";
+                readonly description: "The caller's words for the platform's fixed participant replies on one route. Frozen, strict keys.\n\n``error`` is sent when a turn fails and the target gave no reply; ``slow_down`` when an address\nis over the turn cap; ``pairing_linked`` when a pair code was redeemed and the two persons\nmerged; ``pairing_unlinked`` when ``/unlink`` detached the address; ``pairing_not_linked`` when\n``/unlink`` came from an address linked to nothing; ``pairing_code_invalid`` when a redeem was\nrefused; ``pairing_code`` is the ``/link`` reply carrying the fresh code, a template that MUST\nreference ``{pairing_code}`` and may reference ``{expires_at}`` (the code's ISO-8601 expiry),\nwith no conversion or format spec; ``pairing_link_unavailable`` when a redeem met a person being\nerased (its code is consumed, so the reply asks for a new one); ``pairing_unlink_unavailable``\nwhen ``/unlink`` met the sender's person being erased; ``rejected_unsupported_type`` / ``rejected_too_large`` /\n``rejected_could_not_receive`` / ``rejected_unreadable`` / ``rejected_choice_unavailable`` are the\nnotices for an inbound message the channel cannot bridge, a file over the cap, a file the channel\ncould not fetch, an inbound message whose body the channel could not read, and a tap on a choice\nthe channel can no longer read. Every member but\n``pairing_code`` is literal text: a ``{`` in it is drawn as written. Each is a\n:data:`~tai42_contract.interactions.ReplyText` in the line's language; absent, the built-in\nEnglish reply is sent. An empty catalogue names nothing and is refused; an unknown key is\nrefused.";
                 readonly properties: {
                     readonly error: {
                         readonly anyOf: readonly [{
@@ -18023,6 +17403,18 @@ export const servedDocumentsJson: {
                         }];
                         readonly default: null;
                         readonly title: "Pairing Unlinked";
+                    };
+                    readonly rejected_choice_unavailable: {
+                        readonly anyOf: readonly [{
+                            readonly maxLength: 2000;
+                            readonly minLength: 1;
+                            readonly pattern: "\\S";
+                            readonly type: "string";
+                        }, {
+                            readonly type: "null";
+                        }];
+                        readonly default: null;
+                        readonly title: "Rejected Choice Unavailable";
                     };
                     readonly rejected_could_not_receive: {
                         readonly anyOf: readonly [{
@@ -22582,7 +21974,7 @@ const serverDateTime: z.ZodObject<{
 }, z.core.$loose>;
 
 // @public
-interface SetMcpSecretEnvBody {
+export interface SetMcpSecretEnvBody {
     // (undocumented)
     readonly key_hint: string;
     // (undocumented)
@@ -23091,7 +22483,7 @@ export interface StateDeclarationBody {
     // (undocumented)
     readonly retention_days?: number | null;
     // (undocumented)
-    readonly schema: s.TemplatedText | Record<string, unknown>;
+    readonly schema: TemplatedText | Record<string, unknown>;
     // (undocumented)
     readonly subject_kinds: readonly string[];
 }
@@ -23424,7 +22816,7 @@ export interface StateTemplateBody {
     // (undocumented)
     readonly regimes?: Record<string, unknown>[];
     // (undocumented)
-    readonly schema: s.TemplatedText | Record<string, unknown>;
+    readonly schema: TemplatedText | Record<string, unknown>;
     // (undocumented)
     readonly trace?: Record<string, unknown>;
 }
@@ -24824,21 +24216,21 @@ export interface ValidatePresetBody {
     // (undocumented)
     readonly description?: string;
     // (undocumented)
-    readonly extensions?: readonly s.PresetExtensionElement[][];
+    readonly extensions?: readonly PresetExtensionElement[][];
     // (undocumented)
     readonly fixed_kwargs?: Record<string, unknown>;
     // (undocumented)
-    readonly input_map?: s.TemplatedText | string | null;
+    readonly input_map?: TemplatedText | string | null;
     // (undocumented)
     readonly input_schema?: Record<string, unknown> | null;
     // (undocumented)
     readonly name: string;
     // (undocumented)
-    readonly output_map?: s.TemplatedText | string | null;
+    readonly output_map?: TemplatedText | string | null;
     // (undocumented)
     readonly output_schema?: Record<string, unknown> | null;
     // (undocumented)
-    readonly state_binding?: s.StateBinding | null;
+    readonly state_binding?: StateBinding | null;
 }
 
 // @public (undocumented)

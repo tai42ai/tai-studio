@@ -32,7 +32,9 @@
  * the wrong shape, while a missing required value keeps its required message. A reaction's
  * `display` value for an image slot draws through the scheme-gated image: a safe source is
  * drawn, `null` returns the block's alt text, and a source the gate refuses is not drawn.
- * Abstract fixtures only. The form shot pair is captured in both themes, by tokens, for visual
+ * A reaction's `null` for a field value clears that field: its control shows empty, a
+ * cleared required field is held back with its required message, and the answer carries
+ * no key for a cleared optional field. Abstract fixtures only. The form shot pair is captured in both themes, by tokens, for visual
  * review.
  */
 import { mkdir } from 'node:fs/promises';
@@ -912,4 +914,95 @@ test("a reaction's value draws in an image slot, clears to the alt text on null,
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await drawSlotPicture(card);
   await card.screenshot({ path: `${OUT_DIR}/form-slot-image-dark.png` });
+});
+
+/** One pending form whose `plan` change fires a reaction that clears `seats` (required) and
+ * `note` (optional) with a `null` value each. */
+const CLEARING_REACTION_PAGE = {
+  data: {
+    items: [
+      {
+        interaction_id: 'clear-react-1',
+        group_id: 'clear-react-1',
+        sensitive: false,
+        answer_format: 'form',
+        question: 'Pick a plan',
+        created_at: '2026-08-01T00:00:00.000Z',
+        timeout_at: '2026-08-09T00:00:00.000Z',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: {
+              plan: { type: 'string', enum: ['basic', 'pro'] },
+              seats: { type: 'integer' },
+              note: { type: 'string' },
+            },
+            required: ['seats'],
+          },
+          reactions: { field_changed: ['plan'] },
+        },
+      },
+    ],
+    total: 1,
+    page: 1,
+    page_size: 50,
+    next_page: null,
+    truncated: false,
+  },
+};
+
+test('a reaction that returns null for a field clears it: the control empties, a required one is held back, and the answer carries no cleared key', async ({
+  page,
+}) => {
+  await stubInbox(page, CLEARING_REACTION_PAGE);
+  await page.route(
+    (url) => url.pathname === '/api/interactions/clear-react-1/react',
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            interaction_id: 'clear-react-1',
+            update: { values: { seats: null, note: null } },
+          },
+        }),
+      });
+    },
+  );
+  const answers: unknown[] = [];
+  await page.route(
+    (url) => url.pathname === '/api/interactions/clear-react-1/answer',
+    async (route) => {
+      answers.push(route.request().postDataJSON());
+      await route.fulfill({
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ data: { interaction_id: 'clear-react-1', status: 'answered' } }),
+      });
+    },
+  );
+  await page.goto('/interactions');
+
+  const card = page.getByTestId('interaction-card').filter({ hasText: 'Pick a plan' });
+  const seats = card.getByLabel('seats', { exact: true });
+  const note = card.getByLabel('note', { exact: true });
+  await seats.fill('4');
+  await note.fill('hello');
+
+  // The reaction nulls both fields: each control shows its empty state.
+  await card.getByRole('radio', { name: 'pro' }).click();
+  await expect(seats).toHaveValue('');
+  await expect(note).toHaveValue('');
+
+  // The cleared required field is held back with its required sentence.
+  const submit = card.getByRole('button', { name: 'Submit' });
+  await submit.click();
+  await expect(card.getByText('"seats" is required')).toBeVisible();
+  expect(answers).toEqual([]);
+
+  // Filled again, the answer carries it and no key for the cleared optional field.
+  await seats.fill('2');
+  await submit.click();
+  await expect.poll(() => answers).toEqual([{ answer: { plan: 'pro', seats: 2 } }]);
 });

@@ -1,5 +1,6 @@
 /** Settings-profile CRUD, versioning and apply sub-client. */
 import { apiRoutes, buildPath } from '../generated/api-routes';
+import type { SettingsProfileBody } from '../schemas';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -14,7 +15,7 @@ export function profilesClient(t: Transport) {
       req(buildPath(apiRoutes.get_api_config_profiles_name.path, { name }), s.settingsProfileBody, {
         signal,
       }),
-    putSettingsProfile: (name: string, body: s.SettingsProfileBody) =>
+    putSettingsProfile: (name: string, body: SettingsProfileBody) =>
       req(
         buildPath(apiRoutes.put_api_config_profiles_name.path, { name }),
         s.settingsProfileSaved,

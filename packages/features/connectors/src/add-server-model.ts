@@ -6,19 +6,17 @@
  */
 import type { AddServerArgs, DiscoveredServer } from '@tai42/api-client';
 
-export const ADDRESS_ERROR = 'Enter an https address.';
+export const ADDRESS_ERROR = 'Enter an http or https address.';
 export const NAME_ERROR = 'A name is required.';
 export const IDENTIFIER_ERROR =
   'Use lowercase letters, digits and underscores, starting with a letter.';
 
-/** The hosts on which a plain `http:` server address is accepted. */
-const LOOPBACK_HOSTS: ReadonlySet<string> = new Set(['localhost', '127.0.0.1']);
-
 /** The platform's provider-id rule: a lowercase letter, then lowercase letters, digits or `_`. */
 const IDENTIFIER_RULE = /^[a-z][a-z0-9_]*$/;
 
-/** The field error for a server address, or `null` when it is a parseable https address
- * (or `http:` on localhost / 127.0.0.1). */
+/** The field error for a server address, or `null` when it parses as an `https:` or `http:`
+ * URL. Which hosts may use plain `http:` is the server's rule; its refusal shows as the
+ * look-up's failure. */
 export function addressError(raw: string): string | null {
   let url: URL;
   try {
@@ -26,9 +24,7 @@ export function addressError(raw: string): string | null {
   } catch {
     return ADDRESS_ERROR;
   }
-  if (url.protocol === 'https:') return null;
-  if (url.protocol === 'http:' && LOOPBACK_HOSTS.has(url.hostname)) return null;
-  return ADDRESS_ERROR;
+  return url.protocol === 'https:' || url.protocol === 'http:' ? null : ADDRESS_ERROR;
 }
 
 /** The field error for a provider name, or `null` when one is given. */

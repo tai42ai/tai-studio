@@ -10,11 +10,11 @@
  * runtime).
  */
 import type { ApiClient } from '@tai42/api-client';
-import { createContext, useContext } from 'react';
+import { createContext, type Provider, useContext } from 'react';
 
 const ApiContext = createContext<ApiClient | null>(null);
 
-export const ApiProvider = ApiContext.Provider;
+export const ApiProvider: Provider<ApiClient | null> = ApiContext.Provider;
 
 export function useApi(): ApiClient {
   const client = useContext(ApiContext);

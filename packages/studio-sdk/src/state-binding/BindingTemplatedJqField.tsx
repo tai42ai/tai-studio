@@ -4,11 +4,12 @@
  * door, else a textarea) carrying the attached templates' template-jq inserts, and
  * whose STORED mode picks a stored template that renders to the jq at run time.
  */
+import type { TemplatedText } from '@tai42/api-client';
 import type { ReactNode } from 'react';
 
 import { TemplatedTextField } from '../components/templated-text-field';
 import { BindingJqField, type TemplateJqSuggestion } from './BindingJqField';
-import type { TemplatedText, TemplatedTextCatalog } from './types';
+import type { TemplatedTextCatalog } from './types';
 
 export interface BindingTemplatedJqFieldProps {
   readonly label: string;

@@ -28,7 +28,7 @@ export interface ErrorBoundaryProps {
 // or any object a plugin chose to throw — so the caught value is `unknown` and
 // coerced to a readable string only for display. `hasError` is the caught flag
 // (not a sentinel on `error`), so even a falsy throw such as `null` is contained.
-interface ErrorBoundaryState {
+export interface ErrorBoundaryState {
   readonly hasError: boolean;
   readonly error: unknown;
 }
