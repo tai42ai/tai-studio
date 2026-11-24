@@ -9726,6 +9726,8 @@ export function createApiClient(config: ApiConfig): {
     readonly storedPresetFaultFromError: (error: unknown) => string | null;
     readonly isMcpStartingError: (error: unknown) => boolean;
     readonly isMcpNotLoadedError: (error: unknown) => boolean;
+    readonly isReloadingError: (error: unknown) => boolean;
+    readonly isWorkerLeavingError: (error: unknown) => boolean;
     readonly failedReplyRoll: typeof failedReplyRoll;
 };
 
