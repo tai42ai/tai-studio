@@ -310,28 +310,6 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
     });
   });
 
-  it('surfaces a server refusal of the combined op loudly (dangling-!ENV / X-band validator)', async () => {
-    const user = userEvent.setup({ delay: null });
-    const setMcpSecretEnv = vi
-      .fn()
-      .mockRejectedValue(new ApiError('refused: dangling !ENV reference', 400));
-    const client = {
-      getMcpStatus: vi.fn().mockResolvedValue(status()),
-      getManifestPreserved: vi.fn().mockResolvedValue(withEnvBlank),
-      getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
-      listExtensions: vi.fn().mockResolvedValue([]),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
-      setMcpSecretEnv,
-    };
-    renderWithProviders(<McpServersSection />, { client });
-
-    await screen.findByTestId('mcp-entry-0');
-    await user.type(screen.getByLabelText('API_KEY'), 'plaintext');
-    await user.click(screen.getByRole('button', { name: 'Use secret' }));
-
-    expect(await screen.findByText('refused: dangling !ENV reference')).toBeInTheDocument();
-  });
-
   it('shows a combined op refused while an MCP server is still starting as that start, not an error', async () => {
     const user = userEvent.setup({ delay: null });
     const message =
@@ -360,12 +338,201 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
     expect(screen.queryByText('Something went wrong')).toBeNull();
   });
 
+  const reloading = 'reloading — the server is applying a config reload; retry shortly';
+  const heldUnpick = "tool selection of 'srv' cannot unpick 'srv_search' — held by:\n  hook 'h1'";
+  const stillStarting =
+    "tool selection of 'srv' cannot be checked: the server did not list its tools: MCP server 'srv' start still in progress after 10s";
+  const notLoaded =
+    "tool selection of 'srv' cannot be checked: the server did not list its tools: MCP server 'srv' is not loaded on this worker; a reload binds it";
+  const leaving = 'leaving — this worker is leaving (recycle) and begins no change; retry shortly';
+
+  it.each([
+    {
+      refusal: 'the reload gate (503)',
+      error: new ApiError(reloading, 503, undefined, 5, { error: reloading, reloading: true }),
+      shown: reloading,
+    },
+    {
+      refusal: 'a server start in progress (503 mcp-server-starting)',
+      error: new ApiError(stillStarting, 503, 'mcp-server-starting', undefined, {
+        error: stillStarting,
+        code: 'mcp-server-starting',
+      }),
+      shown: stillStarting,
+    },
+    {
+      refusal: 'a server this worker has not loaded (503 mcp-server-not-loaded)',
+      error: new ApiError(notLoaded, 503, 'mcp-server-not-loaded', undefined, {
+        error: notLoaded,
+        code: 'mcp-server-not-loaded',
+      }),
+      shown: notLoaded,
+    },
+    {
+      refusal: 'a leaving worker (503 leaving)',
+      error: new ApiError(leaving, 503, undefined, undefined, {
+        error: leaving,
+        leaving: 'recycle',
+      }),
+      shown: leaving,
+    },
+    {
+      refusal: 'the boundary validator (400)',
+      error: new ApiError('refused: dangling !ENV reference', 400),
+      shown: 'refused: dangling !ENV reference',
+    },
+    {
+      refusal: 'a held unpick (409)',
+      error: new ApiError(heldUnpick, 409, undefined, undefined, {
+        detail: heldUnpick,
+        holders: [{ kind: 'hook', tag: 'hooks', name: 'h1', locator: {}, summary: "hook 'h1'" }],
+      }),
+      shown: "tool selection of 'srv' cannot unpick 'srv_search' — held by:",
+    },
+  ])(
+    'leaves the paste and Save doors open after $refusal refuses the combined op, so a resend commits the leaf',
+    async ({ error, shown }) => {
+      const user = userEvent.setup({ delay: null });
+      const setMcpSecretEnv = vi.fn().mockRejectedValueOnce(error).mockResolvedValue(reload(1));
+      const client = {
+        getMcpStatus: vi.fn().mockResolvedValue(status()),
+        getManifestPreserved: vi
+          .fn()
+          .mockResolvedValueOnce(withEnvBlank)
+          .mockResolvedValue(withEnvMarker),
+        getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
+        listExtensions: vi.fn().mockResolvedValue([]),
+        getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
+        setMcpSecretEnv,
+        setMcpConfig: vi.fn().mockResolvedValue(reload(0)),
+      };
+      renderWithProviders(<McpServersSection />, { client });
+
+      await screen.findByTestId('mcp-entry-0');
+      await user.type(screen.getByLabelText('API_KEY'), 'plaintext');
+      await user.click(screen.getByRole('button', { name: 'Use secret' }));
+
+      // The refusal wrote nothing: the editor says what the server said, never that a stored
+      // secret is unconfirmed, and both doors stay open for the resend.
+      expect(await screen.findByText(shown)).toBeInTheDocument();
+      expect(screen.queryByText(/could not be confirmed/)).toBeNull();
+      expect(screen.getByRole('button', { name: /Save config/ })).toBeEnabled();
+
+      await user.type(screen.getByLabelText('API_KEY'), 'plaintext');
+      const useSecret = screen.getByRole('button', { name: 'Use secret' });
+      expect(useSecret).toBeEnabled();
+      await user.click(useSecret);
+
+      await waitFor(() => {
+        expect(setMcpSecretEnv).toHaveBeenCalledTimes(2);
+      });
+      expect(await screen.findByRole('button', { name: 'Change reference' })).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Save config/ })).toBeEnabled();
+      });
+      expect(screen.queryByText(shown)).toBeNull();
+    },
+  );
+
+  it('shuts the paste and Save doors on a 503 that carries no mark of the server', async () => {
+    const user = userEvent.setup({ delay: null });
+    // A proxy in front of the server answers this shape when the upstream drops mid-request,
+    // which can be after the server wrote.
+    const setMcpSecretEnv = vi.fn().mockRejectedValue(new ApiError('Service Unavailable', 503));
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifestPreserved: vi.fn().mockResolvedValue(withEnvBlank),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
+      setMcpSecretEnv,
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByTestId('mcp-entry-0');
+    await user.type(screen.getByLabelText('API_KEY'), 'plaintext');
+    await user.click(screen.getByRole('button', { name: 'Use secret' }));
+
+    expect(await screen.findByText('Service Unavailable')).toBeInTheDocument();
+    expect(
+      screen.getByText('A stored secret could not be confirmed — reload the page'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Save config/ })).toBeDisabled();
+    await user.type(screen.getByLabelText('API_KEY'), 'plaintext');
+    expect(screen.getByRole('button', { name: 'Use secret' })).toBeDisabled();
+  });
+
+  it('leaves the doors open when a paste after a confirmed one is refused by the reload gate', async () => {
+    const user = userEvent.setup({ delay: null });
+    const setMcpSecretEnv = vi
+      .fn()
+      .mockResolvedValueOnce(reload(1))
+      .mockRejectedValueOnce(
+        new ApiError(reloading, 503, undefined, 5, { error: reloading, reloading: true }),
+      );
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifestPreserved: vi
+        .fn()
+        .mockResolvedValueOnce(withEnvBlank)
+        .mockResolvedValue(withEnvMarker),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
+      setMcpSecretEnv,
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByTestId('mcp-entry-0');
+    await user.type(screen.getByLabelText('API_KEY'), 'plaintext');
+    await user.click(screen.getByRole('button', { name: 'Use secret' }));
+    await user.click(await screen.findByRole('button', { name: 'Change reference' }));
+    await user.click(screen.getByRole('button', { name: 'Paste new secret' }));
+    await user.type(screen.getByLabelText('API_KEY'), 'rotated');
+    await user.click(screen.getByRole('button', { name: 'Use secret' }));
+
+    // The second op answered nothing, so the first reply must not stand for it.
+    expect(await screen.findByText(reloading)).toBeInTheDocument();
+    expect(screen.queryByText(/could not be confirmed/)).toBeNull();
+    expect(screen.getByRole('button', { name: /Save config/ })).toBeEnabled();
+    expect(setMcpSecretEnv).toHaveBeenCalledTimes(2);
+  });
+
+  it('shuts the paste and Save doors when the op fails after the server may have written', async () => {
+    const user = userEvent.setup({ delay: null });
+    const setMcpSecretEnv = vi
+      .fn()
+      .mockRejectedValue(new ApiError('the env write stands; the manifest write failed', 500));
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifestPreserved: vi.fn().mockResolvedValue(withEnvBlank),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [], deployment_keys: [] }),
+      setMcpSecretEnv,
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByTestId('mcp-entry-0');
+    await user.type(screen.getByLabelText('API_KEY'), 'plaintext');
+    await user.click(screen.getByRole('button', { name: 'Use secret' }));
+
+    expect(
+      await screen.findByText('the env write stands; the manifest write failed'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('A stored secret could not be confirmed — reload the page'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Save config/ })).toBeDisabled();
+    await user.type(screen.getByLabelText('API_KEY'), 'plaintext');
+    expect(screen.getByRole('button', { name: 'Use secret' })).toBeDisabled();
+  });
+
   it('shows the first line and the holders of a combined op refused for a held unpick', async () => {
     const user = userEvent.setup({ delay: null });
-    const message = "tool selection of 'srv' cannot unpick 'srv_search' — held by:\n  hook 'h1'";
     const setMcpSecretEnv = vi.fn().mockRejectedValue(
-      new ApiError(message, 409, undefined, undefined, {
-        detail: message,
+      new ApiError(heldUnpick, 409, undefined, undefined, {
+        detail: heldUnpick,
         holders: [{ kind: 'hook', tag: 'hooks', name: 'h1', locator: {}, summary: "hook 'h1'" }],
       }),
     );

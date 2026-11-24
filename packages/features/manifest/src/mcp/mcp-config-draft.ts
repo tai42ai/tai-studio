@@ -3,10 +3,11 @@
  * (form ⇄ JSON), the combined secret-paste op, the manifest save with its
  * session-generated orphan-key sweep, and the composed hook the editor consumes.
  */
-import { ApiError, apiRoutes, type ReloadConfigResult } from '@tai42/api-client';
+import { type ApiClient, ApiError, apiRoutes, type ReloadConfigResult } from '@tai42/api-client';
 import {
   collectEnvRefs,
   envConfigKey,
+  mcpListingRefusalOf,
   mcpStatusKey,
   parseEnvMarker,
   preservedManifestKey,
@@ -24,12 +25,39 @@ import { resolveManifestPointer } from './mcp-env-markers';
 
 export type ConfigView = 'form' | 'json';
 
-/** How many times the paste's confirmation read retries the gate's retriable 503 before
- *  it gives up and raises. A fleet reload holds the gate for a few seconds per cycle. */
+/** How many times the paste's confirmation read retries a `503` before it gives up and
+ *  raises. A fleet reload holds the gate for a few seconds per cycle. */
 const RELOAD_RETRIES = 10;
 
 /** The wait between those retries when the refusal named no `Retry-After`. */
 const DEFAULT_RETRY_SECONDS = 2;
+
+/**
+ * Whether `error` is a `503`: the answering side cannot serve now. The confirmation read, a read
+ * that changes nothing, is sent again on it, whoever answered.
+ */
+const isUnavailable = (error: unknown): boolean =>
+  error instanceof ApiError && error.status === 503;
+
+/**
+ * Whether `error` is a refusal the studio can tell came from the combined secret op before it
+ * wrote: a `503` carrying the server's own mark (the reload gate, a leaving worker, a server
+ * listing still starting or not loaded), a request it cannot apply (`400`), or a tool selection
+ * still held (`409`). Any other failure — an unmarked `503` or a `502` among them, which a gateway
+ * in front of the server can answer after the server wrote — is treated as one whose write may
+ * stand.
+ */
+const isRefusedBeforeWriting = (
+  api: Pick<
+    ApiClient,
+    'isReloadingError' | 'isWorkerLeavingError' | 'isMcpStartingError' | 'isMcpNotLoadedError'
+  >,
+  error: unknown,
+): boolean =>
+  api.isReloadingError(error) ||
+  api.isWorkerLeavingError(error) ||
+  mcpListingRefusalOf(api, error) !== null ||
+  (error instanceof ApiError && (error.status === 400 || error.status === 409));
 
 export interface SecretPaste {
   readonly onPasteSecret: (manifestPointer: string, keyHint: string, secret: string) => void;
@@ -47,8 +75,10 @@ export interface SecretPaste {
  * SECOND — atomically, one reload/broadcast. On success the generated key rides back
  * on an AUTHORITATIVE preserved re-read (the op's response carries only a COUNT), and
  * it is recorded here as the sole key the save-time orphan sweep may delete. While the
- * op is storing — or has failed to confirm — no second paste and no save may run: the
- * draft still carries the leaf the server is replacing.
+ * op is storing — or has failed after the server may have written — no second paste and
+ * no save may run: the draft still carries the leaf the server is replacing. A refusal of
+ * the op before it writes wrote nothing, so it shuts neither door: the operator reads the
+ * server's reason and can send the paste again.
  */
 export function useSecretPasteMutation(
   sessionGeneratedKeysRef: RefObject<Set<string>>,
@@ -66,15 +96,14 @@ export function useSecretPasteMutation(
       // is the preserved manifest's leaf at the paste pointer — and it is the sole key the
       // save-time orphan sweep may ever delete. `query` raises when that read fails
       // (an invalidation would swallow the failure and leave the stale, pre-paste manifest
-      // in the cache), retrying the gate's retriable 503 on the delay it names. Raising
-      // here fails the mutation, which keeps the Save and paste doors shut over a draft
-      // that still carries the pre-paste leaf and tells the operator so.
+      // in the cache), retrying a 503 on the delay it names. Raising here fails the
+      // mutation, which keeps the Save and paste doors shut over a draft that still carries
+      // the pre-paste leaf and tells the operator so.
       const preserved = await queryClient.query({
         queryKey: preservedManifestKey,
         queryFn: ({ signal }) => api.getManifestPreserved(signal),
         staleTime: 0,
-        retry: (failureCount, error) =>
-          failureCount < RELOAD_RETRIES && error instanceof ApiError && error.status === 503,
+        retry: (failureCount, error) => failureCount < RELOAD_RETRIES && isUnavailable(error),
         retryDelay: (_attempt, error) =>
           (error instanceof ApiError && error.retryAfterSeconds !== undefined
             ? error.retryAfterSeconds
@@ -95,9 +124,13 @@ export function useSecretPasteMutation(
     },
   });
 
+  // The reply is held from the moment the op answers, so a failure with no reply is the op's
+  // own; a failure after it (the confirmation read) leaves a stored secret unconfirmed.
+  const refusedBeforeWriting =
+    secretEnv.isError && reply === null && isRefusedBeforeWriting(api, secretEnv.error);
   const secretStoreBlockedReason = secretEnv.isPending
     ? 'Storing the previous secret'
-    : secretEnv.isError
+    : secretEnv.isError && !refusedBeforeWriting
       ? 'A stored secret could not be confirmed — reload the page'
       : undefined;
 

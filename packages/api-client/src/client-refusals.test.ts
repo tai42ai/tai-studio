@@ -60,6 +60,35 @@ describe('client refusal readers', () => {
     expect(client.storedPresetFaultFromError(new Error('boom'))).toBeNull();
     expect(client.isMcpStartingError(new Error('boom'))).toBe(false);
     expect(client.isMcpNotLoadedError(new Error('boom'))).toBe(false);
+    expect(client.isReloadingError(new Error('boom'))).toBe(false);
+    expect(client.isWorkerLeavingError(new Error('boom'))).toBe(false);
+  });
+
+  it("reads the reload gate's 503 this client raised as the gate's refusal", async () => {
+    const client = clientAnswering(503, {
+      error: 'reloading — the server is applying a config reload; retry shortly',
+      reloading: true,
+    });
+    const error = await rejectionOf(client.listMcpAdvertisedTools('relay'));
+    expect(client.isReloadingError(error)).toBe(true);
+    expect(client.isWorkerLeavingError(error)).toBe(false);
+  });
+
+  it('reads the leaving 503 this client raised as a worker that begins no change', async () => {
+    const client = clientAnswering(503, {
+      error: 'leaving — this worker is leaving (recycle) and begins no change; retry shortly',
+      leaving: 'recycle',
+    });
+    const error = await rejectionOf(client.listMcpAdvertisedTools('relay'));
+    expect(client.isWorkerLeavingError(error)).toBe(true);
+    expect(client.isReloadingError(error)).toBe(false);
+  });
+
+  it('reads a 503 without either envelope as neither refusal', async () => {
+    const client = clientAnswering(503, { error: 'upstream connect error or disconnect/reset' });
+    const error = await rejectionOf(client.listMcpAdvertisedTools('relay'));
+    expect(client.isReloadingError(error)).toBe(false);
+    expect(client.isWorkerLeavingError(error)).toBe(false);
   });
 
   it('reads a 503 mcp-server-starting this client raised as a server start in progress', async () => {

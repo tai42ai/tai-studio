@@ -9,6 +9,8 @@ const {
   storedPresetFaultFromError,
   isMcpStartingError,
   isMcpNotLoadedError,
+  isReloadingError,
+  isWorkerLeavingError,
   failedReplyRoll,
 } = createApiClient({ getToken: () => null });
 
@@ -22,12 +24,16 @@ export const refusalReaders: Pick<
   | 'storedPresetFaultFromError'
   | 'isMcpStartingError'
   | 'isMcpNotLoadedError'
+  | 'isReloadingError'
+  | 'isWorkerLeavingError'
   | 'failedReplyRoll'
 > = {
   holdersFromError,
   storedPresetFaultFromError,
   isMcpStartingError,
   isMcpNotLoadedError,
+  isReloadingError,
+  isWorkerLeavingError,
   failedReplyRoll,
 };
 

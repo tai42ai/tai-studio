@@ -4,6 +4,7 @@ import { failedReplyRoll } from '../failed-reply-roll';
 import type { ApiConfig } from '../http';
 import { isMcpNotLoadedError, isMcpStartingError } from '../mcp-failure';
 import { servedConstants } from '../schemas';
+import { isReloadingError, isWorkerLeavingError } from '../worker-refusal';
 import { agentsClient } from './agents-client';
 import { authClient } from './auth-client';
 import { backendClient } from './backend-client';
@@ -103,6 +104,8 @@ export function createApiClient(config: ApiConfig) {
     storedPresetFaultFromError,
     isMcpStartingError,
     isMcpNotLoadedError,
+    isReloadingError,
+    isWorkerLeavingError,
     failedReplyRoll,
     ...toolsClient(t),
     ...presetsClient(t),
