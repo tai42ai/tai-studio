@@ -7,7 +7,7 @@ packages:
 # Single source of truth for the ranges of third-party deps shared across more
 # than one workspace package. Package manifests reference these with `catalog:`.
 catalog:
-  '@microsoft/api-extractor': 7.59.2
+  '@microsoft/api-extractor': 7.60.1
   '@tanstack/react-query': ^5.103.1
   '@testing-library/jest-dom': ^7.0.1
   '@testing-library/react': ^16.3.3
