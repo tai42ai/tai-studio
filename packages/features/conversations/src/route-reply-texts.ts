@@ -20,7 +20,8 @@ export const REPLY_TEXT_MEMBERS: readonly ReplyTextMember[] = [
   {
     name: 'error',
     title: 'Failed turn',
-    description: 'Sent when a turn fails and the target gave no reply of its own.',
+    description:
+      'Sent when a turn the participant sent fails and the target gave no reply of its own.',
   },
   {
     name: 'slow_down',
